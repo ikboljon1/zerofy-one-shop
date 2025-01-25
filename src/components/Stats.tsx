@@ -1,7 +1,10 @@
 import { Card } from "@/components/ui/card";
 import { ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Stats = () => {
+  const isMobile = useIsMobile();
+  
   const stats = [
     {
       title: "Продажа",
@@ -24,12 +27,17 @@ const Stats = () => {
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+    <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'md:grid-cols-3'}`}>
       {stats.map((stat, index) => (
-        <Card key={index} className="stat-card">
-          <div className="space-y-2">
+        <Card 
+          key={index} 
+          className={`stat-card ${
+            isMobile ? 'flex items-center justify-between p-4' : 'p-6'
+          }`}
+        >
+          <div className={`space-y-2 ${isMobile ? 'flex items-center space-x-4' : ''}`}>
             <p className="text-sm text-muted-foreground">{stat.title}</p>
-            <p className="text-2xl font-bold">{stat.value}</p>
+            <p className={`font-bold ${isMobile ? 'text-xl' : 'text-2xl'}`}>{stat.value}</p>
             <div className="flex items-center space-x-1">
               <span
                 className={`text-sm ${

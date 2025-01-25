@@ -1,6 +1,9 @@
 import { Card } from "@/components/ui/card";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Products = () => {
+  const isMobile = useIsMobile();
+  
   const products = [
     {
       id: 1,
@@ -19,22 +22,35 @@ const Products = () => {
   ];
 
   return (
-    <Card className="mt-6 p-4">
-      <h3 className="mb-4 text-lg font-semibold">Top Products</h3>
+    <Card className={`mt-6 ${isMobile ? 'p-3' : 'p-4'}`}>
+      <h3 className={`mb-4 font-semibold ${isMobile ? 'text-base' : 'text-lg'}`}>
+        Top Products
+      </h3>
       <div className="space-y-4">
         {products.map((product) => (
-          <div key={product.id} className="product-card">
+          <div 
+            key={product.id} 
+            className={`product-card ${
+              isMobile ? 'p-3 space-x-3' : 'p-4 space-x-4'
+            }`}
+          >
             <img
               src={product.image}
               alt={product.name}
-              className="h-16 w-16 rounded-lg object-cover"
+              className={`rounded-lg object-cover ${
+                isMobile ? 'h-12 w-12' : 'h-16 w-16'
+              }`}
             />
             <div>
-              <h4 className="font-semibold">{product.name}</h4>
+              <h4 className={`font-semibold ${isMobile ? 'text-sm' : ''}`}>
+                {product.name}
+              </h4>
               <p className="text-sm text-muted-foreground">
                 Price: {product.price} руб
               </p>
-              <p className="text-sm text-green-500">Profit: {product.profit} руб</p>
+              <p className="text-sm text-green-500">
+                Profit: {product.profit} руб
+              </p>
             </div>
           </div>
         ))}
