@@ -8,26 +8,36 @@ const Stats = () => {
   const stats = [
     {
       title: "Продажа",
-      value: "$12,345",
+      value: "12,345",
       change: "+8.35%",
       isPositive: true,
+      description: "Compared to last month"
     },
     {
       title: "Перечислено",
-      value: "$10,234",
+      value: "10,234",
       change: "+7.87%",
       isPositive: true,
+      description: "Compared to last month"
     },
     {
       title: "Расходы",
-      value: "$2,345",
+      value: "2,345",
       change: "-5.35%",
       isPositive: false,
+      description: "Compared to last month"
     },
+    {
+      title: "Чистая прибыль",
+      value: "25%",
+      change: "+4.87%",
+      isPositive: true,
+      description: "Compared to last month"
+    }
   ];
 
   return (
-    <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'md:grid-cols-3'}`}>
+    <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'md:grid-cols-2 lg:grid-cols-4'}`}>
       {stats.map((stat, index) => (
         <Card 
           key={index} 
@@ -52,6 +62,7 @@ const Stats = () => {
                 <ArrowDownRight className="h-4 w-4 text-red-500" />
               )}
             </div>
+            <p className="text-sm text-muted-foreground">{stat.description}</p>
           </div>
         </Card>
       ))}

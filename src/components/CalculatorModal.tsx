@@ -30,8 +30,8 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
 
     if (isNaN(cost) || isNaN(profit)) {
       toast({
-        title: "Error",
-        description: "Please enter valid numbers",
+        title: "Ошибка",
+        description: "Пожалуйста, введите корректные значения",
         variant: "destructive",
       });
       return;
@@ -52,47 +52,47 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Price Calculator</DialogTitle>
+          <DialogTitle>Калькулятор минимальной цены</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <label className="text-sm">Cost Price</label>
+            <label className="text-sm">Себестоимость:</label>
             <Input
               type="number"
               value={costPrice}
               onChange={(e) => setCostPrice(e.target.value)}
-              placeholder="Enter cost price"
+              placeholder="Введите цену"
             />
           </div>
           <div>
-            <label className="text-sm">Target Profit (%)</label>
+            <label className="text-sm">Желаемая прибыль (%):</label>
             <Input
               type="number"
               value={targetProfit}
               onChange={(e) => setTargetProfit(e.target.value)}
-              placeholder="Enter target profit"
+              placeholder="Введите %"
             />
           </div>
           <Button onClick={calculate} className="w-full">
-            Calculate
+            Рассчитать
           </Button>
           {result && (
             <div className="rounded-lg bg-secondary p-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Min. Price</p>
+                  <p className="text-sm text-muted-foreground">Мин. Цена</p>
                   <p className="text-lg font-semibold">
                     {result.minPrice.toFixed(2)} руб
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Profit</p>
+                  <p className="text-sm text-muted-foreground">Прибыль</p>
                   <p className="text-lg font-semibold">
                     {result.profit.toFixed(2)} руб
                   </p>
                 </div>
-                <div className="col-span-2">
-                  <p className="text-sm text-muted-foreground">Profit Percentage</p>
+                <div>
+                  <p className="text-sm text-muted-foreground">Процент прибыли</p>
                   <p className="text-lg font-semibold">
                     {result.profitPercent.toFixed(2)}%
                   </p>
