@@ -1,5 +1,16 @@
 import { useState } from "react";
-import { Home, BarChart2, Package, Calculator, User, Menu } from "lucide-react";
+import { 
+  Home, 
+  BarChart2, 
+  Package, 
+  ShoppingBag, 
+  FileText, 
+  Sticker,
+  User,
+  CreditCard,
+  DollarSign,
+  Menu 
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +20,12 @@ import Stats from "@/components/Stats";
 import Chart from "@/components/Chart";
 import Products from "@/components/Products";
 import CalculatorModal from "@/components/CalculatorModal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
@@ -25,9 +42,21 @@ const Index = () => {
     });
   };
 
+  const productSubMenu = [
+    { icon: ShoppingBag, label: "Магазины", value: "stores" },
+    { icon: FileText, label: "Отчеты", value: "reports" },
+    { icon: Sticker, label: "Наклейки", value: "stickers" },
+  ];
+
+  const profileMenu = [
+    { icon: CreditCard, label: "История платежей", value: "payment-history" },
+    { icon: User, label: "Профиль", value: "profile" },
+    { icon: DollarSign, label: "Тарифы", value: "rates" },
+  ];
+
   return (
     <div className="min-h-screen bg-background pb-16">
-      {/* Header - Different for Mobile and Desktop */}
+      {/* Header */}
       <header className="sticky top-0 z-10 bg-background/80 backdrop-blur">
         {isMobile ? (
           // Mobile Header
@@ -36,9 +65,21 @@ const Index = () => {
               <Menu className="h-6 w-6" />
             </Button>
             <h1 className="text-xl font-bold">Apexify</h1>
-            <Button variant="ghost" size="icon">
-              <User className="h-5 w-5" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <User className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {profileMenu.map((item) => (
+                  <DropdownMenuItem key={item.value} onClick={() => handleTabChange(item.value)}>
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {item.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         ) : (
           // Desktop Header
@@ -47,14 +88,29 @@ const Index = () => {
               <h1 className="text-2xl font-bold">Apexify</h1>
               <nav className="hidden md:flex space-x-6">
                 <Button variant="ghost" onClick={() => handleTabChange("home")}>
+                  <Home className="mr-2 h-4 w-4" />
                   Dashboard
                 </Button>
                 <Button variant="ghost" onClick={() => handleTabChange("analytics")}>
+                  <BarChart2 className="mr-2 h-4 w-4" />
                   Analytics
                 </Button>
-                <Button variant="ghost" onClick={() => handleTabChange("products")}>
-                  Products
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost">
+                      <Package className="mr-2 h-4 w-4" />
+                      Products
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {productSubMenu.map((item) => (
+                      <DropdownMenuItem key={item.value} onClick={() => handleTabChange(item.value)}>
+                        <item.icon className="mr-2 h-4 w-4" />
+                        {item.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </nav>
             </div>
             <div className="flex items-center space-x-4">
@@ -62,9 +118,21 @@ const Index = () => {
                 <Calculator className="mr-2 h-4 w-4" />
                 Calculator
               </Button>
-              <Button variant="ghost" size="icon">
-                <User className="h-5 w-5" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {profileMenu.map((item) => (
+                    <DropdownMenuItem key={item.value} onClick={() => handleTabChange(item.value)}>
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {item.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         )}
@@ -116,20 +184,22 @@ const Index = () => {
               <BarChart2 className="h-5 w-5" />
               <span className="text-xs">Analytics</span>
             </button>
-            <button
-              className={`nav-item ${activeTab === "products" ? "active" : ""}`}
-              onClick={() => handleTabChange("products")}
-            >
-              <Package className="h-5 w-5" />
-              <span className="text-xs">Products</span>
-            </button>
-            <button
-              className="nav-item"
-              onClick={() => setShowCalculator(true)}
-            >
-              <Calculator className="h-5 w-5" />
-              <span className="text-xs">Calculator</span>
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className={`nav-item ${productSubMenu.some(item => activeTab === item.value) ? "active" : ""}`}>
+                  <Package className="h-5 w-5" />
+                  <span className="text-xs">Products</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {productSubMenu.map((item) => (
+                  <DropdownMenuItem key={item.value} onClick={() => handleTabChange(item.value)}>
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {item.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </nav>
       )}
