@@ -3,7 +3,9 @@ import {
   LayoutDashboard,
   BarChart2, 
   Package, 
-  ShoppingBag,
+  FileText,
+  Store,
+  Sticker,
   User,
   Calculator,
   Sun,
@@ -17,12 +19,6 @@ import Stats from "@/components/Stats";
 import Chart from "@/components/Chart";
 import Products from "@/components/Products";
 import CalculatorModal from "@/components/CalculatorModal";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useTheme } from "@/hooks/use-theme";
 
 const Index = () => {
@@ -39,6 +35,24 @@ const Index = () => {
       description: `Switched to ${tab} view`,
     });
   };
+
+  const desktopNavItems = [
+    { id: "home", label: "Dashboard", icon: LayoutDashboard },
+    { id: "analytics", label: "Analytics", icon: BarChart2 },
+    { id: "products", label: "Products", icon: Package },
+    { id: "reports", label: "Reports", icon: FileText },
+    { id: "stores", label: "Stores", icon: Store },
+    { id: "stickers", label: "Stickers", icon: Sticker },
+    { id: "profile", label: "Profile", icon: User },
+  ];
+
+  const mobileNavItems = [
+    { id: "home", label: "Dashboard", icon: LayoutDashboard },
+    { id: "analytics", label: "Analytics", icon: BarChart2 },
+    { id: "products", label: "Products", icon: Package },
+    { id: "stores", label: "Stores", icon: Store },
+    { id: "profile", label: "Profile", icon: User },
+  ];
 
   return (
     <div className="min-h-screen bg-background pb-16">
@@ -57,8 +71,28 @@ const Index = () => {
         </div>
       </header>
 
+      {/* Desktop Sidebar */}
+      {!isMobile && (
+        <nav className="fixed left-0 top-16 h-full w-64 bg-background border-r border-border p-4">
+          <div className="space-y-4">
+            {desktopNavItems.map((item) => (
+              <button
+                key={item.id}
+                className={`flex items-center space-x-3 w-full p-2 rounded-lg transition-colors ${
+                  activeTab === item.id ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+                }`}
+                onClick={() => handleTabChange(item.id)}
+              >
+                <item.icon className="h-5 w-5" />
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </nav>
+      )}
+
       {/* Main Content */}
-      <main className="container px-4 py-6 space-y-6">
+      <main className={`container px-4 py-6 space-y-6 ${!isMobile ? "ml-64" : ""}`}>
         {activeTab === "home" && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -83,10 +117,28 @@ const Index = () => {
             {/* Add products content */}
           </div>
         )}
+        {activeTab === "reports" && !isMobile && (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold">Reports</h2>
+            {/* Add reports content */}
+          </div>
+        )}
         {activeTab === "stores" && (
           <div className="space-y-4">
             <h2 className="text-2xl font-bold">Stores</h2>
             {/* Add stores content */}
+          </div>
+        )}
+        {activeTab === "stickers" && !isMobile && (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold">Stickers</h2>
+            {/* Add stickers content */}
+          </div>
+        )}
+        {activeTab === "profile" && (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold">Profile</h2>
+            {/* Add profile content */}
           </div>
         )}
       </main>
@@ -95,41 +147,16 @@ const Index = () => {
       {isMobile && (
         <nav className="fixed bottom-0 left-0 right-0 border-t bg-background/80 backdrop-blur">
           <div className="container flex items-center justify-around py-2">
-            <button
-              className={`nav-item ${activeTab === "home" ? "active" : ""}`}
-              onClick={() => handleTabChange("home")}
-            >
-              <LayoutDashboard className="h-5 w-5" />
-              <span className="text-xs">Dashboard</span>
-            </button>
-            <button
-              className={`nav-item ${activeTab === "analytics" ? "active" : ""}`}
-              onClick={() => handleTabChange("analytics")}
-            >
-              <BarChart2 className="h-5 w-5" />
-              <span className="text-xs">Analytics</span>
-            </button>
-            <button
-              className={`nav-item ${activeTab === "products" ? "active" : ""}`}
-              onClick={() => handleTabChange("products")}
-            >
-              <Package className="h-5 w-5" />
-              <span className="text-xs">Products</span>
-            </button>
-            <button
-              className={`nav-item ${activeTab === "stores" ? "active" : ""}`}
-              onClick={() => handleTabChange("stores")}
-            >
-              <ShoppingBag className="h-5 w-5" />
-              <span className="text-xs">Stores</span>
-            </button>
-            <button
-              className={`nav-item ${activeTab === "profile" ? "active" : ""}`}
-              onClick={() => handleTabChange("profile")}
-            >
-              <User className="h-5 w-5" />
-              <span className="text-xs">Profile</span>
-            </button>
+            {mobileNavItems.map((item) => (
+              <button
+                key={item.id}
+                className={`nav-item ${activeTab === item.id ? "active" : ""}`}
+                onClick={() => handleTabChange(item.id)}
+              >
+                <item.icon className="h-5 w-5" />
+                <span className="text-xs">{item.label}</span>
+              </button>
+            ))}
           </div>
         </nav>
       )}
