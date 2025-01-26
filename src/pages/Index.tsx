@@ -1,15 +1,21 @@
 import { useState } from "react";
 import { 
-  LayoutDashboard,
+  Home, 
   BarChart2, 
   Package, 
-  ShoppingBag,
+  ShoppingBag, 
+  FileText, 
+  Sticker,
   User,
+  CreditCard,
+  DollarSign,
+  Menu,
   Calculator,
   Sun,
   Moon 
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -28,6 +34,7 @@ import { useTheme } from "@/hooks/use-theme";
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
   const [showCalculator, setShowCalculator] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const { theme, toggleTheme } = useTheme();
@@ -40,33 +47,124 @@ const Index = () => {
     });
   };
 
+  const productSubMenu = [
+    { icon: ShoppingBag, label: "Магазины", value: "stores" },
+    { icon: FileText, label: "Отчеты", value: "reports" },
+    { icon: Sticker, label: "Наклейки", value: "stickers" },
+  ];
+
+  const profileMenu = [
+    { icon: CreditCard, label: "История платежей", value: "payment-history" },
+    { icon: User, label: "Профиль", value: "profile" },
+    { icon: DollarSign, label: "Тарифы", value: "rates" },
+  ];
+
   return (
     <div className="min-h-screen bg-background pb-16">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-background/80 backdrop-blur">
-        <div className="flex items-center justify-between p-4">
-          <h1 className="text-xl font-bold">Apexify</h1>
-          <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="icon" onClick={toggleTheme}>
-              {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+        {isMobile ? (
+          // Mobile Header
+          <div className="flex items-center justify-between p-4">
+            <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+              <Menu className="h-6 w-6" />
             </Button>
-            {!isMobile && (
-              <Button variant="ghost" size="icon" onClick={() => setShowCalculator(true)}>
-                <Calculator className="h-5 w-5" />
+            <h1 className="text-xl font-bold">Apexify</h1>
+            <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="icon" onClick={toggleTheme}>
+                {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </Button>
-            )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {profileMenu.map((item) => (
+                    <DropdownMenuItem key={item.value} onClick={() => handleTabChange(item.value)}>
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {item.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
-        </div>
+        ) : (
+          // Desktop Header
+          <div className="flex items-center justify-between p-4">
+            <div className="flex items-center space-x-8">
+              <h1 className="text-2xl font-bold">Apexify</h1>
+              <nav className="hidden md:flex space-x-6">
+                <Button variant="ghost" onClick={() => handleTabChange("home")}>
+                  <Home className="mr-2 h-4 w-4" />
+                  Dashboard
+                </Button>
+                <Button variant="ghost" onClick={() => handleTabChange("analytics")}>
+                  <BarChart2 className="mr-2 h-4 w-4" />
+                  Analytics
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost">
+                      <Package className="mr-2 h-4 w-4" />
+                      Products
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {productSubMenu.map((item) => (
+                      <DropdownMenuItem key={item.value} onClick={() => handleTabChange(item.value)}>
+                        <item.icon className="mr-2 h-4 w-4" />
+                        {item.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {productSubMenu.map((item) => (
+                  <Button key={item.value} variant="ghost" onClick={() => handleTabChange(item.value)}>
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {item.label}
+                  </Button>
+                ))}
+              </nav>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Button variant="outline" onClick={() => setShowCalculator(true)}>
+                <Calculator className="mr-2 h-4 w-4" />
+                Calculator
+              </Button>
+              <Button variant="ghost" size="icon" onClick={toggleTheme}>
+                {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {profileMenu.map((item) => (
+                    <DropdownMenuItem key={item.value} onClick={() => handleTabChange(item.value)}>
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {item.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Main Content */}
-      <main className="container px-4 py-6 space-y-6">
+      <main className={`container px-4 py-6 ${isMobile ? 'space-y-4' : 'space-y-6'}`}>
         {activeTab === "home" && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="space-y-6"
+            className={isMobile ? 'space-y-4' : 'space-y-6'}
           >
             <Stats />
             <Chart />
@@ -95,8 +193,8 @@ const Index = () => {
               className={`nav-item ${activeTab === "home" ? "active" : ""}`}
               onClick={() => handleTabChange("home")}
             >
-              <LayoutDashboard className="h-5 w-5" />
-              <span className="text-xs">Dashboard</span>
+              <Home className="h-5 w-5" />
+              <span className="text-xs">Home</span>
             </button>
             <button
               className={`nav-item ${activeTab === "analytics" ? "active" : ""}`}
@@ -105,13 +203,22 @@ const Index = () => {
               <BarChart2 className="h-5 w-5" />
               <span className="text-xs">Analytics</span>
             </button>
-            <button
-              className={`nav-item ${activeTab === "products" ? "active" : ""}`}
-              onClick={() => handleTabChange("products")}
-            >
-              <Package className="h-5 w-5" />
-              <span className="text-xs">Products</span>
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className={`nav-item ${productSubMenu.some(item => activeTab === item.value) ? "active" : ""}`}>
+                  <Package className="h-5 w-5" />
+                  <span className="text-xs">Products</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {productSubMenu.map((item) => (
+                  <DropdownMenuItem key={item.value} onClick={() => handleTabChange(item.value)}>
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {item.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <button
               className={`nav-item ${activeTab === "stores" ? "active" : ""}`}
               onClick={() => handleTabChange("stores")}
@@ -120,7 +227,7 @@ const Index = () => {
               <span className="text-xs">Магазины</span>
             </button>
             <button
-              className={`nav-item ${activeTab === "profile" ? "active" : ""}`}
+              className={`nav-item ${profileMenu.some(item => activeTab === item.value) ? "active" : ""}`}
               onClick={() => handleTabChange("profile")}
             >
               <User className="h-5 w-5" />
