@@ -36,9 +36,9 @@ const Stats = () => {
     }
   ];
 
-  return (
-    <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'md:grid-cols-2 lg:grid-cols-4'}`}>
-      {stats.map((stat, index) => (
+  const renderStatsRow = (start: number, end: number) => (
+    <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
+      {stats.slice(start, end).map((stat, index) => (
         <Card 
           key={index} 
           className={`stat-card ${
@@ -66,6 +66,13 @@ const Stats = () => {
           </div>
         </Card>
       ))}
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      {renderStatsRow(0, 2)}
+      {renderStatsRow(2, 4)}
     </div>
   );
 };

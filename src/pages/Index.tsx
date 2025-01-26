@@ -10,7 +10,9 @@ import {
   CreditCard,
   DollarSign,
   Menu,
-  Calculator 
+  Calculator,
+  Sun,
+  Moon 
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
@@ -27,6 +29,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useTheme } from "@/hooks/use-theme";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
@@ -34,6 +37,7 @@ const Index = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
   const { toast } = useToast();
+  const { theme, toggleTheme } = useTheme();
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -66,21 +70,26 @@ const Index = () => {
               <Menu className="h-6 w-6" />
             </Button>
             <h1 className="text-xl font-bold">Apexify</h1>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <User className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {profileMenu.map((item) => (
-                  <DropdownMenuItem key={item.value} onClick={() => handleTabChange(item.value)}>
-                    <item.icon className="mr-2 h-4 w-4" />
-                    {item.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="icon" onClick={toggleTheme}>
+                {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {profileMenu.map((item) => (
+                    <DropdownMenuItem key={item.value} onClick={() => handleTabChange(item.value)}>
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {item.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         ) : (
           // Desktop Header
@@ -112,12 +121,21 @@ const Index = () => {
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
+                {productSubMenu.map((item) => (
+                  <Button key={item.value} variant="ghost" onClick={() => handleTabChange(item.value)}>
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {item.label}
+                  </Button>
+                ))}
               </nav>
             </div>
             <div className="flex items-center space-x-4">
               <Button variant="outline" onClick={() => setShowCalculator(true)}>
                 <Calculator className="mr-2 h-4 w-4" />
                 Calculator
+              </Button>
+              <Button variant="ghost" size="icon" onClick={toggleTheme}>
+                {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -201,6 +219,20 @@ const Index = () => {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            <button
+              className={`nav-item ${activeTab === "stores" ? "active" : ""}`}
+              onClick={() => handleTabChange("stores")}
+            >
+              <ShoppingBag className="h-5 w-5" />
+              <span className="text-xs">Магазины</span>
+            </button>
+            <button
+              className={`nav-item ${profileMenu.some(item => activeTab === item.value) ? "active" : ""}`}
+              onClick={() => handleTabChange("profile")}
+            >
+              <User className="h-5 w-5" />
+              <span className="text-xs">Профиль</span>
+            </button>
           </div>
         </nav>
       )}
