@@ -50,11 +50,9 @@ const Index = () => {
             <Button variant="ghost" size="icon" onClick={toggleTheme}>
               {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
-            {!isMobile && (
-              <Button variant="ghost" size="icon" onClick={() => setShowCalculator(true)}>
-                <Calculator className="h-5 w-5" />
-              </Button>
-            )}
+            <Button variant="ghost" size="icon" onClick={() => setShowCalculator(true)}>
+              <Calculator className="h-5 w-5" />
+            </Button>
           </div>
         </div>
       </header>
@@ -83,6 +81,12 @@ const Index = () => {
           <div className="space-y-4">
             <h2 className="text-2xl font-bold">Products</h2>
             {/* Add products content */}
+          </div>
+        )}
+        {activeTab === "stores" && (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold">Stores</h2>
+            {/* Add stores content */}
           </div>
         )}
       </main>
@@ -117,14 +121,14 @@ const Index = () => {
               onClick={() => handleTabChange("stores")}
             >
               <ShoppingBag className="h-5 w-5" />
-              <span className="text-xs">Магазины</span>
+              <span className="text-xs">Stores</span>
             </button>
             <button
               className={`nav-item ${activeTab === "profile" ? "active" : ""}`}
               onClick={() => handleTabChange("profile")}
             >
               <User className="h-5 w-5" />
-              <span className="text-xs">Профиль</span>
+              <span className="text-xs">Profile</span>
             </button>
           </div>
         </nav>
