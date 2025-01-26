@@ -9,7 +9,8 @@ import {
   User,
   CreditCard,
   DollarSign,
-  Menu 
+  Menu,
+  Calculator 
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
