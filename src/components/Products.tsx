@@ -91,7 +91,7 @@ const Products = () => {
   );
 
   return (
-    <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'md:grid-cols-2'}`}>
+    <div className={`grid gap-6 ${isMobile ? 'grid-cols-2' : 'md:grid-cols-2'}`}>
       <Card className={`mt-6 ${isMobile ? 'p-3' : 'p-4'}`}>
         <h3 className={`mb-4 font-semibold ${isMobile ? 'text-base' : 'text-lg'}`}>
           Топ-3 прибыльных товара

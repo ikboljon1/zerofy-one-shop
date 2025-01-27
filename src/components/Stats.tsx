@@ -37,7 +37,7 @@ const Stats = () => {
   ];
 
   const renderStatsRow = (start: number, end: number) => (
-    <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
+    <div className={`grid gap-4 ${isMobile ? 'grid-cols-2' : 'grid-cols-2'}`}>
       {stats.slice(start, end).map((stat, index) => (
         <Card 
           key={index} 

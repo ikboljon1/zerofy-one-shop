@@ -71,24 +71,12 @@ const Index = () => {
             </Button>
             <h1 className="text-xl font-bold">Apexify</h1>
             <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="icon" onClick={() => setShowCalculator(true)}>
+                <Calculator className="h-5 w-5" />
+              </Button>
               <Button variant="ghost" size="icon" onClick={toggleTheme}>
                 {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <User className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {profileMenu.map((item) => (
-                    <DropdownMenuItem key={item.value} onClick={() => handleTabChange(item.value)}>
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {item.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           </div>
         ) : (
@@ -132,7 +120,6 @@ const Index = () => {
             <div className="flex items-center space-x-4">
               <Button variant="outline" onClick={() => setShowCalculator(true)}>
                 <Calculator className="mr-2 h-4 w-4" />
-                Calculator
               </Button>
               <Button variant="ghost" size="icon" onClick={toggleTheme}>
                 {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
