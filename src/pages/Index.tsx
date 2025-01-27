@@ -11,7 +11,8 @@ import {
   DollarSign,
   Calculator,
   Sun,
-  Moon 
+  Moon,
+  Zap 
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -61,7 +62,10 @@ const Index = () => {
       <header className="sticky top-0 z-10 bg-background/80 backdrop-blur">
         {isMobile ? (
           <div className="flex items-center justify-between p-4">
-            <h1 className="text-xl font-bold">Zerofy</h1>
+            <div className="flex items-center space-x-2">
+              <Zap className="h-6 w-6 text-primary" />
+              <h1 className="text-xl font-bold">Zerofy</h1>
+            </div>
             <div className="flex items-center space-x-2">
               <Button variant="ghost" size="icon" onClick={() => setShowCalculator(true)}>
                 <Calculator className="h-5 w-5" />
@@ -74,7 +78,10 @@ const Index = () => {
         ) : (
           <div className="flex items-center justify-between p-4">
             <div className="flex items-center space-x-8">
-              <h1 className="text-2xl font-bold">Zerofy</h1>
+              <div className="flex items-center space-x-2">
+                <Zap className="h-8 w-8 text-primary" />
+                <h1 className="text-2xl font-bold">Zerofy</h1>
+              </div>
               <nav className="hidden md:flex space-x-6">
                 <Button variant="ghost" onClick={() => handleTabChange("home")}>
                   <Home className="mr-2 h-4 w-4" />
