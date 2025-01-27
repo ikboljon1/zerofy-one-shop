@@ -9,13 +9,11 @@ import {
   User,
   CreditCard,
   DollarSign,
-  Menu,
   Calculator,
   Sun,
   Moon 
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -34,7 +32,6 @@ import { useTheme } from "@/hooks/use-theme";
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
   const [showCalculator, setShowCalculator] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const { theme, toggleTheme } = useTheme();
@@ -64,9 +61,6 @@ const Index = () => {
       <header className="sticky top-0 z-10 bg-background/80 backdrop-blur">
         {isMobile ? (
           <div className="flex items-center justify-between p-4">
-            <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-              <Menu className="h-6 w-6" />
-            </Button>
             <h1 className="text-xl font-bold">Zerofy</h1>
             <div className="flex items-center space-x-2">
               <Button variant="ghost" size="icon" onClick={() => setShowCalculator(true)}>
