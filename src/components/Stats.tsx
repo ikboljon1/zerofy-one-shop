@@ -41,11 +41,9 @@ const Stats = () => {
       {stats.slice(start, end).map((stat, index) => (
         <Card 
           key={index} 
-          className={`stat-card ${
-            isMobile ? 'flex items-center justify-between p-4' : 'p-6'
-          }`}
+          className="stat-card"
         >
-          <div className={`space-y-2 ${isMobile ? 'flex items-center space-x-4' : ''}`}>
+          <div className="flex flex-col space-y-2">
             <p className="text-sm text-muted-foreground">{stat.title}</p>
             <p className={`font-bold ${isMobile ? 'text-xl' : 'text-2xl'}`}>{stat.value}</p>
             <div className="flex items-center space-x-1">

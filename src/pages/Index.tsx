@@ -61,15 +61,13 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background pb-16">
-      {/* Header */}
       <header className="sticky top-0 z-10 bg-background/80 backdrop-blur">
         {isMobile ? (
-          // Mobile Header
           <div className="flex items-center justify-between p-4">
             <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
               <Menu className="h-6 w-6" />
             </Button>
-            <h1 className="text-xl font-bold">Apexify</h1>
+            <h1 className="text-xl font-bold">Zerofy</h1>
             <div className="flex items-center space-x-2">
               <Button variant="ghost" size="icon" onClick={() => setShowCalculator(true)}>
                 <Calculator className="h-5 w-5" />
@@ -80,10 +78,9 @@ const Index = () => {
             </div>
           </div>
         ) : (
-          // Desktop Header
           <div className="flex items-center justify-between p-4">
             <div className="flex items-center space-x-8">
-              <h1 className="text-2xl font-bold">Apexify</h1>
+              <h1 className="text-2xl font-bold">Zerofy</h1>
               <nav className="hidden md:flex space-x-6">
                 <Button variant="ghost" onClick={() => handleTabChange("home")}>
                   <Home className="mr-2 h-4 w-4" />
@@ -120,6 +117,7 @@ const Index = () => {
             <div className="flex items-center space-x-4">
               <Button variant="outline" onClick={() => setShowCalculator(true)}>
                 <Calculator className="mr-2 h-4 w-4" />
+                Calculator
               </Button>
               <Button variant="ghost" size="icon" onClick={toggleTheme}>
                 {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
@@ -144,7 +142,6 @@ const Index = () => {
         )}
       </header>
 
-      {/* Main Content */}
       <main className={`container px-4 py-6 ${isMobile ? 'space-y-4' : 'space-y-6'}`}>
         {activeTab === "home" && (
           <motion.div
@@ -172,7 +169,6 @@ const Index = () => {
         )}
       </main>
 
-      {/* Mobile Bottom Navigation */}
       {isMobile && (
         <nav className="fixed bottom-0 left-0 right-0 border-t bg-background/80 backdrop-blur">
           <div className="container flex items-center justify-around py-2">
