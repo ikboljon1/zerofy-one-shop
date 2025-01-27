@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { ArrowUpRight, ArrowDownRight, DollarSign, CreditCard, Wallet, PieChart } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, DollarSign, CreditCard, Wallet, PieChart, Package, PackageCheck, Receipt, CheckSquare } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const Stats = () => {
@@ -48,12 +48,55 @@ const Stats = () => {
     }
   ];
 
-  const renderStatsRow = (start: number, end: number) => (
+  const additionalStats = [
+    {
+      title: "Логистика",
+      value: "1,234",
+      change: "-2.35%",
+      isPositive: false,
+      description: "За последний месяц",
+      icon: Package,
+      gradient: "from-[#243949] to-[#517fa4]",
+      iconColor: "text-blue-500"
+    },
+    {
+      title: "Хранение",
+      value: "3,456",
+      change: "+1.87%",
+      isPositive: true,
+      description: "За последний месяц",
+      icon: PackageCheck,
+      gradient: "from-[#c1c161] to-[#d4d4b1]",
+      iconColor: "text-green-500"
+    },
+    {
+      title: "Штрафы",
+      value: "567",
+      change: "-3.35%",
+      isPositive: false,
+      description: "За последний месяц",
+      icon: Receipt,
+      gradient: "from-[#e6b980] to-[#eacda3]",
+      iconColor: "text-red-500"
+    },
+    {
+      title: "Приемка",
+      value: "890",
+      change: "+5.87%",
+      isPositive: true,
+      description: "За последний месяц",
+      icon: CheckSquare,
+      gradient: "from-[#accbee] to-[#e7f0fd]",
+      iconColor: "text-teal-500"
+    }
+  ];
+
+  const renderStatsRow = (statsData: typeof stats, start: number, end: number) => (
     <div className={`grid gap-4 ${isMobile ? 'grid-cols-2' : 'grid-cols-2'}`}>
-      {stats.slice(start, end).map((stat, index) => (
+      {statsData.slice(start, end).map((stat, index) => (
         <Card 
           key={index} 
-          className={`stat-card bg-gradient-to-br ${stat.gradient} dark:from-card dark:to-card`}
+          className={`stat-card bg-gradient-to-br ${stat.gradient} dark:from-gray-800 dark:to-gray-700 border-2 border-opacity-20 dark:border-gray-600`}
         >
           <div className="flex flex-col space-y-2">
             <div className="flex items-center justify-between">
@@ -84,8 +127,13 @@ const Stats = () => {
 
   return (
     <div className="space-y-4">
-      {renderStatsRow(0, 2)}
-      {renderStatsRow(2, 4)}
+      {renderStatsRow(stats, 0, 2)}
+      {renderStatsRow(stats, 2, 4)}
+      <div className="mt-8">
+        <h3 className="text-lg font-semibold mb-4">Дополнительная статистика</h3>
+        {renderStatsRow(additionalStats, 0, 2)}
+        {renderStatsRow(additionalStats, 2, 4)}
+      </div>
     </div>
   );
 };
