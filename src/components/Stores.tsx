@@ -67,11 +67,10 @@ export default function Stores() {
   };
 
   const toggleStoreSelection = (storeId: string) => {
-    setStores(stores.map(store => 
-      store.id === storeId 
-        ? { ...store, isSelected: !store.isSelected }
-        : store
-    ));
+    setStores(stores.map(store => ({
+      ...store,
+      isSelected: store.id === storeId ? !store.isSelected : false
+    })));
   };
 
   return (
