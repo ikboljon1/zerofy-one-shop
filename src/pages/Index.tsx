@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Stats from "@/components/Stats";
 import Chart from "@/components/Chart";
@@ -31,12 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "@/hooks/use-theme";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
   LineChart,
   Line,
@@ -118,231 +113,190 @@ const Index = () => {
     });
   };
 
-  const productSubMenu = [
-    { icon: ShoppingBag, label: "Магазины", value: "stores" },
-    { icon: FileText, label: "Отчеты", value: "reports" },
-    { icon: Sticker, label: "Наклейки", value: "stickers" },
-  ];
-
-  const profileMenu = [
-    { icon: CreditCard, label: "История платежей", value: "payment-history" },
-    { icon: User, label: "Профиль", value: "profile" },
-    { icon: DollarSign, label: "Тарифы", value: "rates" },
-  ];
-
   const renderAnalytics = () => (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Общий анализ продаж</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <Card className="border-l-4 border-l-green-500">
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <DollarSign className="h-5 w-5 text-green-500" />
-                  <div className="flex items-center text-green-500">
-                    <ArrowUp className="h-4 w-4 mr-1" />
-                    <span>8.35%</span>
-                  </div>
-                </div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                  Общий объем продаж
-                </h3>
-                <p className="text-2xl font-bold">$348,261</p>
-                <p className="text-sm text-muted-foreground">
-                  По сравнению с прошлым месяцем
-                </p>
-              </CardContent>
-            </Card>
+      <Card className="p-6">
+        <h2 className="text-xl font-semibold mb-6">Общий анализ продаж</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <Card className="p-4 border-l-4 border-l-green-500">
+            <div className="flex justify-between items-start mb-2">
+              <DollarSign className="h-5 w-5 text-green-500" />
+              <div className="flex items-center text-green-500">
+                <ArrowUp className="h-4 w-4 mr-1" />
+                <span>8.35%</span>
+              </div>
+            </div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">
+              Общий объем продаж
+            </h3>
+            <p className="text-2xl font-bold">$348,261</p>
+            <p className="text-sm text-muted-foreground">
+              По сравнению с прошлым месяцем
+            </p>
+          </Card>
 
-            <Card className="border-l-4 border-l-blue-500">
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <ShoppingBag className="h-5 w-5 text-blue-500" />
-                  <div className="flex items-center text-green-500">
-                    <ArrowUp className="h-4 w-4 mr-1" />
-                    <span>5.25%</span>
-                  </div>
-                </div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                  Количество заказов
-                </h3>
-                <p className="text-2xl font-bold">1,200</p>
-                <p className="text-sm text-muted-foreground">
-                  По сравнению с прошлым месяцем
-                </p>
-              </CardContent>
-            </Card>
+          <Card className="p-4 border-l-4 border-l-blue-500">
+            <div className="flex justify-between items-start mb-2">
+              <ShoppingBag className="h-5 w-5 text-blue-500" />
+              <div className="flex items-center text-green-500">
+                <ArrowUp className="h-4 w-4 mr-1" />
+                <span>5.25%</span>
+              </div>
+            </div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">
+              Количество заказов
+            </h3>
+            <p className="text-2xl font-bold">1,200</p>
+            <p className="text-sm text-muted-foreground">
+              По сравнению с прошлым месяцем
+            </p>
+          </Card>
 
-            <Card className="border-l-4 border-l-red-500">
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <Package className="h-5 w-5 text-red-500" />
-                  <div className="flex items-center text-red-500">
-                    <ArrowDown className="h-4 w-4 mr-1" />
-                    <span>2.75%</span>
-                  </div>
-                </div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                  Количество возвратов
-                </h3>
-                <p className="text-2xl font-bold">150</p>
-                <p className="text-sm text-muted-foreground">
-                  По сравнению с прошлым месяцем
-                </p>
-              </CardContent>
-            </Card>
+          <Card className="p-4 border-l-4 border-l-red-500">
+            <div className="flex justify-between items-start mb-2">
+              <Package className="h-5 w-5 text-red-500" />
+              <div className="flex items-center text-red-500">
+                <ArrowDown className="h-4 w-4 mr-1" />
+                <span>2.75%</span>
+              </div>
+            </div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">
+              Количество возвратов
+            </h3>
+            <p className="text-2xl font-bold">150</p>
+            <p className="text-sm text-muted-foreground">
+              По сравнению с прошлым месяцем
+            </p>
+          </Card>
 
-            <Card className="border-l-4 border-l-purple-500">
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <BarChart2 className="h-5 w-5 text-purple-500" />
-                </div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                  Процент возврата
-                </h3>
-                <p className="text-2xl font-bold">12.5%</p>
-                <p className="text-sm text-muted-foreground">
-                  По сравнению с прошлым месяцем
-                </p>
-              </CardContent>
-            </Card>
+          <Card className="p-4 border-l-4 border-l-purple-500">
+            <div className="flex justify-between items-start mb-2">
+              <BarChart2 className="h-5 w-5 text-purple-500" />
+            </div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">
+              Процент возврата
+            </h3>
+            <p className="text-2xl font-bold">12.5%</p>
+            <p className="text-sm text-muted-foreground">
+              По сравнению с прошлым месяцем
+            </p>
+          </Card>
+        </div>
+
+        {/* Sales Trend */}
+        <Card className="p-4 mb-6">
+          <h3 className="text-lg font-semibold mb-4">График динамики продаж</h3>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={salesData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#8B5CF6"
+                  fill="#8B5CF680"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
+        </Card>
 
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>График динамики продаж</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={salesData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Area
-                        type="monotone"
-                        dataKey="value"
-                        stroke="#8B5CF6"
-                        fill="#8B5CF680"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Анализ возвратов</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={returnsData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Line
-                        type="monotone"
-                        dataKey="returns"
-                        stroke="#EC4899"
-                        strokeWidth={2}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Таблица возвратов по товарам</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-2">Название товара</th>
-                        <th className="text-left p-2">Артикул</th>
-                        <th className="text-right p-2">Количество заказов</th>
-                        <th className="text-right p-2">Количество возвратов</th>
-                        <th className="text-right p-2">Процент возврата</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {salesTableData.map((item, index) => (
-                        <tr key={index} className="border-b">
-                          <td className="p-2">{item.name}</td>
-                          <td className="p-2">{item.sku}</td>
-                          <td className="text-right p-2">{item.orders}</td>
-                          <td className="text-right p-2">{item.returns}</td>
-                          <td className="text-right p-2">{item.returnRate}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>График динамики прибыли</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={profitData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Area
-                        type="monotone"
-                        dataKey="profit"
-                        stroke="#10B981"
-                        fill="#10B98180"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Таблица прибыльности по товарам</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-2">Товар</th>
-                        <th className="text-right p-2">Прибыль</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {salesTableData.map((item, index) => (
-                        <tr key={index} className="border-b">
-                          <td className="p-2">{item.name}</td>
-                          <td className="text-right p-2">${item.profit}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
+        {/* Returns Analysis */}
+        <Card className="p-4 mb-6">
+          <h3 className="text-lg font-semibold mb-4">Анализ возвратов</h3>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={returnsData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Line
+                  type="monotone"
+                  dataKey="returns"
+                  stroke="#EC4899"
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
-        </CardContent>
+        </Card>
+
+        {/* Returns Table */}
+        <Card className="p-4 mb-6">
+          <h3 className="text-lg font-semibold mb-4">Таблица возвратов по товарам</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2">Название товара</th>
+                  <th className="text-left p-2">Артикул</th>
+                  <th className="text-right p-2">Количество заказов</th>
+                  <th className="text-right p-2">Количество возвратов</th>
+                  <th className="text-right p-2">Процент возврата</th>
+                </tr>
+              </thead>
+              <tbody>
+                {salesTableData.map((item) => (
+                  <tr key={item.sku} className="border-b">
+                    <td className="p-2">{item.name}</td>
+                    <td className="p-2">{item.sku}</td>
+                    <td className="text-right p-2">{item.orders}</td>
+                    <td className="text-right p-2">{item.returns}</td>
+                    <td className="text-right p-2">{item.returnRate}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        {/* Profit Analysis */}
+        <Card className="p-4 mb-6">
+          <h3 className="text-lg font-semibold mb-4">График динамики прибыли</h3>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={profitData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Area
+                  type="monotone"
+                  dataKey="profit"
+                  stroke="#10B981"
+                  fill="#10B98180"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        {/* Profit Table */}
+        <Card className="p-4">
+          <h3 className="text-lg font-semibold mb-4">Таблица прибыльности по товарам</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2">Товар</th>
+                  <th className="text-right p-2">Прибыль</th>
+                </tr>
+              </thead>
+              <tbody>
+                {salesTableData.map((item) => (
+                  <tr key={item.sku} className="border-b">
+                    <td className="p-2">{item.name}</td>
+                    <td className="text-right p-2">${item.profit}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       </Card>
     </div>
   );
@@ -402,12 +356,18 @@ const Index = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {profileMenu.map((item) => (
-                    <DropdownMenuItem key={item.value} onClick={() => handleTabChange(item.value)}>
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {item.label}
-                    </DropdownMenuItem>
-                  ))}
+                  <DropdownMenuItem onClick={() => handleTabChange("payment-history")}>
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    История платежей
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleTabChange("profile")}>
+                    <User className="mr-2 h-4 w-4" />
+                    Профиль
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleTabChange("rates")}>
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    Тарифы
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -443,28 +403,28 @@ const Index = () => {
         <nav className="fixed bottom-0 left-0 right-0 border-t bg-background/80 backdrop-blur">
           <div className="container flex items-center justify-around py-2">
             <button
-              className={`nav-item ${activeTab === "home" ? "active" : ""}`}
+              className={`flex flex-col items-center ${activeTab === "home" ? "text-primary" : "text-muted-foreground"}`}
               onClick={() => handleTabChange("home")}
             >
               <Home className="h-5 w-5" />
               <span className="text-xs">Home</span>
             </button>
             <button
-              className={`nav-item ${activeTab === "analytics" ? "active" : ""}`}
+              className={`flex flex-col items-center ${activeTab === "analytics" ? "text-primary" : "text-muted-foreground"}`}
               onClick={() => handleTabChange("analytics")}
             >
               <BarChart2 className="h-5 w-5" />
               <span className="text-xs">Analytics</span>
             </button>
             <button
-              className={`nav-item ${activeTab === "stores" ? "active" : ""}`}
+              className={`flex flex-col items-center ${activeTab === "stores" ? "text-primary" : "text-muted-foreground"}`}
               onClick={() => handleTabChange("stores")}
             >
               <ShoppingBag className="h-5 w-5" />
               <span className="text-xs">Магазины</span>
             </button>
             <button
-              className={`nav-item ${activeTab === "profile" ? "active" : ""}`}
+              className={`flex flex-col items-center ${activeTab === "profile" ? "text-primary" : "text-muted-foreground"}`}
               onClick={() => handleTabChange("profile")}
             >
               <User className="h-5 w-5" />
