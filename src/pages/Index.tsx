@@ -122,7 +122,7 @@ const returnsTableData = [
 ];
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState("home");
+  const [activeTab, setActiveTab] = useState("stores"); // Changed default to stores
   const [showCalculator, setShowCalculator] = useState(false);
   const isMobile = useIsMobile();
   const { toast } = useToast();
@@ -378,15 +378,27 @@ const Index = () => {
                 <h1 className="text-2xl font-bold">Zerofy</h1>
               </div>
               <nav className="hidden md:flex space-x-6">
-                <Button variant="ghost" onClick={() => handleTabChange("home")}>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => handleTabChange("home")}
+                  className={activeTab === "home" ? "bg-accent" : ""}
+                >
                   <Home className="mr-2 h-4 w-4" />
                   Dashboard
                 </Button>
-                <Button variant="ghost" onClick={() => handleTabChange("analytics")}>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => handleTabChange("analytics")}
+                  className={activeTab === "analytics" ? "bg-accent" : ""}
+                >
                   <BarChart2 className="mr-2 h-4 w-4" />
                   Analytics
                 </Button>
-                <Button variant="ghost" onClick={() => handleTabChange("stores")}>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => handleTabChange("stores")}
+                  className={activeTab === "stores" ? "bg-accent" : ""}
+                >
                   <ShoppingBag className="mr-2 h-4 w-4" />
                   Магазины
                 </Button>
@@ -457,28 +469,28 @@ const Index = () => {
         <nav className="fixed bottom-0 left-0 right-0 border-t bg-background/80 backdrop-blur">
           <div className="container flex items-center justify-around py-2">
             <button
-              className={`nav-item ${activeTab === "home" ? "active" : ""}`}
+              className={`flex flex-col items-center space-y-1 ${activeTab === "home" ? "text-primary" : "text-muted-foreground"}`}
               onClick={() => handleTabChange("home")}
             >
               <Home className="h-5 w-5" />
               <span className="text-xs">Home</span>
             </button>
             <button
-              className={`nav-item ${activeTab === "analytics" ? "active" : ""}`}
+              className={`flex flex-col items-center space-y-1 ${activeTab === "analytics" ? "text-primary" : "text-muted-foreground"}`}
               onClick={() => handleTabChange("analytics")}
             >
               <BarChart2 className="h-5 w-5" />
               <span className="text-xs">Analytics</span>
             </button>
             <button
-              className={`nav-item ${activeTab === "stores" ? "active" : ""}`}
+              className={`flex flex-col items-center space-y-1 ${activeTab === "stores" ? "text-primary" : "text-muted-foreground"}`}
               onClick={() => handleTabChange("stores")}
             >
               <ShoppingBag className="h-5 w-5" />
               <span className="text-xs">Магазины</span>
             </button>
             <button
-              className={`nav-item ${activeTab === "profile" ? "active" : ""}`}
+              className={`flex flex-col items-center space-y-1 ${activeTab === "profile" ? "text-primary" : "text-muted-foreground"}`}
               onClick={() => handleTabChange("profile")}
             >
               <User className="h-5 w-5" />
