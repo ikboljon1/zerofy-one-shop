@@ -23,6 +23,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import Stats from "@/components/Stats";
 import Chart from "@/components/Chart";
 import Products from "@/components/Products";
+import Stores from "@/components/Stores";
 import CalculatorModal from "@/components/CalculatorModal";
 import {
   DropdownMenu,
@@ -439,6 +440,15 @@ const Index = () => {
             transition={{ duration: 0.3 }}
           >
             {renderAnalytics()}
+          </motion.div>
+        )}
+        {activeTab === "stores" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Stores />
           </motion.div>
         )}
       </main>
