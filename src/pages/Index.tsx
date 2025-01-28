@@ -49,6 +49,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import Profile from "@/components/Profile";
 
 const salesData = [
   { name: "Jan", value: 300000 },
@@ -402,6 +403,14 @@ const Index = () => {
                   <ShoppingBag className="mr-2 h-4 w-4" />
                   Магазины
                 </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => handleTabChange("profile")}
+                  className={activeTab === "profile" ? "bg-accent" : ""}
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  Профиль
+                </Button>
               </nav>
             </div>
             <div className="flex items-center space-x-4">
@@ -461,6 +470,15 @@ const Index = () => {
             transition={{ duration: 0.3 }}
           >
             <Stores />
+          </motion.div>
+        )}
+        {activeTab === "profile" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Profile />
           </motion.div>
         )}
       </main>
