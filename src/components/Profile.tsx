@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 import {
   CreditCard,
   History,
@@ -12,12 +13,15 @@ import {
   Mail,
   Phone,
   Building,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState("profile");
   const isMobile = useIsMobile();
+  const { toast } = useToast();
 
   // Моковые данные для демонстрации
   const userData = {
@@ -74,6 +78,20 @@ const Profile = () => {
       ],
     },
   ];
+
+  const handleAddCard = () => {
+    toast({
+      title: "Добавление карты",
+      description: "Функция добавления карты будет доступна в ближайшее время",
+    });
+  };
+
+  const handleDeleteCard = () => {
+    toast({
+      title: "Удаление карты",
+      description: "Карта успешно удалена",
+    });
+  };
 
   return (
     <div className="container mx-auto p-4 md:p-6 max-w-5xl">
@@ -181,7 +199,10 @@ const Profile = () => {
                       </li>
                     ))}
                   </ul>
-                  <Button className="w-full mt-6" variant={plan.name === userData.subscription ? "outline" : "default"}>
+                  <Button 
+                    className="w-full mt-6" 
+                    variant={plan.name === userData.subscription ? "outline" : "default"}
+                  >
                     {plan.name === userData.subscription ? "Текущий тариф" : "Выбрать"}
                   </Button>
                 </CardContent>
@@ -196,20 +217,37 @@ const Profile = () => {
               <CardTitle>Способы оплаты</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="border rounded-lg p-4 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
-                <div className="flex items-center gap-4">
-                  <CreditCard className="h-6 w-6" />
-                  <div>
-                    <p className="font-medium">•••• •••• •••• 4242</p>
-                    <p className="text-sm text-muted-foreground">
-                      Истекает 12/24
-                    </p>
+              <div className="grid gap-4">
+                <div className="bg-card rounded-lg p-4 border">
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <CreditCard className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium">•••• •••• •••• 4242</p>
+                        <p className="text-sm text-muted-foreground">
+                          Истекает 12/24
+                        </p>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="w-full md:w-auto flex items-center gap-2"
+                      onClick={handleDeleteCard}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span>Удалить</span>
+                    </Button>
                   </div>
                 </div>
-                <Button variant="outline" className="w-full md:w-auto">Удалить</Button>
               </div>
-              <Button className="w-full">
-                <CreditCard className="mr-2 h-4 w-4" />
+              <Button 
+                className="w-full flex items-center justify-center gap-2"
+                onClick={handleAddCard}
+              >
+                <Plus className="h-4 w-4" />
                 Добавить карту
               </Button>
             </CardContent>
@@ -226,17 +264,21 @@ const Profile = () => {
                 {paymentHistory.map((payment) => (
                   <div
                     key={payment.id}
-                    className="flex flex-col md:flex-row md:items-center justify-between border-b py-4 last:border-0 space-y-2 md:space-y-0"
+                    className="bg-card rounded-lg p-4 border"
                   >
-                    <div>
-                      <p className="font-medium">{payment.description}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {payment.date}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="font-medium">{payment.amount}</span>
-                      <span className="text-green-500">{payment.status}</span>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                      <div className="space-y-1">
+                        <p className="font-medium">{payment.description}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {payment.date}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="font-medium">{payment.amount}</span>
+                        <span className="text-green-500 bg-green-500/10 px-2 py-1 rounded-full text-sm">
+                          {payment.status}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}
