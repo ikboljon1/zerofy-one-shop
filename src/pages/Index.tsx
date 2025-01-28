@@ -128,6 +128,8 @@ const Index = () => {
   const renderAnalytics = () => (
     <Card className="p-6">
       <h2 className="text-xl font-semibold mb-6">Общий анализ продаж</h2>
+      
+      {/* Existing analytics cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card className="p-4 border-l-4 border-l-green-500">
           <div className="flex justify-between items-start mb-2">
@@ -192,9 +194,9 @@ const Index = () => {
             По сравнению с прошлым месяцем
           </p>
         </Card>
-      </div>
 
       <div className="space-y-6">
+        {/* Sales Trend */}
         <Card className="p-4">
           <h3 className="text-lg font-semibold mb-4">График динамики продаж</h3>
           <div className="h-[300px]">
@@ -215,10 +217,9 @@ const Index = () => {
           </div>
         </Card>
 
+        {/* Returns Analysis */}
         <Card className="p-4">
-          <h3 className="text-lg font-semibold mb-4">
-            График динамики возвратов
-          </h3>
+          <h3 className="text-lg font-semibold mb-4">Анализ возвратов</h3>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={returnsData}>
@@ -237,10 +238,43 @@ const Index = () => {
           </div>
         </Card>
 
+        {/* Returns Table */}
         <Card className="p-4">
-          <h3 className="text-lg font-semibold mb-4">
-            График динамики прибыли
-          </h3>
+          <h3 className="text-lg font-semibold mb-4">Таблица возвратов по товарам</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2">Название товара</th>
+                  <th className="text-left p-2">Артикул</th>
+                  <th className="text-right p-2">Количество заказов</th>
+                  <th className="text-right p-2">Количество возвратов</th>
+                  <th className="text-right p-2">Процент возврата</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b">
+                  <td className="p-2">Product 1</td>
+                  <td className="p-2">SKU12345</td>
+                  <td className="text-right p-2">120</td>
+                  <td className="text-right p-2">10</td>
+                  <td className="text-right p-2">8.33%</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="p-2">Product 2</td>
+                  <td className="p-2">SKU67890</td>
+                  <td className="text-right p-2">60</td>
+                  <td className="text-right p-2">5</td>
+                  <td className="text-right p-2">8.33%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        {/* Profit Analysis */}
+        <Card className="p-4">
+          <h3 className="text-lg font-semibold mb-4">График динамики прибыли</h3>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={profitData}>
@@ -259,41 +293,26 @@ const Index = () => {
           </div>
         </Card>
 
+        {/* Profit Table */}
         <Card className="p-4">
-          <h3 className="text-lg font-semibold mb-4">
-            Анализ продаж по товарам
-          </h3>
+          <h3 className="text-lg font-semibold mb-4">Таблица прибыльности по товарам</h3>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-2">Название товара</th>
-                  <th className="text-left p-2">Артикул</th>
-                  <th className="text-right p-2">Количество</th>
-                  <th className="text-right p-2">Сумма продаж</th>
-                  <th className="text-right p-2">Средняя цена</th>
+                  <th className="text-left p-2">Товар</th>
                   <th className="text-right p-2">Прибыль</th>
-                  <th className="text-right p-2">Рентабельность</th>
-                  <th className="text-right p-2">Заказы</th>
-                  <th className="text-right p-2">Возвраты</th>
-                  <th className="text-right p-2">% возврата</th>
                 </tr>
               </thead>
               <tbody>
-                {salesTableData.map((item, index) => (
-                  <tr key={index} className="border-b">
-                    <td className="p-2">{item.name}</td>
-                    <td className="p-2">{item.sku}</td>
-                    <td className="text-right p-2">{item.quantity}</td>
-                    <td className="text-right p-2">${item.sales}</td>
-                    <td className="text-right p-2">${item.avgPrice}</td>
-                    <td className="text-right p-2">${item.profit}</td>
-                    <td className="text-right p-2">{item.profitMargin}</td>
-                    <td className="text-right p-2">{item.orders}</td>
-                    <td className="text-right p-2">{item.returns}</td>
-                    <td className="text-right p-2">{item.returnRate}</td>
-                  </tr>
-                ))}
+                <tr className="border-b">
+                  <td className="p-2">Product 1</td>
+                  <td className="text-right p-2">$2,000</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="p-2">Product 2</td>
+                  <td className="text-right p-2">$1,000</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -336,28 +355,10 @@ const Index = () => {
                   <BarChart2 className="mr-2 h-4 w-4" />
                   Analytics
                 </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost">
-                      <Package className="mr-2 h-4 w-4" />
-                      Products
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    {productSubMenu.map((item) => (
-                      <DropdownMenuItem key={item.value} onClick={() => handleTabChange(item.value)}>
-                        <item.icon className="mr-2 h-4 w-4" />
-                        {item.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                {productSubMenu.map((item) => (
-                  <Button key={item.value} variant="ghost" onClick={() => handleTabChange(item.value)}>
-                    <item.icon className="mr-2 h-4 w-4" />
-                    {item.label}
-                  </Button>
-                ))}
+                <Button variant="ghost" onClick={() => handleTabChange("stores")}>
+                  <ShoppingBag className="mr-2 h-4 w-4" />
+                  Магазины
+                </Button>
               </nav>
             </div>
             <div className="flex items-center space-x-4">
@@ -410,12 +411,6 @@ const Index = () => {
             {renderAnalytics()}
           </motion.div>
         )}
-        {activeTab === "products" && (
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold">Products</h2>
-            {/* Add products content */}
-          </div>
-        )}
       </main>
 
       {isMobile && (
@@ -435,22 +430,6 @@ const Index = () => {
               <BarChart2 className="h-5 w-5" />
               <span className="text-xs">Analytics</span>
             </button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className={`nav-item ${productSubMenu.some(item => activeTab === item.value) ? "active" : ""}`}>
-                  <Package className="h-5 w-5" />
-                  <span className="text-xs">Products</span>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                {productSubMenu.map((item) => (
-                  <DropdownMenuItem key={item.value} onClick={() => handleTabChange(item.value)}>
-                    <item.icon className="mr-2 h-4 w-4" />
-                    {item.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
             <button
               className={`nav-item ${activeTab === "stores" ? "active" : ""}`}
               onClick={() => handleTabChange("stores")}
@@ -459,7 +438,7 @@ const Index = () => {
               <span className="text-xs">Магазины</span>
             </button>
             <button
-              className={`nav-item ${profileMenu.some(item => activeTab === item.value) ? "active" : ""}`}
+              className={`nav-item ${activeTab === "profile" ? "active" : ""}`}
               onClick={() => handleTabChange("profile")}
             >
               <User className="h-5 w-5" />
