@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type Marketplace = "Wildberries" | "Ozon" | "Yandexmarket" | "Uzum";
 
@@ -27,6 +28,7 @@ interface Store {
   marketplace: Marketplace;
   name: string;
   apiKey: string;
+  isSelected?: boolean;
 }
 
 const marketplaces: Marketplace[] = ["Wildberries", "Ozon", "Yandexmarket", "Uzum"];
@@ -52,6 +54,7 @@ export default function Stores() {
       marketplace: newStore.marketplace as Marketplace,
       name: newStore.name,
       apiKey: newStore.apiKey,
+      isSelected: false,
     };
 
     setStores([...stores, store]);
@@ -62,6 +65,17 @@ export default function Stores() {
       description: "Магазин успешно добавлен",
     });
   };
+
+  const toggleStoreSelection = (storeId: string) => {
+    setStores(stores.map(store => 
+      store.id === storeId 
+        ? { ...store, isSelected: !store.isSelected }
+        : store
+    ));
+  };
+
+  const selectedStores = stores.filter(store => store.isSelected);
+  const displayStores = selectedStores.length > 0 ? selectedStores : stores;
 
   return (
     <div className="space-y-6">
@@ -138,10 +152,17 @@ export default function Stores() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {stores.map((store) => (
-            <Card key={store.id}>
+          {displayStores.map((store) => (
+            <Card key={store.id} className={store.isSelected ? "border-primary" : ""}>
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-medium">{store.name}</CardTitle>
+                <div className="flex justify-between items-start">
+                  <CardTitle className="text-lg font-medium">{store.name}</CardTitle>
+                  <Checkbox
+                    checked={store.isSelected}
+                    onCheckedChange={() => toggleStoreSelection(store.id)}
+                    className="mt-1"
+                  />
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 text-sm">
