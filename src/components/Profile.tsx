@@ -15,11 +15,17 @@ import {
   Building,
   Plus,
   Trash2,
+  CheckCircle2,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState("profile");
+  const [selectedPlan, setSelectedPlan] = useState("Бизнес");
+  const [isAddingCard, setIsAddingCard] = useState(false);
+  const [cardNumber, setCardNumber] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+  const [cvv, setCvv] = useState("");
   const isMobile = useIsMobile();
   const { toast } = useToast();
 
@@ -79,11 +85,37 @@ const Profile = () => {
     },
   ];
 
-  const handleAddCard = () => {
+  const handleSelectPlan = (planName: string) => {
+    setSelectedPlan(planName);
     toast({
-      title: "Добавление карты",
-      description: "Функция добавления карты будет доступна в ближайшее время",
+      title: "Подписка выбрана",
+      description: `Вы выбрали тариф ${planName}`,
     });
+  };
+
+  const handleAddCard = () => {
+    if (isAddingCard) {
+      if (!cardNumber || !expiryDate || !cvv) {
+        toast({
+          title: "Ошибка",
+          description: "Пожалуйста, заполните все поля карты",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Here you would typically make an API call to process the card
+      toast({
+        title: "Карта добавлена",
+        description: "Ваша карта успешно добавлена",
+      });
+      setIsAddingCard(false);
+      setCardNumber("");
+      setExpiryDate("");
+      setCvv("");
+    } else {
+      setIsAddingCard(true);
+    }
   };
 
   const handleDeleteCard = () => {
@@ -178,14 +210,17 @@ const Profile = () => {
         <TabsContent value="subscription">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {subscriptionPlans.map((plan) => (
-              <Card key={plan.name} className="relative hover:shadow-lg transition-shadow duration-300">
+              <Card 
+                key={plan.name} 
+                className={`relative hover:shadow-lg transition-shadow duration-300 ${
+                  selectedPlan === plan.name ? 'border-primary' : ''
+                }`}
+              >
                 <CardHeader>
                   <CardTitle className="flex justify-between items-start">
                     <span>{plan.name}</span>
-                    {plan.name === userData.subscription && (
-                      <span className="bg-green-500 text-white px-2 py-1 rounded-full text-xs">
-                        Активен
-                      </span>
+                    {selectedPlan === plan.name && (
+                      <CheckCircle2 className="h-5 w-5 text-primary" />
                     )}
                   </CardTitle>
                   <p className="text-2xl font-bold">{plan.price}</p>
@@ -201,9 +236,10 @@ const Profile = () => {
                   </ul>
                   <Button 
                     className="w-full mt-6" 
-                    variant={plan.name === userData.subscription ? "outline" : "default"}
+                    variant={selectedPlan === plan.name ? "secondary" : "default"}
+                    onClick={() => handleSelectPlan(plan.name)}
                   >
-                    {plan.name === userData.subscription ? "Текущий тариф" : "Выбрать"}
+                    {selectedPlan === plan.name ? "Выбрано" : "Выбрать"}
                   </Button>
                 </CardContent>
               </Card>
@@ -217,38 +253,80 @@ const Profile = () => {
               <CardTitle>Способы оплаты</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4">
-                <div className="bg-card rounded-lg p-4 border hover:border-primary transition-colors">
-                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                        <CreditCard className="h-6 w-6 text-primary" />
+              {!isAddingCard ? (
+                <div className="grid gap-4">
+                  <div className="bg-card rounded-lg p-4 border hover:border-primary transition-colors">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                          <CreditCard className="h-6 w-6 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium">•••• •••• •••• 4242</p>
+                          <p className="text-sm text-muted-foreground">
+                            Истекает 12/24
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium">•••• •••• •••• 4242</p>
-                        <p className="text-sm text-muted-foreground">
-                          Истекает 12/24
-                        </p>
-                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="w-full md:w-auto flex items-center gap-2 hover:bg-destructive hover:text-destructive-foreground"
+                        onClick={handleDeleteCard}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span>Удалить</span>
+                      </Button>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="w-full md:w-auto flex items-center gap-2 hover:bg-destructive hover:text-destructive-foreground"
-                      onClick={handleDeleteCard}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span>Удалить</span>
-                    </Button>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="cardNumber">Номер карты</Label>
+                    <Input
+                      id="cardNumber"
+                      placeholder="1234 5678 9012 3456"
+                      value={cardNumber}
+                      onChange={(e) => setCardNumber(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="expiryDate">Срок действия</Label>
+                      <Input
+                        id="expiryDate"
+                        placeholder="MM/YY"
+                        value={expiryDate}
+                        onChange={(e) => setExpiryDate(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cvv">CVV</Label>
+                      <Input
+                        id="cvv"
+                        type="password"
+                        maxLength={3}
+                        placeholder="123"
+                        value={cvv}
+                        onChange={(e) => setCvv(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
               <Button 
                 className="w-full flex items-center justify-center gap-2 hover:bg-primary/90"
                 onClick={handleAddCard}
               >
-                <Plus className="h-4 w-4" />
-                Добавить карту
+                {isAddingCard ? (
+                  "Сохранить карту"
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4" />
+                    Добавить карту
+                  </>
+                )}
               </Button>
             </CardContent>
           </Card>
