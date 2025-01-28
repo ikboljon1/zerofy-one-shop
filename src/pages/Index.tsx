@@ -113,78 +113,89 @@ const Index = () => {
     });
   };
 
+  const productSubMenu = [
+    { icon: ShoppingBag, label: "Магазины", value: "stores" },
+    { icon: FileText, label: "Отчеты", value: "reports" },
+    { icon: Sticker, label: "Наклейки", value: "stickers" },
+  ];
+
+  const profileMenu = [
+    { icon: CreditCard, label: "История платежей", value: "payment-history" },
+    { icon: User, label: "Профиль", value: "profile" },
+    { icon: DollarSign, label: "Тарифы", value: "rates" },
+  ];
+
   const renderAnalytics = () => (
-    <div className="space-y-6">
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-6">Общий анализ продаж</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Card className="p-4 border-l-4 border-l-green-500">
-            <div className="flex justify-between items-start mb-2">
-              <DollarSign className="h-5 w-5 text-green-500" />
-              <div className="flex items-center text-green-500">
-                <ArrowUp className="h-4 w-4 mr-1" />
-                <span>8.35%</span>
-              </div>
+    <Card className="p-6">
+      <h2 className="text-xl font-semibold mb-6">Общий анализ продаж</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <Card className="p-4 border-l-4 border-l-green-500">
+          <div className="flex justify-between items-start mb-2">
+            <DollarSign className="h-5 w-5 text-green-500" />
+            <div className="flex items-center text-green-500">
+              <ArrowUp className="h-4 w-4 mr-1" />
+              <span>8.35%</span>
             </div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">
-              Общий объем продаж
-            </h3>
-            <p className="text-2xl font-bold">$348,261</p>
-            <p className="text-sm text-muted-foreground">
-              По сравнению с прошлым месяцем
-            </p>
-          </Card>
+          </div>
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">
+            Общий объем продаж
+          </h3>
+          <p className="text-2xl font-bold">$348,261</p>
+          <p className="text-sm text-muted-foreground">
+            По сравнению с прошлым месяцем
+          </p>
+        </Card>
 
-          <Card className="p-4 border-l-4 border-l-blue-500">
-            <div className="flex justify-between items-start mb-2">
-              <ShoppingBag className="h-5 w-5 text-blue-500" />
-              <div className="flex items-center text-green-500">
-                <ArrowUp className="h-4 w-4 mr-1" />
-                <span>5.25%</span>
-              </div>
+        <Card className="p-4 border-l-4 border-l-blue-500">
+          <div className="flex justify-between items-start mb-2">
+            <ShoppingBag className="h-5 w-5 text-blue-500" />
+            <div className="flex items-center text-green-500">
+              <ArrowUp className="h-4 w-4 mr-1" />
+              <span>5.25%</span>
             </div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">
-              Количество заказов
-            </h3>
-            <p className="text-2xl font-bold">1,200</p>
-            <p className="text-sm text-muted-foreground">
-              По сравнению с прошлым месяцем
-            </p>
-          </Card>
+          </div>
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">
+            Количество заказов
+          </h3>
+          <p className="text-2xl font-bold">1,200</p>
+          <p className="text-sm text-muted-foreground">
+            По сравнению с прошлым месяцем
+          </p>
+        </Card>
 
-          <Card className="p-4 border-l-4 border-l-red-500">
-            <div className="flex justify-between items-start mb-2">
-              <Package className="h-5 w-5 text-red-500" />
-              <div className="flex items-center text-red-500">
-                <ArrowDown className="h-4 w-4 mr-1" />
-                <span>2.75%</span>
-              </div>
+        <Card className="p-4 border-l-4 border-l-red-500">
+          <div className="flex justify-between items-start mb-2">
+            <Package className="h-5 w-5 text-red-500" />
+            <div className="flex items-center text-red-500">
+              <ArrowDown className="h-4 w-4 mr-1" />
+              <span>2.75%</span>
             </div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">
-              Количество возвратов
-            </h3>
-            <p className="text-2xl font-bold">150</p>
-            <p className="text-sm text-muted-foreground">
-              По сравнению с прошлым месяцем
-            </p>
-          </Card>
+          </div>
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">
+            Количество возвратов
+          </h3>
+          <p className="text-2xl font-bold">150</p>
+          <p className="text-sm text-muted-foreground">
+            По сравнению с прошлым месяцем
+          </p>
+        </Card>
 
-          <Card className="p-4 border-l-4 border-l-purple-500">
-            <div className="flex justify-between items-start mb-2">
-              <BarChart2 className="h-5 w-5 text-purple-500" />
-            </div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">
-              Процент возврата
-            </h3>
-            <p className="text-2xl font-bold">12.5%</p>
-            <p className="text-sm text-muted-foreground">
-              По сравнению с прошлым месяцем
-            </p>
-          </Card>
-        </div>
+        <Card className="p-4 border-l-4 border-l-purple-500">
+          <div className="flex justify-between items-start mb-2">
+            <BarChart2 className="h-5 w-5 text-purple-500" />
+          </div>
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">
+            Процент возврата
+          </h3>
+          <p className="text-2xl font-bold">12.5%</p>
+          <p className="text-sm text-muted-foreground">
+            По сравнению с прошлым месяцем
+          </p>
+        </Card>
+      </div>
 
-        {/* Sales Trend */}
-        <Card className="p-4 mb-6">
+      <div className="space-y-6">
+        <Card className="p-4">
           <h3 className="text-lg font-semibold mb-4">График динамики продаж</h3>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -204,9 +215,10 @@ const Index = () => {
           </div>
         </Card>
 
-        {/* Returns Analysis */}
-        <Card className="p-4 mb-6">
-          <h3 className="text-lg font-semibold mb-4">Анализ возвратов</h3>
+        <Card className="p-4">
+          <h3 className="text-lg font-semibold mb-4">
+            График динамики возвратов
+          </h3>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={returnsData}>
@@ -225,38 +237,10 @@ const Index = () => {
           </div>
         </Card>
 
-        {/* Returns Table */}
-        <Card className="p-4 mb-6">
-          <h3 className="text-lg font-semibold mb-4">Таблица возвратов по товарам</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2">Название товара</th>
-                  <th className="text-left p-2">Артикул</th>
-                  <th className="text-right p-2">Количество заказов</th>
-                  <th className="text-right p-2">Количество возвратов</th>
-                  <th className="text-right p-2">Процент возврата</th>
-                </tr>
-              </thead>
-              <tbody>
-                {salesTableData.map((item) => (
-                  <tr key={item.sku} className="border-b">
-                    <td className="p-2">{item.name}</td>
-                    <td className="p-2">{item.sku}</td>
-                    <td className="text-right p-2">{item.orders}</td>
-                    <td className="text-right p-2">{item.returns}</td>
-                    <td className="text-right p-2">{item.returnRate}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-
-        {/* Profit Analysis */}
-        <Card className="p-4 mb-6">
-          <h3 className="text-lg font-semibold mb-4">График динамики прибыли</h3>
+        <Card className="p-4">
+          <h3 className="text-lg font-semibold mb-4">
+            График динамики прибыли
+          </h3>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={profitData}>
@@ -275,30 +259,47 @@ const Index = () => {
           </div>
         </Card>
 
-        {/* Profit Table */}
         <Card className="p-4">
-          <h3 className="text-lg font-semibold mb-4">Таблица прибыльности по товарам</h3>
+          <h3 className="text-lg font-semibold mb-4">
+            Анализ продаж по товарам
+          </h3>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-2">Товар</th>
+                  <th className="text-left p-2">Название товара</th>
+                  <th className="text-left p-2">Артикул</th>
+                  <th className="text-right p-2">Количество</th>
+                  <th className="text-right p-2">Сумма продаж</th>
+                  <th className="text-right p-2">Средняя цена</th>
                   <th className="text-right p-2">Прибыль</th>
+                  <th className="text-right p-2">Рентабельность</th>
+                  <th className="text-right p-2">Заказы</th>
+                  <th className="text-right p-2">Возвраты</th>
+                  <th className="text-right p-2">% возврата</th>
                 </tr>
               </thead>
               <tbody>
-                {salesTableData.map((item) => (
-                  <tr key={item.sku} className="border-b">
+                {salesTableData.map((item, index) => (
+                  <tr key={index} className="border-b">
                     <td className="p-2">{item.name}</td>
+                    <td className="p-2">{item.sku}</td>
+                    <td className="text-right p-2">{item.quantity}</td>
+                    <td className="text-right p-2">${item.sales}</td>
+                    <td className="text-right p-2">${item.avgPrice}</td>
                     <td className="text-right p-2">${item.profit}</td>
+                    <td className="text-right p-2">{item.profitMargin}</td>
+                    <td className="text-right p-2">{item.orders}</td>
+                    <td className="text-right p-2">{item.returns}</td>
+                    <td className="text-right p-2">{item.returnRate}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </Card>
-      </Card>
-    </div>
+      </div>
+    </Card>
   );
 
   return (
@@ -335,10 +336,28 @@ const Index = () => {
                   <BarChart2 className="mr-2 h-4 w-4" />
                   Analytics
                 </Button>
-                <Button variant="ghost" onClick={() => handleTabChange("stores")}>
-                  <ShoppingBag className="mr-2 h-4 w-4" />
-                  Магазины
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost">
+                      <Package className="mr-2 h-4 w-4" />
+                      Products
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {productSubMenu.map((item) => (
+                      <DropdownMenuItem key={item.value} onClick={() => handleTabChange(item.value)}>
+                        <item.icon className="mr-2 h-4 w-4" />
+                        {item.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {productSubMenu.map((item) => (
+                  <Button key={item.value} variant="ghost" onClick={() => handleTabChange(item.value)}>
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {item.label}
+                  </Button>
+                ))}
               </nav>
             </div>
             <div className="flex items-center space-x-4">
@@ -356,18 +375,12 @@ const Index = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleTabChange("payment-history")}>
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    История платежей
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleTabChange("profile")}>
-                    <User className="mr-2 h-4 w-4" />
-                    Профиль
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleTabChange("rates")}>
-                    <DollarSign className="mr-2 h-4 w-4" />
-                    Тарифы
-                  </DropdownMenuItem>
+                  {profileMenu.map((item) => (
+                    <DropdownMenuItem key={item.value} onClick={() => handleTabChange(item.value)}>
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {item.label}
+                    </DropdownMenuItem>
+                  ))}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -397,34 +410,56 @@ const Index = () => {
             {renderAnalytics()}
           </motion.div>
         )}
+        {activeTab === "products" && (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold">Products</h2>
+            {/* Add products content */}
+          </div>
+        )}
       </main>
 
       {isMobile && (
         <nav className="fixed bottom-0 left-0 right-0 border-t bg-background/80 backdrop-blur">
           <div className="container flex items-center justify-around py-2">
             <button
-              className={`flex flex-col items-center ${activeTab === "home" ? "text-primary" : "text-muted-foreground"}`}
+              className={`nav-item ${activeTab === "home" ? "active" : ""}`}
               onClick={() => handleTabChange("home")}
             >
               <Home className="h-5 w-5" />
               <span className="text-xs">Home</span>
             </button>
             <button
-              className={`flex flex-col items-center ${activeTab === "analytics" ? "text-primary" : "text-muted-foreground"}`}
+              className={`nav-item ${activeTab === "analytics" ? "active" : ""}`}
               onClick={() => handleTabChange("analytics")}
             >
               <BarChart2 className="h-5 w-5" />
               <span className="text-xs">Analytics</span>
             </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className={`nav-item ${productSubMenu.some(item => activeTab === item.value) ? "active" : ""}`}>
+                  <Package className="h-5 w-5" />
+                  <span className="text-xs">Products</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {productSubMenu.map((item) => (
+                  <DropdownMenuItem key={item.value} onClick={() => handleTabChange(item.value)}>
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {item.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <button
-              className={`flex flex-col items-center ${activeTab === "stores" ? "text-primary" : "text-muted-foreground"}`}
+              className={`nav-item ${activeTab === "stores" ? "active" : ""}`}
               onClick={() => handleTabChange("stores")}
             >
               <ShoppingBag className="h-5 w-5" />
               <span className="text-xs">Магазины</span>
             </button>
             <button
-              className={`flex flex-col items-center ${activeTab === "profile" ? "text-primary" : "text-muted-foreground"}`}
+              className={`nav-item ${profileMenu.some(item => activeTab === item.value) ? "active" : ""}`}
               onClick={() => handleTabChange("profile")}
             >
               <User className="h-5 w-5" />
