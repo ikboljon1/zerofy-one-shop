@@ -103,6 +103,23 @@ const salesTableData = [
   },
 ];
 
+const returnsTableData = [
+  {
+    name: "Product 1",
+    sku: "SKU12345",
+    orders: 120,
+    returns: 10,
+    returnRate: "8.33%"
+  },
+  {
+    name: "Product 2",
+    sku: "SKU67890",
+    orders: 60,
+    returns: 5,
+    returnRate: "8.33%"
+  }
+];
+
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
   const [showCalculator, setShowCalculator] = useState(false);
@@ -135,7 +152,6 @@ const Index = () => {
       <h2 className="text-xl font-semibold mb-6">Общий анализ продаж</h2>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        {/* First row */}
         <div className="grid grid-cols-2 gap-4">
           <Card className="p-4 border-l-4 border-l-green-500">
             <div className="flex justify-between items-start mb-2">
@@ -149,9 +165,6 @@ const Index = () => {
               Общий объем продаж
             </h3>
             <p className="text-2xl font-bold">$348,261</p>
-            <p className="text-sm text-muted-foreground">
-              По сравнению с прошлым месяцем
-            </p>
           </Card>
 
           <Card className="p-4 border-l-4 border-l-blue-500">
@@ -166,13 +179,9 @@ const Index = () => {
               Количество заказов
             </h3>
             <p className="text-2xl font-bold">1,200</p>
-            <p className="text-sm text-muted-foreground">
-              По сравнению с прошлым месяцем
-            </p>
           </Card>
         </div>
 
-        {/* Second row */}
         <div className="grid grid-cols-2 gap-4">
           <Card className="p-4 border-l-4 border-l-red-500">
             <div className="flex justify-between items-start mb-2">
@@ -186,9 +195,6 @@ const Index = () => {
               Количество возвратов
             </h3>
             <p className="text-2xl font-bold">150</p>
-            <p className="text-sm text-muted-foreground">
-              По сравнению с прошлым месяцем
-            </p>
           </Card>
 
           <Card className="p-4 border-l-4 border-l-purple-500">
@@ -199,17 +205,13 @@ const Index = () => {
               Процент возврата
             </h3>
             <p className="text-2xl font-bold">12.5%</p>
-            <p className="text-sm text-muted-foreground">
-              По сравнению с прошлым месяцем
-            </p>
           </Card>
         </div>
       </div>
 
-      {/* Product Sales Analysis */}
       <Card className="p-4 mt-6">
         <h3 className="text-lg font-semibold mb-4">Анализ продаж по товарам</h3>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto scrollbar-hide">
           <table className="w-full">
             <thead>
               <tr className="border-b">
@@ -235,6 +237,34 @@ const Index = () => {
                   <td className="text-right p-2">${item.avgPrice}</td>
                   <td className="text-right p-2">${item.profit}</td>
                   <td className="text-right p-2">{item.profitMargin}</td>
+                  <td className="text-right p-2">{item.orders}</td>
+                  <td className="text-right p-2">{item.returns}</td>
+                  <td className="text-right p-2">{item.returnRate}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <Card className="p-4 mt-6">
+        <h3 className="text-lg font-semibold mb-4">Таблица возвратов по товарам</h3>
+        <div className="overflow-x-auto scrollbar-hide">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left p-2">Название товара</th>
+                <th className="text-left p-2">Артикул</th>
+                <th className="text-right p-2">Количество заказов</th>
+                <th className="text-right p-2">Количество возвратов</th>
+                <th className="text-right p-2">Процент возврата</th>
+              </tr>
+            </thead>
+            <tbody>
+              {returnsTableData.map((item, index) => (
+                <tr key={index} className="border-b">
+                  <td className="p-2">{item.name}</td>
+                  <td className="p-2">{item.sku}</td>
                   <td className="text-right p-2">{item.orders}</td>
                   <td className="text-right p-2">{item.returns}</td>
                   <td className="text-right p-2">{item.returnRate}</td>
