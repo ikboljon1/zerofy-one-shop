@@ -98,7 +98,7 @@ const Profile = () => {
       <h1 className="text-2xl md:text-3xl font-bold mb-6">Профиль</h1>
       
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className={`grid ${isMobile ? 'grid-cols-2 gap-2' : 'grid-cols-4 gap-4'} w-full mb-6`}>
+        <TabsList className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 w-full">
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             <span className={isMobile ? 'text-sm' : ''}>Профиль</span>
@@ -176,7 +176,7 @@ const Profile = () => {
         </TabsContent>
 
         <TabsContent value="subscription">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {subscriptionPlans.map((plan) => (
               <Card key={plan.name} className="relative hover:shadow-lg transition-shadow duration-300">
                 <CardHeader>
@@ -218,7 +218,7 @@ const Profile = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4">
-                <div className="bg-card rounded-lg p-4 border">
+                <div className="bg-card rounded-lg p-4 border hover:border-primary transition-colors">
                   <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
@@ -234,7 +234,7 @@ const Profile = () => {
                     <Button 
                       variant="outline" 
                       size="sm"
-                      className="w-full md:w-auto flex items-center gap-2"
+                      className="w-full md:w-auto flex items-center gap-2 hover:bg-destructive hover:text-destructive-foreground"
                       onClick={handleDeleteCard}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -244,7 +244,7 @@ const Profile = () => {
                 </div>
               </div>
               <Button 
-                className="w-full flex items-center justify-center gap-2"
+                className="w-full flex items-center justify-center gap-2 hover:bg-primary/90"
                 onClick={handleAddCard}
               >
                 <Plus className="h-4 w-4" />
@@ -264,7 +264,7 @@ const Profile = () => {
                 {paymentHistory.map((payment) => (
                   <div
                     key={payment.id}
-                    className="bg-card rounded-lg p-4 border"
+                    className="bg-card rounded-lg p-4 border hover:border-primary transition-colors"
                   >
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
                       <div className="space-y-1">
