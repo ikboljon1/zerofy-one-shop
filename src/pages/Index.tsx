@@ -131,7 +131,7 @@ const Index = () => {
   ];
 
   const renderAnalytics = () => (
-    <Card className="p-6">
+    <div className="space-y-6">
       <h2 className="text-xl font-semibold mb-6">Общий анализ продаж</h2>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -226,30 +226,20 @@ const Index = () => {
               </tr>
             </thead>
             <tbody>
-              <tr className="border-b">
-                <td className="p-2">Product 1</td>
-                <td className="p-2">SKU12345</td>
-                <td className="text-right p-2">100</td>
-                <td className="text-right p-2">$10,000</td>
-                <td className="text-right p-2">$100</td>
-                <td className="text-right p-2">$2,000</td>
-                <td className="text-right p-2">20%</td>
-                <td className="text-right p-2">120</td>
-                <td className="text-right p-2">10</td>
-                <td className="text-right p-2">8.33%</td>
-              </tr>
-              <tr className="border-b">
-                <td className="p-2">Product 2</td>
-                <td className="p-2">SKU67890</td>
-                <td className="text-right p-2">50</td>
-                <td className="text-right p-2">$5,000</td>
-                <td className="text-right p-2">$100</td>
-                <td className="text-right p-2">$1,000</td>
-                <td className="text-right p-2">20%</td>
-                <td className="text-right p-2">60</td>
-                <td className="text-right p-2">5</td>
-                <td className="text-right p-2">8.33%</td>
-              </tr>
+              {salesTableData.map((item, index) => (
+                <tr key={index} className="border-b">
+                  <td className="p-2">{item.name}</td>
+                  <td className="p-2">{item.sku}</td>
+                  <td className="text-right p-2">{item.quantity}</td>
+                  <td className="text-right p-2">${item.sales}</td>
+                  <td className="text-right p-2">${item.avgPrice}</td>
+                  <td className="text-right p-2">${item.profit}</td>
+                  <td className="text-right p-2">{item.profitMargin}</td>
+                  <td className="text-right p-2">{item.orders}</td>
+                  <td className="text-right p-2">{item.returns}</td>
+                  <td className="text-right p-2">{item.returnRate}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -328,7 +318,7 @@ const Index = () => {
           </CardContent>
         </Card>
       </div>
-    </Card>
+    </div>
   );
 
   return (
