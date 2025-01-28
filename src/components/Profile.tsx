@@ -16,20 +16,21 @@ import {
   Plus,
   Trash2,
   CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState("profile");
-  const [selectedPlan, setSelectedPlan] = useState("Бизнес");
+  const [selectedPlan, setSelectedPlan] = useState("");
   const [isAddingCard, setIsAddingCard] = useState(false);
   const [cardNumber, setCardNumber] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [cvv, setCvv] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
   const isMobile = useIsMobile();
   const { toast } = useToast();
 
-  // Моковые данные для демонстрации
   const userData = {
     name: "Иван Иванов",
     email: "ivan@example.com",
@@ -93,7 +94,19 @@ const Profile = () => {
     });
   };
 
-  const handleAddCard = () => {
+  const handleProceedToPayment = () => {
+    if (!selectedPlan) {
+      toast({
+        title: "Выберите тариф",
+        description: "Пожалуйста, выберите тариф для продолжения",
+        variant: "destructive",
+      });
+      return;
+    }
+    setActiveTab("payment");
+  };
+
+  const handleAddCard = async () => {
     if (isAddingCard) {
       if (!cardNumber || !expiryDate || !cvv) {
         toast({
@@ -103,33 +116,70 @@ const Profile = () => {
         });
         return;
       }
+
+      setIsProcessing(true);
       
-      // Here you would typically make an API call to process the card
-      toast({
-        title: "Карта добавлена",
-        description: "Ваша карта успешно добавлена",
-      });
-      setIsAddingCard(false);
-      setCardNumber("");
-      setExpiryDate("");
-      setCvv("");
+      try {
+        // Here we'll later integrate with the payment system
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulating API call
+        
+        toast({
+          title: "Карта добавлена",
+          description: "Ваша карта успешно добавлена",
+        });
+        setIsAddingCard(false);
+        setCardNumber("");
+        setExpiryDate("");
+        setCvv("");
+      } catch (error) {
+        toast({
+          title: "Ошибка",
+          description: "Не удалось добавить карту",
+          variant: "destructive",
+        });
+      } finally {
+        setIsProcessing(false);
+      }
     } else {
       setIsAddingCard(true);
     }
   };
 
-  const handleDeleteCard = () => {
-    toast({
-      title: "Удаление карты",
-      description: "Карта успешно удалена",
-    });
+  const handlePayment = async () => {
+    if (!selectedPlan) {
+      toast({
+        title: "Выберите тариф",
+        description: "Пожалуйста, выберите тариф для продолжения",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      // Here we'll later integrate with the payment system
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulating API call
+      
+      toast({
+        title: "Успешно",
+        description: `Подписка ${selectedPlan} успешно оформлена`,
+      });
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось выполнить платеж",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
     <div className="container mx-auto p-4 md:p-6 max-w-5xl">
       <h1 className="text-2xl md:text-3xl font-bold mb-6">Профиль</h1>
       
-      <Tabs defaultValue="profile" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 w-full">
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
@@ -208,42 +258,61 @@ const Profile = () => {
         </TabsContent>
 
         <TabsContent value="subscription">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {subscriptionPlans.map((plan) => (
-              <Card 
-                key={plan.name} 
-                className={`relative hover:shadow-lg transition-shadow duration-300 ${
-                  selectedPlan === plan.name ? 'border-primary' : ''
-                }`}
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {subscriptionPlans.map((plan) => (
+                <Card 
+                  key={plan.name} 
+                  className={`relative hover:shadow-lg transition-shadow duration-300 ${
+                    selectedPlan === plan.name ? 'border-primary' : ''
+                  }`}
+                >
+                  <CardHeader>
+                    <CardTitle className="flex justify-between items-start">
+                      <span>{plan.name}</span>
+                      {selectedPlan === plan.name && (
+                        <CheckCircle2 className="h-5 w-5 text-primary" />
+                      )}
+                    </CardTitle>
+                    <p className="text-2xl font-bold">{plan.price}</p>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {plan.features.map((feature, index) => (
+                        <li key={index} className="flex items-center gap-2 text-sm">
+                          <span className="text-green-500">✓</span>
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button 
+                      className="w-full mt-6" 
+                      variant={selectedPlan === plan.name ? "secondary" : "default"}
+                      onClick={() => handleSelectPlan(plan.name)}
+                    >
+                      {selectedPlan === plan.name ? "Выбрано" : "Выбрать"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <div className="flex justify-center">
+              <Button 
+                size="lg"
+                onClick={handleProceedToPayment}
+                disabled={!selectedPlan || isProcessing}
+                className="w-full md:w-auto"
               >
-                <CardHeader>
-                  <CardTitle className="flex justify-between items-start">
-                    <span>{plan.name}</span>
-                    {selectedPlan === plan.name && (
-                      <CheckCircle2 className="h-5 w-5 text-primary" />
-                    )}
-                  </CardTitle>
-                  <p className="text-2xl font-bold">{plan.price}</p>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {plan.features.map((feature, index) => (
-                      <li key={index} className="flex items-center gap-2 text-sm">
-                        <span className="text-green-500">✓</span>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button 
-                    className="w-full mt-6" 
-                    variant={selectedPlan === plan.name ? "secondary" : "default"}
-                    onClick={() => handleSelectPlan(plan.name)}
-                  >
-                    {selectedPlan === plan.name ? "Выбрано" : "Выбрать"}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Обработка...
+                  </>
+                ) : (
+                  'Перейти к оплате'
+                )}
+              </Button>
+            </div>
           </div>
         </TabsContent>
 
@@ -254,31 +323,39 @@ const Profile = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               {!isAddingCard ? (
-                <div className="grid gap-4">
-                  <div className="bg-card rounded-lg p-4 border hover:border-primary transition-colors">
+                <div className="space-y-4">
+                  <div className="bg-card rounded-lg p-4 border">
                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                           <CreditCard className="h-6 w-6 text-primary" />
                         </div>
                         <div>
-                          <p className="font-medium">•••• •••• •••• 4242</p>
+                          <p className="font-medium">Добавьте карту для оплаты</p>
                           <p className="text-sm text-muted-foreground">
-                            Истекает 12/24
+                            Для оформления подписки необходимо добавить карту
                           </p>
                         </div>
                       </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="w-full md:w-auto flex items-center gap-2 hover:bg-destructive hover:text-destructive-foreground"
-                        onClick={handleDeleteCard}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span>Удалить</span>
-                      </Button>
                     </div>
                   </div>
+                  <Button 
+                    className="w-full flex items-center justify-center gap-2"
+                    onClick={handleAddCard}
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Обработка...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4" />
+                        Добавить карту
+                      </>
+                    )}
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -313,21 +390,57 @@ const Profile = () => {
                       />
                     </div>
                   </div>
+                  <Button 
+                    className="w-full"
+                    onClick={handleAddCard}
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Сохранение карты...
+                      </>
+                    ) : (
+                      'Сохранить карту'
+                    )}
+                  </Button>
                 </div>
               )}
-              <Button 
-                className="w-full flex items-center justify-center gap-2 hover:bg-primary/90"
-                onClick={handleAddCard}
-              >
-                {isAddingCard ? (
-                  "Сохранить карту"
-                ) : (
-                  <>
-                    <Plus className="h-4 w-4" />
-                    Добавить карту
-                  </>
-                )}
-              </Button>
+              
+              {selectedPlan && (
+                <div className="mt-8 space-y-4">
+                  <div className="bg-card rounded-lg p-4 border">
+                    <h3 className="font-medium mb-2">Детали подписки</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Тариф:</span>
+                        <span className="font-medium">{selectedPlan}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Стоимость:</span>
+                        <span className="font-medium">
+                          {subscriptionPlans.find(plan => plan.name === selectedPlan)?.price}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    className="w-full"
+                    onClick={handlePayment}
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Обработка платежа...
+                      </>
+                    ) : (
+                      'Оплатить подписку'
+                    )}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
