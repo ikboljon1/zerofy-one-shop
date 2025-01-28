@@ -74,9 +74,6 @@ export default function Stores() {
     ));
   };
 
-  const selectedStores = stores.filter(store => store.isSelected);
-  const displayStores = selectedStores.length > 0 ? selectedStores : stores;
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -152,7 +149,7 @@ export default function Stores() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {displayStores.map((store) => (
+          {stores.map((store) => (
             <Card key={store.id} className={store.isSelected ? "border-primary" : ""}>
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
