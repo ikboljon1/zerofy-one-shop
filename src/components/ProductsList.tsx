@@ -16,6 +16,12 @@ interface Product {
     c246x328: string;
   }>;
   costPrice?: number;
+  expenses?: {
+    logistics: number;
+    storage: number;
+    penalties: number;
+    acceptance: number;
+  };
 }
 
 interface ProductsListProps {
@@ -30,6 +36,19 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+
+  const calculateNetProfit = (product: Product) => {
+    if (!product.costPrice || !product.expenses) return 0;
+    
+    const totalExpenses = 
+      product.costPrice + 
+      product.expenses.logistics + 
+      product.expenses.storage + 
+      product.expenses.penalties + 
+      product.expenses.acceptance;
+    
+    return -totalExpenses; // Пока возвращаем отрицательные расходы, позже добавим доход
+  };
 
   const syncProducts = async () => {
     if (!selectedStore) {
@@ -67,7 +86,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
       const data = await response.json();
       
-      // Load existing cost prices from localStorage
+      // Загружаем существующие цены из localStorage
       const storedProducts = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
       const costPrices = storedProducts.reduce((acc: Record<number, number>, product: Product) => {
         if (product.costPrice) {
@@ -76,10 +95,16 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         return acc;
       }, {});
 
-      // Merge new products with existing cost prices
+      // Объединяем новые продукты с существующими ценами
       const updatedProducts = data.cards.map((product: Product) => ({
         ...product,
-        costPrice: costPrices[product.nmID] || 0
+        costPrice: costPrices[product.nmID] || 0,
+        expenses: {
+          logistics: Math.random() * 100, // Временные данные для демонстрации
+          storage: Math.random() * 50,
+          penalties: Math.random() * 20,
+          acceptance: Math.random() * 30
+        }
       }));
 
       setProducts(updatedProducts);
@@ -109,7 +134,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedProducts));
   };
 
-  // Load products from localStorage when store changes
+  // Загружаем продукты из localStorage при изменении магазина
   useState(() => {
     if (selectedStore) {
       const storedProducts = localStorage.getItem(`products_${selectedStore.id}`);
@@ -153,15 +178,18 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className={`grid gap-4 ${isMobile ? 'grid-cols-2' : 'md:grid-cols-3'}`}>
           {products.map((product) => (
-            <Card key={product.nmID}>
+            <Card key={product.nmID} className="flex flex-col">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg font-medium">
                   {product.title || product.vendorCode}
                 </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Артикул WB: {product.nmID}
+                </p>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex-1">
                 <div className="space-y-4">
                   <img
                     src={product.photos?.[0]?.c246x328 || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"}
@@ -191,6 +219,32 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                         placeholder="Введите себестоимость"
                       />
                     </div>
+                    {product.expenses && (
+                      <div className="mt-4 space-y-2 border-t pt-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Логистика:</span>
+                          <span>{product.expenses.logistics.toFixed(2)} ₽</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Хранение:</span>
+                          <span>{product.expenses.storage.toFixed(2)} ₽</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Штрафы:</span>
+                          <span>{product.expenses.penalties.toFixed(2)} ₽</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Приемка:</span>
+                          <span>{product.expenses.acceptance.toFixed(2)} ₽</span>
+                        </div>
+                        <div className="flex justify-between text-sm font-semibold border-t pt-2">
+                          <span>Чистая прибыль:</span>
+                          <span className={calculateNetProfit(product) >= 0 ? "text-green-500" : "text-red-500"}>
+                            {calculateNetProfit(product).toFixed(2)} ₽
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardContent>
