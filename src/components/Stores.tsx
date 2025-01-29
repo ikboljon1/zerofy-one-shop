@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ShoppingBag, Plus, Store } from "lucide-react";
+import { ShoppingBag, Plus, Store, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -173,6 +173,23 @@ export default function Stores() {
     }
   };
 
+  const handleDeleteStore = (storeId: string) => {
+    const storeToDelete = stores.find(store => store.id === storeId);
+    if (!storeToDelete) return;
+
+    const updatedStores = stores.filter(store => store.id !== storeId);
+    setStores(updatedStores);
+    localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(updatedStores));
+    
+    // Remove store stats from localStorage
+    localStorage.removeItem(`${STATS_STORAGE_KEY}_${storeId}`);
+    
+    toast({
+      title: "Магазин удален",
+      description: `Магазин "${storeToDelete.name}" был успешно удален`,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -257,11 +274,21 @@ export default function Stores() {
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg font-medium">{store.name}</CardTitle>
-                  <Checkbox
-                    checked={store.isSelected}
-                    onCheckedChange={() => toggleStoreSelection(store.id)}
-                    className="mt-1"
-                  />
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={store.isSelected}
+                      onCheckedChange={() => toggleStoreSelection(store.id)}
+                      className="mt-1"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive/90"
+                      onClick={() => handleDeleteStore(store.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
