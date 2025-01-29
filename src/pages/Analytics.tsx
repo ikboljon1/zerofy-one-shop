@@ -1,286 +1,280 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
+import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format, subDays } from "date-fns";
+import { 
+  Calendar as CalendarIcon, 
+  Loader2,
+  ArrowUpRight,
+  ArrowDownRight
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   LineChart,
   Line,
-  AreaChart,
-  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  AreaChart,
+  Area,
+  PieChart,
+  Pie,
+  Cell
 } from "recharts";
-import {
-  Bell,
-  Search,
-  Share,
-  User,
-  ArrowUp,
-  ArrowDown,
-  DollarSign,
-  ShoppingCart,
-  RefreshCcw,
-  Percent,
-} from "lucide-react";
+import { fetchWildberriesStats } from "@/services/wildberriesApi";
 
-const salesData = [
-  { name: "Jan", value: 300000 },
-  { name: "Feb", value: 320000 },
-  { name: "Mar", value: 310000 },
-  { name: "Apr", value: 325000 },
-  { name: "May", value: 330000 },
-  { name: "Jun", value: 348261 },
-];
-
-const returnsData = [
-  { name: "Jan", returns: 120 },
-  { name: "Feb", returns: 150 },
-  { name: "Mar", returns: 140 },
-  { name: "Apr", returns: 130 },
-  { name: "May", returns: 145 },
-  { name: "Jun", returns: 150 },
-];
-
-const profitData = [
-  { name: "Jan", profit: 50000 },
-  { name: "Feb", profit: 55000 },
-  { name: "Mar", profit: 53000 },
-  { name: "Apr", profit: 54000 },
-  { name: "May", profit: 56000 },
-  { name: "Jun", profit: 58000 },
-];
-
-const salesTableData = [
-  {
-    name: "Product 1",
-    sku: "SKU12345",
-    quantity: 100,
-    sales: 10000,
-    avgPrice: 100,
-    profit: 2000,
-    profitMargin: "20%",
-    orders: 120,
-    returns: 10,
-    returnRate: "8.33%",
-  },
-  {
-    name: "Product 2",
-    sku: "SKU67890",
-    quantity: 50,
-    sales: 5000,
-    avgPrice: 100,
-    profit: 1000,
-    profitMargin: "20%",
-    orders: 60,
-    returns: 5,
-    returnRate: "8.33%",
-  },
-];
+const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1'];
 
 const Analytics = () => {
+  const isMobile = useIsMobile();
+  const { toast } = useToast();
+  const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
+  const [dateTo, setDateTo] = useState<Date>(new Date());
+  const [isLoading, setIsLoading] = useState(false);
+  const [statsData, setStatsData] = useState<any>(null);
+
+  const getSelectedStore = () => {
+    const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
+    return stores.find((store: any) => store.isSelected) || null;
+  };
+
+  const fetchStats = async () => {
+    try {
+      setIsLoading(true);
+      const selectedStore = getSelectedStore();
+      
+      if (!selectedStore) {
+        toast({
+          title: "Внимание",
+          description: "Выберите основной магазин в разделе 'Магазины'",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const data = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
+      setStatsData(data);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить статистику",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const renderDatePicker = (date: Date, onChange: (date: Date) => void, label: string) => (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className={cn(
+            "justify-start text-left font-normal",
+            !date && "text-muted-foreground"
+          )}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {date ? format(date, "PPP") : <span>{label}</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0">
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={(date) => date && onChange(date)}
+          initialFocus
+        />
+      </PopoverContent>
+    </Popover>
+  );
+
+  const calculatePercentageChange = (current: number, previous: number): string => {
+    if (previous === 0) return '0%';
+    const change = ((current - previous) / previous) * 100;
+    return `${Math.abs(change).toFixed(1)}%`;
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur p-4 flex items-center justify-between border-b">
-        <h1 className="text-2xl font-semibold">Аналитика</h1>
-        <div className="flex items-center space-x-4">
-          <div className="relative w-64">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Поиск..."
-              className="pl-8 bg-secondary"
-            />
-          </div>
-          <Button variant="outline">
-            <Share className="mr-2 h-4 w-4" />
-            Поделиться
-          </Button>
-          <Button variant="ghost" size="icon">
-            <Bell className="h-5 w-5" />
-          </Button>
-          <Button variant="ghost" size="icon">
-            <User className="h-5 w-5" />
-          </Button>
+    <div className="space-y-6 p-6">
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        {renderDatePicker(dateFrom, setDateFrom, "Выберите начальную дату")}
+        {renderDatePicker(dateTo, setDateTo, "Выберите конечную дату")}
+        <Button onClick={fetchStats} disabled={isLoading}>
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Загрузка...
+            </>
+          ) : (
+            "Обновить"
+          )}
+        </Button>
+      </div>
+
+      {!statsData ? (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">
+            Выберите период для просмотра аналитики
+          </p>
         </div>
-      </header>
-
-      <main className="p-6 space-y-6">
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-6">Общий анализ продаж</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <Card className="p-4 border-l-4 border-l-green-500">
-              <div className="flex justify-between items-start mb-2">
-                <DollarSign className="h-5 w-5 text-green-500" />
-                <div className="flex items-center text-green-500">
-                  <ArrowUp className="h-4 w-4 mr-1" />
-                  <span>8.35%</span>
+      ) : (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Анализ продаж</h3>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span>Общая сумма продаж:</span>
+                  <span className="font-semibold">{statsData.currentPeriod.sales.toLocaleString()} ₽</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Средний чек:</span>
+                  <span className="font-semibold">
+                    {(statsData.currentPeriod.sales / statsData.productSales.reduce((acc: number, curr: any) => acc + curr.quantity, 0)).toLocaleString()} ₽
+                  </span>
                 </div>
               </div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                Общий объем продаж
-              </h3>
-              <p className="text-2xl font-bold">$348,261</p>
-              <p className="text-sm text-muted-foreground">
-                По сравнению с прошлым месяцем
-              </p>
             </Card>
 
-            <Card className="p-4 border-l-4 border-l-blue-500">
-              <div className="flex justify-between items-start mb-2">
-                <ShoppingCart className="h-5 w-5 text-blue-500" />
-                <div className="flex items-center text-green-500">
-                  <ArrowUp className="h-4 w-4 mr-1" />
-                  <span>5.25%</span>
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Анализ возвратов</h3>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span>Сумма возвратов:</span>
+                  <span className="font-semibold text-red-500">
+                    {statsData.currentPeriod.expenses.total.toLocaleString()} ₽
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Процент возвратов:</span>
+                  <span className="font-semibold text-red-500">
+                    {((statsData.currentPeriod.expenses.total / statsData.currentPeriod.sales) * 100).toFixed(2)}%
+                  </span>
                 </div>
               </div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                Количество заказов
-              </h3>
-              <p className="text-2xl font-bold">1,200</p>
-              <p className="text-sm text-muted-foreground">
-                По сравнению с прошлым месяцем
-              </p>
             </Card>
 
-            <Card className="p-4 border-l-4 border-l-red-500">
-              <div className="flex justify-between items-start mb-2">
-                <RefreshCcw className="h-5 w-5 text-red-500" />
-                <div className="flex items-center text-red-500">
-                  <ArrowDown className="h-4 w-4 mr-1" />
-                  <span>2.75%</span>
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Прибыльность</h3>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span>Чистая прибыль:</span>
+                  <span className="font-semibold text-green-500">
+                    {statsData.currentPeriod.netProfit.toLocaleString()} ₽
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Рентабельность:</span>
+                  <span className="font-semibold">
+                    {((statsData.currentPeriod.netProfit / statsData.currentPeriod.sales) * 100).toFixed(2)}%
+                  </span>
                 </div>
               </div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                Количество возвратов
-              </h3>
-              <p className="text-2xl font-bold">150</p>
-              <p className="text-sm text-muted-foreground">
-                По сравнению с прошлым месяцем
-              </p>
-            </Card>
-
-            <Card className="p-4 border-l-4 border-l-purple-500">
-              <div className="flex justify-between items-start mb-2">
-                <Percent className="h-5 w-5 text-purple-500" />
-              </div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                Процент возврата
-              </h3>
-              <p className="text-2xl font-bold">12.5%</p>
-              <p className="text-sm text-muted-foreground">
-                По сравнению с прошлым месяцем
-              </p>
             </Card>
           </div>
 
-          <div className="space-y-6">
-            <Card className="p-4">
-              <h3 className="text-lg font-semibold mb-4">График динамики продаж</h3>
-              <div className="h-[300px]">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Динамика продаж</h3>
+              <div className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={salesData}>
+                  <AreaChart data={statsData.dailySales}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
+                    <XAxis 
+                      dataKey="date" 
+                      tickFormatter={(value) => {
+                        const date = new Date(value);
+                        return `${date.getDate()}.${date.getMonth() + 1}`;
+                      }}
+                    />
                     <YAxis />
-                    <Tooltip />
+                    <Tooltip 
+                      formatter={(value: any) => [`${value.toLocaleString()} ₽`, 'Продажи']}
+                      labelFormatter={(label) => {
+                        const date = new Date(label);
+                        return format(date, 'dd.MM.yyyy');
+                      }}
+                    />
                     <Area
                       type="monotone"
-                      dataKey="value"
+                      dataKey="sales"
                       stroke="#8B5CF6"
                       fill="#8B5CF680"
+                      name="Продажи"
                     />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
             </Card>
 
-            <Card className="p-4">
-              <h3 className="text-lg font-semibold mb-4">
-                Анализ продаж по товарам
-              </h3>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-2">Название товара</th>
-                      <th className="text-left p-2">Артикул</th>
-                      <th className="text-right p-2">Количество</th>
-                      <th className="text-right p-2">Сумма продаж</th>
-                      <th className="text-right p-2">Средняя цена</th>
-                      <th className="text-right p-2">Прибыль</th>
-                      <th className="text-right p-2">Рентабельность</th>
-                      <th className="text-right p-2">Заказы</th>
-                      <th className="text-right p-2">Возвраты</th>
-                      <th className="text-right p-2">% возврата</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {salesTableData.map((item, index) => (
-                      <tr key={index} className="border-b">
-                        <td className="p-2">{item.name}</td>
-                        <td className="p-2">{item.sku}</td>
-                        <td className="text-right p-2">{item.quantity}</td>
-                        <td className="text-right p-2">${item.sales}</td>
-                        <td className="text-right p-2">${item.avgPrice}</td>
-                        <td className="text-right p-2">${item.profit}</td>
-                        <td className="text-right p-2">{item.profitMargin}</td>
-                        <td className="text-right p-2">{item.orders}</td>
-                        <td className="text-right p-2">{item.returns}</td>
-                        <td className="text-right p-2">{item.returnRate}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-
-            <Card className="p-4">
-              <h3 className="text-lg font-semibold mb-4">
-                График динамики возвратов
-              </h3>
-              <div className="h-[300px]">
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Структура продаж по товарам</h3>
+              <div className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={returnsData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
+                  <PieChart>
+                    <Pie
+                      data={statsData.productSales}
+                      dataKey="quantity"
+                      nameKey="subject_name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      label
+                    >
+                      {statsData.productSales.map((_: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
                     <Tooltip />
-                    <Line
-                      type="monotone"
-                      dataKey="returns"
-                      stroke="#EC4899"
-                      strokeWidth={2}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-
-            <Card className="p-4">
-              <h3 className="text-lg font-semibold mb-4">
-                График динамики прибыли
-              </h3>
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={profitData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Area
-                      type="monotone"
-                      dataKey="profit"
-                      stroke="#10B981"
-                      fill="#10B98180"
-                    />
-                  </AreaChart>
+                  </PieChart>
                 </ResponsiveContainer>
               </div>
             </Card>
           </div>
-        </Card>
-      </main>
+
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Детальный анализ расходов</h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 bg-background rounded-lg border">
+                  <h4 className="text-sm font-medium text-muted-foreground">Логистика</h4>
+                  <p className="text-2xl font-bold mt-2">
+                    {statsData.currentPeriod.expenses.logistics.toLocaleString()} ₽
+                  </p>
+                </div>
+                <div className="p-4 bg-background rounded-lg border">
+                  <h4 className="text-sm font-medium text-muted-foreground">Хранение</h4>
+                  <p className="text-2xl font-bold mt-2">
+                    {statsData.currentPeriod.expenses.storage.toLocaleString()} ₽
+                  </p>
+                </div>
+                <div className="p-4 bg-background rounded-lg border">
+                  <h4 className="text-sm font-medium text-muted-foreground">Штрафы</h4>
+                  <p className="text-2xl font-bold mt-2">
+                    {statsData.currentPeriod.expenses.penalties.toLocaleString()} ₽
+                  </p>
+                </div>
+                <div className="p-4 bg-background rounded-lg border">
+                  <h4 className="text-sm font-medium text-muted-foreground">Приемка</h4>
+                  <p className="text-2xl font-bold mt-2">
+                    {statsData.currentPeriod.acceptance.toLocaleString()} ₽
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
