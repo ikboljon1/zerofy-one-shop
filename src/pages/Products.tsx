@@ -3,6 +3,7 @@ import { Package, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProductsList from "@/components/ProductsList";
 import { useToast } from "@/hooks/use-toast";
+import Stores from "@/components/Stores";
 
 const Products = () => {
   const [selectedStore, setSelectedStore] = useState<{id: string; apiKey: string} | null>(null);
@@ -37,6 +38,11 @@ const Products = () => {
     }
   };
 
+  const handleStoreSelect = (store: { id: string; apiKey: string }) => {
+    console.log("Store selected:", store);
+    setSelectedStore(store);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -50,6 +56,7 @@ const Products = () => {
         </Button>
       </div>
       
+      <Stores onStoreSelect={handleStoreSelect} />
       <ProductsList selectedStore={selectedStore} />
     </div>
   );
