@@ -63,19 +63,34 @@ const WB_CONTENT_URL = "https://suppliers-api.wildberries.ru/content/v2/get/card
 const dataCache: { [key: string]: CachedData } = {};
 const requestTimestamps: { [key: string]: number } = {};
 
+const RETRY_DELAY = 60000; // 60 seconds delay between retries
+const MAX_RETRIES = 3;
+
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-const waitForRateLimit = async (apiKey: string) => {
-  const now = Date.now();
-  const lastRequestTime = requestTimestamps[apiKey] || 0;
-  const timeToWait = Math.max(0, lastRequestTime + 60000 - now);
+const fetchWithRetry = async (url: string, headers: HeadersInit, params?: URLSearchParams, retryCount = 0): Promise<any> => {
+  try {
+    const response = await fetch(`${url}${params ? `?${params}` : ''}`, { headers });
+    
+    if (response.status === 429 && retryCount < MAX_RETRIES) {
+      console.log(`Rate limit hit, waiting ${RETRY_DELAY/1000} seconds before retry ${retryCount + 1}/${MAX_RETRIES}`);
+      await delay(RETRY_DELAY);
+      return fetchWithRetry(url, headers, params, retryCount + 1);
+    }
 
-  if (timeToWait > 0) {
-    console.log(`Ожидание ограничения скорости: ${timeToWait}мс до следующего запроса`);
-    await delay(timeToWait);
+    if (!response.ok) {
+      const errorData = await response.text();
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorData}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error('Fetch error:', error.message);
+      throw error;
+    }
+    throw new Error('Unknown error occurred');
   }
-
-  requestTimestamps[apiKey] = Date.now();
 };
 
 const fetchAndCacheData = async (
@@ -87,11 +102,9 @@ const fetchAndCacheData = async (
   const now = Date.now();
   
   if (dataCache[cacheKey] && (now - dataCache[cacheKey].timestamp) < 3600000) {
-    console.log('Используются кэшированные данные');
+    console.log('Using cached data');
     return dataCache[cacheKey].data;
   }
-
-  await waitForRateLimit(apiKey);
 
   const params = new URLSearchParams({
     dateFrom: dateFrom.toISOString().split('T')[0],
@@ -99,26 +112,63 @@ const fetchAndCacheData = async (
     limit: '100000'
   });
 
-  const response = await fetch(`${WB_REPORT_URL}?${params}`, {
-    headers: { 'Authorization': apiKey }
-  });
-
-  if (!response.ok) {
-    if (response.status === 429) {
-      throw new Error('Превышен лимит запросов к API. Пожалуйста, подождите минуту.');
-    }
-    throw new Error(`Ошибка HTTP! статус: ${response.status}`);
-  }
-
-  const data: WildberriesReportItem[] = await response.json();
-  
-  dataCache[cacheKey] = {
-    timestamp: now,
-    data: data
+  const headers = {
+    'Authorization': apiKey,
+    'Content-Type': 'application/json'
   };
 
-  return data;
+  try {
+    const data = await fetchWithRetry(WB_REPORT_URL, headers, params);
+    
+    dataCache[cacheKey] = {
+      timestamp: now,
+      data: data
+    };
+
+    return data;
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    throw new Error('Failed to fetch Wildberries data');
+  }
 };
+
+const fetchProductNames = async (apiKey: string, nmIds: string[]): Promise<Map<string, { name: string, image: string }>> => {
+  const headers = {
+    'Authorization': apiKey,
+    'Content-Type': 'application/json'
+  };
+
+  const payload = {
+    settings: {
+      filter: {
+        withPhoto: -1
+      },
+      cursor: {
+        limit: 100
+      }
+    }
+  };
+
+  try {
+    const data = await fetchWithRetry(WB_CONTENT_URL, headers, undefined);
+    const productInfo = new Map<string, { name: string, image: string }>();
+
+    if (data.cards) {
+      data.cards.forEach((card: any) => {
+        const image = card.photos && card.photos.length > 0 ? card.photos[0].big : null;
+        productInfo.set(card.nmID.toString(), {
+          name: card.title || 'Неизвестный товар',
+          image: image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
+        });
+      });
+    }
+
+    return productInfo;
+  } catch (error) {
+    console.error('Error fetching product names:', error);
+    return new Map();
+  }
+}
 
 const calculateProductStats = (data: WildberriesReportItem[]) => {
   const productStats = new Map<string, {
@@ -177,51 +227,6 @@ const calculateProductStats = (data: WildberriesReportItem[]) => {
 
   return Array.from(productStats.values());
 };
-
-const fetchProductNames = async (apiKey: string, nmIds: string[]): Promise<Map<string, { name: string, image: string }>> => {
-  const productInfo = new Map<string, { name: string, image: string }>();
-  
-  const payload = {
-    settings: {
-      filter: {
-        withPhoto: -1
-      },
-      cursor: {
-        limit: 100
-      }
-    }
-  };
-
-  try {
-    const response = await fetch(WB_CONTENT_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': apiKey,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    if (data.cards) {
-      data.cards.forEach((card: any) => {
-        const image = card.photos && card.photos.length > 0 ? card.photos[0].big : null;
-        productInfo.set(card.nmID.toString(), {
-          name: card.title || 'Неизвестный товар',
-          image: image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
-        });
-      });
-    }
-  } catch (error) {
-    console.error('Error fetching product names:', error);
-  }
-
-  return productInfo;
-}
 
 const getTopProducts = async (data: WildberriesReportItem[], apiKey: string) => {
   const productProfits: { [key: string]: number } = {};
