@@ -63,9 +63,9 @@ const WB_CONTENT_URL = "https://suppliers-api.wildberries.ru/content/v2/get/card
 const dataCache: { [key: string]: CachedData } = {};
 const requestTimestamps: { [key: string]: number } = {};
 
-const RETRY_DELAY = 60000; // 60 seconds delay between retries
+const RETRY_DELAY = 120000; // Increased to 120 seconds delay between retries
 const MAX_RETRIES = 3;
-const RATE_LIMIT_WINDOW = 60000; // 1 minute window for rate limiting
+const RATE_LIMIT_WINDOW = 120000; // Increased to 2 minutes window for rate limiting
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -79,7 +79,14 @@ const updateRequestTimestamp = (key: string) => {
   requestTimestamps[key] = Date.now();
 };
 
-const fetchWithRetry = async (url: string, headers: HeadersInit, params?: URLSearchParams, retryCount = 0): Promise<any> => {
+const fetchWithRetry = async (
+  url: string, 
+  headers: HeadersInit, 
+  params?: URLSearchParams, 
+  method: string = 'GET',
+  body?: any,
+  retryCount = 0
+): Promise<any> => {
   const requestKey = `${url}${params ? params.toString() : ''}`;
 
   if (shouldThrottle(requestKey) && retryCount === 0) {
@@ -89,12 +96,20 @@ const fetchWithRetry = async (url: string, headers: HeadersInit, params?: URLSea
 
   try {
     updateRequestTimestamp(requestKey);
-    const response = await fetch(`${url}${params ? `?${params}` : ''}`, { headers });
+    
+    const requestOptions: RequestInit = {
+      method,
+      headers,
+      ...(body && { body: JSON.stringify(body) })
+    };
+
+    const fullUrl = `${url}${params ? `?${params}` : ''}`;
+    const response = await fetch(fullUrl, requestOptions);
     
     if (response.status === 429 && retryCount < MAX_RETRIES) {
       console.log(`Rate limit hit, waiting ${RETRY_DELAY/1000} seconds before retry ${retryCount + 1}/${MAX_RETRIES}`);
       await delay(RETRY_DELAY);
-      return fetchWithRetry(url, headers, params, retryCount + 1);
+      return fetchWithRetry(url, headers, params, method, body, retryCount + 1);
     }
 
     if (!response.ok) {
@@ -107,7 +122,7 @@ const fetchWithRetry = async (url: string, headers: HeadersInit, params?: URLSea
     if (retryCount < MAX_RETRIES) {
       console.log(`Request failed, retrying... (${retryCount + 1}/${MAX_RETRIES})`);
       await delay(RETRY_DELAY);
-      return fetchWithRetry(url, headers, params, retryCount + 1);
+      return fetchWithRetry(url, headers, params, method, body, retryCount + 1);
     }
     
     if (error instanceof Error) {
@@ -166,7 +181,8 @@ const fetchProductNames = async (apiKey: string, nmIds: string[]): Promise<Map<s
   const payload = {
     settings: {
       filter: {
-        withPhoto: -1
+        withPhoto: -1,
+        nmID: nmIds
       },
       cursor: {
         limit: 100
@@ -175,7 +191,15 @@ const fetchProductNames = async (apiKey: string, nmIds: string[]): Promise<Map<s
   };
 
   try {
-    const data = await fetchWithRetry(WB_CONTENT_URL, headers, undefined);
+    // Changed to use POST method and include payload
+    const data = await fetchWithRetry(
+      WB_CONTENT_URL, 
+      headers, 
+      undefined, 
+      'POST', 
+      payload
+    );
+    
     const productInfo = new Map<string, { name: string, image: string }>();
 
     if (data.cards) {
@@ -193,7 +217,7 @@ const fetchProductNames = async (apiKey: string, nmIds: string[]): Promise<Map<s
     console.error('Error fetching product names:', error);
     return new Map();
   }
-}
+};
 
 const calculateProductStats = (data: WildberriesReportItem[]) => {
   const productStats = new Map<string, {
