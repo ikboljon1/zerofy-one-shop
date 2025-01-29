@@ -65,11 +65,30 @@ const requestTimestamps: { [key: string]: number } = {};
 
 const RETRY_DELAY = 60000; // 60 seconds delay between retries
 const MAX_RETRIES = 3;
+const RATE_LIMIT_WINDOW = 60000; // 1 minute window for rate limiting
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+const shouldThrottle = (key: string): boolean => {
+  const now = Date.now();
+  const lastRequest = requestTimestamps[key] || 0;
+  return (now - lastRequest) < RATE_LIMIT_WINDOW;
+};
+
+const updateRequestTimestamp = (key: string) => {
+  requestTimestamps[key] = Date.now();
+};
+
 const fetchWithRetry = async (url: string, headers: HeadersInit, params?: URLSearchParams, retryCount = 0): Promise<any> => {
+  const requestKey = `${url}${params ? params.toString() : ''}`;
+
+  if (shouldThrottle(requestKey) && retryCount === 0) {
+    console.log('Rate limiting in effect, waiting before making request...');
+    await delay(RATE_LIMIT_WINDOW);
+  }
+
   try {
+    updateRequestTimestamp(requestKey);
     const response = await fetch(`${url}${params ? `?${params}` : ''}`, { headers });
     
     if (response.status === 429 && retryCount < MAX_RETRIES) {
@@ -85,6 +104,12 @@ const fetchWithRetry = async (url: string, headers: HeadersInit, params?: URLSea
 
     return response.json();
   } catch (error) {
+    if (retryCount < MAX_RETRIES) {
+      console.log(`Request failed, retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+      await delay(RETRY_DELAY);
+      return fetchWithRetry(url, headers, params, retryCount + 1);
+    }
+    
     if (error instanceof Error) {
       console.error('Fetch error:', error.message);
       throw error;
