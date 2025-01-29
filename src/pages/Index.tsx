@@ -51,6 +51,7 @@ import {
 } from "recharts";
 import Profile from "@/components/Profile";
 import ProductsList from "@/components/ProductsList";
+import Products from "@/pages/Products";
 
 const salesData = [
   { name: "Jan", value: 300000 },
@@ -355,7 +356,6 @@ const Index = () => {
     </div>
   );
 
-  // Add this mock data for now
   const mockTopProfitableProducts = [
     {
       name: "Товар 1",
@@ -442,6 +442,14 @@ const Index = () => {
                 </Button>
                 <Button 
                   variant="ghost" 
+                  onClick={() => handleTabChange("products")}
+                  className={activeTab === "products" ? "bg-accent" : ""}
+                >
+                  <Package className="mr-2 h-4 w-4" />
+                  Товары
+                </Button>
+                <Button 
+                  variant="ghost" 
                   onClick={() => handleTabChange("stores")}
                   className={activeTab === "stores" ? "bg-accent" : ""}
                 >
@@ -512,6 +520,15 @@ const Index = () => {
             {renderAnalytics()}
           </motion.div>
         )}
+        {activeTab === "products" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Products />
+          </motion.div>
+        )}
         {activeTab === "stores" && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -548,6 +565,13 @@ const Index = () => {
             >
               <BarChart2 className="h-5 w-5" />
               <span className="text-xs">Analytics</span>
+            </button>
+            <button
+              className={`flex flex-col items-center space-y-1 ${activeTab === "products" ? "text-primary" : "text-muted-foreground"}`}
+              onClick={() => handleTabChange("products")}
+            >
+              <Package className="h-5 w-5" />
+              <span className="text-xs">Товары</span>
             </button>
             <button
               className={`flex flex-col items-center space-y-1 ${activeTab === "stores" ? "text-primary" : "text-muted-foreground"}`}
