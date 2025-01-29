@@ -60,46 +60,47 @@ export const fetchWildberriesStats = async (
     // Filter only sales
     const salesData = data.filter(item => item.quantity > 0);
 
-    // Group data by products for correct calculations
-    const groupedData = salesData.reduce((acc, item) => {
-      if (!acc[item.nm_id]) {
-        acc[item.nm_id] = [];
-      }
-      acc[item.nm_id].push(item);
-      return acc;
-    }, {} as Record<number, WildberriesReportItem[]>);
+    // Calculate total expenses according to the specified formula
+    const totalExpenses = salesData.reduce((sum, item) => {
+      return sum + 
+        (item.acceptance || 0) +
+        (item.delivery_rub || 0) +
+        (item.storage_fee || 0) +
+        (item.penalty || 0) +
+        (item.additional_payment || 0) +
+        (item.deduction || 0);
+    }, 0);
 
-    let totalSales = 0;
-    let totalTransferred = 0;
-    let totalCommission = 0;
-    let totalLogistics = 0;
-    let totalStorage = 0;
-    let totalPenalties = 0;
-    let totalAdditional = 0;
-    let totalAcquiring = 0;
-    let totalDeductions = 0;
-    let totalAcceptance = 0;
+    // Calculate other metrics
+    const totalSales = salesData.reduce((sum, item) => 
+      sum + (item.retail_price * item.quantity), 0);
+    
+    const totalTransferred = salesData.reduce((sum, item) => 
+      sum + (item.ppvz_for_pay || 0), 0);
 
-    // Process each product group
-    Object.values(groupedData).forEach(group => {
-      const calculatedSales = group.reduce((sum, item) => 
-        sum + (item.retail_price * item.quantity), 0);
-      
-      totalSales += calculatedSales;
-      totalTransferred += group.reduce((sum, item) => sum + (item.ppvz_for_pay || 0), 0);
-      totalCommission += group.reduce((sum, item) => sum + (item.ppvz_sales_commission || 0), 0);
-      totalLogistics += group.reduce((sum, item) => sum + (item.delivery_rub || 0), 0);
-      totalStorage += group.reduce((sum, item) => sum + (item.storage_fee || 0), 0);
-      totalPenalties += group.reduce((sum, item) => sum + (item.penalty || 0), 0);
-      totalAdditional += group.reduce((sum, item) => sum + (item.additional_payment || 0), 0);
-      totalAcquiring += group.reduce((sum, item) => sum + (item.acquiring_fee || 0), 0);
-      totalDeductions += group.reduce((sum, item) => sum + (item.deduction || 0), 0);
-      totalAcceptance += group.reduce((sum, item) => sum + (item.acceptance || 0), 0);
-    });
+    const totalCommission = salesData.reduce((sum, item) => 
+      sum + (item.ppvz_sales_commission || 0), 0);
 
-    const totalExpenses = totalCommission + totalLogistics + totalStorage + 
-                         totalPenalties + totalAdditional + totalAcquiring + 
-                         totalDeductions;
+    const totalLogistics = salesData.reduce((sum, item) => 
+      sum + (item.delivery_rub || 0), 0);
+
+    const totalStorage = salesData.reduce((sum, item) => 
+      sum + (item.storage_fee || 0), 0);
+
+    const totalPenalties = salesData.reduce((sum, item) => 
+      sum + (item.penalty || 0), 0);
+
+    const totalAdditional = salesData.reduce((sum, item) => 
+      sum + (item.additional_payment || 0), 0);
+
+    const totalAcquiring = salesData.reduce((sum, item) => 
+      sum + (item.acquiring_fee || 0), 0);
+
+    const totalDeductions = salesData.reduce((sum, item) => 
+      sum + (item.deduction || 0), 0);
+
+    const totalAcceptance = salesData.reduce((sum, item) => 
+      sum + (item.acceptance || 0), 0);
 
     return {
       sales: totalSales,
