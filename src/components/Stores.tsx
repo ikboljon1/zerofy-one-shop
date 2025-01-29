@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ShoppingBag, Plus, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { fetchWildberriesStats } from "@/services/wildberriesApi";
 
 type Marketplace = "Wildberries" | "Ozon" | "Yandexmarket" | "Uzum";
 
@@ -29,17 +30,57 @@ interface Store {
   name: string;
   apiKey: string;
   isSelected?: boolean;
+  stats?: {
+    sales: number;
+    transferred: number;
+    expenses: number;
+    netProfit: number;
+  };
 }
 
 const marketplaces: Marketplace[] = ["Wildberries", "Ozon", "Yandexmarket", "Uzum"];
+
+const STORES_STORAGE_KEY = 'marketplace_stores';
 
 export default function Stores() {
   const [stores, setStores] = useState<Store[]>([]);
   const [newStore, setNewStore] = useState<Partial<Store>>({});
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleAddStore = () => {
+  // Load stores from localStorage on component mount
+  useEffect(() => {
+    const savedStores = localStorage.getItem(STORES_STORAGE_KEY);
+    if (savedStores) {
+      setStores(JSON.parse(savedStores));
+    }
+  }, []);
+
+  // Save stores to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(stores));
+  }, [stores]);
+
+  const fetchStoreStats = async (store: Store) => {
+    if (store.marketplace === "Wildberries") {
+      try {
+        const stats = await fetchWildberriesStats(store.apiKey);
+        return stats;
+      } catch (error) {
+        console.error('Error fetching store stats:', error);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось получить статистику магазина",
+          variant: "destructive",
+        });
+        return null;
+      }
+    }
+    return null;
+  };
+
+  const handleAddStore = async () => {
     if (!newStore.marketplace || !newStore.name || !newStore.apiKey) {
       toast({
         title: "Ошибка",
@@ -49,21 +90,39 @@ export default function Stores() {
       return;
     }
 
-    const store: Store = {
-      id: Date.now().toString(),
-      marketplace: newStore.marketplace as Marketplace,
-      name: newStore.name,
-      apiKey: newStore.apiKey,
-      isSelected: false,
-    };
+    setIsLoading(true);
 
-    setStores([...stores, store]);
-    setNewStore({});
-    setIsOpen(false);
-    toast({
-      title: "Успешно",
-      description: "Магазин успешно добавлен",
-    });
+    try {
+      const store: Store = {
+        id: Date.now().toString(),
+        marketplace: newStore.marketplace as Marketplace,
+        name: newStore.name,
+        apiKey: newStore.apiKey,
+        isSelected: false,
+      };
+
+      // Fetch initial stats for the store
+      const stats = await fetchStoreStats(store);
+      if (stats) {
+        store.stats = stats;
+      }
+
+      setStores([...stores, store]);
+      setNewStore({});
+      setIsOpen(false);
+      toast({
+        title: "Успешно",
+        description: "Магазин успешно добавлен",
+      });
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось добавить магазин",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const toggleStoreSelection = (storeId: string) => {
@@ -71,6 +130,30 @@ export default function Stores() {
       ...store,
       isSelected: store.id === storeId ? !store.isSelected : false
     })));
+  };
+
+  const refreshStoreStats = async (store: Store) => {
+    setIsLoading(true);
+    try {
+      const stats = await fetchStoreStats(store);
+      if (stats) {
+        setStores(stores.map(s => 
+          s.id === store.id ? { ...s, stats } : s
+        ));
+        toast({
+          title: "Успешно",
+          description: "Статистика магазина обновлена",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обновить статистику",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -82,7 +165,7 @@ export default function Stores() {
         </div>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button disabled={isLoading}>
               <Plus className="h-4 w-4 mr-2" />
               Добавить магазин
             </Button>
@@ -131,8 +214,12 @@ export default function Stores() {
                   placeholder="Введите API ключ"
                 />
               </div>
-              <Button className="w-full" onClick={handleAddStore}>
-                Добавить
+              <Button 
+                className="w-full" 
+                onClick={handleAddStore}
+                disabled={isLoading}
+              >
+                {isLoading ? "Добавление..." : "Добавить"}
               </Button>
             </div>
           </DialogContent>
@@ -166,10 +253,34 @@ export default function Stores() {
                     <span className="text-muted-foreground">Маркетплейс:</span>
                     <span className="font-medium">{store.marketplace}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">API ключ:</span>
-                    <span className="font-medium">••••••••</span>
-                  </div>
+                  {store.stats && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Продажи:</span>
+                        <span className="font-medium">{store.stats.sales.toLocaleString()} ₽</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Перечислено:</span>
+                        <span className="font-medium">{store.stats.transferred.toLocaleString()} ₽</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Расходы:</span>
+                        <span className="font-medium">{store.stats.expenses.toLocaleString()} ₽</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Чистая прибыль:</span>
+                        <span className="font-medium">{store.stats.netProfit.toLocaleString()} ₽</span>
+                      </div>
+                    </>
+                  )}
+                  <Button 
+                    variant="outline" 
+                    className="w-full mt-4"
+                    onClick={() => refreshStoreStats(store)}
+                    disabled={isLoading}
+                  >
+                    Обновить статистику
+                  </Button>
                 </div>
               </CardContent>
             </Card>
