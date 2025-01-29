@@ -254,19 +254,19 @@ export default function Stores() {
                     <>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Продажи:</span>
-                        <span className="font-medium">{store.stats.sales.toLocaleString()} ₽</span>
+                        <span className="font-medium">{store.stats.currentPeriod.sales.toLocaleString()} ₽</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Перечислено:</span>
-                        <span className="font-medium">{store.stats.transferred.toLocaleString()} ₽</span>
+                        <span className="font-medium">{store.stats.currentPeriod.transferred.toLocaleString()} ₽</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Расходы:</span>
-                        <span className="font-medium">{store.stats.expenses.total.toLocaleString()} ₽</span>
+                        <span className="font-medium">{store.stats.currentPeriod.expenses.total.toLocaleString()} ₽</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Чистая прибыль:</span>
-                        <span className="font-medium">{store.stats.netProfit.toLocaleString()} ₽</span>
+                        <span className="font-medium">{store.stats.currentPeriod.netProfit.toLocaleString()} ₽</span>
                       </div>
                     </>
                   )}
