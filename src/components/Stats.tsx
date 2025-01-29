@@ -43,6 +43,12 @@ const Stats = () => {
     return stores.find((store: Store) => store.isSelected) || null;
   };
 
+  const calculatePercentageChange = (current: number, previous: number): string => {
+    if (previous === 0) return "+0%";
+    const change = ((current - previous) / previous) * 100;
+    return `${change > 0 ? '+' : ''}${change.toFixed(2)}%`;
+  };
+
   const fetchStats = async () => {
     try {
       setIsLoading(true);
@@ -71,7 +77,6 @@ const Stats = () => {
     }
   };
 
-  // Fetch stats on component mount and when dates or selected store changes
   useEffect(() => {
     const selectedStore = getSelectedStore();
     if (selectedStore) {
@@ -82,9 +87,9 @@ const Stats = () => {
   const stats = statsData ? [
     {
       title: "Продажа",
-      value: statsData.sales.toLocaleString(),
-      change: "+8.35%",
-      isPositive: true,
+      value: statsData.currentPeriod.sales.toLocaleString(),
+      change: calculatePercentageChange(statsData.currentPeriod.sales, statsData.previousPeriod.sales),
+      isPositive: statsData.currentPeriod.sales >= statsData.previousPeriod.sales,
       description: "За выбранный период",
       icon: DollarSign,
       gradient: "from-[#fdfcfb] to-[#e2d1c3]",
@@ -92,9 +97,9 @@ const Stats = () => {
     },
     {
       title: "Перечислено",
-      value: statsData.transferred.toLocaleString(),
-      change: "+7.87%",
-      isPositive: true,
+      value: statsData.currentPeriod.transferred.toLocaleString(),
+      change: calculatePercentageChange(statsData.currentPeriod.transferred, statsData.previousPeriod.transferred),
+      isPositive: statsData.currentPeriod.transferred >= statsData.previousPeriod.transferred,
       description: "За выбранный период",
       icon: CreditCard,
       gradient: "from-[#accbee] to-[#e7f0fd]",
@@ -102,9 +107,9 @@ const Stats = () => {
     },
     {
       title: "Расходы",
-      value: statsData.expenses.total.toLocaleString(),
-      change: "-5.35%",
-      isPositive: false,
+      value: statsData.currentPeriod.expenses.total.toLocaleString(),
+      change: calculatePercentageChange(statsData.currentPeriod.expenses.total, statsData.previousPeriod.expenses.total),
+      isPositive: statsData.currentPeriod.expenses.total <= statsData.previousPeriod.expenses.total,
       description: "За выбранный период",
       icon: Wallet,
       gradient: "from-[#ee9ca7] to-[#ffdde1]",
@@ -112,9 +117,9 @@ const Stats = () => {
     },
     {
       title: "Чистая прибыль",
-      value: statsData.netProfit.toLocaleString(),
-      change: "+4.87%",
-      isPositive: true,
+      value: statsData.currentPeriod.netProfit.toLocaleString(),
+      change: calculatePercentageChange(statsData.currentPeriod.netProfit, statsData.previousPeriod.netProfit),
+      isPositive: statsData.currentPeriod.netProfit >= statsData.previousPeriod.netProfit,
       description: "За выбранный период",
       icon: PieChart,
       gradient: "from-[#d299c2] to-[#fef9d7]",
@@ -125,9 +130,9 @@ const Stats = () => {
   const additionalStats = statsData ? [
     {
       title: "Логистика",
-      value: statsData.expenses.logistics.toLocaleString(),
-      change: "-2.35%",
-      isPositive: false,
+      value: statsData.currentPeriod.expenses.logistics.toLocaleString(),
+      change: calculatePercentageChange(statsData.currentPeriod.expenses.logistics, statsData.previousPeriod.expenses.logistics),
+      isPositive: statsData.currentPeriod.expenses.logistics <= statsData.previousPeriod.expenses.logistics,
       description: "За выбранный период",
       icon: Package,
       gradient: "from-[#243949] to-[#517fa4]",
@@ -135,9 +140,9 @@ const Stats = () => {
     },
     {
       title: "Хранение",
-      value: statsData.expenses.storage.toLocaleString(),
-      change: "+1.87%",
-      isPositive: true,
+      value: statsData.currentPeriod.expenses.storage.toLocaleString(),
+      change: calculatePercentageChange(statsData.currentPeriod.expenses.storage, statsData.previousPeriod.expenses.storage),
+      isPositive: statsData.currentPeriod.expenses.storage <= statsData.previousPeriod.expenses.storage,
       description: "За выбранный период",
       icon: PackageCheck,
       gradient: "from-[#c1c161] to-[#d4d4b1]",
@@ -145,9 +150,9 @@ const Stats = () => {
     },
     {
       title: "Штрафы",
-      value: statsData.expenses.penalties.toLocaleString(),
-      change: "-3.35%",
-      isPositive: false,
+      value: statsData.currentPeriod.expenses.penalties.toLocaleString(),
+      change: calculatePercentageChange(statsData.currentPeriod.expenses.penalties, statsData.previousPeriod.expenses.penalties),
+      isPositive: statsData.currentPeriod.expenses.penalties <= statsData.previousPeriod.expenses.penalties,
       description: "За выбранный период",
       icon: Receipt,
       gradient: "from-[#e6b980] to-[#eacda3]",
@@ -155,9 +160,9 @@ const Stats = () => {
     },
     {
       title: "Приемка",
-      value: statsData.acceptance.toLocaleString(),
-      change: "+5.87%",
-      isPositive: true,
+      value: statsData.currentPeriod.acceptance.toLocaleString(),
+      change: calculatePercentageChange(statsData.currentPeriod.acceptance, statsData.previousPeriod.acceptance),
+      isPositive: statsData.currentPeriod.acceptance >= statsData.previousPeriod.acceptance,
       description: "За выбранный период",
       icon: CheckSquare,
       gradient: "from-[#accbee] to-[#e7f0fd]",

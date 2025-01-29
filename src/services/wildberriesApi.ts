@@ -1,37 +1,48 @@
+import { differenceInMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+
 interface WildberriesReportItem {
-  realizationreport_id: number;
-  date_from: string;
-  date_to: string;
-  nm_id: number;
+  date: string;
   quantity: number;
-  retail_price: number;
-  retail_amount: number;
+  acceptedQuantity: number;
+  acceptedAmount: number;
+  storageAmount: number;
+  logisticAmount: number;
+  penaltyAmount: number;
+  sale: number;
   ppvz_for_pay: number;
-  ppvz_sales_commission: number;
-  delivery_rub: number;
-  penalty: number;
-  storage_fee: number;
-  additional_payment: number;
-  acquiring_fee: number;
-  deduction: number;
   acceptance: number;
 }
 
-export interface WildberriesResponse {
-  sales: number;
-  transferred: number;
-  expenses: {
-    total: number;
-    commission: number;
-    logistics: number;
-    storage: number;
-    penalties: number;
-    additional: number;
-    acquiring: number;
-    deductions: number;
+interface StatsResponse {
+  currentPeriod: {
+    sales: number;
+    transferred: number;
+    expenses: {
+      total: number;
+      logistics: number;
+      storage: number;
+      penalties: number;
+    };
+    netProfit: number;
+    acceptance: number;
   };
-  netProfit: number;
-  acceptance: number;
+  previousPeriod: {
+    sales: number;
+    transferred: number;
+    expenses: {
+      total: number;
+      logistics: number;
+      storage: number;
+      penalties: number;
+    };
+    netProfit: number;
+    acceptance: number;
+  };
+  salesTrend: Array<{
+    date: string;
+    currentValue: number;
+    previousValue: number;
+  }>;
 }
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -67,80 +78,110 @@ export const fetchWildberriesStats = async (
   apiKey: string, 
   dateFrom: Date, 
   dateTo: Date
-): Promise<WildberriesResponse> => {
+): Promise<StatsResponse> => {
   try {
-    const url = new URL('https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod');
-    url.searchParams.append('dateFrom', dateFrom.toISOString().split('T')[0]);
-    url.searchParams.append('dateTo', dateTo.toISOString().split('T')[0]);
-    url.searchParams.append('limit', '100000');
+    // Calculate previous period
+    const monthsDiff = differenceInMonths(dateTo, dateFrom) + 1;
+    const previousDateFrom = subMonths(dateFrom, monthsDiff);
+    const previousDateTo = subMonths(dateTo, monthsDiff);
 
-    const data: WildberriesReportItem[] = await fetchWithRetry(url.toString(), {
-      headers: {
-        'Authorization': apiKey
-      }
-    });
-    
-    // Filter only sales
-    const salesData = data.filter(item => item.quantity > 0);
+    // Fetch current period data
+    const currentUrl = new URL('https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod');
+    currentUrl.searchParams.append('dateFrom', dateFrom.toISOString().split('T')[0]);
+    currentUrl.searchParams.append('dateTo', dateTo.toISOString().split('T')[0]);
+    currentUrl.searchParams.append('limit', '100000');
 
-    // Calculate total expenses
-    const totalExpenses = salesData.reduce((sum, item) => {
+    // Fetch previous period data
+    const previousUrl = new URL('https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod');
+    previousUrl.searchParams.append('dateFrom', previousDateFrom.toISOString().split('T')[0]);
+    previousUrl.searchParams.append('dateTo', previousDateTo.toISOString().split('T')[0]);
+    previousUrl.searchParams.append('limit', '100000');
+
+    const [currentData, previousData] = await Promise.all([
+      fetchWithRetry(currentUrl.toString(), {
+        headers: { 'Authorization': apiKey }
+      }),
+      fetchWithRetry(previousUrl.toString(), {
+        headers: { 'Authorization': apiKey }
+      })
+    ]);
+
+    // Process current period data
+    const currentSalesData = currentData.filter((item: WildberriesReportItem) => item.quantity > 0);
+    const currentTotalExpenses = currentSalesData.reduce((sum: number, item: WildberriesReportItem) => {
       return sum + 
         (item.acceptance || 0) +
-        (item.delivery_rub || 0) +
-        (item.storage_fee || 0) +
-        (item.penalty || 0) +
-        (item.additional_payment || 0) +
-        (item.deduction || 0);
+        (item.storageAmount || 0) +
+        (item.logisticAmount || 0) +
+        (item.penaltyAmount || 0);
     }, 0);
 
-    // Calculate other metrics
-    const totalSales = salesData.reduce((sum, item) => 
-      sum + (item.retail_price * item.quantity), 0);
-    
-    const totalTransferred = salesData.reduce((sum, item) => 
-      sum + (item.ppvz_for_pay || 0), 0);
+    // Process previous period data
+    const previousSalesData = previousData.filter((item: WildberriesReportItem) => item.quantity > 0);
+    const previousTotalExpenses = previousSalesData.reduce((sum: number, item: WildberriesReportItem) => {
+      return sum + 
+        (item.acceptance || 0) +
+        (item.storageAmount || 0) +
+        (item.logisticAmount || 0) +
+        (item.penaltyAmount || 0);
+    }, 0);
 
-    const totalCommission = salesData.reduce((sum, item) => 
-      sum + (item.ppvz_sales_commission || 0), 0);
+    // Calculate current period stats
+    const currentStats = {
+      sales: currentSalesData.reduce((sum: number, item: WildberriesReportItem) => sum + (item.sale || 0), 0),
+      transferred: currentSalesData.reduce((sum: number, item: WildberriesReportItem) => sum + (item.ppvz_for_pay || 0), 0),
+      expenses: {
+        total: currentTotalExpenses,
+        logistics: currentSalesData.reduce((sum: number, item: WildberriesReportItem) => sum + (item.logisticAmount || 0), 0),
+        storage: currentSalesData.reduce((sum: number, item: WildberriesReportItem) => sum + (item.storageAmount || 0), 0),
+        penalties: currentSalesData.reduce((sum: number, item: WildberriesReportItem) => sum + (item.penaltyAmount || 0), 0)
+      },
+      acceptance: currentSalesData.reduce((sum: number, item: WildberriesReportItem) => sum + (item.acceptance || 0), 0),
+      netProfit: 0
+    };
+    currentStats.netProfit = currentStats.transferred - currentStats.expenses.total;
 
-    const totalLogistics = salesData.reduce((sum, item) => 
-      sum + (item.delivery_rub || 0), 0);
+    // Calculate previous period stats
+    const previousStats = {
+      sales: previousSalesData.reduce((sum: number, item: WildberriesReportItem) => sum + (item.sale || 0), 0),
+      transferred: previousSalesData.reduce((sum: number, item: WildberriesReportItem) => sum + (item.ppvz_for_pay || 0), 0),
+      expenses: {
+        total: previousTotalExpenses,
+        logistics: previousSalesData.reduce((sum: number, item: WildberriesReportItem) => sum + (item.logisticAmount || 0), 0),
+        storage: previousSalesData.reduce((sum: number, item: WildberriesReportItem) => sum + (item.storageAmount || 0), 0),
+        penalties: previousSalesData.reduce((sum: number, item: WildberriesReportItem) => sum + (item.penaltyAmount || 0), 0)
+      },
+      acceptance: previousSalesData.reduce((sum: number, item: WildberriesReportItem) => sum + (item.acceptance || 0), 0),
+      netProfit: 0
+    };
+    previousStats.netProfit = previousStats.transferred - previousStats.expenses.total;
 
-    const totalStorage = salesData.reduce((sum, item) => 
-      sum + (item.storage_fee || 0), 0);
+    // Prepare sales trend data
+    const salesByDate = new Map();
+    const previousSalesByDate = new Map();
 
-    const totalPenalties = salesData.reduce((sum, item) => 
-      sum + (item.penalty || 0), 0);
+    currentSalesData.forEach((item: WildberriesReportItem) => {
+      const date = item.date.split('T')[0];
+      salesByDate.set(date, (salesByDate.get(date) || 0) + (item.sale || 0));
+    });
 
-    const totalAdditional = salesData.reduce((sum, item) => 
-      sum + (item.additional_payment || 0), 0);
+    previousSalesData.forEach((item: WildberriesReportItem) => {
+      const date = item.date.split('T')[0];
+      previousSalesByDate.set(date, (previousSalesByDate.get(date) || 0) + (item.sale || 0));
+    });
 
-    const totalAcquiring = salesData.reduce((sum, item) => 
-      sum + (item.acquiring_fee || 0), 0);
-
-    const totalDeductions = salesData.reduce((sum, item) => 
-      sum + (item.deduction || 0), 0);
-
-    const totalAcceptance = salesData.reduce((sum, item) => 
-      sum + (item.acceptance || 0), 0);
+    const salesTrend = Array.from(salesByDate.entries()).map(([date, value]) => ({
+      date,
+      currentValue: value,
+      previousValue: previousSalesByDate.get(date) || 0
+    })).sort((a, b) => a.date.localeCompare(b.date));
 
     return {
-      sales: totalSales,
-      transferred: totalTransferred,
-      expenses: {
-        total: totalExpenses,
-        commission: totalCommission,
-        logistics: totalLogistics,
-        storage: totalStorage,
-        penalties: totalPenalties,
-        additional: totalAdditional,
-        acquiring: totalAcquiring,
-        deductions: totalDeductions
-      },
-      netProfit: totalTransferred - totalExpenses + totalAcceptance,
-      acceptance: totalAcceptance
+      currentPeriod: currentStats,
+      previousPeriod: previousStats,
+      salesTrend
     };
+
   } catch (error) {
     console.error('Error fetching Wildberries stats:', error);
     if (error instanceof Error) {
