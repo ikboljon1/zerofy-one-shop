@@ -22,11 +22,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Stats from "@/components/Stats";
 import Chart from "@/components/Chart";
-import ProductsDisplay from "@/components/Products";
+import Products from "@/components/Products";
 import Stores from "@/components/Stores";
 import CalculatorModal from "@/components/CalculatorModal";
-import Products from "@/pages/Products";
-import Profile from "@/components/Profile";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,6 +49,9 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import Profile from "@/components/Profile";
+import ProductsList from "@/components/ProductsList";
+import Products from "@/pages/Products";
 
 const salesData = [
   { name: "Jan", value: 300000 },
@@ -124,7 +125,7 @@ const returnsTableData = [
 ];
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState("home");
+  const [activeTab, setActiveTab] = useState("home"); // Changed default to "home" for Dashboard
   const [showCalculator, setShowCalculator] = useState(false);
   const isMobile = useIsMobile();
   const { toast } = useToast();
@@ -503,11 +504,11 @@ const Index = () => {
           >
             <Stats />
             <Chart />
-            <ProductsDisplay 
+            <Products 
               topProfitableProducts={mockTopProfitableProducts}
               topUnprofitableProducts={mockTopUnprofitableProducts}
             />
-            <Products selectedStore={selectedStore} />
+            <ProductsList selectedStore={selectedStore} />
           </motion.div>
         )}
         {activeTab === "analytics" && (
@@ -525,7 +526,7 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <Products selectedStore={selectedStore} />
+            <Products />
           </motion.div>
         )}
         {activeTab === "stores" && (
@@ -596,4 +597,3 @@ const Index = () => {
 };
 
 export default Index;
-
