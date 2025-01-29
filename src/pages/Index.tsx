@@ -50,6 +50,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import Profile from "@/components/Profile";
+import ProductsList from "@/components/ProductsList";
 
 const salesData = [
   { name: "Jan", value: 300000 },
@@ -128,6 +129,7 @@ const Index = () => {
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const { theme, toggleTheme } = useTheme();
+  const [selectedStore, setSelectedStore] = useState<{id: string; apiKey: string} | null>(null);
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -498,6 +500,7 @@ const Index = () => {
               topProfitableProducts={mockTopProfitableProducts}
               topUnprofitableProducts={mockTopUnprofitableProducts}
             />
+            <ProductsList selectedStore={selectedStore} />
           </motion.div>
         )}
         {activeTab === "analytics" && (
@@ -515,7 +518,7 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <Stores />
+            <Stores onStoreSelect={setSelectedStore} />
           </motion.div>
         )}
         {activeTab === "profile" && (

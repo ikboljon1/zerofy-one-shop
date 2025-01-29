@@ -39,7 +39,11 @@ const marketplaces: Marketplace[] = ["Wildberries", "Ozon", "Yandexmarket", "Uzu
 const STORES_STORAGE_KEY = 'marketplace_stores';
 const STATS_STORAGE_KEY = 'marketplace_stats';
 
-export default function Stores() {
+interface StoresProps {
+  onStoreSelect?: (store: { id: string; apiKey: string }) => void;
+}
+
+export default function Stores({ onStoreSelect }: StoresProps) {
   const [stores, setStores] = useState<Store[]>([]);
   const [newStore, setNewStore] = useState<Partial<Store>>({});
   const [isOpen, setIsOpen] = useState(false);
@@ -143,10 +147,19 @@ export default function Stores() {
   };
 
   const toggleStoreSelection = (storeId: string) => {
+    const selectedStore = stores.find(store => store.id === storeId);
+    
     setStores(stores.map(store => ({
       ...store,
       isSelected: store.id === storeId ? !store.isSelected : false
     })));
+
+    if (selectedStore && onStoreSelect) {
+      onStoreSelect({
+        id: selectedStore.id,
+        apiKey: selectedStore.apiKey
+      });
+    }
   };
 
   const refreshStoreStats = async (store: Store) => {
