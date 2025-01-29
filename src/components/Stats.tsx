@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, startOfWeek, endOfWeek } from "date-fns";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -25,8 +25,8 @@ import {
 const Stats = () => {
   const isMobile = useIsMobile();
   const { toast } = useToast();
-  const [dateFrom, setDateFrom] = useState<Date>(startOfWeek(new Date()));
-  const [dateTo, setDateTo] = useState<Date>(endOfWeek(new Date()));
+  const [dateFrom, setDateFrom] = useState<Date>(startOfMonth(new Date()));
+  const [dateTo, setDateTo] = useState<Date>(endOfMonth(new Date()));
   const [isLoading, setIsLoading] = useState(false);
   const [statsData, setStatsData] = useState<any>(null);
 
@@ -46,6 +46,7 @@ const Stats = () => {
       const data = await fetchWildberriesStats(apiKey, dateFrom, dateTo);
       setStatsData(data);
     } catch (error) {
+      console.error('Error fetching stats:', error);
       toast({
         title: "Ошибка",
         description: "Не удалось загрузить статистику",
@@ -56,8 +57,12 @@ const Stats = () => {
     }
   };
 
+  // Fetch stats on component mount and when dates change
   useEffect(() => {
-    fetchStats();
+    const stores = JSON.parse(localStorage.getItem('stores') || '[]');
+    if (stores.length > 0) {
+      fetchStats();
+    }
   }, [dateFrom, dateTo]);
 
   const stats = statsData ? [
@@ -214,7 +219,7 @@ const Stats = () => {
           onClick={fetchStats} 
           disabled={isLoading}
         >
-          Обновить
+          {isLoading ? "Загрузка..." : "Обновить"}
         </Button>
       </div>
       
