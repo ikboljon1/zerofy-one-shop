@@ -34,6 +34,35 @@ export interface WildberriesResponse {
   acceptance: number;
 }
 
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const fetchWithRetry = async (url: string, options: RequestInit, retries = 3, baseDelay = 1000) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await fetch(url, options);
+      
+      if (response.status === 429) {
+        const waitTime = baseDelay * Math.pow(2, i);
+        console.log(`Rate limited. Waiting ${waitTime}ms before retry ${i + 1}/${retries}`);
+        await delay(waitTime);
+        continue;
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (i === retries - 1) throw error;
+      const waitTime = baseDelay * Math.pow(2, i);
+      console.log(`Request failed. Waiting ${waitTime}ms before retry ${i + 1}/${retries}`);
+      await delay(waitTime);
+    }
+  }
+  throw new Error('Max retries reached');
+};
+
 export const fetchWildberriesStats = async (
   apiKey: string, 
   dateFrom: Date, 
@@ -45,22 +74,16 @@ export const fetchWildberriesStats = async (
     url.searchParams.append('dateTo', dateTo.toISOString().split('T')[0]);
     url.searchParams.append('limit', '100000');
 
-    const response = await fetch(url.toString(), {
+    const data: WildberriesReportItem[] = await fetchWithRetry(url.toString(), {
       headers: {
         'Authorization': apiKey
       }
     });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch Wildberries statistics');
-    }
-
-    const data: WildberriesReportItem[] = await response.json();
     
     // Filter only sales
     const salesData = data.filter(item => item.quantity > 0);
 
-    // Calculate total expenses according to the specified formula
+    // Calculate total expenses
     const totalExpenses = salesData.reduce((sum, item) => {
       return sum + 
         (item.acceptance || 0) +
@@ -120,6 +143,11 @@ export const fetchWildberriesStats = async (
     };
   } catch (error) {
     console.error('Error fetching Wildberries stats:', error);
-    throw new Error('Failed to fetch Wildberries statistics');
+    if (error instanceof Error) {
+      if (error.message.includes('429')) {
+        throw new Error('Превышен лимит запросов к API. Пожалуйста, подождите немного и попробуйте снова.');
+      }
+    }
+    throw new Error('Не удалось загрузить статистику Wildberries');
   }
 };
