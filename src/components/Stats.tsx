@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
+import { format, startOfWeek, endOfWeek } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -25,25 +25,24 @@ import {
 const Stats = () => {
   const isMobile = useIsMobile();
   const { toast } = useToast();
-  const [dateFrom, setDateFrom] = useState<Date>(new Date());
-  const [dateTo, setDateTo] = useState<Date>(new Date());
+  const [dateFrom, setDateFrom] = useState<Date>(startOfWeek(new Date()));
+  const [dateTo, setDateTo] = useState<Date>(endOfWeek(new Date()));
   const [isLoading, setIsLoading] = useState(false);
   const [statsData, setStatsData] = useState<any>(null);
 
   const fetchStats = async () => {
     try {
       setIsLoading(true);
-      // Получаем API ключ из localStorage
       const stores = JSON.parse(localStorage.getItem('stores') || '[]');
       if (stores.length === 0) {
         toast({
-          title: "Ошибка",
+          title: "Внимание",
           description: "Добавьте магазин для получения статистики",
           variant: "destructive"
         });
         return;
       }
-      const apiKey = stores[0].apiKey; // Используем ключ первого магазина
+      const apiKey = stores[0].apiKey;
       const data = await fetchWildberriesStats(apiKey, dateFrom, dateTo);
       setStatsData(data);
     } catch (error) {

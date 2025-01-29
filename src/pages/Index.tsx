@@ -123,7 +123,7 @@ const returnsTableData = [
 ];
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState("stores"); // Changed default to stores
+  const [activeTab, setActiveTab] = useState("home"); // Changed default to "home" for Dashboard
   const [showCalculator, setShowCalculator] = useState(false);
   const isMobile = useIsMobile();
   const { toast } = useToast();

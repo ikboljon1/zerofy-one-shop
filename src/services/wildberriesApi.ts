@@ -41,8 +41,8 @@ export const fetchWildberriesStats = async (
 ): Promise<WildberriesResponse> => {
   try {
     const url = new URL('https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod');
-    url.searchParams.append('dateFrom', dateFrom.toISOString());
-    url.searchParams.append('dateTo', dateTo.toISOString());
+    url.searchParams.append('dateFrom', dateFrom.toISOString().split('T')[0]);
+    url.searchParams.append('dateTo', dateTo.toISOString().split('T')[0]);
     url.searchParams.append('limit', '100000');
 
     const response = await fetch(url.toString(), {
@@ -56,7 +56,7 @@ export const fetchWildberriesStats = async (
     }
 
     const data: WildberriesReportItem[] = await response.json();
-
+    
     // Filter only sales
     const salesData = data.filter(item => item.quantity > 0);
 
