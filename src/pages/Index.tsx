@@ -22,7 +22,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Stats from "@/components/Stats";
 import Chart from "@/components/Chart";
-import ProductsDisplay from "@/components/Products"; // Renamed import to avoid conflict
 import Stores from "@/components/Stores";
 import CalculatorModal from "@/components/CalculatorModal";
 import {
@@ -504,11 +503,6 @@ const Index = () => {
           >
             <Stats />
             <Chart />
-            <ProductsDisplay 
-              topProfitableProducts={mockTopProfitableProducts}
-              topUnprofitableProducts={mockTopUnprofitableProducts}
-            />
-            <ProductsList selectedStore={selectedStore} />
           </motion.div>
         )}
         {activeTab === "analytics" && (
