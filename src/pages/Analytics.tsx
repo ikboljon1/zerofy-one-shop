@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { processAnalyticsData } from "@/utils/analyticsProcessor";
 import AnalyticsSection from "@/components/AnalyticsSection";
 import { Loader2 } from "lucide-react";
+import { usePeriod } from "@/hooks/use-period";
 
 const Analytics = () => {
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { period } = usePeriod();
 
   useEffect(() => {
     const loadAnalyticsData = () => {
@@ -27,7 +29,11 @@ const Analytics = () => {
         }
 
         const stats = JSON.parse(storedStats);
-        const processedData = processAnalyticsData(stats.stats);
+        const processedData = processAnalyticsData(
+          stats.stats, 
+          period.startDate, 
+          period.endDate
+        );
         setAnalyticsData(processedData);
       } catch (error) {
         console.error('Error loading analytics data:', error);
@@ -37,7 +43,7 @@ const Analytics = () => {
     };
 
     loadAnalyticsData();
-  }, []);
+  }, [period]); // Add period to dependency array to reload when it changes
 
   if (isLoading) {
     return (
