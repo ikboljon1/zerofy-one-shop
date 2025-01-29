@@ -52,10 +52,11 @@ const fetchWithRetry = async (url: string, options: RequestInit, retries = 5, ba
   
   for (let i = 0; i < retries; i++) {
     try {
+      await delay(i > 0 ? baseDelay * Math.pow(2, i - 1) : 0); // Add initial delay for retries
+      
       const response = await fetch(url, options);
       
       if (response.status === 429) {
-        // Get retry-after header or use exponential backoff
         const retryAfter = response.headers.get('retry-after');
         const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : baseDelay * Math.pow(2, i);
         console.log(`Rate limited. Waiting ${waitTime}ms before retry ${i + 1}/${retries}`);
@@ -75,7 +76,6 @@ const fetchWithRetry = async (url: string, options: RequestInit, retries = 5, ba
       
       const waitTime = baseDelay * Math.pow(2, i);
       console.log(`Request failed. Waiting ${waitTime}ms before retry ${i + 1}/${retries}`);
-      await delay(waitTime);
     }
   }
   
@@ -88,32 +88,31 @@ export const fetchWildberriesStats = async (
   dateTo: Date
 ): Promise<WildberriesResponse> => {
   try {
-    // Calculate previous period
     const monthsDiff = differenceInMonths(dateTo, dateFrom) + 1;
     const previousDateFrom = subMonths(dateFrom, monthsDiff);
     const previousDateTo = subMonths(dateTo, monthsDiff);
 
-    // Fetch current period data with increased delay between retries
+    // Sequential requests instead of parallel to avoid rate limits
     const currentUrl = new URL('https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod');
     currentUrl.searchParams.append('dateFrom', dateFrom.toISOString().split('T')[0]);
     currentUrl.searchParams.append('dateTo', dateTo.toISOString().split('T')[0]);
     currentUrl.searchParams.append('limit', '100000');
 
-    // Fetch previous period data
     const previousUrl = new URL('https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod');
     previousUrl.searchParams.append('dateFrom', previousDateFrom.toISOString().split('T')[0]);
     previousUrl.searchParams.append('dateTo', previousDateTo.toISOString().split('T')[0]);
     previousUrl.searchParams.append('limit', '100000');
 
-    // Add delay between requests to avoid rate limiting
-    const [currentData, previousData] = await Promise.all([
-      fetchWithRetry(currentUrl.toString(), {
-        headers: { 'Authorization': apiKey }
-      }),
-      delay(2000).then(() => fetchWithRetry(previousUrl.toString(), {
-        headers: { 'Authorization': apiKey }
-      }))
-    ]);
+    // Make requests sequentially with delay between them
+    const currentData = await fetchWithRetry(currentUrl.toString(), {
+      headers: { 'Authorization': apiKey }
+    });
+    
+    await delay(3000); // Wait 3 seconds between requests
+    
+    const previousData = await fetchWithRetry(previousUrl.toString(), {
+      headers: { 'Authorization': apiKey }
+    });
 
     // Process current period data
     const currentSalesData = currentData.filter((item: WildberriesReportItem) => item.quantity > 0);
