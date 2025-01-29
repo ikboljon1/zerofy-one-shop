@@ -1,25 +1,49 @@
 import { differenceInMonths } from 'date-fns';
 
-export interface WildberriesReportItem {
-  date: string;
-  quantity: number;
-  acceptedQuantity: number;
-  acceptedAmount: number;
-  storageAmount: number;
-  logisticAmount: number;
-  penaltyAmount: number;
-  sale: number;
-  ppvz_for_pay: number;
-  acceptance: number;
-  nm_id: string;
+interface WildberriesReportItem {
+  realizationreport_id: number;
+  date_from: string;
+  date_to: string;
+  create_dt: string;
+  currency_name: string;
+  suppliercontract_code: string;
+  rrd_id: number;
+  gi_id: number;
   subject_name: string;
+  nm_id: string;
+  brand_name: string;
+  sa_name: string;
+  ts_name: string;
+  barcode: string;
   doc_type_name: string;
-  delivery_rub: number;
-  penalty: number;
-  storage_fee: number;
-  retail_amount: number;
+  quantity: number;
   retail_price: number;
+  retail_amount: number;
+  sale_percent: number;
+  commission_percent: number;
+  office_name: string;
+  supplier_oper_name: string;
+  order_dt: string;
+  sale_dt: string;
+  rr_dt: string;
+  shk_id: number;
+  retail_price_withdisc_rub: number;
+  delivery_amount: number;
+  return_amount: number;
+  delivery_rub: number;
+  ppvz_spp_prc: number;
+  ppvz_kvw_prc_base: number;
+  ppvz_kvw_prc: number;
+  ppvz_sales_commission: number;
+  ppvz_for_pay: number;
+  ppvz_reward: number;
+  ppvz_vw: number;
+  ppvz_vw_nds: number;
+  penalty: number;
+  additional_payment: number;
+  storage_fee: number;
   deduction: number;
+  acceptance: number;
 }
 
 export interface ProductInfo {
@@ -47,7 +71,6 @@ export interface WildberriesResponse {
 }
 
 const WB_REPORT_URL = 'https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod';
-const WB_CONTENT_URL = 'https://suppliers-api.wildberries.ru/content/v2/get/cards/list';
 
 // Rate limiting implementation
 const requestTimestamps: { [key: string]: number } = {};
@@ -67,21 +90,6 @@ const waitForRateLimit = async (apiKey: string) => {
   requestTimestamps[apiKey] = Date.now();
 };
 
-const fetchWithRetry = async (url: string, options: RequestInit, apiKey: string) => {
-  await waitForRateLimit(apiKey);
-  
-  const response = await fetch(url, options);
-  
-  if (!response.ok) {
-    if (response.status === 429) {
-      throw new Error('Превышен лимит запросов к API. Пожалуйста, подождите минуту и попробуйте снова.');
-    }
-    throw new Error(`Ошибка HTTP! статус: ${response.status}`);
-  }
-
-  return response.json();
-};
-
 const calculateProductProfits = (data: WildberriesReportItem[]): Map<string, number> => {
   const productProfits = new Map<string, number>();
 
@@ -93,8 +101,7 @@ const calculateProductProfits = (data: WildberriesReportItem[]): Map<string, num
                   (item.storage_fee || 0) -
                   (item.penalty || 0) -
                   (item.deduction || 0) -
-                  (item.acceptance || 0) -
-                  (item.retail_amount || 0);
+                  (item.acceptance || 0);
 
     const currentProfit = productProfits.get(item.nm_id) || 0;
     productProfits.set(item.nm_id, currentProfit + profit);
@@ -109,49 +116,56 @@ export const fetchWildberriesStats = async (
   dateTo: Date
 ): Promise<WildberriesResponse> => {
   try {
-    const currentUrl = new URL(WB_REPORT_URL);
-    currentUrl.searchParams.append('dateFrom', dateFrom.toISOString().split('T')[0]);
-    currentUrl.searchParams.append('dateTo', dateTo.toISOString().split('T')[0]);
-    currentUrl.searchParams.append('limit', '100000');
+    await waitForRateLimit(apiKey);
 
-    const currentData = await fetchWithRetry(
-      currentUrl.toString(),
-      { headers: { 'Authorization': apiKey } },
-      apiKey
-    );
+    const params = new URLSearchParams({
+      dateFrom: dateFrom.toISOString().split('T')[0],
+      dateTo: dateTo.toISOString().split('T')[0],
+      limit: '100000'
+    });
 
-    // Process sales data
-    const salesData = currentData.filter((item: WildberriesReportItem) => item.quantity > 0);
+    const response = await fetch(`${WB_REPORT_URL}?${params}`, {
+      headers: { 'Authorization': apiKey }
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error('Превышен лимит запросов к API. Пожалуйста, подождите минуту и попробуйте снова.');
+      }
+      throw new Error(`Ошибка HTTP! статус: ${response.status}`);
+    }
+
+    const data: WildberriesReportItem[] = await response.json();
     
     // Calculate profits per product
-    const productProfits = calculateProductProfits(salesData);
+    const productProfits = calculateProductProfits(data);
 
     // Sort products by profit
     const sortedProducts = Array.from(productProfits.entries())
       .sort(([, a], [, b]) => b - a)
       .map(([nm_id, profit]) => ({
         nm_id,
-        name: `Товар ${nm_id}`, // Simplified as we're not fetching names to avoid rate limits
+        name: `Товар ${nm_id}`,
         profit: Math.round(profit * 100) / 100,
         image: `https://images.wbstatic.net/big/new/${nm_id.slice(0, -5)}0000/${nm_id}-1.jpg`
       }));
 
     const currentStats = {
-      sales: salesData.reduce((sum: number, item: WildberriesReportItem) => sum + (item.sale || 0), 0),
-      transferred: salesData.reduce((sum: number, item: WildberriesReportItem) => sum + (item.ppvz_for_pay || 0), 0),
+      sales: data.reduce((sum, item) => sum + (item.retail_amount || 0), 0),
+      transferred: data.reduce((sum, item) => sum + (item.ppvz_for_pay || 0), 0),
       expenses: {
-        total: salesData.reduce((sum: number, item: WildberriesReportItem) => 
+        total: data.reduce((sum, item) => 
           sum + 
           (item.delivery_rub || 0) +
           (item.storage_fee || 0) +
           (item.penalty || 0) +
           (item.deduction || 0) +
           (item.acceptance || 0), 0),
-        logistics: salesData.reduce((sum: number, item: WildberriesReportItem) => sum + (item.delivery_rub || 0), 0),
-        storage: salesData.reduce((sum: number, item: WildberriesReportItem) => sum + (item.storage_fee || 0), 0),
-        penalties: salesData.reduce((sum: number, item: WildberriesReportItem) => sum + (item.penalty || 0), 0)
+        logistics: data.reduce((sum, item) => sum + (item.delivery_rub || 0), 0),
+        storage: data.reduce((sum, item) => sum + (item.storage_fee || 0), 0),
+        penalties: data.reduce((sum, item) => sum + (item.penalty || 0), 0)
       },
-      acceptance: salesData.reduce((sum: number, item: WildberriesReportItem) => sum + (item.acceptance || 0), 0),
+      acceptance: data.reduce((sum, item) => sum + (item.acceptance || 0), 0),
       netProfit: 0,
       profitableProducts: sortedProducts.slice(0, 3),
       unprofitableProducts: sortedProducts.slice(-3).reverse()
