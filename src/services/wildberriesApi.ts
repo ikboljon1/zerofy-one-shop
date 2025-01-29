@@ -218,7 +218,7 @@ const fetchProductNames = async (apiKey: string, nmIds: string[]): Promise<Map<s
   return productNames;
 }
 
-const calculateStats = async (data: WildberriesReportItem[]): Promise<WildberriesResponse> => {
+const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Promise<WildberriesResponse> => {
   const stats: WildberriesResponse = {
     currentPeriod: {
       sales: 0,
@@ -293,18 +293,21 @@ const calculateStats = async (data: WildberriesReportItem[]): Promise<Wildberrie
   
   const sortedByProfit = [...productStats].sort((a, b) => b.profit - a.profit);
   
+  const defaultProductImage = "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg";
+  const defaultUnprofitableImage = "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg";
+  
   stats.topProfitableProducts = sortedByProfit.slice(0, 3).map(product => ({
-    name: productNames.get(product.nmId) || 'Неизвестный товар',
+    name: productNames.get(product.nmId) || product.name,
     price: product.price.toFixed(2),
     profit: `+${product.profit.toFixed(0)}`,
-    image: product.image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
+    image: defaultProductImage
   }));
 
   stats.topUnprofitableProducts = sortedByProfit.slice(-3).reverse().map(product => ({
-    name: productNames.get(product.nmId) || 'Неизвестный товар',
+    name: productNames.get(product.nmId) || product.name,
     price: product.price.toFixed(2),
     profit: product.profit.toFixed(0),
-    image: product.image || "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg"
+    image: defaultUnprofitableImage
   }));
 
   return stats;
@@ -317,7 +320,7 @@ export const fetchWildberriesStats = async (
 ): Promise<WildberriesResponse> => {
   try {
     const data = await fetchAndCacheData(apiKey, dateFrom, dateTo);
-    return await calculateStats(data);
+    return await calculateStats(data, apiKey);
   } catch (error) {
     console.error('Ошибка получения статистики Wildberries:', error);
     throw new Error('Не удалось загрузить статистику Wildberries');
