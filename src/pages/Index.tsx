@@ -149,252 +149,123 @@ const Index = () => {
     { icon: DollarSign, label: "Тарифы", value: "rates" },
   ];
 
+  const mockSalesTrend = [
+    { date: "2024-01-01", currentValue: 1200000, previousValue: 1000000 },
+    { date: "2024-01-02", currentValue: 1250000, previousValue: 1100000 },
+    { date: "2024-01-03", currentValue: 1265146, previousValue: 1150000 },
+  ];
+
+  const mockProductSales = [
+    { name: "Товар 1", quantity: 11 },
+    { name: "Товар 2", quantity: 13 },
+    { name: "Товар 3", quantity: 8 },
+  ];
+
   const renderAnalytics = () => (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold mb-6">Общий анализ продаж</h2>
-      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div className="grid grid-cols-2 gap-4">
           <Card className="p-4 border-l-4 border-l-green-500">
-            <div className="flex justify-between items-start mb-2">
-              <DollarSign className="h-5 w-5 text-green-500" />
-              <div className="flex items-center text-green-500">
-                <ArrowUp className="h-4 w-4 mr-1" />
-                <span>8.35%</span>
-              </div>
-            </div>
             <h3 className="text-sm font-medium text-muted-foreground mb-2">
               Общий объем продаж
             </h3>
-            <p className="text-2xl font-bold">$348,261</p>
+            <p className="text-2xl font-bold">
+              ₽1,265,146.41
+            </p>
           </Card>
 
           <Card className="p-4 border-l-4 border-l-blue-500">
-            <div className="flex justify-between items-start mb-2">
-              <ShoppingBag className="h-5 w-5 text-blue-500" />
-              <div className="flex items-center text-green-500">
-                <ArrowUp className="h-4 w-4 mr-1" />
-                <span>5.25%</span>
-              </div>
-            </div>
             <h3 className="text-sm font-medium text-muted-foreground mb-2">
               Количество заказов
             </h3>
-            <p className="text-2xl font-bold">1,200</p>
+            <p className="text-2xl font-bold">
+              1,227
+            </p>
           </Card>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <Card className="p-4 border-l-4 border-l-red-500">
-            <div className="flex justify-between items-start mb-2">
-              <Package className="h-5 w-5 text-red-500" />
-              <div className="flex items-center text-red-500">
-                <ArrowDown className="h-4 w-4 mr-1" />
-                <span>2.75%</span>
-              </div>
-            </div>
             <h3 className="text-sm font-medium text-muted-foreground mb-2">
               Количество возвратов
             </h3>
-            <p className="text-2xl font-bold">150</p>
+            <p className="text-2xl font-bold">
+              46
+            </p>
           </Card>
 
           <Card className="p-4 border-l-4 border-l-purple-500">
-            <div className="flex justify-between items-start mb-2">
-              <BarChart2 className="h-5 w-5 text-purple-500" />
-            </div>
             <h3 className="text-sm font-medium text-muted-foreground mb-2">
               Процент возврата
             </h3>
-            <p className="text-2xl font-bold">12.5%</p>
+            <p className="text-2xl font-bold">
+              3.75%
+            </p>
           </Card>
         </div>
       </div>
 
-      <Card className="p-4 mt-6">
+      <Chart salesTrend={mockSalesTrend} productSales={mockProductSales} />
+
+      <Card className="p-4">
         <h3 className="text-lg font-semibold mb-4">Анализ продаж по товарам</h3>
-        <div className="overflow-x-auto scrollbar-hide">
+        <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b">
                 <th className="text-left p-2">Название товара</th>
-                <th className="text-left p-2">Артикул</th>
-                <th className="text-right p-2">Количество проданных товаров</th>
+                <th className="text-right p-2">Количество</th>
                 <th className="text-right p-2">Сумма продаж</th>
                 <th className="text-right p-2">Средняя цена</th>
                 <th className="text-right p-2">Прибыль</th>
                 <th className="text-right p-2">Рентабельность</th>
-                <th className="text-right p-2">Количество заказов</th>
-                <th className="text-right p-2">Количество возвратов</th>
-                <th className="text-right p-2">Процент возврата</th>
+                <th className="text-right p-2">Заказы</th>
+                <th className="text-right p-2">Возвраты</th>
+                <th className="text-right p-2">% возврата</th>
               </tr>
             </thead>
             <tbody>
-              {salesTableData.map((item, index) => (
-                <tr key={index} className="border-b">
-                  <td className="p-2">{item.name}</td>
-                  <td className="p-2">{item.sku}</td>
-                  <td className="text-right p-2">{item.quantity}</td>
-                  <td className="text-right p-2">${item.sales}</td>
-                  <td className="text-right p-2">${item.avgPrice}</td>
-                  <td className="text-right p-2">${item.profit}</td>
-                  <td className="text-right p-2">{item.profitMargin}</td>
-                  <td className="text-right p-2">{item.orders}</td>
-                  <td className="text-right p-2">{item.returns}</td>
-                  <td className="text-right p-2">{item.returnRate}</td>
-                </tr>
-              ))}
+              <tr className="border-b">
+                <td className="p-2">Товар ID: 228365699</td>
+                <td className="text-right p-2">11</td>
+                <td className="text-right p-2">₽5,625.44</td>
+                <td className="text-right p-2">₽511.40</td>
+                <td className="text-right p-2">₽3,208.51</td>
+                <td className="text-right p-2">57.04%</td>
+                <td className="text-right p-2">11</td>
+                <td className="text-right p-2">3</td>
+                <td className="text-right p-2">27.27%</td>
+              </tr>
             </tbody>
           </table>
         </div>
       </Card>
 
-      <Card className="p-4 mt-6">
+      <Card className="p-4">
         <h3 className="text-lg font-semibold mb-4">Таблица возвратов по товарам</h3>
-        <div className="overflow-x-auto scrollbar-hide">
+        <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b">
                 <th className="text-left p-2">Название товара</th>
-                <th className="text-left p-2">Артикул</th>
                 <th className="text-right p-2">Количество заказов</th>
                 <th className="text-right p-2">Количество возвратов</th>
                 <th className="text-right p-2">Процент возврата</th>
               </tr>
             </thead>
             <tbody>
-              {returnsTableData.map((item, index) => (
-                <tr key={index} className="border-b">
-                  <td className="p-2">{item.name}</td>
-                  <td className="p-2">{item.sku}</td>
-                  <td className="text-right p-2">{item.orders}</td>
-                  <td className="text-right p-2">{item.returns}</td>
-                  <td className="text-right p-2">{item.returnRate}</td>
-                </tr>
-              ))}
+              <tr className="border-b">
+                <td className="p-2">Товар ID: 228169605</td>
+                <td className="text-right p-2">13</td>
+                <td className="text-right p-2">1</td>
+                <td className="text-right p-2">7.69%</td>
+              </tr>
             </tbody>
           </table>
         </div>
       </Card>
-
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>График динамики продаж</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={salesData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#8B5CF6"
-                    fill="#8B5CF680"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Анализ возвратов</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={returnsData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line
-                    type="monotone"
-                    dataKey="returns"
-                    stroke="#EC4899"
-                    strokeWidth={2}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>График динамики прибыли</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={profitData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Area
-                    type="monotone"
-                    dataKey="profit"
-                    stroke="#10B981"
-                    fill="#10B98180"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
-
-  // Add this mock data for now
-  const mockTopProfitableProducts = [
-    {
-      name: "Товар 1",
-      price: "1000",
-      profit: "200",
-      image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
-    },
-    {
-      name: "Товар 2",
-      price: "800",
-      profit: "150",
-      image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
-    },
-    {
-      name: "Товар 3",
-      price: "1200",
-      profit: "180",
-      image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
-    }
-  ];
-
-  const mockTopUnprofitableProducts = [
-    {
-      name: "Товар 4",
-      price: "500",
-      profit: "-100",
-      image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg"
-    },
-    {
-      name: "Товар 5",
-      price: "600",
-      profit: "-80",
-      image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg"
-    },
-    {
-      name: "Товар 6",
-      price: "400",
-      profit: "-60",
-      image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg"
-    }
-  ];
 
   return (
     <div className="min-h-screen bg-background pb-16">
@@ -493,7 +364,7 @@ const Index = () => {
             className={isMobile ? 'space-y-4' : 'space-y-6'}
           >
             <Stats />
-            <Chart />
+            <Chart salesTrend={mockSalesTrend} productSales={mockProductSales} />
             <Products 
               topProfitableProducts={mockTopProfitableProducts}
               topUnprofitableProducts={mockTopUnprofitableProducts}
