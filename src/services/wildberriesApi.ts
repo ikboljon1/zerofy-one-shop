@@ -1,4 +1,18 @@
-import { format } from 'date-fns';
+// Define the response type structure
+export interface WildberriesResponse {
+  currentPeriod: {
+    sales: number;
+    transferred: number;
+    expenses: {
+      total: number;
+      logistics: number;
+      storage: number;
+      penalties: number;
+    };
+    netProfit: number;
+    acceptance: number;
+  };
+}
 
 interface WildberriesReportItem {
   realizationreport_id: number;
@@ -23,12 +37,12 @@ interface CachedData {
   data: WildberriesReportItem[];
 }
 
-// Кэш для хранения данных
-let dataCache: { [key: string]: CachedData } = {};
-
 const WB_REPORT_URL = 'https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod';
 
-// Управление запросами (1 запрос в минуту)
+// Cache for storing data
+const dataCache: { [key: string]: CachedData } = {};
+
+// Request management (1 request per minute)
 const requestTimestamps: { [key: string]: number } = {};
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -51,10 +65,10 @@ const fetchAndCacheData = async (
   dateFrom: Date,
   dateTo: Date
 ): Promise<WildberriesReportItem[]> => {
-  const cacheKey = `${apiKey}_${format(dateFrom, 'yyyy-MM-dd')}_${format(dateTo, 'yyyy-MM-dd')}`;
+  const cacheKey = `${apiKey}_${dateFrom.toISOString()}_${dateTo.toISOString()}`;
   const now = Date.now();
   
-  // Проверяем кэш (действителен 1 час)
+  // Check cache (valid for 1 hour)
   if (dataCache[cacheKey] && (now - dataCache[cacheKey].timestamp) < 3600000) {
     console.log('Используются кэшированные данные');
     return dataCache[cacheKey].data;
@@ -63,8 +77,8 @@ const fetchAndCacheData = async (
   await waitForRateLimit(apiKey);
 
   const params = new URLSearchParams({
-    dateFrom: format(dateFrom, 'yyyy-MM-dd'),
-    dateTo: format(dateTo, 'yyyy-MM-dd'),
+    dateFrom: dateFrom.toISOString().split('T')[0],
+    dateTo: dateTo.toISOString().split('T')[0],
     limit: '100000'
   });
 
@@ -81,7 +95,7 @@ const fetchAndCacheData = async (
 
   const data: WildberriesReportItem[] = await response.json();
   
-  // Сохраняем в кэш
+  // Save to cache
   dataCache[cacheKey] = {
     timestamp: now,
     data: data
@@ -90,8 +104,8 @@ const fetchAndCacheData = async (
   return data;
 };
 
-const calculateStats = (data: WildberriesReportItem[]) => {
-  const stats = {
+const calculateStats = (data: WildberriesReportItem[]): WildberriesResponse => {
+  const stats: WildberriesResponse = {
     currentPeriod: {
       sales: 0,
       transferred: 0,
@@ -107,13 +121,13 @@ const calculateStats = (data: WildberriesReportItem[]) => {
   };
 
   data.forEach(item => {
-    // Продажи
+    // Sales
     stats.currentPeriod.sales += item.retail_amount || 0;
     
-    // Перечисления
+    // Transfers
     stats.currentPeriod.transferred += item.ppvz_for_pay || 0;
     
-    // Расходы
+    // Expenses
     const logistics = item.delivery_rub || 0;
     const storage = item.storage_fee || 0;
     const penalties = item.penalty || 0;
@@ -128,7 +142,7 @@ const calculateStats = (data: WildberriesReportItem[]) => {
     stats.currentPeriod.expenses.total += logistics + storage + penalties + acceptance + deduction;
   });
 
-  // Расчет чистой прибыли
+  // Calculate net profit
   stats.currentPeriod.netProfit = 
     stats.currentPeriod.transferred - stats.currentPeriod.expenses.total;
 
@@ -139,7 +153,7 @@ export const fetchWildberriesStats = async (
   apiKey: string,
   dateFrom: Date,
   dateTo: Date
-) => {
+): Promise<WildberriesResponse> => {
   try {
     const data = await fetchAndCacheData(apiKey, dateFrom, dateTo);
     return calculateStats(data);
