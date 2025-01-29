@@ -63,20 +63,42 @@ const WB_CONTENT_URL = "https://suppliers-api.wildberries.ru/content/v2/get/card
 const dataCache: { [key: string]: CachedData } = {};
 const requestTimestamps: { [key: string]: number } = {};
 
-const RETRY_DELAY = 120000; // Increased to 120 seconds delay between retries
-const MAX_RETRIES = 3;
-const RATE_LIMIT_WINDOW = 120000; // Increased to 2 minutes window for rate limiting
+// Increased delays and limits for better rate limiting handling
+const RETRY_DELAY = 60000; // 1 minute delay between retries
+const INITIAL_RETRY_DELAY = 5000; // 5 seconds for first retry
+const MAX_RETRIES = 5;
+const RATE_LIMIT_WINDOW = 60000; // 1 minute window for rate limiting
+const MAX_REQUESTS_PER_WINDOW = 5; // Maximum requests per minute
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const shouldThrottle = (key: string): boolean => {
   const now = Date.now();
-  const lastRequest = requestTimestamps[key] || 0;
-  return (now - lastRequest) < RATE_LIMIT_WINDOW;
+  const windowStart = now - RATE_LIMIT_WINDOW;
+  
+  // Count requests in the current window
+  const requestsInWindow = Object.entries(requestTimestamps)
+    .filter(([, timestamp]) => timestamp > windowStart)
+    .length;
+    
+  return requestsInWindow >= MAX_REQUESTS_PER_WINDOW;
 };
 
 const updateRequestTimestamp = (key: string) => {
   requestTimestamps[key] = Date.now();
+  
+  // Cleanup old timestamps
+  const windowStart = Date.now() - RATE_LIMIT_WINDOW;
+  Object.keys(requestTimestamps).forEach(key => {
+    if (requestTimestamps[key] < windowStart) {
+      delete requestTimestamps[key];
+    }
+  });
+};
+
+const calculateRetryDelay = (retryCount: number): number => {
+  if (retryCount === 0) return INITIAL_RETRY_DELAY;
+  return Math.min(RETRY_DELAY * Math.pow(2, retryCount - 1), 300000); // Max 5 minutes
 };
 
 const fetchWithRetry = async (
@@ -89,9 +111,9 @@ const fetchWithRetry = async (
 ): Promise<any> => {
   const requestKey = `${url}${params ? params.toString() : ''}`;
 
-  if (shouldThrottle(requestKey) && retryCount === 0) {
+  if (shouldThrottle(requestKey)) {
     console.log('Rate limiting in effect, waiting before making request...');
-    await delay(RATE_LIMIT_WINDOW);
+    await delay(calculateRetryDelay(retryCount));
   }
 
   try {
@@ -106,10 +128,16 @@ const fetchWithRetry = async (
     const fullUrl = `${url}${params ? `?${params}` : ''}`;
     const response = await fetch(fullUrl, requestOptions);
     
-    if (response.status === 429 && retryCount < MAX_RETRIES) {
-      console.log(`Rate limit hit, waiting ${RETRY_DELAY/1000} seconds before retry ${retryCount + 1}/${MAX_RETRIES}`);
-      await delay(RETRY_DELAY);
-      return fetchWithRetry(url, headers, params, method, body, retryCount + 1);
+    if (response.status === 429) {
+      const retryAfter = response.headers.get('Retry-After');
+      const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : calculateRetryDelay(retryCount);
+      
+      console.log(`Rate limit hit, waiting ${waitTime/1000} seconds before retry ${retryCount + 1}/${MAX_RETRIES}`);
+      
+      if (retryCount < MAX_RETRIES) {
+        await delay(waitTime);
+        return fetchWithRetry(url, headers, params, method, body, retryCount + 1);
+      }
     }
 
     if (!response.ok) {
@@ -120,8 +148,9 @@ const fetchWithRetry = async (
     return response.json();
   } catch (error) {
     if (retryCount < MAX_RETRIES) {
-      console.log(`Request failed, retrying... (${retryCount + 1}/${MAX_RETRIES})`);
-      await delay(RETRY_DELAY);
+      const waitTime = calculateRetryDelay(retryCount);
+      console.log(`Request failed, waiting ${waitTime/1000} seconds before retry ${retryCount + 1}/${MAX_RETRIES}`);
+      await delay(waitTime);
       return fetchWithRetry(url, headers, params, method, body, retryCount + 1);
     }
     
