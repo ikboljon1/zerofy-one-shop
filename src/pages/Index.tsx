@@ -22,7 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Stats from "@/components/Stats";
 import Chart from "@/components/Chart";
-import Products from "@/components/Products";
+import ProductsComponent from "@/components/Products";
 import Stores from "@/components/Stores";
 import CalculatorModal from "@/components/CalculatorModal";
 import {
@@ -504,7 +504,7 @@ const Index = () => {
           >
             <Stats />
             <Chart />
-            <Products 
+            <ProductsComponent 
               topProfitableProducts={mockTopProfitableProducts}
               topUnprofitableProducts={mockTopUnprofitableProducts}
             />
