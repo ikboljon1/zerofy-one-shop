@@ -39,21 +39,26 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
     return null;
   }
 
-  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name, value }: any) => {
+  const totalSales = productSales.reduce((sum, item) => sum + item.quantity, 0);
+
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name }: any) => {
     const RADIAN = Math.PI / 180;
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    const sin = Math.sin(-RADIAN * midAngle);
+    const cos = Math.cos(-RADIAN * midAngle);
+    const textAnchor = (cos >= 0 ? 'start' : 'end');
 
     return (
-      <text
-        x={x}
-        y={y}
+      <text 
+        x={x} 
+        y={y} 
         fill="white"
-        textAnchor={x > cx ? 'start' : 'end'}
+        textAnchor={textAnchor}
         dominantBaseline="central"
       >
-        {`${name} (${value})`}
+        {`${name} (${(percent * 100).toFixed(0)}%)`}
       </text>
     );
   };
@@ -121,7 +126,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Количество проданных товаров</h3>
         </div>
-        <div className="h-[400px] w-full">
+        <div className="h-[400px] w-full relative">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -130,6 +135,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 cy="50%"
                 labelLine={false}
                 label={renderCustomizedLabel}
+                innerRadius={80}
                 outerRadius={150}
                 fill="#8884d8"
                 dataKey="quantity"
@@ -152,6 +158,10 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
               <Legend />
             </PieChart>
           </ResponsiveContainer>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+            <div className="text-2xl font-bold">{totalSales.toLocaleString()}</div>
+            <div className="text-sm text-muted-foreground">Всего продано</div>
+          </div>
         </div>
       </Card>
     </div>

@@ -245,7 +245,7 @@ const Stats = () => {
   );
 
   const renderStatsRow = (statsData: typeof stats, start: number, end: number) => (
-    <div className={`grid gap-4 ${isMobile ? 'grid-cols-2' : 'grid-cols-2'}`}>
+    <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-4'}`}>
       {statsData.slice(start, end).map((stat, index) => (
         <Card 
           key={index} 
@@ -312,16 +312,16 @@ const Stats = () => {
         </div>
       ) : statsData ? (
         <>
-          {renderStatsRow(stats, 0, 2)}
-          {renderStatsRow(stats, 2, 4)}
-          <Chart 
-            salesTrend={prepareSalesTrendData(statsData)} 
-            productSales={prepareProductSalesData(statsData)}
-          />
-          <div className="mt-8">
-            <h3 className="text-lg font-semibold mb-4">Дополнительная статистика</h3>
-            {renderStatsRow(additionalStats, 0, 2)}
-            {renderStatsRow(additionalStats, 2, 4)}
+          <div className="grid gap-6">
+            {renderStatsRow(stats, 0, 4)}
+            <Chart 
+              salesTrend={prepareSalesTrendData(statsData)} 
+              productSales={prepareProductSalesData(statsData)}
+            />
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold mb-4">Дополнительная статистика</h3>
+              {renderStatsRow(additionalStats, 0, 4)}
+            </div>
           </div>
         </>
       ) : (
