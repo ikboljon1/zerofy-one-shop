@@ -125,7 +125,7 @@ const returnsTableData = [
 ];
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState("home"); // Changed default to "home" for Dashboard
+  const [activeTab, setActiveTab] = useState("home");
   const [showCalculator, setShowCalculator] = useState(false);
   const isMobile = useIsMobile();
   const { toast } = useToast();
@@ -526,7 +526,7 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <Products />
+            <Products selectedStore={selectedStore} />
           </motion.div>
         )}
         {activeTab === "stores" && (
