@@ -54,19 +54,26 @@ export interface ProcessedAnalytics {
   };
 }
 
-export const processAnalyticsData = (data: WildberriesReportData[], startDate: string, endDate: string): ProcessedAnalytics => {
+export const processAnalyticsData = (
+  data: WildberriesReportData[], 
+  startDate: string, 
+  endDate: string
+): ProcessedAnalytics => {
   // Filter data by period
   const filteredData = data.filter(item => {
     const itemDate = new Date(item.sale_dt);
-    return itemDate >= new Date(startDate) && itemDate <= new Date(endDate);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    return itemDate >= start && itemDate <= end;
   });
 
   const salesData = filteredData.filter(item => item.doc_type_name === 'Продажа');
   const returnsData = filteredData.filter(item => item.doc_type_name === 'Возврат');
 
-  // General Sales Analytics
+  // Calculate total sales volume correctly
   const totalSalesVolume = salesData.reduce((sum, item) => 
     sum + (item.retail_price * item.quantity), 0);
+
   const totalOrdersCount = salesData.length;
   const totalReturnsCount = returnsData.length;
   const returnRate = totalOrdersCount > 0 
@@ -122,7 +129,7 @@ export const processAnalyticsData = (data: WildberriesReportData[], startDate: s
     return acc;
   }, {});
 
-  // Returns Analysis - following the Python logic
+  // Returns Analysis
   const returnsAnalysis = Object.entries(productAnalysis).reduce((acc: any, [key, value]: [string, any]) => {
     acc[key] = {
       productName: value.productName,
