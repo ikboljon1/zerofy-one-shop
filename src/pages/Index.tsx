@@ -24,7 +24,14 @@ import Stats from "@/components/Stats";
 import Chart from "@/components/Chart";
 import Products from "@/components/Products";
 import Stores from "@/components/Stores";
+import Profile from "@/components/Profile";
 import CalculatorModal from "@/components/CalculatorModal";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +39,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "@/hooks/use-theme";
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 const salesData = [
   { name: "Jan", value: 300000 },
