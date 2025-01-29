@@ -17,7 +17,7 @@ interface WildberriesReportItem {
   acceptance: number;
 }
 
-interface WildberriesResponse {
+export interface WildberriesResponse {
   sales: number;
   transferred: number;
   expenses: {

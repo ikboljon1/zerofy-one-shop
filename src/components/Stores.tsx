@@ -20,26 +20,9 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { fetchWildberriesStats } from "@/services/wildberriesApi";
+import { fetchWildberriesStats, WildberriesResponse } from "@/services/wildberriesApi";
 
 type Marketplace = "Wildberries" | "Ozon" | "Yandexmarket" | "Uzum";
-
-interface StoreStats {
-  sales: number;
-  transferred: number;
-  expenses: {
-    total: number;
-    commission: number;
-    logistics: number;
-    storage: number;
-    penalties: number;
-    additional: number;
-    acquiring: number;
-    deductions: number;
-  };
-  netProfit: number;
-  acceptance?: number;
-}
 
 interface Store {
   id: string;
@@ -47,7 +30,7 @@ interface Store {
   name: string;
   apiKey: string;
   isSelected?: boolean;
-  stats?: StoreStats;
+  stats?: WildberriesResponse;
 }
 
 const marketplaces: Marketplace[] = ["Wildberries", "Ozon", "Yandexmarket", "Uzum"];
