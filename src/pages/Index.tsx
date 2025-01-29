@@ -12,9 +12,7 @@ import {
   Calculator,
   Sun,
   Moon,
-  Zap,
-  ArrowUp,
-  ArrowDown
+  Zap
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -39,137 +37,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "@/hooks/use-theme";
-import {
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-
-const salesData = [
-  { name: "Jan", value: 300000 },
-  { name: "Feb", value: 320000 },
-  { name: "Mar", value: 310000 },
-  { name: "Apr", value: 325000 },
-  { name: "May", value: 330000 },
-  { name: "Jun", value: 348261 },
-];
-
-const returnsData = [
-  { name: "Jan", returns: 120 },
-  { name: "Feb", returns: 150 },
-  { name: "Mar", returns: 140 },
-  { name: "Apr", returns: 130 },
-  { name: "May", returns: 145 },
-  { name: "Jun", returns: 150 },
-];
-
-const profitData = [
-  { name: "Jan", profit: 50000 },
-  { name: "Feb", profit: 55000 },
-  { name: "Mar", profit: 53000 },
-  { name: "Apr", profit: 54000 },
-  { name: "May", profit: 56000 },
-  { name: "Jun", profit: 58000 },
-];
-
-const salesTableData = [
-  {
-    name: "Product 1",
-    sku: "SKU12345",
-    quantity: 100,
-    sales: 10000,
-    avgPrice: 100,
-    profit: 2000,
-    profitMargin: "20%",
-    orders: 120,
-    returns: 10,
-    returnRate: "8.33%",
-  },
-  {
-    name: "Product 2",
-    sku: "SKU67890",
-    quantity: 50,
-    sales: 5000,
-    avgPrice: 100,
-    profit: 1000,
-    profitMargin: "20%",
-    orders: 60,
-    returns: 5,
-    returnRate: "8.33%",
-  },
-];
-
-const returnsTableData = [
-  {
-    name: "Product 1",
-    sku: "SKU12345",
-    orders: 120,
-    returns: 10,
-    returnRate: "8.33%"
-  },
-  {
-    name: "Product 2",
-    sku: "SKU67890",
-    orders: 60,
-    returns: 5,
-    returnRate: "8.33%"
-  }
-];
-
-const mockTopProfitableProducts = [
-  {
-    name: "Товар ID: 228365699",
-    price: "511.40",
-    profit: "3208.51",
-    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
-  },
-  {
-    name: "Товар ID: 228169605",
-    price: "450.00",
-    profit: "2500.00",
-    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
-  },
-  {
-    name: "Товар ID: 228169606",
-    price: "600.00",
-    profit: "1800.00",
-    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
-  }
-];
-
-const mockTopUnprofitableProducts = [
-  {
-    name: "Товар ID: 228169607",
-    price: "300.00",
-    profit: "-500.00",
-    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
-  },
-  {
-    name: "Товар ID: 228169608",
-    price: "250.00",
-    profit: "-300.00",
-    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
-  },
-  {
-    name: "Товар ID: 228169609",
-    price: "400.00",
-    profit: "-200.00",
-    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
-  }
-];
+import { usePeriod } from "@/hooks/use-period";
+import { calculateAnalytics } from "@/utils/analytics";
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState("home"); // Changed default to "home" for Dashboard
+  const [activeTab, setActiveTab] = useState("home");
   const [showCalculator, setShowCalculator] = useState(false);
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const { theme, toggleTheme } = useTheme();
+  const { period } = usePeriod();
+
+  const analytics = calculateAnalytics(period.startDate, period.endDate);
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -178,30 +57,6 @@ const Index = () => {
       description: `Switched to ${tab} view`,
     });
   };
-
-  const productSubMenu = [
-    { icon: ShoppingBag, label: "Магазины", value: "stores" },
-    { icon: FileText, label: "Отчеты", value: "reports" },
-    { icon: Sticker, label: "Наклейки", value: "stickers" },
-  ];
-
-  const profileMenu = [
-    { icon: CreditCard, label: "История платежей", value: "payment-history" },
-    { icon: User, label: "Профиль", value: "profile" },
-    { icon: DollarSign, label: "Тарифы", value: "rates" },
-  ];
-
-  const mockSalesTrend = [
-    { date: "2024-01-01", currentValue: 1200000, previousValue: 1000000 },
-    { date: "2024-01-02", currentValue: 1250000, previousValue: 1100000 },
-    { date: "2024-01-03", currentValue: 1265146, previousValue: 1150000 },
-  ];
-
-  const mockProductSales = [
-    { name: "Товар 1", quantity: 11 },
-    { name: "Товар 2", quantity: 13 },
-    { name: "Товар 3", quantity: 8 },
-  ];
 
   const renderAnalytics = () => (
     <div className="space-y-6">
@@ -212,7 +67,7 @@ const Index = () => {
               Общий объем продаж
             </h3>
             <p className="text-2xl font-bold">
-              ₽1,265,146.41
+              ₽{analytics.generalSalesAnalytics.totalSalesVolume.toLocaleString('ru-RU', { maximumFractionDigits: 2 })}
             </p>
           </Card>
 
@@ -221,7 +76,7 @@ const Index = () => {
               Количество заказов
             </h3>
             <p className="text-2xl font-bold">
-              1,227
+              {analytics.generalSalesAnalytics.totalOrdersCount}
             </p>
           </Card>
         </div>
@@ -232,7 +87,7 @@ const Index = () => {
               Количество возвратов
             </h3>
             <p className="text-2xl font-bold">
-              46
+              {analytics.generalSalesAnalytics.totalReturnsCount}
             </p>
           </Card>
 
@@ -241,13 +96,11 @@ const Index = () => {
               Процент возврата
             </h3>
             <p className="text-2xl font-bold">
-              3.75%
+              {analytics.generalSalesAnalytics.returnRate.toFixed(2)}%
             </p>
           </Card>
         </div>
       </div>
-
-      <Chart salesTrend={mockSalesTrend} productSales={mockProductSales} />
 
       <Card className="p-4">
         <h3 className="text-lg font-semibold mb-4">Анализ продаж по товарам</h3>
@@ -267,41 +120,19 @@ const Index = () => {
               </tr>
             </thead>
             <tbody>
-              <tr className="border-b">
-                <td className="p-2">Товар ID: 228365699</td>
-                <td className="text-right p-2">11</td>
-                <td className="text-right p-2">₽5,625.44</td>
-                <td className="text-right p-2">₽511.40</td>
-                <td className="text-right p-2">₽3,208.51</td>
-                <td className="text-right p-2">57.04%</td>
-                <td className="text-right p-2">11</td>
-                <td className="text-right p-2">3</td>
-                <td className="text-right p-2">27.27%</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      <Card className="p-4">
-        <h3 className="text-lg font-semibold mb-4">Таблица возвратов по товарам</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left p-2">Название товара</th>
-                <th className="text-right p-2">Количество заказов</th>
-                <th className="text-right p-2">Количество возвратов</th>
-                <th className="text-right p-2">Процент возврата</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b">
-                <td className="p-2">Товар ID: 228169605</td>
-                <td className="text-right p-2">13</td>
-                <td className="text-right p-2">1</td>
-                <td className="text-right p-2">7.69%</td>
-              </tr>
+              {Object.entries(analytics.productSalesAnalysis).map(([id, product]) => (
+                <tr key={id} className="border-b">
+                  <td className="p-2">{product.productName}</td>
+                  <td className="text-right p-2">{product.quantitySold}</td>
+                  <td className="text-right p-2">₽{product.salesAmount.toLocaleString('ru-RU', { maximumFractionDigits: 2 })}</td>
+                  <td className="text-right p-2">₽{product.averagePrice.toLocaleString('ru-RU', { maximumFractionDigits: 2 })}</td>
+                  <td className="text-right p-2">₽{product.profit.toLocaleString('ru-RU', { maximumFractionDigits: 2 })}</td>
+                  <td className="text-right p-2">{product.profitability.toFixed(2)}%</td>
+                  <td className="text-right p-2">{product.ordersCount}</td>
+                  <td className="text-right p-2">{product.returnsCount}</td>
+                  <td className="text-right p-2">{product.returnRate.toFixed(2)}%</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
