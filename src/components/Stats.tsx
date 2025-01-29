@@ -19,7 +19,8 @@ import {
   Package,
   PackageCheck,
   Receipt,
-  CheckSquare
+  CheckSquare,
+  Loader2
 } from "lucide-react";
 
 interface Store {
@@ -84,12 +85,13 @@ const Stats = () => {
     }
   }, [dateFrom, dateTo]);
 
+  // Only create stats array if statsData exists
   const stats = statsData ? [
     {
       title: "Продажа",
       value: statsData.currentPeriod.sales.toLocaleString(),
-      change: calculatePercentageChange(statsData.currentPeriod.sales, statsData.previousPeriod.sales),
-      isPositive: statsData.currentPeriod.sales >= statsData.previousPeriod.sales,
+      change: calculatePercentageChange(statsData.currentPeriod.sales, statsData.previousPeriod?.sales || 0),
+      isPositive: statsData.currentPeriod.sales >= (statsData.previousPeriod?.sales || 0),
       description: "За выбранный период",
       icon: DollarSign,
       gradient: "from-[#fdfcfb] to-[#e2d1c3]",
@@ -98,8 +100,8 @@ const Stats = () => {
     {
       title: "Перечислено",
       value: statsData.currentPeriod.transferred.toLocaleString(),
-      change: calculatePercentageChange(statsData.currentPeriod.transferred, statsData.previousPeriod.transferred),
-      isPositive: statsData.currentPeriod.transferred >= statsData.previousPeriod.transferred,
+      change: calculatePercentageChange(statsData.currentPeriod.transferred, statsData.previousPeriod?.transferred || 0),
+      isPositive: statsData.currentPeriod.transferred >= (statsData.previousPeriod?.transferred || 0),
       description: "За выбранный период",
       icon: CreditCard,
       gradient: "from-[#accbee] to-[#e7f0fd]",
@@ -108,8 +110,8 @@ const Stats = () => {
     {
       title: "Расходы",
       value: statsData.currentPeriod.expenses.total.toLocaleString(),
-      change: calculatePercentageChange(statsData.currentPeriod.expenses.total, statsData.previousPeriod.expenses.total),
-      isPositive: statsData.currentPeriod.expenses.total <= statsData.previousPeriod.expenses.total,
+      change: calculatePercentageChange(statsData.currentPeriod.expenses.total, statsData.previousPeriod?.expenses?.total || 0),
+      isPositive: statsData.currentPeriod.expenses.total <= (statsData.previousPeriod?.expenses?.total || 0),
       description: "За выбранный период",
       icon: Wallet,
       gradient: "from-[#ee9ca7] to-[#ffdde1]",
@@ -118,8 +120,8 @@ const Stats = () => {
     {
       title: "Чистая прибыль",
       value: statsData.currentPeriod.netProfit.toLocaleString(),
-      change: calculatePercentageChange(statsData.currentPeriod.netProfit, statsData.previousPeriod.netProfit),
-      isPositive: statsData.currentPeriod.netProfit >= statsData.previousPeriod.netProfit,
+      change: calculatePercentageChange(statsData.currentPeriod.netProfit, statsData.previousPeriod?.netProfit || 0),
+      isPositive: statsData.currentPeriod.netProfit >= (statsData.previousPeriod?.netProfit || 0),
       description: "За выбранный период",
       icon: PieChart,
       gradient: "from-[#d299c2] to-[#fef9d7]",
@@ -131,8 +133,8 @@ const Stats = () => {
     {
       title: "Логистика",
       value: statsData.currentPeriod.expenses.logistics.toLocaleString(),
-      change: calculatePercentageChange(statsData.currentPeriod.expenses.logistics, statsData.previousPeriod.expenses.logistics),
-      isPositive: statsData.currentPeriod.expenses.logistics <= statsData.previousPeriod.expenses.logistics,
+      change: calculatePercentageChange(statsData.currentPeriod.expenses.logistics, statsData.previousPeriod?.expenses?.logistics || 0),
+      isPositive: statsData.currentPeriod.expenses.logistics <= (statsData.previousPeriod?.expenses?.logistics || 0),
       description: "За выбранный период",
       icon: Package,
       gradient: "from-[#243949] to-[#517fa4]",
@@ -141,8 +143,8 @@ const Stats = () => {
     {
       title: "Хранение",
       value: statsData.currentPeriod.expenses.storage.toLocaleString(),
-      change: calculatePercentageChange(statsData.currentPeriod.expenses.storage, statsData.previousPeriod.expenses.storage),
-      isPositive: statsData.currentPeriod.expenses.storage <= statsData.previousPeriod.expenses.storage,
+      change: calculatePercentageChange(statsData.currentPeriod.expenses.storage, statsData.previousPeriod?.expenses?.storage || 0),
+      isPositive: statsData.currentPeriod.expenses.storage <= (statsData.previousPeriod?.expenses?.storage || 0),
       description: "За выбранный период",
       icon: PackageCheck,
       gradient: "from-[#c1c161] to-[#d4d4b1]",
@@ -151,8 +153,8 @@ const Stats = () => {
     {
       title: "Штрафы",
       value: statsData.currentPeriod.expenses.penalties.toLocaleString(),
-      change: calculatePercentageChange(statsData.currentPeriod.expenses.penalties, statsData.previousPeriod.expenses.penalties),
-      isPositive: statsData.currentPeriod.expenses.penalties <= statsData.previousPeriod.expenses.penalties,
+      change: calculatePercentageChange(statsData.currentPeriod.expenses.penalties, statsData.previousPeriod?.expenses?.penalties || 0),
+      isPositive: statsData.currentPeriod.expenses.penalties <= (statsData.previousPeriod?.expenses?.penalties || 0),
       description: "За выбранный период",
       icon: Receipt,
       gradient: "from-[#e6b980] to-[#eacda3]",
@@ -161,8 +163,8 @@ const Stats = () => {
     {
       title: "Приемка",
       value: statsData.currentPeriod.acceptance.toLocaleString(),
-      change: calculatePercentageChange(statsData.currentPeriod.acceptance, statsData.previousPeriod.acceptance),
-      isPositive: statsData.currentPeriod.acceptance >= statsData.previousPeriod.acceptance,
+      change: calculatePercentageChange(statsData.currentPeriod.acceptance, statsData.previousPeriod?.acceptance || 0),
+      isPositive: statsData.currentPeriod.acceptance >= (statsData.previousPeriod?.acceptance || 0),
       description: "За выбранный период",
       icon: CheckSquare,
       gradient: "from-[#accbee] to-[#e7f0fd]",
@@ -240,7 +242,14 @@ const Stats = () => {
           onClick={fetchStats} 
           disabled={isLoading}
         >
-          {isLoading ? "Загрузка..." : "Обновить"}
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Загрузка...
+            </>
+          ) : (
+            "Обновить"
+          )}
         </Button>
       </div>
       
@@ -249,6 +258,10 @@ const Stats = () => {
           <p className="text-muted-foreground">
             Выберите основной магазин в разделе "Магазины"
           </p>
+        </div>
+      ) : isLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       ) : statsData ? (
         <>
@@ -263,7 +276,7 @@ const Stats = () => {
       ) : (
         <div className="text-center py-8">
           <p className="text-muted-foreground">
-            {isLoading ? "Загрузка данных..." : "Выберите период для просмотра статистики"}
+            Выберите период для просмотра статистики
           </p>
         </div>
       )}
