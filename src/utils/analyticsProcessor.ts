@@ -104,7 +104,7 @@ export const processAnalyticsData = (data: WildberriesReportData[]): ProcessedAn
     );
 
     record.profit = item.ppvz_for_pay - record.totalExpenses;
-    record.averagePrice = record.salesAmount / record.quantitySold || 0;
+    record.averagePrice = record.quantitySold > 0 ? record.salesAmount / record.quantitySold : 0;
     record.profitability = record.salesAmount > 0 
       ? (record.profit / record.salesAmount) * 100 
       : 0;
@@ -112,6 +112,26 @@ export const processAnalyticsData = (data: WildberriesReportData[]): ProcessedAn
       ? (record.returnsCount / record.ordersCount) * 100 
       : 0;
 
+    return acc;
+  }, {});
+
+  // Returns Analysis
+  const returnsAnalysis = Object.entries(productAnalysis).reduce((acc: any, [key, value]: [string, any]) => {
+    acc[key] = {
+      productName: value.productName,
+      ordersCount: value.ordersCount,
+      returnsCount: value.returnsCount,
+      returnRate: value.returnRate
+    };
+    return acc;
+  }, {});
+
+  // Profitability Analysis
+  const profitabilityAnalysis = Object.entries(productAnalysis).reduce((acc: any, [key, value]: [string, any]) => {
+    acc[key] = {
+      productName: value.productName,
+      profit: value.profit
+    };
     return acc;
   }, {});
 
@@ -123,21 +143,7 @@ export const processAnalyticsData = (data: WildberriesReportData[]): ProcessedAn
       returnRate
     },
     productSalesAnalysis: productAnalysis,
-    returnsAnalysis: Object.entries(productAnalysis).reduce((acc: any, [key, value]: [string, any]) => {
-      acc[key] = {
-        productName: value.productName,
-        ordersCount: value.ordersCount,
-        returnsCount: value.returnsCount,
-        returnRate: value.returnRate
-      };
-      return acc;
-    }, {}),
-    profitabilityAnalysis: Object.entries(productAnalysis).reduce((acc: any, [key, value]: [string, any]) => {
-      acc[key] = {
-        productName: value.productName,
-        profit: value.profit
-      };
-      return acc;
-    }, {})
+    returnsAnalysis,
+    profitabilityAnalysis
   };
 };
