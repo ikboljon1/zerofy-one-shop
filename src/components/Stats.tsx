@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, startOfWeek, endOfWeek } from "date-fns";
+import { format, subDays } from "date-fns";
 import { 
   Calendar as CalendarIcon, 
   Loader2,
@@ -44,8 +44,8 @@ const STATS_STORAGE_KEY = 'marketplace_stats';
 const Stats = () => {
   const isMobile = useIsMobile();
   const { toast } = useToast();
-  const [dateFrom, setDateFrom] = useState<Date>(startOfWeek(new Date()));
-  const [dateTo, setDateTo] = useState<Date>(endOfWeek(new Date()));
+  const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
+  const [dateTo, setDateTo] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState(false);
   const [statsData, setStatsData] = useState<any>(null);
 
