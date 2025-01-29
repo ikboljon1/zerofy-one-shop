@@ -1,4 +1,4 @@
-import { differenceInMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { differenceInMonths, subMonths } from 'date-fns';
 
 interface WildberriesReportItem {
   date: string;
@@ -13,7 +13,7 @@ interface WildberriesReportItem {
   acceptance: number;
 }
 
-interface StatsResponse {
+export interface WildberriesResponse {
   currentPeriod: {
     sales: number;
     transferred: number;
@@ -78,7 +78,7 @@ export const fetchWildberriesStats = async (
   apiKey: string, 
   dateFrom: Date, 
   dateTo: Date
-): Promise<StatsResponse> => {
+): Promise<WildberriesResponse> => {
   try {
     // Calculate previous period
     const monthsDiff = differenceInMonths(dateTo, dateFrom) + 1;
