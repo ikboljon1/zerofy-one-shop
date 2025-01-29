@@ -1,6 +1,6 @@
 import { differenceInMonths, subMonths } from 'date-fns';
 
-interface WildberriesReportItem {
+export interface WildberriesReportItem {
   date: string;
   quantity: number;
   acceptedQuantity: number;
@@ -47,13 +47,17 @@ export interface WildberriesResponse {
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-const fetchWithRetry = async (url: string, options: RequestInit, retries = 3, baseDelay = 1000) => {
+const fetchWithRetry = async (url: string, options: RequestInit, retries = 5, baseDelay = 2000) => {
+  let lastError;
+  
   for (let i = 0; i < retries; i++) {
     try {
       const response = await fetch(url, options);
       
       if (response.status === 429) {
-        const waitTime = baseDelay * Math.pow(2, i);
+        // Get retry-after header or use exponential backoff
+        const retryAfter = response.headers.get('retry-after');
+        const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : baseDelay * Math.pow(2, i);
         console.log(`Rate limited. Waiting ${waitTime}ms before retry ${i + 1}/${retries}`);
         await delay(waitTime);
         continue;
@@ -63,15 +67,19 @@ const fetchWithRetry = async (url: string, options: RequestInit, retries = 3, ba
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      const data = await response.json();
+      return data;
     } catch (error) {
-      if (i === retries - 1) throw error;
+      lastError = error;
+      if (i === retries - 1) break;
+      
       const waitTime = baseDelay * Math.pow(2, i);
       console.log(`Request failed. Waiting ${waitTime}ms before retry ${i + 1}/${retries}`);
       await delay(waitTime);
     }
   }
-  throw new Error('Max retries reached');
+  
+  throw lastError || new Error('Max retries reached');
 };
 
 export const fetchWildberriesStats = async (
@@ -85,7 +93,7 @@ export const fetchWildberriesStats = async (
     const previousDateFrom = subMonths(dateFrom, monthsDiff);
     const previousDateTo = subMonths(dateTo, monthsDiff);
 
-    // Fetch current period data
+    // Fetch current period data with increased delay between retries
     const currentUrl = new URL('https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod');
     currentUrl.searchParams.append('dateFrom', dateFrom.toISOString().split('T')[0]);
     currentUrl.searchParams.append('dateTo', dateTo.toISOString().split('T')[0]);
@@ -97,13 +105,14 @@ export const fetchWildberriesStats = async (
     previousUrl.searchParams.append('dateTo', previousDateTo.toISOString().split('T')[0]);
     previousUrl.searchParams.append('limit', '100000');
 
+    // Add delay between requests to avoid rate limiting
     const [currentData, previousData] = await Promise.all([
       fetchWithRetry(currentUrl.toString(), {
         headers: { 'Authorization': apiKey }
       }),
-      fetchWithRetry(previousUrl.toString(), {
+      delay(2000).then(() => fetchWithRetry(previousUrl.toString(), {
         headers: { 'Authorization': apiKey }
-      })
+      }))
     ]);
 
     // Process current period data
