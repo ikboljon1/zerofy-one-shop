@@ -89,9 +89,11 @@ export const processAnalyticsData = (
   const salesData = filteredData.filter(item => item.doc_type_name === 'Продажа');
   const returnsData = filteredData.filter(item => item.doc_type_name === 'Возврат');
 
-  // Calculate total sales volume correctly from filtered data
-  const totalSalesVolume = salesData.reduce((sum, item) => 
-    sum + (item.retail_price * item.quantity), 0);
+  // Calculate total sales volume from filtered data only
+  const totalSalesVolume = salesData.reduce((sum, item) => {
+    const saleAmount = item.retail_price * item.quantity;
+    return sum + saleAmount;
+  }, 0);
 
   const totalOrdersCount = salesData.length;
   const totalReturnsCount = returnsData.length;
