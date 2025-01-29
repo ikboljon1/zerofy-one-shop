@@ -121,30 +121,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     }
   });
 
-  if (!selectedStore) {
-    return (
-      <Card className="border-dashed">
-        <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-          <Package className="h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">Выберите магазин для просмотра товаров</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <Package className="h-5 w-5" />
-          <h2 className="text-xl font-semibold">Товары</h2>
-        </div>
-        <Button onClick={syncProducts} disabled={isLoading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-          Синхронизировать
-        </Button>
-      </div>
-
       {products.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-8 text-center">
@@ -153,7 +131,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
           {products.map((product) => (
             <Card key={product.nmID}>
               <CardHeader className="pb-2">
