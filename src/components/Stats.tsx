@@ -22,6 +22,14 @@ import {
   CheckSquare
 } from "lucide-react";
 
+interface Store {
+  id: string;
+  marketplace: string;
+  name: string;
+  apiKey: string;
+  isSelected?: boolean;
+}
+
 const Stats = () => {
   const isMobile = useIsMobile();
   const { toast } = useToast();
@@ -30,20 +38,26 @@ const Stats = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [statsData, setStatsData] = useState<any>(null);
 
+  const getSelectedStore = (): Store | null => {
+    const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
+    return stores.find((store: Store) => store.isSelected) || null;
+  };
+
   const fetchStats = async () => {
     try {
       setIsLoading(true);
-      const stores = JSON.parse(localStorage.getItem('stores') || '[]');
-      if (stores.length === 0) {
+      const selectedStore = getSelectedStore();
+      
+      if (!selectedStore) {
         toast({
           title: "Внимание",
-          description: "Добавьте магазин для получения статистики",
+          description: "Выберите основной магазин в разделе 'Магазины'",
           variant: "destructive"
         });
         return;
       }
-      const apiKey = stores[0].apiKey;
-      const data = await fetchWildberriesStats(apiKey, dateFrom, dateTo);
+
+      const data = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
       setStatsData(data);
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -57,10 +71,10 @@ const Stats = () => {
     }
   };
 
-  // Fetch stats on component mount and when dates change
+  // Fetch stats on component mount and when dates or selected store changes
   useEffect(() => {
-    const stores = JSON.parse(localStorage.getItem('stores') || '[]');
-    if (stores.length > 0) {
+    const selectedStore = getSelectedStore();
+    if (selectedStore) {
       fetchStats();
     }
   }, [dateFrom, dateTo]);
@@ -210,6 +224,8 @@ const Stats = () => {
     </div>
   );
 
+  const selectedStore = getSelectedStore();
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -223,7 +239,13 @@ const Stats = () => {
         </Button>
       </div>
       
-      {statsData ? (
+      {!selectedStore ? (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">
+            Выберите основной магазин в разделе "Магазины"
+          </p>
+        </div>
+      ) : statsData ? (
         <>
           {renderStatsRow(stats, 0, 2)}
           {renderStatsRow(stats, 2, 4)}
