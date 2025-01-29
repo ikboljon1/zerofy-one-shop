@@ -3,13 +3,32 @@ import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, startOfWeek, endOfWeek } from "date-fns";
-import { Calendar as CalendarIcon, Loader2 } from "lucide-react";
+import { 
+  Calendar as CalendarIcon, 
+  Loader2,
+  DollarSign,
+  CreditCard,
+  Wallet,
+  PieChart,
+  Package,
+  PackageCheck,
+  Receipt,
+  CheckSquare,
+  ArrowUpRight,
+  ArrowDownRight
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Chart from "@/components/Chart";
+
+const calculatePercentageChange = (current: number, previous: number): string => {
+  if (previous === 0) return '0%';
+  const change = ((current - previous) / previous) * 100;
+  return `${Math.abs(change).toFixed(1)}%`;
+};
 
 interface Store {
   id: string;
