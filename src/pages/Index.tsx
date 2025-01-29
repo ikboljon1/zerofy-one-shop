@@ -353,6 +353,49 @@ const Index = () => {
     </div>
   );
 
+  // Add this mock data for now
+  const mockTopProfitableProducts = [
+    {
+      name: "Товар 1",
+      price: "1000",
+      profit: "200",
+      image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
+    },
+    {
+      name: "Товар 2",
+      price: "800",
+      profit: "150",
+      image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
+    },
+    {
+      name: "Товар 3",
+      price: "1200",
+      profit: "180",
+      image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
+    }
+  ];
+
+  const mockTopUnprofitableProducts = [
+    {
+      name: "Товар 4",
+      price: "500",
+      profit: "-100",
+      image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg"
+    },
+    {
+      name: "Товар 5",
+      price: "600",
+      profit: "-80",
+      image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg"
+    },
+    {
+      name: "Товар 6",
+      price: "400",
+      profit: "-60",
+      image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg"
+    }
+  ];
+
   return (
     <div className="min-h-screen bg-background pb-16">
       <header className="sticky top-0 z-10 bg-background/80 backdrop-blur">
@@ -451,7 +494,10 @@ const Index = () => {
           >
             <Stats />
             <Chart />
-            <Products />
+            <Products 
+              topProfitableProducts={mockTopProfitableProducts}
+              topUnprofitableProducts={mockTopUnprofitableProducts}
+            />
           </motion.div>
         )}
         {activeTab === "analytics" && (

@@ -14,7 +14,10 @@ interface ProductListProps {
   isProfitable: boolean;
 }
 
-const Products = ({ topProfitableProducts, topUnprofitableProducts }: { 
+const Products = ({ 
+  topProfitableProducts = [], 
+  topUnprofitableProducts = [] 
+}: { 
   topProfitableProducts: Product[],
   topUnprofitableProducts: Product[] 
 }) => {
