@@ -12,9 +12,7 @@ import {
   Calculator,
   Sun,
   Moon,
-  Zap,
-  ArrowUp,
-  ArrowDown
+  Zap
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -25,6 +23,7 @@ import Chart from "@/components/Chart";
 import ProductsDisplay from "@/components/Products";
 import Stores from "@/components/Stores";
 import CalculatorModal from "@/components/CalculatorModal";
+import Products from "@/pages/Products";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,26 +31,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "@/hooks/use-theme";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-import Profile from "@/components/Profile";
-import ProductsList from "@/components/ProductsList";
-import Products from "@/pages/Products";
 
 const salesData = [
   { name: "Jan", value: 300000 },
@@ -508,7 +487,7 @@ const Index = () => {
               topProfitableProducts={mockTopProfitableProducts}
               topUnprofitableProducts={mockTopUnprofitableProducts}
             />
-            <ProductsList selectedStore={selectedStore} />
+            <Products selectedStore={selectedStore} />
           </motion.div>
         )}
         {activeTab === "analytics" && (
