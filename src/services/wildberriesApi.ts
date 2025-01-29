@@ -21,6 +21,18 @@ export interface WildberriesResponse {
     subject_name: string;
     quantity: number;
   }>;
+  topProfitableProducts?: Array<{
+    name: string;
+    price: string;
+    profit: string;
+    image: string;
+  }>;
+  topUnprofitableProducts?: Array<{
+    name: string;
+    price: string;
+    profit: string;
+    image: string;
+  }>;
 }
 
 interface WildberriesReportItem {
@@ -113,6 +125,63 @@ const fetchAndCacheData = async (
   return data;
 };
 
+const calculateProductStats = (data: WildberriesReportItem[]) => {
+  const productStats = new Map<string, {
+    name: string,
+    profit: number,
+    price: number,
+    sales: number,
+    quantity: number,
+    returns: number,
+    logistics: number,
+    storage: number,
+    penalties: number,
+    deductions: number
+  }>();
+
+  data.forEach(item => {
+    const currentStats = productStats.get(item.subject_name) || {
+      name: item.subject_name,
+      profit: 0,
+      price: 0,
+      sales: 0,
+      quantity: 0,
+      returns: 0,
+      logistics: 0,
+      storage: 0,
+      penalties: 0,
+      deductions: 0
+    };
+
+    if (item.doc_type_name === "Продажа") {
+      currentStats.sales += item.retail_amount || 0;
+      currentStats.quantity += item.quantity || 0;
+    } else if (item.doc_type_name === "Возврат") {
+      currentStats.returns += item.retail_amount || 0;
+    }
+
+    currentStats.logistics += item.delivery_rub || 0;
+    currentStats.storage += item.storage_fee || 0;
+    currentStats.penalties += item.penalty || 0;
+    currentStats.deductions += item.deduction || 0;
+    
+    // Расчет прибыли
+    currentStats.profit = item.ppvz_for_pay - (
+      currentStats.logistics +
+      currentStats.storage +
+      currentStats.penalties +
+      currentStats.deductions +
+      currentStats.returns
+    );
+
+    currentStats.price = item.retail_amount / (item.quantity || 1);
+
+    productStats.set(item.subject_name, currentStats);
+  });
+
+  return Array.from(productStats.values());
+};
+
 const calculateStats = (data: WildberriesReportItem[]): WildberriesResponse => {
   const stats: WildberriesResponse = {
     currentPeriod: {
@@ -189,6 +258,27 @@ const calculateStats = (data: WildberriesReportItem[]): WildberriesResponse => {
 
   stats.dailySales = sortedDailySales;
   stats.productSales = sortedProductSales;
+
+  // Расчет статистики по продуктам
+  const productStats = calculateProductStats(data);
+  
+  // Сортировка по прибыли
+  const sortedByProfit = [...productStats].sort((a, b) => b.profit - a.profit);
+  
+  // Получаем топ-3 прибыльных и убыточных
+  stats.topProfitableProducts = sortedByProfit.slice(0, 3).map(product => ({
+    name: product.name,
+    price: product.price.toFixed(2),
+    profit: `+${product.profit.toFixed(0)}`,
+    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" // Заглушка для демонстрации
+  }));
+
+  stats.topUnprofitableProducts = sortedByProfit.slice(-3).reverse().map(product => ({
+    name: product.name,
+    price: product.price.toFixed(2),
+    profit: product.profit.toFixed(0),
+    image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg" // Заглушка для демонстрации
+  }));
 
   return stats;
 };
