@@ -41,26 +41,23 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
 
   const totalSales = productSales.reduce((sum, item) => sum + item.quantity, 0);
 
-  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name }: any) => {
-    const RADIAN = Math.PI / 180;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-    const sin = Math.sin(-RADIAN * midAngle);
-    const cos = Math.cos(-RADIAN * midAngle);
-    const textAnchor = (cos >= 0 ? 'start' : 'end');
-
+  const renderCustomizedLabel = ({ name }: any) => {
     return (
       <text 
-        x={x} 
-        y={y} 
         fill="white"
-        textAnchor={textAnchor}
+        textAnchor="middle"
         dominantBaseline="central"
       >
-        {`${name} (${(percent * 100).toFixed(0)}%)`}
+        {name}
       </text>
     );
+  };
+
+  const customLegendFormatter = (value: string, entry: any) => {
+    const item = productSales.find(p => p.name === value);
+    if (!item) return value;
+    const percentage = ((item.quantity / totalSales) * 100).toFixed(0);
+    return `${value} (${percentage}%)`;
   };
 
   return (
@@ -135,8 +132,8 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 cy="50%"
                 labelLine={false}
                 label={renderCustomizedLabel}
-                innerRadius={80}
-                outerRadius={150}
+                innerRadius={100}
+                outerRadius={130}
                 fill="#8884d8"
                 dataKey="quantity"
                 nameKey="name"
@@ -155,7 +152,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 }}
                 formatter={(value: number) => [value.toLocaleString(), 'шт.']}
               />
-              <Legend />
+              <Legend formatter={customLegendFormatter} />
             </PieChart>
           </ResponsiveContainer>
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
