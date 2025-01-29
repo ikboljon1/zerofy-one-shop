@@ -57,10 +57,10 @@ export const fetchWildberriesStats = async (
 
     const data: WildberriesReportItem[] = await response.json();
 
-    // Фильтруем только продажи
+    // Filter only sales
     const salesData = data.filter(item => item.quantity > 0);
 
-    // Группируем данные по товарам для правильного расчета
+    // Group data by products for correct calculations
     const groupedData = salesData.reduce((acc, item) => {
       if (!acc[item.nm_id]) {
         acc[item.nm_id] = [];
@@ -80,7 +80,7 @@ export const fetchWildberriesStats = async (
     let totalDeductions = 0;
     let totalAcceptance = 0;
 
-    // Обрабатываем каждую группу товаров
+    // Process each product group
     Object.values(groupedData).forEach(group => {
       const calculatedSales = group.reduce((sum, item) => 
         sum + (item.retail_price * item.quantity), 0);

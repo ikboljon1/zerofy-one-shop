@@ -24,18 +24,30 @@ import { fetchWildberriesStats } from "@/services/wildberriesApi";
 
 type Marketplace = "Wildberries" | "Ozon" | "Yandexmarket" | "Uzum";
 
+interface StoreStats {
+  sales: number;
+  transferred: number;
+  expenses: {
+    total: number;
+    commission: number;
+    logistics: number;
+    storage: number;
+    penalties: number;
+    additional: number;
+    acquiring: number;
+    deductions: number;
+  };
+  netProfit: number;
+  acceptance?: number;
+}
+
 interface Store {
   id: string;
   marketplace: Marketplace;
   name: string;
   apiKey: string;
   isSelected?: boolean;
-  stats?: {
-    sales: number;
-    transferred: number;
-    expenses: number;
-    netProfit: number;
-  };
+  stats?: StoreStats;
 }
 
 const marketplaces: Marketplace[] = ["Wildberries", "Ozon", "Yandexmarket", "Uzum"];
@@ -65,7 +77,9 @@ export default function Stores() {
   const fetchStoreStats = async (store: Store) => {
     if (store.marketplace === "Wildberries") {
       try {
-        const stats = await fetchWildberriesStats(store.apiKey);
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
+        const stats = await fetchWildberriesStats(store.apiKey, thirtyDaysAgo, new Date());
         return stats;
       } catch (error) {
         console.error('Error fetching store stats:', error);
@@ -265,7 +279,7 @@ export default function Stores() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Расходы:</span>
-                        <span className="font-medium">{store.stats.expenses.toLocaleString()} ₽</span>
+                        <span className="font-medium">{store.stats.expenses.total.toLocaleString()} ₽</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Чистая прибыль:</span>
