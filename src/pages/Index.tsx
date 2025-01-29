@@ -18,18 +18,13 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Card } from "@/components/ui/card";
 import Stats from "@/components/Stats";
 import Chart from "@/components/Chart";
 import Products from "@/components/Products";
 import Stores from "@/components/Stores";
 import Profile from "@/components/Profile";
 import CalculatorModal from "@/components/CalculatorModal";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +34,49 @@ import {
 import { useTheme } from "@/hooks/use-theme";
 import { usePeriod } from "@/hooks/use-period";
 import { calculateAnalytics } from "@/utils/analytics";
+import salesData from "@/data/salesData.json";
+
+interface ProductAnalytics {
+  productName: string;
+  quantitySold: number;
+  salesAmount: number;
+  averagePrice: number;
+  profit: number;
+  profitability: number;
+  ordersCount: number;
+  returnsCount: number;
+  returnRate: number;
+}
+
+const mockSalesTrend = [
+  { date: "2024-01-01", currentValue: 1000, previousValue: 800 },
+  { date: "2024-01-02", currentValue: 1200, previousValue: 900 },
+  { date: "2024-01-03", currentValue: 1100, previousValue: 950 }
+];
+
+const mockProductSales = [
+  { name: "Product A", quantity: 150 },
+  { name: "Product B", quantity: 120 },
+  { name: "Product C", quantity: 90 }
+];
+
+const mockTopProfitableProducts = [
+  { name: "Product A", price: "1500", profit: "300", image: "" },
+  { name: "Product B", price: "1200", profit: "250", image: "" },
+  { name: "Product C", price: "1000", profit: "200", image: "" }
+];
+
+const mockTopUnprofitableProducts = [
+  { name: "Product X", price: "800", profit: "-100", image: "" },
+  { name: "Product Y", price: "600", profit: "-80", image: "" },
+  { name: "Product Z", price: "500", profit: "-60", image: "" }
+];
+
+const profileMenu = [
+  { label: "Profile", value: "profile", icon: User },
+  { label: "Billing", value: "billing", icon: CreditCard },
+  { label: "Pricing", value: "pricing", icon: DollarSign }
+];
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
@@ -122,15 +160,15 @@ const Index = () => {
             <tbody>
               {Object.entries(analytics.productSalesAnalysis).map(([id, product]) => (
                 <tr key={id} className="border-b">
-                  <td className="p-2">{product.productName}</td>
-                  <td className="text-right p-2">{product.quantitySold}</td>
-                  <td className="text-right p-2">₽{product.salesAmount.toLocaleString('ru-RU', { maximumFractionDigits: 2 })}</td>
-                  <td className="text-right p-2">₽{product.averagePrice.toLocaleString('ru-RU', { maximumFractionDigits: 2 })}</td>
-                  <td className="text-right p-2">₽{product.profit.toLocaleString('ru-RU', { maximumFractionDigits: 2 })}</td>
-                  <td className="text-right p-2">{product.profitability.toFixed(2)}%</td>
-                  <td className="text-right p-2">{product.ordersCount}</td>
-                  <td className="text-right p-2">{product.returnsCount}</td>
-                  <td className="text-right p-2">{product.returnRate.toFixed(2)}%</td>
+                  <td className="p-2">{(product as ProductAnalytics).productName}</td>
+                  <td className="text-right p-2">{(product as ProductAnalytics).quantitySold}</td>
+                  <td className="text-right p-2">₽{(product as ProductAnalytics).salesAmount.toLocaleString('ru-RU', { maximumFractionDigits: 2 })}</td>
+                  <td className="text-right p-2">₽{(product as ProductAnalytics).averagePrice.toLocaleString('ru-RU', { maximumFractionDigits: 2 })}</td>
+                  <td className="text-right p-2">₽{(product as ProductAnalytics).profit.toLocaleString('ru-RU', { maximumFractionDigits: 2 })}</td>
+                  <td className="text-right p-2">{(product as ProductAnalytics).profitability.toFixed(2)}%</td>
+                  <td className="text-right p-2">{(product as ProductAnalytics).ordersCount}</td>
+                  <td className="text-right p-2">{(product as ProductAnalytics).returnsCount}</td>
+                  <td className="text-right p-2">{(product as ProductAnalytics).returnRate.toFixed(2)}%</td>
                 </tr>
               ))}
             </tbody>
