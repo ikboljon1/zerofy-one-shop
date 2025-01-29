@@ -58,9 +58,9 @@ interface CachedData {
 }
 
 const WB_REPORT_URL = 'https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod';
+const WB_CONTENT_URL = "https://suppliers-api.wildberries.ru/content/v2/get/cards/list";
 
 const dataCache: { [key: string]: CachedData } = {};
-
 const requestTimestamps: { [key: string]: number } = {};
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -178,13 +178,12 @@ const calculateProductStats = (data: WildberriesReportItem[]) => {
   return Array.from(productStats.values());
 };
 
-const fetchProductNames = async (apiKey: string, nmIds: string[]): Promise<Map<string, string>> => {
-  const productNames = new Map<string, string>();
+const fetchProductNames = async (apiKey: string, nmIds: string[]): Promise<Map<string, { name: string, image: string }>> => {
+  const productInfo = new Map<string, { name: string, image: string }>();
   
   const payload = {
     settings: {
       filter: {
-        nmIDs: nmIds,
         withPhoto: -1
       },
       cursor: {
@@ -194,7 +193,7 @@ const fetchProductNames = async (apiKey: string, nmIds: string[]): Promise<Map<s
   };
 
   try {
-    const response = await fetch('https://content-api.wildberries.ru/content/v2/get/cards/list', {
+    const response = await fetch(WB_CONTENT_URL, {
       method: 'POST',
       headers: {
         'Authorization': apiKey,
@@ -208,15 +207,81 @@ const fetchProductNames = async (apiKey: string, nmIds: string[]): Promise<Map<s
     }
 
     const data = await response.json();
-    data.cards.forEach((card: any) => {
-      productNames.set(card.nmID.toString(), card.title || 'Неизвестный товар');
-    });
+    if (data.cards) {
+      data.cards.forEach((card: any) => {
+        const image = card.photos && card.photos.length > 0 ? card.photos[0].big : null;
+        productInfo.set(card.nmID.toString(), {
+          name: card.title || 'Неизвестный товар',
+          image: image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
+        });
+      });
+    }
   } catch (error) {
     console.error('Error fetching product names:', error);
   }
 
-  return productNames;
+  return productInfo;
 }
+
+const getTopProducts = async (data: WildberriesReportItem[], apiKey: string) => {
+  const productProfits: { [key: string]: number } = {};
+  const nmIdsList: string[] = [];
+
+  data.forEach(item => {
+    const nmId = item.nm_id;
+    if (!nmId) return;
+
+    nmIdsList.push(nmId);
+    
+    const ppvzForPay = item.ppvz_for_pay || 0;
+    const deliveryRub = item.delivery_rub || 0;
+    const storageFee = item.storage_fee || 0;
+    const penalty = item.penalty || 0;
+    const deduction = item.deduction || 0;
+    const acceptance = item.acceptance || 0;
+    const retailAmount = item.retail_amount || 0;
+
+    const profit = ppvzForPay - deliveryRub - storageFee - penalty - deduction - acceptance - retailAmount;
+
+    if (!productProfits[nmId]) {
+      productProfits[nmId] = 0;
+    }
+    productProfits[nmId] += profit;
+  });
+
+  const productInfo = await fetchProductNames(apiKey, Array.from(new Set(nmIdsList)));
+
+  const sortedProducts = Object.entries(productProfits)
+    .sort(([, a], [, b]) => b - a);
+
+  const topProfitable = sortedProducts.slice(0, 3).map(([nmId, profit]) => {
+    const info = productInfo.get(nmId) || { 
+      name: 'Неизвестный товар',
+      image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
+    };
+    return {
+      name: info.name,
+      price: "0",
+      profit: `+${profit.toFixed(0)}`,
+      image: info.image
+    };
+  });
+
+  const topUnprofitable = sortedProducts.slice(-3).reverse().map(([nmId, profit]) => {
+    const info = productInfo.get(nmId) || {
+      name: 'Неизвестный товар',
+      image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg"
+    };
+    return {
+      name: info.name,
+      price: "0",
+      profit: profit.toFixed(0),
+      image: info.image
+    };
+  });
+
+  return { topProfitable, topUnprofitable };
+};
 
 const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Promise<WildberriesResponse> => {
   const stats: WildberriesResponse = {
@@ -286,29 +351,10 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
   stats.dailySales = sortedDailySales;
   stats.productSales = sortedProductSales;
 
-  const productStats = calculateProductStats(data);
+  const { topProfitable, topUnprofitable } = await getTopProducts(data, apiKey);
   
-  const nmIds = productStats.map(product => product.nmId).filter(Boolean);
-  const productNames = await fetchProductNames(apiKey, nmIds);
-  
-  const sortedByProfit = [...productStats].sort((a, b) => b.profit - a.profit);
-  
-  const defaultProductImage = "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg";
-  const defaultUnprofitableImage = "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg";
-  
-  stats.topProfitableProducts = sortedByProfit.slice(0, 3).map(product => ({
-    name: productNames.get(product.nmId) || product.name,
-    price: product.price.toFixed(2),
-    profit: `+${product.profit.toFixed(0)}`,
-    image: defaultProductImage
-  }));
-
-  stats.topUnprofitableProducts = sortedByProfit.slice(-3).reverse().map(product => ({
-    name: productNames.get(product.nmId) || product.name,
-    price: product.price.toFixed(2),
-    profit: product.profit.toFixed(0),
-    image: defaultUnprofitableImage
-  }));
+  stats.topProfitableProducts = topProfitable;
+  stats.topUnprofitableProducts = topUnprofitable;
 
   return stats;
 };
