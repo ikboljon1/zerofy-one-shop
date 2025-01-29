@@ -2,26 +2,13 @@ import { Card } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, startOfMonth, endOfMonth } from "date-fns";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { format, startOfWeek, endOfWeek } from "date-fns";
+import { Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  ArrowUpRight,
-  ArrowDownRight,
-  DollarSign,
-  CreditCard,
-  Wallet,
-  PieChart,
-  Package,
-  PackageCheck,
-  Receipt,
-  CheckSquare,
-  Loader2
-} from "lucide-react";
 import Chart from "@/components/Chart";
 
 interface Store {
@@ -32,23 +19,32 @@ interface Store {
   isSelected?: boolean;
 }
 
+const STORES_STORAGE_KEY = 'marketplace_stores';
+const STATS_STORAGE_KEY = 'marketplace_stats';
+
 const Stats = () => {
   const isMobile = useIsMobile();
   const { toast } = useToast();
-  const [dateFrom, setDateFrom] = useState<Date>(startOfMonth(new Date()));
-  const [dateTo, setDateTo] = useState<Date>(endOfMonth(new Date()));
+  const [dateFrom, setDateFrom] = useState<Date>(startOfWeek(new Date()));
+  const [dateTo, setDateTo] = useState<Date>(endOfWeek(new Date()));
   const [isLoading, setIsLoading] = useState(false);
   const [statsData, setStatsData] = useState<any>(null);
 
   const getSelectedStore = (): Store | null => {
-    const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
+    const stores = JSON.parse(localStorage.getItem(STORES_STORAGE_KEY) || '[]');
     return stores.find((store: Store) => store.isSelected) || null;
   };
 
-  const calculatePercentageChange = (current: number, previous: number): string => {
-    if (previous === 0) return "+0%";
-    const change = ((current - previous) / previous) * 100;
-    return `${change > 0 ? '+' : ''}${change.toFixed(2)}%`;
+  const loadStoredStats = (storeId: string) => {
+    const storedStats = localStorage.getItem(`${STATS_STORAGE_KEY}_${storeId}`);
+    if (storedStats) {
+      const data = JSON.parse(storedStats);
+      setStatsData(data.stats);
+      setDateFrom(new Date(data.dateFrom));
+      setDateTo(new Date(data.dateTo));
+      return true;
+    }
+    return false;
   };
 
   const fetchStats = async () => {
@@ -66,6 +62,16 @@ const Stats = () => {
       }
 
       const data = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
+      
+      // Save new stats to localStorage
+      const statsData = {
+        storeId: selectedStore.id,
+        dateFrom: dateFrom.toISOString(),
+        dateTo: dateTo.toISOString(),
+        stats: data
+      };
+      localStorage.setItem(`${STATS_STORAGE_KEY}_${selectedStore.id}`, JSON.stringify(statsData));
+      
       setStatsData(data);
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -82,9 +88,12 @@ const Stats = () => {
   useEffect(() => {
     const selectedStore = getSelectedStore();
     if (selectedStore) {
-      fetchStats();
+      const hasStoredStats = loadStoredStats(selectedStore.id);
+      if (!hasStoredStats) {
+        fetchStats();
+      }
     }
-  }, [dateFrom, dateTo]);
+  }, []);
 
   const prepareSalesTrendData = (data: any) => {
     if (!data || !data.dailySales) return [];

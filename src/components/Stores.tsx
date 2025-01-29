@@ -31,11 +31,13 @@ interface Store {
   apiKey: string;
   isSelected?: boolean;
   stats?: WildberriesResponse;
+  lastFetchDate?: string;
 }
 
 const marketplaces: Marketplace[] = ["Wildberries", "Ozon", "Yandexmarket", "Uzum"];
 
 const STORES_STORAGE_KEY = 'marketplace_stores';
+const STATS_STORAGE_KEY = 'marketplace_stats';
 
 export default function Stores() {
   const [stores, setStores] = useState<Store[]>([]);
@@ -57,12 +59,29 @@ export default function Stores() {
     localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(stores));
   }, [stores]);
 
+  const getLastWeekDateRange = () => {
+    const now = new Date();
+    const lastWeek = new Date(now);
+    lastWeek.setDate(now.getDate() - 7);
+    return { from: lastWeek, to: now };
+  };
+
   const fetchStoreStats = async (store: Store) => {
     if (store.marketplace === "Wildberries") {
       try {
-        const now = new Date();
-        const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
-        const stats = await fetchWildberriesStats(store.apiKey, thirtyDaysAgo, new Date());
+        const { from, to } = getLastWeekDateRange();
+        const stats = await fetchWildberriesStats(store.apiKey, from, to);
+        
+        // Save stats to localStorage
+        const statsData = {
+          storeId: store.id,
+          dateFrom: from.toISOString(),
+          dateTo: to.toISOString(),
+          stats: stats
+        };
+        
+        localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify(statsData));
+        
         return stats;
       } catch (error) {
         console.error('Error fetching store stats:', error);
@@ -96,6 +115,7 @@ export default function Stores() {
         name: newStore.name,
         apiKey: newStore.apiKey,
         isSelected: false,
+        lastFetchDate: new Date().toISOString()
       };
 
       // Fetch initial stats for the store
