@@ -12,6 +12,7 @@ import {
   Area
 } from "recharts";
 import { ProcessedAnalytics } from "@/utils/analyticsProcessor";
+import { usePeriod } from "@/hooks/use-period";
 
 interface AnalyticsSectionProps {
   data: ProcessedAnalytics;
@@ -19,6 +20,7 @@ interface AnalyticsSectionProps {
 
 const AnalyticsSection = ({ data }: AnalyticsSectionProps) => {
   const isMobile = useIsMobile();
+  const { period } = usePeriod();
 
   const formatCurrency = (value: number) => 
     new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(value);
@@ -109,7 +111,7 @@ const AnalyticsSection = ({ data }: AnalyticsSectionProps) => {
       </Card>
 
       <Card className="p-4 mt-6">
-        <h3 className="text-lg font-semibold mb-4">Таблица возвратов по товарам</h3>
+        <h3 className="text-lg font-semibold mb-4">Анализ возвратов по товарам</h3>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>

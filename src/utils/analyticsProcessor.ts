@@ -15,6 +15,7 @@ interface WildberriesReportData {
   commission_percent: number;
   nm_id: string;
   subject_name: string;
+  sale_dt: string;
 }
 
 export interface ProcessedAnalytics {
@@ -53,9 +54,15 @@ export interface ProcessedAnalytics {
   };
 }
 
-export const processAnalyticsData = (data: WildberriesReportData[]): ProcessedAnalytics => {
-  const salesData = data.filter(item => item.doc_type_name === 'Продажа');
-  const returnsData = data.filter(item => item.doc_type_name === 'Возврат');
+export const processAnalyticsData = (data: WildberriesReportData[], startDate: string, endDate: string): ProcessedAnalytics => {
+  // Filter data by period
+  const filteredData = data.filter(item => {
+    const itemDate = new Date(item.sale_dt);
+    return itemDate >= new Date(startDate) && itemDate <= new Date(endDate);
+  });
+
+  const salesData = filteredData.filter(item => item.doc_type_name === 'Продажа');
+  const returnsData = filteredData.filter(item => item.doc_type_name === 'Возврат');
 
   // General Sales Analytics
   const totalSalesVolume = salesData.reduce((sum, item) => 
@@ -67,7 +74,7 @@ export const processAnalyticsData = (data: WildberriesReportData[]): ProcessedAn
     : 0;
 
   // Product Analysis
-  const productAnalysis = data.reduce((acc: any, item) => {
+  const productAnalysis = filteredData.reduce((acc: any, item) => {
     if (!acc[item.nm_id]) {
       acc[item.nm_id] = {
         productName: item.subject_name,
@@ -115,7 +122,7 @@ export const processAnalyticsData = (data: WildberriesReportData[]): ProcessedAn
     return acc;
   }, {});
 
-  // Returns Analysis
+  // Returns Analysis - following the Python logic
   const returnsAnalysis = Object.entries(productAnalysis).reduce((acc: any, [key, value]: [string, any]) => {
     acc[key] = {
       productName: value.productName,
