@@ -22,7 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Stats from "@/components/Stats";
 import Chart from "@/components/Chart";
-import Products from "@/components/Products";
+import ProductsDisplay from "@/components/Products"; // Renamed import to avoid conflict
 import Stores from "@/components/Stores";
 import CalculatorModal from "@/components/CalculatorModal";
 import {
@@ -125,7 +125,7 @@ const returnsTableData = [
 ];
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState("home"); // Changed default to "home" for Dashboard
+  const [activeTab, setActiveTab] = useState("home");
   const [showCalculator, setShowCalculator] = useState(false);
   const isMobile = useIsMobile();
   const { toast } = useToast();
@@ -504,7 +504,7 @@ const Index = () => {
           >
             <Stats />
             <Chart />
-            <Products 
+            <ProductsDisplay 
               topProfitableProducts={mockTopProfitableProducts}
               topUnprofitableProducts={mockTopUnprofitableProducts}
             />
