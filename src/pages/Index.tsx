@@ -12,7 +12,9 @@ import {
   Calculator,
   Sun,
   Moon,
-  Zap
+  Zap,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -24,6 +26,7 @@ import ProductsDisplay from "@/components/Products";
 import Stores from "@/components/Stores";
 import CalculatorModal from "@/components/CalculatorModal";
 import Products from "@/pages/Products";
+import Profile from "@/components/Profile";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +34,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "@/hooks/use-theme";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 const salesData = [
   { name: "Jan", value: 300000 },
@@ -576,3 +596,4 @@ const Index = () => {
 };
 
 export default Index;
+
