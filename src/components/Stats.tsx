@@ -22,6 +22,7 @@ import {
   CheckSquare,
   Loader2
 } from "lucide-react";
+import Chart from "@/components/Chart";
 
 interface Store {
   id: string;
@@ -85,7 +86,25 @@ const Stats = () => {
     }
   }, [dateFrom, dateTo]);
 
-  // Only create stats array if statsData exists
+  const prepareSalesTrendData = (data: any) => {
+    if (!data || !data.dailySales) return [];
+    
+    return data.dailySales.map((item: any) => ({
+      date: item.date,
+      currentValue: item.sales,
+      previousValue: item.previousSales
+    }));
+  };
+
+  const prepareProductSalesData = (data: any) => {
+    if (!data || !data.productSales) return [];
+    
+    return data.productSales.map((item: any) => ({
+      name: item.subject_name,
+      quantity: item.quantity
+    }));
+  };
+
   const stats = statsData ? [
     {
       title: "Продажа",
@@ -267,6 +286,10 @@ const Stats = () => {
         <>
           {renderStatsRow(stats, 0, 2)}
           {renderStatsRow(stats, 2, 4)}
+          <Chart 
+            salesTrend={prepareSalesTrendData(statsData)} 
+            productSales={prepareProductSalesData(statsData)}
+          />
           <div className="mt-8">
             <h3 className="text-lg font-semibold mb-4">Дополнительная статистика</h3>
             {renderStatsRow(additionalStats, 0, 2)}

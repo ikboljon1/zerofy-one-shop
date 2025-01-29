@@ -12,6 +12,15 @@ export interface WildberriesResponse {
     netProfit: number;
     acceptance: number;
   };
+  dailySales: Array<{
+    date: string;
+    sales: number;
+    previousSales: number;
+  }>;
+  productSales: Array<{
+    subject_name: string;
+    quantity: number;
+  }>;
 }
 
 interface WildberriesReportItem {
@@ -117,10 +126,26 @@ const calculateStats = (data: WildberriesReportItem[]): WildberriesResponse => {
       },
       netProfit: 0,
       acceptance: 0
-    }
+    },
+    dailySales: [],
+    productSales: []
   };
 
+  // Group sales by date
+  const dailySales = new Map<string, { sales: number; previousSales: number }>();
+  const productSales = new Map<string, number>();
+
   data.forEach(item => {
+    // Daily sales
+    const saleDate = item.sale_dt.split('T')[0];
+    const currentSales = dailySales.get(saleDate) || { sales: 0, previousSales: 0 };
+    currentSales.sales += item.retail_amount || 0;
+    dailySales.set(saleDate, currentSales);
+
+    // Product sales quantity
+    const currentQuantity = productSales.get(item.subject_name) || 0;
+    productSales.set(item.subject_name, currentQuantity + (item.quantity || 0));
+
     // Sales
     stats.currentPeriod.sales += item.retail_amount || 0;
     
@@ -145,6 +170,25 @@ const calculateStats = (data: WildberriesReportItem[]): WildberriesResponse => {
   // Calculate net profit
   stats.currentPeriod.netProfit = 
     stats.currentPeriod.transferred - stats.currentPeriod.expenses.total;
+
+  // Convert Maps to arrays and sort
+  const sortedDailySales = Array.from(dailySales.entries())
+    .map(([date, values]) => ({
+      date,
+      ...values
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const sortedProductSales = Array.from(productSales.entries())
+    .map(([name, quantity]) => ({
+      subject_name: name,
+      quantity
+    }))
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 10); // Top 10 products
+
+  stats.dailySales = sortedDailySales;
+  stats.productSales = sortedProductSales;
 
   return stats;
 };
