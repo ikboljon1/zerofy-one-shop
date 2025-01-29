@@ -50,7 +50,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import Profile from "@/components/Profile";
-import AnalyticsSection from "@/components/AnalyticsSection";
 
 const salesData = [
   { name: "Jan", value: 300000 },
@@ -129,7 +128,6 @@ const Index = () => {
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const { theme, toggleTheme } = useTheme();
-  const [statsData, setStatsData] = useState<any>(null);
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -355,6 +353,7 @@ const Index = () => {
     </div>
   );
 
+  // Add this mock data for now
   const mockTopProfitableProducts = [
     {
       name: "Товар 1",
@@ -507,7 +506,7 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <AnalyticsSection statsData={statsData} />
+            {renderAnalytics()}
           </motion.div>
         )}
         {activeTab === "stores" && (
