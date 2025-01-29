@@ -54,11 +54,30 @@ export interface ProcessedAnalytics {
   };
 }
 
+const CACHE_KEY = 'analytics_cache';
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes in milliseconds
+
+interface CacheData {
+  timestamp: number;
+  data: ProcessedAnalytics;
+}
+
 export const processAnalyticsData = (
   data: WildberriesReportData[], 
   startDate: string, 
   endDate: string
 ): ProcessedAnalytics => {
+  const cacheKey = `${CACHE_KEY}_${startDate}_${endDate}`;
+  const cachedData = localStorage.getItem(cacheKey);
+
+  if (cachedData) {
+    const parsed: CacheData = JSON.parse(cachedData);
+    if (Date.now() - parsed.timestamp < CACHE_DURATION) {
+      return parsed.data;
+    }
+    localStorage.removeItem(cacheKey);
+  }
+
   // Filter data by period
   const filteredData = data.filter(item => {
     const itemDate = new Date(item.sale_dt);
@@ -70,7 +89,7 @@ export const processAnalyticsData = (
   const salesData = filteredData.filter(item => item.doc_type_name === 'Продажа');
   const returnsData = filteredData.filter(item => item.doc_type_name === 'Возврат');
 
-  // Calculate total sales volume correctly
+  // Calculate total sales volume correctly from filtered data
   const totalSalesVolume = salesData.reduce((sum, item) => 
     sum + (item.retail_price * item.quantity), 0);
 
@@ -80,7 +99,7 @@ export const processAnalyticsData = (
     ? (totalReturnsCount / totalOrdersCount) * 100 
     : 0;
 
-  // Product Analysis
+  // Product Analysis with filtered data
   const productAnalysis = filteredData.reduce((acc: any, item) => {
     if (!acc[item.nm_id]) {
       acc[item.nm_id] = {
@@ -149,7 +168,7 @@ export const processAnalyticsData = (
     return acc;
   }, {});
 
-  return {
+  const result = {
     generalSalesAnalytics: {
       totalSalesVolume,
       totalOrdersCount,
@@ -160,4 +179,12 @@ export const processAnalyticsData = (
     returnsAnalysis,
     profitabilityAnalysis
   };
+
+  // Cache the results
+  localStorage.setItem(cacheKey, JSON.stringify({
+    timestamp: Date.now(),
+    data: result
+  }));
+
+  return result;
 };

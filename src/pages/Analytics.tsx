@@ -3,15 +3,18 @@ import { processAnalyticsData } from "@/utils/analyticsProcessor";
 import AnalyticsSection from "@/components/AnalyticsSection";
 import { Loader2 } from "lucide-react";
 import { usePeriod } from "@/hooks/use-period";
+import { useToast } from "@/hooks/use-toast";
 
 const Analytics = () => {
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { period } = usePeriod();
+  const { toast } = useToast();
 
   useEffect(() => {
     const loadAnalyticsData = () => {
       try {
+        setIsLoading(true);
         // Get the selected store
         const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
         const selectedStore = stores.find((store: any) => store.isSelected);
@@ -35,15 +38,25 @@ const Analytics = () => {
           period.endDate
         );
         setAnalyticsData(processedData);
+        
+        toast({
+          title: "Данные обновлены",
+          description: `Данные обновлены для периода ${period.startDate} - ${period.endDate}`,
+        });
       } catch (error) {
         console.error('Error loading analytics data:', error);
+        toast({
+          variant: "destructive",
+          title: "Ошибка",
+          description: "Не удалось загрузить данные аналитики",
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
     loadAnalyticsData();
-  }, [period]); // Add period to dependency array to reload when it changes
+  }, [period, toast]); // Add period to dependency array to reload when it changes
 
   if (isLoading) {
     return (
