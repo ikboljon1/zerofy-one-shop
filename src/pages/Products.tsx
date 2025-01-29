@@ -4,8 +4,11 @@ import { Button } from "@/components/ui/button";
 import ProductsList from "@/components/ProductsList";
 import { useToast } from "@/hooks/use-toast";
 
-const Products = () => {
-  const [selectedStore, setSelectedStore] = useState<{id: string; apiKey: string} | null>(null);
+interface ProductsProps {
+  selectedStore: { id: string; apiKey: string } | null;
+}
+
+const Products = ({ selectedStore }: ProductsProps) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 

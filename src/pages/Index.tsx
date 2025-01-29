@@ -22,7 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Stats from "@/components/Stats";
 import Chart from "@/components/Chart";
-import ProductsDisplay from "@/components/Products"; // Renamed import to avoid conflict
+import ProductsDisplay from "@/components/Products";
 import Stores from "@/components/Stores";
 import CalculatorModal from "@/components/CalculatorModal";
 import {
@@ -526,7 +526,7 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <Products />
+            <Products selectedStore={selectedStore} />
           </motion.div>
         )}
         {activeTab === "stores" && (
