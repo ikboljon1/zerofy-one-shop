@@ -33,15 +33,15 @@ const Products = ({
           }`}
         >
           <img
-            src={product.image}
+            src={product.image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"}
             alt={product.name}
             className={`rounded-lg object-cover ${
               isMobile ? 'h-12 w-12' : 'h-16 w-16'
             }`}
           />
-          <div>
+          <div className="flex-1">
             <h4 className={`font-semibold ${isMobile ? 'text-sm' : ''}`}>
-              {product.name}
+              {product.name || "Неизвестный товар"}
             </h4>
             <p className="text-sm text-muted-foreground">
               Цена: {product.price} руб
