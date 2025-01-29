@@ -32,24 +32,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "@/hooks/use-theme";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-import Profile from "@/components/Profile";
 
 const salesData = [
   { name: "Jan", value: 300000 },
@@ -119,6 +101,48 @@ const returnsTableData = [
     orders: 60,
     returns: 5,
     returnRate: "8.33%"
+  }
+];
+
+const mockTopProfitableProducts = [
+  {
+    name: "Товар ID: 228365699",
+    price: "511.40",
+    profit: "3208.51",
+    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
+  },
+  {
+    name: "Товар ID: 228169605",
+    price: "450.00",
+    profit: "2500.00",
+    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
+  },
+  {
+    name: "Товар ID: 228169606",
+    price: "600.00",
+    profit: "1800.00",
+    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
+  }
+];
+
+const mockTopUnprofitableProducts = [
+  {
+    name: "Товар ID: 228169607",
+    price: "300.00",
+    profit: "-500.00",
+    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
+  },
+  {
+    name: "Товар ID: 228169608",
+    price: "250.00",
+    profit: "-300.00",
+    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
+  },
+  {
+    name: "Товар ID: 228169609",
+    price: "400.00",
+    profit: "-200.00",
+    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
   }
 ];
 
