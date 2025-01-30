@@ -208,11 +208,12 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
     setIsLoading(true);
     try {
-      // Сначала получаем отчет о продажах
-      const reportResponse = await fetch("https://statistics-api.wildberries.ru/api/v1/supplier/reportDetailByPeriod", {
+      // Updated API endpoint for sales report
+      const reportResponse = await fetch("https://statistics-api.wildberries.ru/api/v1/supplier/sales", {
         method: "GET",
         headers: {
-          "Authorization": selectedStore.apiKey
+          "Authorization": selectedStore.apiKey,
+          "Content-Type": "application/json"
         }
       });
 
@@ -223,10 +224,10 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       const reportData = await reportResponse.json();
       console.log("Sales report data:", reportData);
       
-      // Сохраняем отчет в localStorage
+      // Save report to localStorage
       localStorage.setItem(`wb_report_${selectedStore.id}`, JSON.stringify(reportData));
 
-      // Затем получаем данные о товарах
+      // Fetch products data
       const response = await fetch("https://content-api.wildberries.ru/content/v2/get/cards/list", {
         method: "POST",
         headers: {
