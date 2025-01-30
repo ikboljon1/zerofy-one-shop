@@ -52,10 +52,10 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     const productSales = salesData[product.nmID] || 0;
 
     const totalExpenses = product.expenses ? (
-      (product.expenses.logistics * productSales) +
-      (product.expenses.storage * productSales) +
-      (product.expenses.penalties * productSales) +
-      (product.expenses.acceptance * productSales)
+      (product.expenses.logistics || 0) +
+      (product.expenses.storage || 0) +
+      (product.expenses.penalties || 0) +
+      (product.expenses.acceptance || 0)
     ) : 0;
 
     const revenue = (product.discountedPrice || 0) * productSales;
@@ -123,19 +123,21 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     try {
       const statsData = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
       
-      // Process the stats data to update products
-      const updatedProducts = products.map(product => {
-        const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore.id}`) || "{}");
-        const productSales = salesData[product.nmID] || 0;
+      // Get existing products from localStorage
+      const existingProducts = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
+      const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore.id}`) || "{}");
+
+      // Update products with new data
+      const updatedProducts = existingProducts.map((product: Product) => {
+        const productSales = salesData[product.nmID] || 1; // Use 1 as default to avoid division by zero
         
         return {
           ...product,
-          discountedPrice: product.price || 0,
           expenses: {
-            logistics: statsData.currentPeriod.expenses.logistics / productSales || 0,
-            storage: statsData.currentPeriod.expenses.storage / productSales || 0,
-            penalties: statsData.currentPeriod.expenses.penalties / productSales || 0,
-            acceptance: statsData.currentPeriod.acceptance / productSales || 0
+            logistics: statsData.currentPeriod.expenses.logistics / productSales,
+            storage: statsData.currentPeriod.expenses.storage / productSales,
+            penalties: statsData.currentPeriod.expenses.penalties / productSales,
+            acceptance: statsData.currentPeriod.acceptance / productSales
           }
         };
       });
@@ -177,7 +179,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
               </>
             ) : (
               <>
-                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw className="mr-2 h-4 w-4" />
                 Синхронизировать
               </>
             )}
