@@ -72,7 +72,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     
     // Расчет общих расходов
     const totalExpenses = 
-      (product.costPrice * productSales) + // Себестоимость * количество проданных товаров
       product.expenses.logistics +          // Логистика
       product.expenses.storage +            // Хранение
       product.expenses.penalties +          // Штрафы
@@ -81,7 +80,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     console.log('Calculation details for product', product.nmID, {
       costPrice: product.costPrice,
       productSales,
-      costPriceTotal: product.costPrice * productSales,
       logistics: product.expenses.logistics,
       storage: product.expenses.storage,
       penalties: product.expenses.penalties,
@@ -361,11 +359,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                         className="h-8 text-sm"
                         placeholder="Введите себестоимость"
                       />
-                      {product.costPrice > 0 && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Текущая себестоимость: {product.costPrice} ₽
-                        </p>
-                      )}
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs text-muted-foreground">
@@ -377,10 +370,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                     </div>
                     {product.expenses && (
                       <div className="space-y-1.5 border-t pt-2">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Расчет себестоимости:</span>
-                          <span>{product.costPrice} ₽ × {profitDetails.productSales} шт. = {(product.costPrice * profitDetails.productSales).toFixed(2)} ₽</span>
-                        </div>
                         <div className="flex justify-between text-xs">
                           <span className="text-muted-foreground">Логистика:</span>
                           <span>{product.expenses.logistics.toFixed(2)} ₽</span>
@@ -397,13 +386,9 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                           <span className="text-muted-foreground">Приемка:</span>
                           <span>{product.expenses.acceptance.toFixed(2)} ₽</span>
                         </div>
-                        <div className="flex justify-between text-xs">
+                        <div className="flex justify-between text-xs font-medium border-t pt-2">
                           <span className="text-muted-foreground">Общие расходы:</span>
                           <span>{profitDetails.totalExpenses.toFixed(2)} ₽</span>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Выручка:</span>
-                          <span>{product.discountedPrice} ₽ × {profitDetails.productSales} шт. = {profitDetails.revenue.toFixed(2)} ₽</span>
                         </div>
                         <div className="flex justify-between text-sm font-medium border-t pt-2">
                           <span>Чистая прибыль:</span>
