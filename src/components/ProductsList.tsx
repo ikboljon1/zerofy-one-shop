@@ -66,12 +66,18 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   };
 
   const fetchProductPrices = async (nmIds: number[]) => {
-    if (!selectedStore?.apiKey) return {};
+    if (!selectedStore?.apiKey || nmIds.length === 0) {
+      console.log("No products to fetch prices for");
+      return {};
+    }
 
     try {
       const url = new URL("https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter");
       url.searchParams.append("limit", "1000");
       url.searchParams.append("filterNmID", nmIds.join(','));
+
+      console.log("Fetching prices for nmIds:", nmIds);
+      console.log("Request URL:", url.toString());
 
       const response = await fetch(url.toString(), {
         method: "GET",
@@ -96,7 +102,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         data.data.listGoods.forEach((item) => {
           if (item.sizes && item.sizes.length > 0) {
             const firstSize = item.sizes[0];
-            // Берем базовую цену из первого размера
+            // Take the base price from the first size
             const basePrice = firstSize.price;
             priceMap[item.nmID] = basePrice;
             console.log(`Price set for ${item.nmID}:`, {
@@ -156,7 +162,13 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       const data = await response.json();
       console.log("Products data:", data);
       
-      // Загружаем существующие цены из localStorage
+      if (!data.cards || !Array.isArray(data.cards)) {
+        console.log("No products found in response");
+        setProducts([]);
+        return;
+      }
+
+      // Load existing prices from localStorage
       const storedProducts = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
       const costPrices = storedProducts.reduce((acc: Record<number, number>, product: Product) => {
         if (product.costPrice) {
@@ -165,11 +177,12 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         return acc;
       }, {});
 
-      // Получаем актуальные цены
+      // Get current prices
       const nmIds = data.cards.map((product: Product) => product.nmID);
+      console.log("Fetching prices for products:", nmIds);
       const prices = await fetchProductPrices(nmIds);
 
-      // Объединяем новые продукты с существующими ценами
+      // Combine new products with existing prices
       const updatedProducts = data.cards.map((product: Product) => {
         const currentPrice = prices[product.nmID];
         console.log(`Processing product ${product.nmID}:`, {
@@ -218,7 +231,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedProducts));
   };
 
-  // Загружаем продукты из localStorage при изменении магазина
+  // Load products from localStorage when store changes
   useState(() => {
     if (selectedStore) {
       const storedProducts = localStorage.getItem(`products_${selectedStore.id}`);
