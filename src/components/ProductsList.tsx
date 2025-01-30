@@ -37,6 +37,7 @@ interface WBPriceResponse {
   data: {
     listGoods: Array<{
       nmID: number;
+      vendorCode: string;
       sizes: Array<{
         price: number;
         discountedPrice: number;
@@ -94,12 +95,15 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       
       if (data.data?.listGoods) {
         data.data.listGoods.forEach((item) => {
-          if (item.nmID && item.sizes && item.sizes[0]) {
+          // Get the first size's price data
+          const firstSize = item.sizes?.[0];
+          if (item.nmID && firstSize) {
             // Use clubDiscountedPrice as the main price, falling back to discountedPrice or regular price
-            const price = item.sizes[0].clubDiscountedPrice || 
-                         item.sizes[0].discountedPrice || 
-                         item.sizes[0].price || 0;
+            const price = firstSize.clubDiscountedPrice || 
+                         firstSize.discountedPrice || 
+                         firstSize.price || 0;
             priceMap[item.nmID] = price;
+            console.log(`Price for ${item.nmID} (${item.vendorCode}): ${price}`);
           }
         });
       }
