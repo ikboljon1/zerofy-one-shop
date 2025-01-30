@@ -63,11 +63,12 @@ const WB_CONTENT_URL = "https://suppliers-api.wildberries.ru/content/v2/get/card
 const dataCache: { [key: string]: CachedData } = {};
 const requestTimestamps: { [key: string]: number } = {};
 
-const RETRY_DELAY = 60000;
-const INITIAL_RETRY_DELAY = 5000;
+// Increased delays and limits for better rate limiting handling
+const RETRY_DELAY = 60000; // 1 minute delay between retries
+const INITIAL_RETRY_DELAY = 5000; // 5 seconds for first retry
 const MAX_RETRIES = 5;
-const RATE_LIMIT_WINDOW = 60000;
-const MAX_REQUESTS_PER_WINDOW = 5;
+const RATE_LIMIT_WINDOW = 60000; // 1 minute window for rate limiting
+const MAX_REQUESTS_PER_WINDOW = 5; // Maximum requests per minute
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -75,6 +76,7 @@ const shouldThrottle = (key: string): boolean => {
   const now = Date.now();
   const windowStart = now - RATE_LIMIT_WINDOW;
   
+  // Count requests in the current window
   const requestsInWindow = Object.entries(requestTimestamps)
     .filter(([, timestamp]) => timestamp > windowStart)
     .length;
@@ -85,6 +87,7 @@ const shouldThrottle = (key: string): boolean => {
 const updateRequestTimestamp = (key: string) => {
   requestTimestamps[key] = Date.now();
   
+  // Cleanup old timestamps
   const windowStart = Date.now() - RATE_LIMIT_WINDOW;
   Object.keys(requestTimestamps).forEach(key => {
     if (requestTimestamps[key] < windowStart) {
@@ -95,7 +98,7 @@ const updateRequestTimestamp = (key: string) => {
 
 const calculateRetryDelay = (retryCount: number): number => {
   if (retryCount === 0) return INITIAL_RETRY_DELAY;
-  return Math.min(RETRY_DELAY * Math.pow(2, retryCount - 1), 300000);
+  return Math.min(RETRY_DELAY * Math.pow(2, retryCount - 1), 300000); // Max 5 minutes
 };
 
 const fetchWithRetry = async (
@@ -184,13 +187,7 @@ const fetchAndCacheData = async (
   };
 
   try {
-    console.log('Fetching data from API with params:', {
-      dateFrom: dateFrom.toISOString(),
-      dateTo: dateTo.toISOString()
-    });
-
     const data = await fetchWithRetry(WB_REPORT_URL, headers, params);
-    console.log('Received data from API:', data);
     
     dataCache[cacheKey] = {
       timestamp: now,
@@ -223,6 +220,7 @@ const fetchProductNames = async (apiKey: string, nmIds: string[]): Promise<Map<s
   };
 
   try {
+    // Changed to use POST method and include payload
     const data = await fetchWithRetry(
       WB_CONTENT_URL, 
       headers, 
@@ -261,13 +259,12 @@ const calculateProductStats = (data: WildberriesReportItem[]) => {
     logistics: number,
     storage: number,
     penalties: number,
-    acceptance: number,
     deductions: number,
     nmId: string
   }>();
 
   data.forEach(item => {
-    const currentStats = productStats.get(item.nm_id) || {
+    const currentStats = productStats.get(item.subject_name) || {
       name: item.subject_name,
       profit: 0,
       price: 0,
@@ -277,7 +274,6 @@ const calculateProductStats = (data: WildberriesReportItem[]) => {
       logistics: 0,
       storage: 0,
       penalties: 0,
-      acceptance: 0,
       deductions: 0,
       nmId: item.nm_id
     };
@@ -285,28 +281,28 @@ const calculateProductStats = (data: WildberriesReportItem[]) => {
     if (item.doc_type_name === "Продажа") {
       currentStats.sales += item.retail_amount || 0;
       currentStats.quantity += item.quantity || 0;
+      // Суммируем фактические расходы из API для каждой продажи
       currentStats.logistics += item.delivery_rub || 0;
       currentStats.storage += item.storage_fee || 0;
       currentStats.penalties += item.penalty || 0;
-      currentStats.acceptance += item.acceptance || 0;
       currentStats.deductions += item.deduction || 0;
     } else if (item.doc_type_name === "Возврат") {
-      currentStats.returns += item.quantity || 0;
+      currentStats.returns += item.retail_amount || 0;
     }
 
+    // Обновляем прибыль с учетом фактических общих расходов
     currentStats.profit = currentStats.sales - (
       currentStats.logistics +
       currentStats.storage +
       currentStats.penalties +
-      currentStats.acceptance +
-      currentStats.deductions
+      currentStats.deductions +
+      currentStats.returns
     );
 
-    if (currentStats.quantity > 0) {
-      currentStats.price = currentStats.sales / currentStats.quantity;
-    }
+    // Рассчитываем среднюю цену продажи
+    currentStats.price = currentStats.sales / (currentStats.quantity || 1);
 
-    productStats.set(item.nm_id, currentStats);
+    productStats.set(item.subject_name, currentStats);
   });
 
   return Array.from(productStats.values());
@@ -446,33 +442,16 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
   stats.dailySales = sortedDailySales;
   stats.productSales = sortedProductSales;
 
+  // Save sales data to localStorage
   const salesData: { [key: string]: number } = {};
-  const expensesData: { [key: string]: any } = {};
-  
-  data.forEach(item => {
-    if (item.doc_type_name === "Продажа") {
-      const nmId = item.nm_id;
-      if (!salesData[nmId]) {
-        salesData[nmId] = 0;
-        expensesData[nmId] = {
-          logistics: 0,
-          storage: 0,
-          penalties: 0,
-          acceptance: 0
-        };
-      }
-      salesData[nmId] += item.quantity || 0;
-      expensesData[nmId].logistics += item.delivery_rub || 0;
-      expensesData[nmId].storage += item.storage_fee || 0;
-      expensesData[nmId].penalties += item.penalty || 0;
-      expensesData[nmId].acceptance += item.acceptance || 0;
-    }
+  salesByProduct.forEach((value, key) => {
+    salesData[key] = value;
   });
-
+  
+  // Get store ID from localStorage (you'll need to set this when selecting a store)
   const storeId = localStorage.getItem('currentStoreId');
   if (storeId) {
     localStorage.setItem(`sales_${storeId}`, JSON.stringify(salesData));
-    localStorage.setItem(`expenses_${storeId}`, JSON.stringify(expensesData));
   }
 
   const { topProfitable, topUnprofitable } = await getTopProducts(data, apiKey);
@@ -489,18 +468,10 @@ export const fetchWildberriesStats = async (
   dateTo: Date
 ): Promise<WildberriesResponse> => {
   try {
-    console.log('Fetching Wildberries stats for period:', {
-      from: dateFrom.toISOString(),
-      to: dateTo.toISOString()
-    });
-
     const data = await fetchAndCacheData(apiKey, dateFrom, dateTo);
-    const stats = await calculateStats(data, apiKey);
-
-    console.log('Calculated stats:', stats);
-    return stats;
+    return await calculateStats(data, apiKey);
   } catch (error) {
-    console.error('Error in fetchWildberriesStats:', error);
-    throw new Error('Failed to fetch Wildberries statistics');
+    console.error('Ошибка получения статистики Wildberries:', error);
+    throw new Error('Не удалось загрузить статистику Wildberries');
   }
 };
