@@ -18,6 +18,6 @@ interface Product {
     penalties: number;
     acceptance: number;
     deductions?: number;
-    transferred?: number;
+    ppvz_for_pay?: number;
   };
 }

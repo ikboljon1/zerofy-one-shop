@@ -25,6 +25,8 @@ interface Product {
     storage: number;
     penalties: number;
     acceptance: number;
+    deductions?: number;
+    ppvz_for_pay?: number;
   };
 }
 
@@ -71,8 +73,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     // Calculate total sales amount (price * quantity)
     const salesAmount = (product.discountedPrice || 0) * productSales;
     
-    // Get transferred amount from API data
-    const transferredAmount = product.expenses.transferred || 0;
+    // Get transferred amount from ppvz_for_pay
+    const transferredAmount = product.expenses.ppvz_for_pay || 0;
     
     // Calculate total expenses including deductions
     const totalExpenses = 
@@ -82,7 +84,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       product.expenses.acceptance +    // Total acceptance
       (product.expenses.deductions || 0); // Add deductions
     
-    // Net profit is now transferred amount minus total expenses
+    // Net profit is now ppvz_for_pay minus total expenses
     const netProfit = transferredAmount - totalExpenses;
     
     return {
@@ -269,8 +271,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
             storage: Math.random() * 50,
             penalties: Math.random() * 20,
             acceptance: Math.random() * 30,
-            deductions: Math.random() * 40,  // Added deductions
-            transferred: Math.random() * 1000  // Added transferred amount
+            deductions: Math.random() * 40,
+            ppvz_for_pay: Math.random() * 1000  // Changed from transferred to ppvz_for_pay
           }
         };
       });
