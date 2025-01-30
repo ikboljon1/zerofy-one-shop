@@ -67,51 +67,57 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   };
 
   const fetchProductPrices = async (nmIds: number[]) => {
-    if (!selectedStore?.apiKey) return {};
+    if (!selectedStore?.apiKey || nmIds.length === 0) return {};
 
     try {
-      const url = new URL("https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter");
-      url.searchParams.append("limit", "1000");
-      url.searchParams.append("filterNmID", nmIds.join(','));
-
-      console.log("Fetching prices with URL:", url.toString());
-
-      const response = await fetch(url.toString(), {
-        method: "GET",
-        headers: {
-          "Authorization": selectedStore.apiKey,
-          "Content-Type": "application/json"
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error("Price fetch error details:", errorData);
-        throw new Error("Failed to fetch prices");
-      }
-
-      const data = await response.json() as WBPriceResponse;
-      console.log("Raw price data:", data);
-      
+      // Split nmIds into chunks of 20
+      const chunkSize = 20;
       const priceMap: { [key: number]: number } = {};
-      
-      if (data.data?.listGoods) {
-        data.data.listGoods.forEach((item) => {
-          if (item.sizes && item.sizes.length > 0) {
-            const firstSize = item.sizes[0];
-            // Берем цену из первого размера
-            const price = firstSize.price || 0;
-            priceMap[item.nmID] = price;
-            console.log(`Price set for ${item.nmID}:`, {
-              nmID: item.nmID,
-              vendorCode: item.vendorCode,
-              price: price,
-              firstSize: firstSize
-            });
-          } else {
-            console.log(`No sizes found for ${item.nmID}`);
+
+      // Process nmIds in chunks
+      for (let i = 0; i < nmIds.length; i += chunkSize) {
+        const chunk = nmIds.slice(i, i + chunkSize);
+        const url = new URL("https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter");
+        url.searchParams.append("limit", "1000");
+        url.searchParams.append("filterNmID", chunk.join(','));
+
+        console.log(`Fetching prices for chunk ${i / chunkSize + 1}, IDs:`, chunk);
+
+        const response = await fetch(url.toString(), {
+          method: "GET",
+          headers: {
+            "Authorization": selectedStore.apiKey,
+            "Content-Type": "application/json"
           }
         });
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error(`Price fetch error for chunk ${i / chunkSize + 1}:`, errorData);
+          continue; // Skip this chunk if there's an error, but continue with others
+        }
+
+        const data = await response.json() as WBPriceResponse;
+        console.log(`Price data for chunk ${i / chunkSize + 1}:`, data);
+        
+        if (data.data?.listGoods) {
+          data.data.listGoods.forEach((item) => {
+            if (item.sizes && item.sizes.length > 0) {
+              const firstSize = item.sizes[0];
+              const price = firstSize.price || 0;
+              priceMap[item.nmID] = price;
+              console.log(`Price set for ${item.nmID}:`, {
+                nmID: item.nmID,
+                vendorCode: item.vendorCode,
+                price: price,
+                firstSize: firstSize
+              });
+            }
+          });
+        }
+
+        // Add a small delay between requests to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
 
       console.log("Final price map:", priceMap);
