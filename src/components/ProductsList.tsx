@@ -19,6 +19,7 @@ interface Product {
   price?: number;
   discountedPrice?: number;
   clubPrice?: number;
+  quantity?: number;
   expenses?: {
     logistics: number;
     storage: number;
@@ -67,15 +68,15 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     console.log('Sales data from localStorage:', salesData);
     
     // Получаем количество продаж для конкретного товара
-    const productSales = salesData[product.nmID] || 0;
+    const productSales = product.quantity || salesData[product.nmID] || 0;
     console.log('Product sales for ID', product.nmID, ':', productSales);
     
-    // Расчет общих расходов
+    // Расчет общих расходов с учетом количества проданных товаров
     const totalExpenses = 
-      product.expenses.logistics +          // Логистика
-      product.expenses.storage +            // Хранение
-      product.expenses.penalties +          // Штрафы
-      product.expenses.acceptance;          // Приемка
+      (product.expenses.logistics * productSales) +     // Логистика
+      (product.expenses.storage * productSales) +       // Хранение
+      (product.expenses.penalties * productSales) +     // Штрафы
+      (product.expenses.acceptance * productSales);     // Приемка
     
     console.log('Calculation details for product', product.nmID, {
       costPrice: product.costPrice,
@@ -95,11 +96,13 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       revenue
     });
     
-    // Чистая прибыль = выручка - общие расходы
-    const netProfit = revenue - totalExpenses;
+    // Чистая прибыль = выручка - общие расходы - (себестоимость * количество)
+    const netProfit = revenue - totalExpenses - (product.costPrice * productSales);
     console.log('Net profit calculation:', {
       revenue,
       totalExpenses,
+      costPrice: product.costPrice,
+      productSales,
       netProfit
     });
     
@@ -170,6 +173,49 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     }
   };
 
+  const fetchProductQuantities = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
+    try {
+      const url = new URL("https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod");
+      url.searchParams.append("dateFrom", dateFrom.toISOString().split('T')[0]);
+      url.searchParams.append("dateTo", dateTo.toISOString().split('T')[0]);
+      url.searchParams.append("limit", "100000");
+
+      console.log('Fetching quantities with URL:', url.toString());
+
+      const response = await fetch(url.toString(), {
+        headers: {
+          "Authorization": apiKey,
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error fetching quantities:', errorText);
+        return {};
+      }
+
+      const data = await response.json();
+      console.log('Quantities data:', data);
+
+      const quantityMap: { [key: number]: number } = {};
+      
+      // Группируем количество по nmId
+      data.forEach((item: any) => {
+        if (item.doc_type_name === "Продажа") {
+          const nmId = item.nm_id;
+          quantityMap[nmId] = (quantityMap[nmId] || 0) + (item.quantity || 0);
+        }
+      });
+
+      console.log('Final quantity map:', quantityMap);
+      return quantityMap;
+    } catch (error) {
+      console.error('Error in fetchProductQuantities:', error);
+      return {};
+    }
+  };
+
   const syncProducts = async () => {
     if (!selectedStore) {
       toast({
@@ -217,18 +263,28 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
       const nmIds = data.cards.map((product: Product) => product.nmID);
       const prices = await fetchProductPrices(nmIds);
+      
+      // Получаем количество проданных товаров за последние 30 дней
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 30);
+      const quantities = await fetchProductQuantities(selectedStore.apiKey, startDate, endDate);
 
       const updatedProducts = data.cards.map((product: Product) => {
         const currentPrice = prices[product.nmID];
+        const quantity = quantities[product.nmID] || 0;
+        
         console.log(`Processing product ${product.nmID}:`, {
           price: currentPrice,
-          costPrice: costPrices[product.nmID]
+          costPrice: costPrices[product.nmID],
+          quantity: quantity
         });
         
         return {
           ...product,
           costPrice: costPrices[product.nmID] || 0,
           discountedPrice: currentPrice || 0,
+          quantity: quantity,
           expenses: {
             logistics: Math.random() * 100,
             storage: Math.random() * 50,
@@ -366,6 +422,14 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       </label>
                       <div className="text-sm font-medium">
                         {product.discountedPrice ? `${product.discountedPrice.toFixed(2)} ₽` : "0.00 ₽"}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">
+                        Продано за 30 дней:
+                      </label>
+                      <div className="text-sm font-medium">
+                        {product.quantity || 0} шт.
                       </div>
                     </div>
                     {product.expenses && (
