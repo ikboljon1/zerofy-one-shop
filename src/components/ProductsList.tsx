@@ -208,8 +208,18 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
     setIsLoading(true);
     try {
-      // Updated API endpoint for sales report
-      const reportResponse = await fetch("https://statistics-api.wildberries.ru/api/v1/supplier/sales", {
+      // Get date range for last 30 days
+      const dateTo = new Date();
+      const dateFrom = new Date();
+      dateFrom.setDate(dateFrom.getDate() - 30);
+
+      // Format dates as YYYY-MM-DD
+      const formatDate = (date: Date) => {
+        return date.toISOString().split('T')[0];
+      };
+
+      // Updated API endpoint for sales report with date parameters
+      const reportResponse = await fetch(`https://statistics-api.wildberries.ru/api/v1/supplier/sales?dateFrom=${formatDate(dateFrom)}&dateTo=${formatDate(dateTo)}`, {
         method: "GET",
         headers: {
           "Authorization": selectedStore.apiKey,
