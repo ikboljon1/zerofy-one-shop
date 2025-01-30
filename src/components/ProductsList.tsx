@@ -56,7 +56,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   const isMobile = useIsMobile();
 
   const calculateNetProfit = (product: Product) => {
-    if (!product.costPrice) return {
+    if (!product.costPrice || !product.expenses) return {
       netProfit: 0,
       productSales: 0,
       totalExpenses: 0,
@@ -64,32 +64,43 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     };
     
     const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore?.id}`) || '{}');
-    const expensesData = JSON.parse(localStorage.getItem('expenses_data') || '{}');
+    console.log('Sales data from localStorage:', salesData);
     
-    const productSales = salesData[product.nmID] || 0;
-    const productExpenses = expensesData[product.nmID] || {
-      logistics: 0,
-      storage: 0,
-      penalties: 0,
-      acceptance: 0
-    };
+    const productSales = product.quantity || salesData[product.nmID] || 0;
+    console.log('Product sales for ID', product.nmID, ':', productSales);
     
-    // Используем общие расходы из API
+    // Используем фактические общие расходы из API
     const totalExpenses = 
-      productExpenses.logistics +     // Общая логистика
-      productExpenses.storage +       // Общее хранение
-      productExpenses.penalties +     // Общие штрафы
-      productExpenses.acceptance;     // Общая приемка
+      product.expenses.logistics +     // Фактическая общая логистика
+      product.expenses.storage +       // Фактическое общее хранение
+      product.expenses.penalties +     // Фактические общие штрафы
+      product.expenses.acceptance;     // Фактическая общая приемка
     
     console.log('Calculation details for product', product.nmID, {
       costPrice: product.costPrice,
       productSales,
-      expenses: productExpenses,
+      logistics: product.expenses.logistics,
+      storage: product.expenses.storage,
+      penalties: product.expenses.penalties,
+      acceptance: product.expenses.acceptance,
       totalExpenses
     });
     
     const revenue = (product.discountedPrice || 0) * productSales;
+    console.log('Revenue calculation:', {
+      discountedPrice: product.discountedPrice,
+      productSales,
+      revenue
+    });
+    
     const netProfit = revenue - totalExpenses - (product.costPrice * productSales);
+    console.log('Net profit calculation:', {
+      revenue,
+      totalExpenses,
+      costPrice: product.costPrice,
+      productSales,
+      netProfit
+    });
     
     return {
       netProfit,

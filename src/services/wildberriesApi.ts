@@ -248,55 +248,124 @@ const fetchProductNames = async (apiKey: string, nmIds: string[]): Promise<Map<s
   }
 };
 
-const fetchProductExpenses = async (apiKey: string, nmId: string, dateFrom: Date, dateTo: Date) => {
-  try {
-    const url = new URL("https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod");
-    url.searchParams.append("dateFrom", dateFrom.toISOString().split('T')[0]);
-    url.searchParams.append("dateTo", dateTo.toISOString().split('T')[0]);
-    url.searchParams.append("limit", "100000");
-    url.searchParams.append("nmId", nmId);
+const calculateProductStats = (data: WildberriesReportItem[]) => {
+  const productStats = new Map<string, {
+    name: string,
+    profit: number,
+    price: number,
+    sales: number,
+    quantity: number,
+    returns: number,
+    logistics: number,
+    storage: number,
+    penalties: number,
+    deductions: number,
+    nmId: string
+  }>();
 
-    console.log('Fetching expenses for product:', nmId);
+  data.forEach(item => {
+    const currentStats = productStats.get(item.subject_name) || {
+      name: item.subject_name,
+      profit: 0,
+      price: 0,
+      sales: 0,
+      quantity: 0,
+      returns: 0,
+      logistics: 0,
+      storage: 0,
+      penalties: 0,
+      deductions: 0,
+      nmId: item.nm_id
+    };
 
-    const response = await fetch(url.toString(), {
-      headers: {
-        "Authorization": apiKey,
-        "Content-Type": "application/json"
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (item.doc_type_name === "Продажа") {
+      currentStats.sales += item.retail_amount || 0;
+      currentStats.quantity += item.quantity || 0;
+      // Суммируем фактические расходы из API для каждой продажи
+      currentStats.logistics += item.delivery_rub || 0;
+      currentStats.storage += item.storage_fee || 0;
+      currentStats.penalties += item.penalty || 0;
+      currentStats.deductions += item.deduction || 0;
+    } else if (item.doc_type_name === "Возврат") {
+      currentStats.returns += item.retail_amount || 0;
     }
 
-    const data = await response.json();
+    // Обновляем прибыль с учетом фактических общих расходов
+    currentStats.profit = currentStats.sales - (
+      currentStats.logistics +
+      currentStats.storage +
+      currentStats.penalties +
+      currentStats.deductions +
+      currentStats.returns
+    );
+
+    // Рассчитываем среднюю цену продажи
+    currentStats.price = currentStats.sales / (currentStats.quantity || 1);
+
+    productStats.set(item.subject_name, currentStats);
+  });
+
+  return Array.from(productStats.values());
+};
+
+const getTopProducts = async (data: WildberriesReportItem[], apiKey: string) => {
+  const productProfits: { [key: string]: number } = {};
+  const nmIdsList: string[] = [];
+
+  data.forEach(item => {
+    const nmId = item.nm_id;
+    if (!nmId) return;
+
+    nmIdsList.push(nmId);
     
-    // Суммируем все расходы для товара
-    const totalExpenses = {
-      logistics: 0,
-      storage: 0,
-      penalties: 0,
-      acceptance: 0
+    const ppvzForPay = item.ppvz_for_pay || 0;
+    const deliveryRub = item.delivery_rub || 0;
+    const storageFee = item.storage_fee || 0;
+    const penalty = item.penalty || 0;
+    const deduction = item.deduction || 0;
+    const acceptance = item.acceptance || 0;
+    const retailAmount = item.retail_amount || 0;
+
+    const profit = ppvzForPay - deliveryRub - storageFee - penalty - deduction - acceptance - retailAmount;
+
+    if (!productProfits[nmId]) {
+      productProfits[nmId] = 0;
+    }
+    productProfits[nmId] += profit;
+  });
+
+  const productInfo = await fetchProductNames(apiKey, Array.from(new Set(nmIdsList)));
+
+  const sortedProducts = Object.entries(productProfits)
+    .sort(([, a], [, b]) => b - a);
+
+  const topProfitable = sortedProducts.slice(0, 3).map(([nmId, profit]) => {
+    const info = productInfo.get(nmId) || { 
+      name: 'Неизвестный товар',
+      image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
     };
-
-    data.forEach((item: any) => {
-      totalExpenses.logistics += item.delivery_rub || 0;
-      totalExpenses.storage += item.storage_fee || 0;
-      totalExpenses.penalties += item.penalty || 0;
-      totalExpenses.acceptance += item.acceptance || 0;
-    });
-
-    console.log('Total expenses for product', nmId, ':', totalExpenses);
-    return totalExpenses;
-  } catch (error) {
-    console.error('Error fetching product expenses:', error);
     return {
-      logistics: 0,
-      storage: 0,
-      penalties: 0,
-      acceptance: 0
+      name: info.name,
+      price: "0",
+      profit: `+${profit.toFixed(0)}`,
+      image: info.image
     };
-  }
+  });
+
+  const topUnprofitable = sortedProducts.slice(-3).reverse().map(([nmId, profit]) => {
+    const info = productInfo.get(nmId) || {
+      name: 'Неизвестный товар',
+      image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg"
+    };
+    return {
+      name: info.name,
+      price: "0",
+      profit: profit.toFixed(0),
+      image: info.image
+    };
+  });
+
+  return { topProfitable, topUnprofitable };
 };
 
 const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Promise<WildberriesResponse> => {
@@ -321,21 +390,7 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
   const productSales = new Map<string, number>();
   const salesByProduct = new Map<string, number>();
 
-  // Получаем общие расходы для каждого товара
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - 30);
-
-  for (const item of data) {
-    if (item.doc_type_name === "Продажа") {
-      const expenses = await fetchProductExpenses(apiKey, item.nm_id, startDate, endDate);
-      
-      // Сохраняем общие расходы в localStorage
-      const expensesData = JSON.parse(localStorage.getItem('expenses_data') || '{}');
-      expensesData[item.nm_id] = expenses;
-      localStorage.setItem('expenses_data', JSON.stringify(expensesData));
-    }
-
+  data.forEach(item => {
     const saleDate = item.sale_dt.split('T')[0];
     const currentSales = dailySales.get(saleDate) || { sales: 0, previousSales: 0 };
     currentSales.sales += item.retail_amount || 0;
@@ -364,7 +419,7 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
       const currentSalesByProduct = salesByProduct.get(item.nm_id) || 0;
       salesByProduct.set(item.nm_id, currentSalesByProduct + (item.quantity || 0));
     }
-  }
+  });
 
   stats.currentPeriod.netProfit = 
     stats.currentPeriod.transferred - stats.currentPeriod.expenses.total;
@@ -405,73 +460,6 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
   stats.topUnprofitableProducts = topUnprofitable;
 
   return stats;
-};
-
-const getTopProducts = async (data: WildberriesReportItem[], apiKey: string) => {
-  // Create a map to store product data
-  const productMap = new Map<string, {
-    sales: number;
-    profit: number;
-    nmId: string;
-  }>();
-
-  // Calculate sales and profit for each product
-  data.forEach((item) => {
-    if (item.doc_type_name === "Продажа") {
-      const nmId = item.nm_id;
-      const currentData = productMap.get(nmId) || {
-        sales: 0,
-        profit: 0,
-        nmId: nmId
-      };
-
-      currentData.sales += item.quantity || 0;
-      currentData.profit += item.ppvz_for_pay || 0;
-      
-      // Subtract expenses
-      currentData.profit -= (
-        (item.delivery_rub || 0) +
-        (item.storage_fee || 0) +
-        (item.penalty || 0) +
-        (item.acceptance || 0)
-      );
-
-      productMap.set(nmId, currentData);
-    }
-  });
-
-  // Convert map to array and sort by profit
-  const sortedProducts = Array.from(productMap.values())
-    .sort((a, b) => b.profit - a.profit);
-
-  // Get product details from content API
-  const nmIds = sortedProducts.map(p => p.nmId);
-  const productInfo = await fetchProductNames(apiKey, nmIds);
-
-  // Prepare top profitable and unprofitable products
-  const topProfitable = sortedProducts
-    .slice(0, 5)
-    .map(product => ({
-      name: productInfo.get(product.nmId)?.name || 'Неизвестный товар',
-      price: product.sales.toString(),
-      profit: product.profit.toFixed(2),
-      image: productInfo.get(product.nmId)?.image || ''
-    }));
-
-  const topUnprofitable = sortedProducts
-    .slice(-5)
-    .reverse()
-    .map(product => ({
-      name: productInfo.get(product.nmId)?.name || 'Неизвестный товар',
-      price: product.sales.toString(),
-      profit: product.profit.toFixed(2),
-      image: productInfo.get(product.nmId)?.image || ''
-    }));
-
-  return {
-    topProfitable,
-    topUnprofitable
-  };
 };
 
 export const fetchWildberriesStats = async (
