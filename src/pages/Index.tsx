@@ -25,6 +25,7 @@ import Chart from "@/components/Chart";
 import ProductsComponent from "@/components/Products";
 import Stores from "@/components/Stores";
 import CalculatorModal from "@/components/CalculatorModal";
+import Products from "@/pages/Products";
 import {
   DropdownMenu,
   DropdownMenuContent,
