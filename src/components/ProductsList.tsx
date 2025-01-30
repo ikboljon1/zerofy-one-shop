@@ -49,17 +49,16 @@ interface WBPriceResponse {
 }
 
 interface WBReportItem {
-  realizationreport_id: string;
+  realizationreport_id: number;
   date_from: string;
   date_to: string;
-  nm_id: number;
+  nm_id: string;
   doc_type_name: string;
   quantity: number;
   retail_amount: number;
-  ppvz_for_pay: number;
   delivery_rub: number;
-  penalty: number;
   storage_fee: number;
+  penalty: number;
   acceptance_fee: number;
 }
 
@@ -69,39 +68,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
-  const fetchSalesReport = async () => {
-    if (!selectedStore?.apiKey) return null;
-
-    const dateFrom = new Date();
-    dateFrom.setDate(dateFrom.getDate() - 30); // Last 30 days
-    const dateTo = new Date();
-
-    const formatDate = (date: Date) => {
-      return date.toISOString().split('T')[0];
-    };
-
-    try {
-      const response = await fetch(
-        `https://statistics-api.wildberries.ru/api/v1/supplier/sales?dateFrom=${formatDate(dateFrom)}&dateTo=${formatDate(dateTo)}`,
-        {
-          headers: {
-            Authorization: selectedStore.apiKey,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch sales report');
-      }
-
-      const data = await response.json() as WBReportItem[];
-      return data;
-    } catch (error) {
-      console.error('Error fetching sales report:', error);
-      return null;
-    }
-  };
-
   const calculateNetProfit = (product: Product) => {
     if (!product.costPrice || !product.expenses) return {
       netProfit: 0,
@@ -110,42 +76,53 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       revenue: 0
     };
     
-    // Get sales data from localStorage
-    const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore?.id}`) || '{}');
-    console.log('Sales data from localStorage:', salesData);
+    // Получаем данные о продажах и расходах из отчета Wildberries
+    const reportData = JSON.parse(localStorage.getItem(`wb_report_${selectedStore?.id}`) || '[]') as WBReportItem[];
+    console.log('Report data from localStorage:', reportData);
     
-    // Get number of sales for specific product
-    const productSales = salesData[product.nmID] || 0;
-    console.log('Product sales for ID', product.nmID, ':', productSales);
+    // Фильтруем данные для конкретного товара
+    const productReportData = reportData.filter(item => 
+      item.nm_id === product.nmID.toString() && 
+      item.doc_type_name === "Продажа"
+    );
     
-    // Calculate total expenses
+    console.log('Product report data:', productReportData);
+    
+    // Считаем количество продаж
+    const productSales = productReportData.reduce((sum, item) => sum + item.quantity, 0);
+    
+    // Считаем расходы из отчета
+    const expenses = productReportData.reduce((sum, item) => ({
+      logistics: sum.logistics + (item.delivery_rub || 0),
+      storage: sum.storage + (item.storage_fee || 0),
+      penalties: sum.penalties + (item.penalty || 0),
+      acceptance: sum.acceptance + (item.acceptance_fee || 0)
+    }), {
+      logistics: 0,
+      storage: 0,
+      penalties: 0,
+      acceptance: 0
+    });
+    
+    // Обновляем расходы товара из отчета
+    product.expenses = expenses;
+    
+    console.log('Expenses calculation for product', product.nmID, expenses);
+    
+    // Расчет общих расходов
     const totalExpenses = 
-      (product.expenses.logistics * productSales) +    // Logistics per sale
-      (product.expenses.storage * productSales) +      // Storage per sale
-      (product.expenses.penalties * productSales) +    // Penalties per sale
-      (product.expenses.acceptance * productSales);    // Acceptance per sale
+      expenses.logistics +    // Логистика
+      expenses.storage +      // Хранение
+      expenses.penalties +    // Штрафы
+      expenses.acceptance;    // Приемка
     
-    console.log('Calculation details for product', product.nmID, {
-      costPrice: product.costPrice,
-      productSales,
-      logistics: product.expenses.logistics,
-      storage: product.expenses.storage,
-      penalties: product.expenses.penalties,
-      acceptance: product.expenses.acceptance,
-      totalExpenses
-    });
-    
-    // Calculate revenue: sale price * number of sold items
+    // Расчет выручки: цена продажи * количество проданных товаров
     const revenue = (product.discountedPrice || 0) * productSales;
-    console.log('Revenue calculation:', {
-      discountedPrice: product.discountedPrice,
-      productSales,
-      revenue
-    });
     
-    // Net profit = revenue - total expenses - (cost price * number of sales)
+    // Чистая прибыль = выручка - общие расходы - (себестоимость * количество продаж)
     const netProfit = revenue - totalExpenses - (product.costPrice * productSales);
-    console.log('Net profit calculation:', {
+    
+    console.log('Profit calculation for product', product.nmID, {
       revenue,
       totalExpenses,
       costPriceTotal: product.costPrice * productSales,
@@ -231,55 +208,36 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
     setIsLoading(true);
     try {
-      // Fetch sales report first
-      const salesReport = await fetchSalesReport();
-      
-      if (salesReport) {
-        // Process sales data
-        const salesByProduct: { [key: number]: number } = {};
-        const expensesByProduct: { [key: number]: {
-          logistics: number,
-          storage: number,
-          penalties: number,
-          acceptance: number
-        }} = {};
+      // Get date range for last 30 days
+      const dateTo = new Date();
+      const dateFrom = new Date();
+      dateFrom.setDate(dateFrom.getDate() - 30);
 
-        salesReport.forEach(item => {
-          if (item.doc_type_name === "Продажа") {
-            // Accumulate sales
-            salesByProduct[item.nm_id] = (salesByProduct[item.nm_id] || 0) + item.quantity;
-            
-            // Calculate average expenses per item
-            if (!expensesByProduct[item.nm_id]) {
-              expensesByProduct[item.nm_id] = {
-                logistics: 0,
-                storage: 0,
-                penalties: 0,
-                acceptance: 0
-              };
-            }
-            
-            expensesByProduct[item.nm_id].logistics += item.delivery_rub / item.quantity;
-            expensesByProduct[item.nm_id].storage += item.storage_fee / item.quantity;
-            expensesByProduct[item.nm_id].penalties += item.penalty / item.quantity;
-            expensesByProduct[item.nm_id].acceptance += item.acceptance_fee / item.quantity;
-          }
-        });
+      // Format dates as YYYY-MM-DD
+      const formatDate = (date: Date) => {
+        return date.toISOString().split('T')[0];
+      };
 
-        // Calculate average expenses per item
-        Object.keys(expensesByProduct).forEach(nmId => {
-          const numId = Number(nmId);
-          const sales = salesByProduct[numId] || 1;
-          expensesByProduct[numId].logistics /= sales;
-          expensesByProduct[numId].storage /= sales;
-          expensesByProduct[numId].penalties /= sales;
-          expensesByProduct[numId].acceptance /= sales;
-        });
+      // Updated API endpoint for sales report with date parameters
+      const reportResponse = await fetch(`https://statistics-api.wildberries.ru/api/v1/supplier/sales?dateFrom=${formatDate(dateFrom)}&dateTo=${formatDate(dateTo)}`, {
+        method: "GET",
+        headers: {
+          "Authorization": selectedStore.apiKey,
+          "Content-Type": "application/json"
+        }
+      });
 
-        // Save sales data to localStorage
-        localStorage.setItem(`sales_${selectedStore.id}`, JSON.stringify(salesByProduct));
+      if (!reportResponse.ok) {
+        throw new Error("Failed to fetch sales report");
       }
 
+      const reportData = await reportResponse.json();
+      console.log("Sales report data:", reportData);
+      
+      // Save report to localStorage
+      localStorage.setItem(`wb_report_${selectedStore.id}`, JSON.stringify(reportData));
+
+      // Fetch products data
       const response = await fetch("https://content-api.wildberries.ru/content/v2/get/cards/list", {
         method: "POST",
         headers: {
@@ -316,28 +274,11 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       const nmIds = data.cards.map((product: Product) => product.nmID);
       const prices = await fetchProductPrices(nmIds);
 
-      const updatedProducts = data.cards.map((product: Product) => {
-        const currentPrice = prices[product.nmID];
-        const productExpenses = salesReport ? expensesByProduct[product.nmID] : null;
-        
-        console.log(`Processing product ${product.nmID}:`, {
-          price: currentPrice,
-          costPrice: costPrices[product.nmID],
-          expenses: productExpenses
-        });
-        
-        return {
-          ...product,
-          costPrice: costPrices[product.nmID] || 0,
-          discountedPrice: currentPrice || 0,
-          expenses: productExpenses || {
-            logistics: 0,
-            storage: 0,
-            penalties: 0,
-            acceptance: 0
-          }
-        };
-      });
+      const updatedProducts = data.cards.map((product: Product) => ({
+        ...product,
+        costPrice: costPrices[product.nmID] || 0,
+        discountedPrice: prices[product.nmID] || 0
+      }));
 
       console.log("Updated products:", updatedProducts);
       setProducts(updatedProducts);
