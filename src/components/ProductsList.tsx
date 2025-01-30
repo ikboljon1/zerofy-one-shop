@@ -60,53 +60,38 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       netProfit: 0,
       productSales: 0,
       totalExpenses: 0,
-      revenue: 0
+      revenue: 0,
+      salesAmount: 0,
+      transferredAmount: 0
     };
     
     const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore?.id}`) || '{}');
-    console.log('Sales data from localStorage:', salesData);
-    
     const productSales = product.quantity || salesData[product.nmID] || 0;
-    console.log('Product sales for ID', product.nmID, ':', productSales);
     
-    // Используем фактические общие расходы из API
+    // Calculate total sales amount (price * quantity)
+    const salesAmount = (product.discountedPrice || 0) * productSales;
+    
+    // Get transferred amount from API data
+    const transferredAmount = product.expenses.transferred || 0;
+    
+    // Calculate total expenses including deductions
     const totalExpenses = 
-      product.expenses.logistics +     // Фактическая общая логистика
-      product.expenses.storage +       // Фактическое общее хранение
-      product.expenses.penalties +     // Фактические общие штрафы
-      product.expenses.acceptance;     // Фактическая общая приемка
+      product.expenses.logistics +     // Total logistics
+      product.expenses.storage +       // Total storage
+      product.expenses.penalties +     // Total penalties
+      product.expenses.acceptance +    // Total acceptance
+      (product.expenses.deductions || 0); // Add deductions
     
-    console.log('Calculation details for product', product.nmID, {
-      costPrice: product.costPrice,
-      productSales,
-      logistics: product.expenses.logistics,
-      storage: product.expenses.storage,
-      penalties: product.expenses.penalties,
-      acceptance: product.expenses.acceptance,
-      totalExpenses
-    });
-    
-    const revenue = (product.discountedPrice || 0) * productSales;
-    console.log('Revenue calculation:', {
-      discountedPrice: product.discountedPrice,
-      productSales,
-      revenue
-    });
-    
-    const netProfit = revenue - totalExpenses - (product.costPrice * productSales);
-    console.log('Net profit calculation:', {
-      revenue,
-      totalExpenses,
-      costPrice: product.costPrice,
-      productSales,
-      netProfit
-    });
+    // Net profit is now transferred amount minus total expenses
+    const netProfit = transferredAmount - totalExpenses;
     
     return {
       netProfit,
       productSales,
       totalExpenses,
-      revenue
+      revenue: salesAmount,
+      salesAmount,
+      transferredAmount
     };
   };
 
@@ -418,6 +403,22 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs text-muted-foreground">
+                        Сумма продаж:
+                      </label>
+                      <div className="text-sm font-medium">
+                        {profitDetails.salesAmount.toFixed(2)} ₽
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">
+                        Перечислено:
+                      </label>
+                      <div className="text-sm font-medium">
+                        {profitDetails.transferredAmount.toFixed(2)} ₽
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">
                         Продано за 30 дней:
                       </label>
                       <div className="text-sm font-medium">
@@ -441,6 +442,10 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                         <div className="flex justify-between text-xs">
                           <span className="text-muted-foreground">Общая приемка:</span>
                           <span>{product.expenses.acceptance.toFixed(2)} ₽</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Прочие удержания:</span>
+                          <span>{(product.expenses.deductions || 0).toFixed(2)} ₽</span>
                         </div>
                         <div className="flex justify-between text-xs font-medium border-t pt-2">
                           <span className="text-muted-foreground">Общие расходы:</span>
