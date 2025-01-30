@@ -384,8 +384,14 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
     productSales: []
   };
 
+  // Load stored cost prices
+  const storedProducts = JSON.parse(localStorage.getItem(`products_${apiKey}`) || "[]");
+  const costPrices = new Map(storedProducts.map((p: any) => [p.nmID.toString(), p.costPrice || 0]));
+
   const dailySales = new Map<string, { sales: number; previousSales: number }>();
-  const productSales = new Map<string, number>();
+  const productSales = new Map<string, { quantity: number; nmId: string }>();
+
+  let totalCostPrice = 0;
 
   data.forEach(item => {
     const saleDate = item.sale_dt.split('T')[0];
@@ -393,8 +399,14 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
     currentSales.sales += item.retail_amount || 0;
     dailySales.set(saleDate, currentSales);
 
-    const currentQuantity = productSales.get(item.subject_name) || 0;
-    productSales.set(item.subject_name, currentQuantity + (item.quantity || 0));
+    const currentProduct = productSales.get(item.subject_name) || { quantity: 0, nmId: item.nm_id };
+    const quantity = item.quantity || 0;
+    currentProduct.quantity += quantity;
+    productSales.set(item.subject_name, currentProduct);
+
+    // Calculate cost price impact
+    const costPrice = costPrices.get(item.nm_id) || 0;
+    totalCostPrice += costPrice * quantity;
 
     stats.currentPeriod.sales += item.retail_amount || 0;
     stats.currentPeriod.transferred += item.ppvz_for_pay || 0;
@@ -413,6 +425,10 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
     stats.currentPeriod.expenses.total += logistics + storage + penalties + acceptance + deduction;
   });
 
+  // Add total cost price to expenses
+  stats.currentPeriod.expenses.total += totalCostPrice;
+
+  // Calculate net profit considering cost price
   stats.currentPeriod.netProfit = 
     stats.currentPeriod.transferred - stats.currentPeriod.expenses.total;
 
@@ -424,7 +440,7 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
     .sort((a, b) => a.date.localeCompare(b.date));
 
   const sortedProductSales = Array.from(productSales.entries())
-    .map(([name, quantity]) => ({
+    .map(([name, { quantity }]) => ({
       subject_name: name,
       quantity
     }))

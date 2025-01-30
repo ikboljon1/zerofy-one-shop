@@ -33,20 +33,6 @@ interface ProductsListProps {
   } | null;
 }
 
-interface WBPriceResponse {
-  data: {
-    listGoods: Array<{
-      nmID: number;
-      vendorCode: string;
-      sizes: Array<{
-        price: number;
-        discountedPrice: number;
-        clubDiscountedPrice: number;
-      }>;
-    }>;
-  };
-}
-
 const ProductsList = ({ selectedStore }: ProductsListProps) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -63,160 +49,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       product.expenses.penalties + 
       product.expenses.acceptance;
     
-    return -totalExpenses;
-  };
-
-  const fetchProductPrices = async (nmIds: number[]) => {
-    if (!selectedStore?.apiKey || nmIds.length === 0) return {};
-
-    try {
-      // Split nmIds into chunks of 20
-      const chunkSize = 20;
-      const priceMap: { [key: number]: number } = {};
-
-      // Process nmIds in chunks
-      for (let i = 0; i < nmIds.length; i += chunkSize) {
-        const chunk = nmIds.slice(i, i + chunkSize);
-        const url = new URL("https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter");
-        url.searchParams.append("limit", "1000");
-        url.searchParams.append("nmId", chunk.join(',')); // Changed from filterNmID to nmId
-
-        console.log(`Fetching prices for chunk ${i / chunkSize + 1}, IDs:`, chunk);
-
-        const response = await fetch(url.toString(), {
-          method: "GET",
-          headers: {
-            "Authorization": selectedStore.apiKey,
-            "Content-Type": "application/json"
-          }
-        });
-
-        if (!response.ok) {
-          const errorData = await response.text();
-          console.error(`Price fetch error for chunk ${i / chunkSize + 1}:`, errorData);
-          continue; // Skip this chunk if there's an error, but continue with others
-        }
-
-        const data = await response.json() as WBPriceResponse;
-        console.log(`Price data for chunk ${i / chunkSize + 1}:`, data);
-        
-        if (data.data?.listGoods) {
-          data.data.listGoods.forEach((item) => {
-            if (item.sizes && item.sizes.length > 0) {
-              const firstSize = item.sizes[0];
-              const price = firstSize.price || 0;
-              priceMap[item.nmID] = price;
-              console.log(`Price set for ${item.nmID}:`, {
-                nmID: item.nmID,
-                vendorCode: item.vendorCode,
-                price: price,
-                firstSize: firstSize
-              });
-            }
-          });
-        }
-
-        // Add a small delay between requests to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-
-      console.log("Final price map:", priceMap);
-      return priceMap;
-    } catch (error) {
-      console.error("Error fetching prices:", error);
-      return {};
-    }
-  };
-
-  const syncProducts = async () => {
-    if (!selectedStore) {
-      toast({
-        title: "Ошибка",
-        description: "Пожалуйста, выберите магазин",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const response = await fetch("https://content-api.wildberries.ru/content/v2/get/cards/list", {
-        method: "POST",
-        headers: {
-          "Authorization": selectedStore.apiKey,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          settings: {
-            cursor: {
-              limit: 100
-            },
-            filter: {
-              withPhoto: -1
-            }
-          }
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch products");
-      }
-
-      const data = await response.json();
-      console.log("Products data:", data);
-      
-      // Загружаем существующие цены из localStorage
-      const storedProducts = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
-      const costPrices = storedProducts.reduce((acc: Record<number, number>, product: Product) => {
-        if (product.costPrice) {
-          acc[product.nmID] = product.costPrice;
-        }
-        return acc;
-      }, {});
-
-      // Получаем актуальные цены
-      const nmIds = data.cards.map((product: Product) => product.nmID);
-      const prices = await fetchProductPrices(nmIds);
-
-      // Объединяем новые продукты с существующими ценами
-      const updatedProducts = data.cards.map((product: Product) => {
-        const currentPrice = prices[product.nmID];
-        console.log(`Processing product ${product.nmID}:`, {
-          price: currentPrice,
-          costPrice: costPrices[product.nmID]
-        });
-        
-        return {
-          ...product,
-          costPrice: costPrices[product.nmID] || 0,
-          price: currentPrice || 0,
-          expenses: {
-            logistics: Math.random() * 100,
-            storage: Math.random() * 50,
-            penalties: Math.random() * 20,
-            acceptance: Math.random() * 30
-          }
-        };
-      });
-
-      console.log("Updated products:", updatedProducts);
-      setProducts(updatedProducts);
-      localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(updatedProducts));
-
-      toast({
-        title: "Успешно",
-        description: "Товары успешно синхронизированы",
-      });
-    } catch (error) {
-      console.error("Error syncing products:", error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось синхронизировать товары",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    return product.price ? (product.price - totalExpenses) : -totalExpenses;
   };
 
   const updateCostPrice = (productId: number, costPrice: number) => {
@@ -224,7 +57,24 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       product.nmID === productId ? { ...product, costPrice } : product
     );
     setProducts(updatedProducts);
-    localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedProducts));
+    
+    // Save to localStorage
+    if (selectedStore?.apiKey) {
+      localStorage.setItem(`products_${selectedStore.apiKey}`, JSON.stringify(updatedProducts));
+      
+      // Trigger stats recalculation by updating the timestamp
+      const statsKey = `marketplace_stats_${selectedStore.apiKey}`;
+      const currentStats = JSON.parse(localStorage.getItem(statsKey) || "{}");
+      localStorage.setItem(statsKey, JSON.stringify({
+        ...currentStats,
+        lastUpdated: new Date().toISOString()
+      }));
+
+      toast({
+        title: "Успешно",
+        description: "Себестоимость товара обновлена",
+      });
+    }
   };
 
   // Загружаем продукты из localStorage при изменении магазина
