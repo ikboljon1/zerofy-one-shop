@@ -69,7 +69,12 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     
     const revenue = (product.discountedPrice || 0) * productSales;
     
-    return revenue - totalExpenses;
+    return {
+      netProfit: revenue - totalExpenses,
+      productSales,
+      totalExpenses,
+      revenue
+    };
   };
 
   const fetchProductPrices = async (nmIds: number[]) => {
@@ -288,79 +293,99 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         </Card>
       ) : (
         <div className={`grid gap-4 ${isMobile ? 'grid-cols-2' : 'md:grid-cols-3'}`}>
-          {products.map((product) => (
-            <Card key={product.nmID} className="flex flex-col h-full">
-              <CardHeader className="pb-2">
-                <CardTitle className={`${isMobile ? 'text-sm' : 'text-base'} font-medium line-clamp-2`}>
-                  {product.title || "Неизвестный товар"}
-                </CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  ID: {product.nmID}
-                </p>
-              </CardHeader>
-              <CardContent className="flex-1 space-y-3">
-                <img
-                  src={product.photos?.[0]?.c246x328 || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"}
-                  alt={product.title}
-                  className="w-full aspect-square object-cover rounded-lg"
-                />
-                <div className="space-y-2">
-                  <div className="space-y-1">
-                    <label htmlFor={`costPrice-${product.nmID}`} className="text-xs text-muted-foreground">
-                      Себестоимость:
-                    </label>
-                    <Input
-                      id={`costPrice-${product.nmID}`}
-                      type="number"
-                      value={product.costPrice || ""}
-                      onChange={(e) => updateCostPrice(product.nmID, Number(e.target.value))}
-                      className="h-8 text-sm"
-                      placeholder="Введите себестоимость"
-                    />
-                    {product.costPrice > 0 && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Текущая себестоимость: {product.costPrice} ₽
-                      </p>
+          {products.map((product) => {
+            const profitDetails = calculateNetProfit(product);
+            
+            return (
+              <Card key={product.nmID} className="flex flex-col h-full">
+                <CardHeader className="pb-2">
+                  <CardTitle className={`${isMobile ? 'text-sm' : 'text-base'} font-medium line-clamp-2`}>
+                    {product.title || "Неизвестный товар"}
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    ID: {product.nmID}
+                  </p>
+                </CardHeader>
+                <CardContent className="flex-1 space-y-3">
+                  <img
+                    src={product.photos?.[0]?.c246x328 || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"}
+                    alt={product.title}
+                    className="w-full aspect-square object-cover rounded-lg"
+                  />
+                  <div className="space-y-2">
+                    <div className="space-y-1">
+                      <label htmlFor={`costPrice-${product.nmID}`} className="text-xs text-muted-foreground">
+                        Себестоимость:
+                      </label>
+                      <Input
+                        id={`costPrice-${product.nmID}`}
+                        type="number"
+                        value={product.costPrice || ""}
+                        onChange={(e) => updateCostPrice(product.nmID, Number(e.target.value))}
+                        className="h-8 text-sm"
+                        placeholder="Введите себестоимость"
+                      />
+                      {product.costPrice > 0 && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Текущая себестоимость: {product.costPrice} ₽
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">
+                        Цена товара:
+                      </label>
+                      <div className="text-sm font-medium">
+                        {product.discountedPrice ? `${product.discountedPrice.toFixed(2)} ₽` : "0.00 ₽"}
+                      </div>
+                    </div>
+                    {product.expenses && (
+                      <div className="space-y-1.5 border-t pt-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Количество продаж:</span>
+                          <span>{profitDetails.productSales} шт.</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Общая выручка:</span>
+                          <span>{profitDetails.revenue.toFixed(2)} ₽</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Расходы на товар:</span>
+                          <span>{(product.costPrice * profitDetails.productSales).toFixed(2)} ₽</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Логистика:</span>
+                          <span>{product.expenses.logistics.toFixed(2)} ₽</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Хранение:</span>
+                          <span>{product.expenses.storage.toFixed(2)} ₽</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Штрафы:</span>
+                          <span>{product.expenses.penalties.toFixed(2)} ₽</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Приемка:</span>
+                          <span>{product.expenses.acceptance.toFixed(2)} ₽</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Общие расходы:</span>
+                          <span>{profitDetails.totalExpenses.toFixed(2)} ₽</span>
+                        </div>
+                        <div className="flex justify-between text-sm font-medium border-t pt-2">
+                          <span>Чистая прибыль:</span>
+                          <span className={profitDetails.netProfit >= 0 ? "text-green-500" : "text-red-500"}>
+                            {profitDetails.netProfit.toFixed(2)} ₽
+                          </span>
+                        </div>
+                      </div>
                     )}
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">
-                      Цена товара:
-                    </label>
-                    <div className="text-sm font-medium">
-                      {product.discountedPrice ? `${product.discountedPrice.toFixed(2)} ₽` : "0.00 ₽"}
-                    </div>
-                  </div>
-                  {product.expenses && (
-                    <div className="space-y-1.5 border-t pt-2">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Логистика:</span>
-                        <span>{product.expenses.logistics.toFixed(2)} ₽</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Хранение:</span>
-                        <span>{product.expenses.storage.toFixed(2)} ₽</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Штрафы:</span>
-                        <span>{product.expenses.penalties.toFixed(2)} ₽</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Приемка:</span>
-                        <span>{product.expenses.acceptance.toFixed(2)} ₽</span>
-                      </div>
-                      <div className="flex justify-between text-sm font-medium border-t pt-2">
-                        <span>Чистая прибыль:</span>
-                        <span className={calculateNetProfit(product) >= 0 ? "text-green-500" : "text-red-500"}>
-                          {calculateNetProfit(product).toFixed(2)} ₽
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
