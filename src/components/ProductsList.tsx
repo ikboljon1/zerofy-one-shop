@@ -17,7 +17,6 @@ interface Product {
   }>;
   costPrice?: number;
   price?: number;
-  clubPrice?: number;
   expenses?: {
     logistics: number;
     storage: number;
@@ -74,8 +73,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       url.searchParams.append("limit", "1000");
       url.searchParams.append("filterNmID", nmIds.join(','));
 
-      console.log("Fetching prices with URL:", url.toString());
-
       const response = await fetch(url.toString(), {
         method: "GET",
         headers: {
@@ -99,13 +96,13 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         data.data.listGoods.forEach((item) => {
           if (item.sizes && item.sizes.length > 0) {
             const firstSize = item.sizes[0];
-            // Берем цену из первого размера
-            const price = firstSize.price || 0;
-            priceMap[item.nmID] = price;
+            // Берем базовую цену из первого размера
+            const basePrice = firstSize.price;
+            priceMap[item.nmID] = basePrice;
             console.log(`Price set for ${item.nmID}:`, {
               nmID: item.nmID,
               vendorCode: item.vendorCode,
-              price: price,
+              basePrice: basePrice,
               firstSize: firstSize
             });
           } else {
@@ -246,22 +243,15 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <Package className="h-5 w-5" />
-          <h2 className="text-xl font-semibold">Товары</h2>
-        </div>
-        <Button onClick={syncProducts} disabled={isLoading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-          Синхронизировать
-        </Button>
-      </div>
-
       {products.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-8 text-center">
             <Package className="h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-muted-foreground">Нет товаров для отображения</p>
+            <Button onClick={syncProducts} disabled={isLoading} className="mt-4">
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Синхронизировать
+            </Button>
           </CardContent>
         </Card>
       ) : (
