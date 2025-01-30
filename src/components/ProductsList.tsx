@@ -33,6 +33,19 @@ interface ProductsListProps {
   } | null;
 }
 
+interface WBPriceResponse {
+  data: {
+    listGoods: Array<{
+      nmID: number;
+      sizes: Array<{
+        price: number;
+        discountedPrice: number;
+        clubDiscountedPrice: number;
+      }>;
+    }>;
+  };
+}
+
 const ProductsList = ({ selectedStore }: ProductsListProps) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -58,9 +71,9 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     try {
       const url = new URL("https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter");
       url.searchParams.append("limit", "1000");
-      url.searchParams.append("filterNmID", nmIds.join(','));  // Changed separator from ; to ,
+      url.searchParams.append("filterNmID", nmIds.join(','));
 
-      console.log("Fetching prices with URL:", url.toString()); // Debug log
+      console.log("Fetching prices with URL:", url.toString());
 
       const response = await fetch(url.toString(), {
         method: "GET",
@@ -76,13 +89,17 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         throw new Error("Failed to fetch prices");
       }
 
-      const data = await response.json();
+      const data = await response.json() as WBPriceResponse;
       const priceMap: { [key: number]: number } = {};
       
       if (data.data?.listGoods) {
-        data.data.listGoods.forEach((item: any) => {
+        data.data.listGoods.forEach((item) => {
           if (item.nmID && item.sizes && item.sizes[0]) {
-            priceMap[item.nmID] = item.sizes[0].clubDiscountedPrice || 0;
+            // Use clubDiscountedPrice as the main price, falling back to discountedPrice or regular price
+            const price = item.sizes[0].clubDiscountedPrice || 
+                         item.sizes[0].discountedPrice || 
+                         item.sizes[0].price || 0;
+            priceMap[item.nmID] = price;
           }
         });
       }
