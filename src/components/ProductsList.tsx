@@ -46,6 +46,75 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
+  const fetchProductPrices = async (nmIds: number[]): Promise<Record<number, number>> => {
+    if (!selectedStore?.apiKey) return {};
+
+    try {
+      const response = await fetch(
+        "https://suppliers-api.wildberries.ru/public/api/v1/info",
+        {
+          method: "POST",
+          headers: {
+            "Authorization": selectedStore.apiKey,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ nmIds })
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch product prices');
+      }
+
+      const data = await response.json();
+      return data.reduce((acc: Record<number, number>, item: any) => {
+        acc[item.nmId] = item.price;
+        return acc;
+      }, {});
+    } catch (error) {
+      console.error('Error fetching product prices:', error);
+      return {};
+    }
+  };
+
+  const calculateNetProfit = (product: Product) => {
+    const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore?.id}`) || "{}");
+    const productSales = salesData[product.nmID] || 0;
+
+    const totalExpenses = product.expenses ? (
+      (product.expenses.logistics * productSales) +
+      (product.expenses.storage * productSales) +
+      (product.expenses.penalties * productSales) +
+      (product.expenses.acceptance * productSales)
+    ) : 0;
+
+    const revenue = (product.discountedPrice || 0) * productSales;
+
+    const netProfit = revenue - totalExpenses - ((product.costPrice || 0) * productSales);
+
+    return {
+      totalExpenses,
+      netProfit
+    };
+  };
+
+  const updateCostPrice = (productId: number, newCostPrice: number) => {
+    setProducts(prevProducts => {
+      const updatedProducts = prevProducts.map(product => {
+        if (product.nmID === productId) {
+          return { ...product, costPrice: newCostPrice };
+        }
+        return product;
+      });
+
+      if (selectedStore?.id) {
+        localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(updatedProducts));
+      }
+
+      return updatedProducts;
+    });
+  };
+
   const renderDatePicker = (date: Date, onChange: (date: Date) => void, label: string) => (
     <Popover>
       <PopoverTrigger asChild>
@@ -94,7 +163,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
       const data = await response.json();
       
-      // Save sales report to localStorage with date range
       const salesReport = {
         dateFrom: formatDate(dateFrom),
         dateTo: formatDate(dateTo),
@@ -123,7 +191,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
     setIsLoading(true);
     try {
-      // Initialize expenses tracking object
       let expensesByProduct: { [key: number]: {
         logistics: number,
         storage: number,
@@ -131,19 +198,15 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         acceptance: number
       }} = {};
 
-      // Fetch sales report first
       const salesReport = await fetchSalesReport();
       
       if (salesReport) {
-        // Process sales data
         const salesByProduct: { [key: number]: number } = {};
 
         salesReport.forEach((item: any) => {
           if (item.doc_type_name === "Продажа") {
-            // Accumulate sales
             salesByProduct[item.nm_id] = (salesByProduct[item.nm_id] || 0) + item.quantity;
             
-            // Initialize expenses object if it doesn't exist
             if (!expensesByProduct[item.nm_id]) {
               expensesByProduct[item.nm_id] = {
                 logistics: 0,
@@ -153,7 +216,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
               };
             }
             
-            // Accumulate expenses
             expensesByProduct[item.nm_id].logistics += item.delivery_rub || 0;
             expensesByProduct[item.nm_id].storage += item.storage_fee || 0;
             expensesByProduct[item.nm_id].penalties += item.penalty || 0;
@@ -161,7 +223,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           }
         });
 
-        // Calculate average expenses per item
         Object.keys(expensesByProduct).forEach(nmId => {
           const numId = Number(nmId);
           const sales = salesByProduct[numId] || 1;
@@ -171,7 +232,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           expensesByProduct[numId].acceptance /= sales;
         });
 
-        // Save sales data to localStorage
         localStorage.setItem(`sales_${selectedStore.id}`, JSON.stringify(salesByProduct));
         console.log('Saved sales data:', salesByProduct);
         console.log('Calculated expenses:', expensesByProduct);
