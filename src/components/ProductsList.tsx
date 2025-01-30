@@ -1,15 +1,10 @@
 import { useState } from "react";
-import { Package, RefreshCw, Calendar as CalendarIcon, Loader2 } from "lucide-react";
+import { Package, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, subDays } from "date-fns";
-import { cn } from "@/lib/utils";
-import { fetchWildberriesStats } from "@/services/wildberriesApi";
 
 interface Product {
   nmID: number;
@@ -39,78 +34,193 @@ interface ProductsListProps {
   } | null;
 }
 
+interface WBPriceResponse {
+  data: {
+    listGoods: Array<{
+      nmID: number;
+      vendorCode: string;
+      sizes: Array<{
+        price: number;
+        discountedPrice: number;
+        clubDiscountedPrice: number;
+      }>;
+    }>;
+  };
+}
+
+interface WBReportItem {
+  realizationreport_id: string;
+  date_from: string;
+  date_to: string;
+  nm_id: number;
+  doc_type_name: string;
+  quantity: number;
+  retail_amount: number;
+  ppvz_for_pay: number;
+  delivery_rub: number;
+  penalty: number;
+  storage_fee: number;
+  acceptance_fee: number;
+}
+
 const ProductsList = ({ selectedStore }: ProductsListProps) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
-  const [dateTo, setDateTo] = useState<Date>(new Date());
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
+  const fetchSalesReport = async () => {
+    if (!selectedStore?.apiKey) return null;
+
+    const dateFrom = new Date();
+    dateFrom.setDate(dateFrom.getDate() - 30); // Last 30 days
+    const dateTo = new Date();
+
+    const formatDate = (date: Date) => {
+      return date.toISOString().split('T')[0];
+    };
+
+    try {
+      const response = await fetch(
+        `https://statistics-api.wildberries.ru/api/v1/supplier/sales?dateFrom=${formatDate(dateFrom)}&dateTo=${formatDate(dateTo)}`,
+        {
+          headers: {
+            Authorization: selectedStore.apiKey,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch sales report');
+      }
+
+      const data = await response.json() as WBReportItem[];
+      return data;
+    } catch (error) {
+      console.error('Error fetching sales report:', error);
+      return null;
+    }
+  };
+
   const calculateNetProfit = (product: Product) => {
-    const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore?.id}`) || "{}");
+    if (!product.costPrice || !product.expenses) return {
+      netProfit: 0,
+      productSales: 0,
+      totalExpenses: 0,
+      revenue: 0
+    };
+    
+    // Get sales data from localStorage
+    const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore?.id}`) || '{}');
+    console.log('Sales data from localStorage:', salesData);
+    
+    // Get number of sales for specific product
     const productSales = salesData[product.nmID] || 0;
-
-    const totalExpenses = product.expenses ? (
-      (product.expenses.logistics * productSales) +
-      (product.expenses.storage * productSales) +
-      (product.expenses.penalties * productSales) +
-      (product.expenses.acceptance * productSales)
-    ) : 0;
-
+    console.log('Product sales for ID', product.nmID, ':', productSales);
+    
+    // Calculate total expenses
+    const totalExpenses = 
+      (product.expenses.logistics * productSales) +    // Logistics per sale
+      (product.expenses.storage * productSales) +      // Storage per sale
+      (product.expenses.penalties * productSales) +    // Penalties per sale
+      (product.expenses.acceptance * productSales);    // Acceptance per sale
+    
+    console.log('Calculation details for product', product.nmID, {
+      costPrice: product.costPrice,
+      productSales,
+      logistics: product.expenses.logistics,
+      storage: product.expenses.storage,
+      penalties: product.expenses.penalties,
+      acceptance: product.expenses.acceptance,
+      totalExpenses
+    });
+    
+    // Calculate revenue: sale price * number of sold items
     const revenue = (product.discountedPrice || 0) * productSales;
-    const netProfit = revenue - totalExpenses - ((product.costPrice || 0) * productSales);
-
-    return {
+    console.log('Revenue calculation:', {
+      discountedPrice: product.discountedPrice,
+      productSales,
+      revenue
+    });
+    
+    // Net profit = revenue - total expenses - (cost price * number of sales)
+    const netProfit = revenue - totalExpenses - (product.costPrice * productSales);
+    console.log('Net profit calculation:', {
+      revenue,
       totalExpenses,
+      costPriceTotal: product.costPrice * productSales,
       netProfit
+    });
+    
+    return {
+      netProfit,
+      productSales,
+      totalExpenses,
+      revenue
     };
   };
 
-  const updateCostPrice = (productId: number, newCostPrice: number) => {
-    setProducts(prevProducts => {
-      const updatedProducts = prevProducts.map(product => {
-        if (product.nmID === productId) {
-          return { ...product, costPrice: newCostPrice };
-        }
-        return product;
-      });
+  const fetchProductPrices = async (nmIds: number[]) => {
+    if (!selectedStore?.apiKey || nmIds.length === 0) return {};
 
-      if (selectedStore?.id) {
-        localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(updatedProducts));
+    try {
+      const chunkSize = 20;
+      const priceMap: { [key: number]: number } = {};
+
+      for (let i = 0; i < nmIds.length; i += chunkSize) {
+        const chunk = nmIds.slice(i, i + chunkSize);
+        const url = new URL("https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter");
+        url.searchParams.append("limit", "1000");
+        url.searchParams.append("nmId", chunk.join(','));
+
+        console.log(`Fetching prices for chunk ${i / chunkSize + 1}, IDs:`, chunk);
+
+        const response = await fetch(url.toString(), {
+          method: "GET",
+          headers: {
+            "Authorization": selectedStore.apiKey,
+            "Content-Type": "application/json"
+          }
+        });
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error(`Price fetch error for chunk ${i / chunkSize + 1}:`, errorData);
+          continue;
+        }
+
+        const data = await response.json() as WBPriceResponse;
+        console.log(`Price data for chunk ${i / chunkSize + 1}:`, data);
+        
+        if (data.data?.listGoods) {
+          data.data.listGoods.forEach((item) => {
+            if (item.sizes && item.sizes.length > 0) {
+              const firstSize = item.sizes[0];
+              const discountedPrice = firstSize.discountedPrice || 0;
+              priceMap[item.nmID] = discountedPrice;
+              console.log(`Price set for ${item.nmID}:`, {
+                nmID: item.nmID,
+                vendorCode: item.vendorCode,
+                discountedPrice: discountedPrice,
+                firstSize: firstSize
+              });
+            }
+          });
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      return updatedProducts;
-    });
+      console.log("Final price map:", priceMap);
+      return priceMap;
+    } catch (error) {
+      console.error("Error fetching prices:", error);
+      return {};
+    }
   };
 
-  const renderDatePicker = (date: Date, onChange: (date: Date) => void, label: string) => (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          className={cn(
-            "justify-start text-left font-normal",
-            !date && "text-muted-foreground"
-          )}
-        >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? format(date, "PPP") : <span>{label}</span>}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0">
-        <Calendar
-          mode="single"
-          selected={date}
-          onSelect={(date) => date && onChange(date)}
-          initialFocus
-        />
-      </PopoverContent>
-    </Popover>
-  );
-
   const syncProducts = async () => {
-    if (!selectedStore?.apiKey) {
+    if (!selectedStore) {
       toast({
         title: "Ошибка",
         description: "Пожалуйста, выберите магазин",
@@ -121,27 +231,120 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
     setIsLoading(true);
     try {
-      const statsData = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
+      // Fetch sales report first
+      const salesReport = await fetchSalesReport();
       
-      // Get existing products from localStorage
-      const existingProducts = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
-      const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore.id}`) || "{}");
+      // Initialize expenses tracking object outside the conditional block
+      let expensesByProduct: { [key: number]: {
+        logistics: number,
+        storage: number,
+        penalties: number,
+        acceptance: number
+      }} = {};
+      
+      if (salesReport) {
+        // Process sales data
+        const salesByProduct: { [key: number]: number } = {};
 
-      // Update products with new data
-      const updatedProducts = existingProducts.map((product: Product) => {
-        const productSales = salesData[product.nmID] || 1; // Use 1 as default to avoid division by zero
+        salesReport.forEach(item => {
+          if (item.doc_type_name === "Продажа") {
+            // Accumulate sales
+            salesByProduct[item.nm_id] = (salesByProduct[item.nm_id] || 0) + item.quantity;
+            
+            // Initialize expenses object if it doesn't exist
+            if (!expensesByProduct[item.nm_id]) {
+              expensesByProduct[item.nm_id] = {
+                logistics: 0,
+                storage: 0,
+                penalties: 0,
+                acceptance: 0
+              };
+            }
+            
+            // Accumulate expenses
+            expensesByProduct[item.nm_id].logistics += item.delivery_rub;
+            expensesByProduct[item.nm_id].storage += item.storage_fee;
+            expensesByProduct[item.nm_id].penalties += item.penalty;
+            expensesByProduct[item.nm_id].acceptance += item.acceptance_fee;
+          }
+        });
+
+        // Calculate average expenses per item
+        Object.keys(expensesByProduct).forEach(nmId => {
+          const numId = Number(nmId);
+          const sales = salesByProduct[numId] || 1;
+          expensesByProduct[numId].logistics /= sales;
+          expensesByProduct[numId].storage /= sales;
+          expensesByProduct[numId].penalties /= sales;
+          expensesByProduct[numId].acceptance /= sales;
+        });
+
+        // Save sales data to localStorage
+        localStorage.setItem(`sales_${selectedStore.id}`, JSON.stringify(salesByProduct));
+        console.log('Saved sales data:', salesByProduct);
+        console.log('Calculated expenses:', expensesByProduct);
+      }
+
+      const response = await fetch("https://content-api.wildberries.ru/content/v2/get/cards/list", {
+        method: "POST",
+        headers: {
+          "Authorization": selectedStore.apiKey,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          settings: {
+            cursor: {
+              limit: 100
+            },
+            filter: {
+              withPhoto: -1
+            }
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch products");
+      }
+
+      const data = await response.json();
+      console.log("Products data:", data);
+      
+      const storedProducts = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
+      const costPrices = storedProducts.reduce((acc: Record<number, number>, product: Product) => {
+        if (product.costPrice) {
+          acc[product.nmID] = product.costPrice;
+        }
+        return acc;
+      }, {});
+
+      const nmIds = data.cards.map((product: Product) => product.nmID);
+      const prices = await fetchProductPrices(nmIds);
+
+      const updatedProducts = data.cards.map((product: Product) => {
+        const currentPrice = prices[product.nmID];
+        const productExpenses = expensesByProduct[product.nmID] || {
+          logistics: 0,
+          storage: 0,
+          penalties: 0,
+          acceptance: 0
+        };
+        
+        console.log(`Processing product ${product.nmID}:`, {
+          price: currentPrice,
+          costPrice: costPrices[product.nmID],
+          expenses: productExpenses
+        });
         
         return {
           ...product,
-          expenses: {
-            logistics: (statsData.currentPeriod.expenses.logistics * productSales) || 0,
-            storage: (statsData.currentPeriod.expenses.storage * productSales) || 0,
-            penalties: (statsData.currentPeriod.expenses.penalties * productSales) || 0,
-            acceptance: (statsData.currentPeriod.acceptance * productSales) || 0
-          }
+          costPrice: costPrices[product.nmID] || 0,
+          discountedPrice: currentPrice || 0,
+          expenses: productExpenses
         };
       });
 
+      console.log("Updated products:", updatedProducts);
       setProducts(updatedProducts);
       localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(updatedProducts));
 
@@ -161,7 +364,52 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     }
   };
 
-  // ... keep existing code (render method and product cards)
+  const updateCostPrice = (productId: number, costPrice: number) => {
+    const updatedProducts = products.map(product => {
+      if (product.nmID === productId) {
+        const updatedProduct = { ...product, costPrice };
+        return updatedProduct;
+      }
+      return product;
+    });
+    
+    setProducts(updatedProducts);
+    localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedProducts));
+    
+    // Обновляем себестоимость в отдельном хранилище для быстрого доступа
+    const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore?.id}`) || '{}');
+    costPrices[productId] = costPrice;
+    localStorage.setItem(`costPrices_${selectedStore?.id}`, JSON.stringify(costPrices));
+  };
+
+  useState(() => {
+    if (selectedStore) {
+      const storedProducts = localStorage.getItem(`products_${selectedStore.id}`);
+      if (storedProducts) {
+        const parsedProducts = JSON.parse(storedProducts);
+        // Загружаем сохраненные себестоимости
+        const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore.id}`) || '{}');
+        const productsWithCostPrices = parsedProducts.map((product: Product) => ({
+          ...product,
+          costPrice: costPrices[product.nmID] || product.costPrice || 0
+        }));
+        setProducts(productsWithCostPrices);
+      } else {
+        setProducts([]);
+      }
+    }
+  });
+
+  if (!selectedStore) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+          <Package className="h-12 w-12 text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">Выберите магазин для просмотра товаров</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -170,23 +418,10 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           <Package className="h-5 w-5" />
           <h2 className="text-xl font-semibold">Товары</h2>
         </div>
-        <div className="flex flex-col sm:flex-row gap-4">
-          {renderDatePicker(dateFrom, setDateFrom, "Выберите начальную дату")}
-          {renderDatePicker(dateTo, setDateTo, "Выберите конечную дату")}
-          <Button onClick={syncProducts} disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Синхронизация...
-              </>
-            ) : (
-              <>
-                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                Синхронизировать
-              </>
-            )}
-          </Button>
-        </div>
+        <Button onClick={syncProducts} disabled={isLoading}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          Синхронизировать
+        </Button>
       </div>
 
       {products.length === 0 ? (
