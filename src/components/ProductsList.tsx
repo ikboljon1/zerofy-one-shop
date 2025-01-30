@@ -249,7 +249,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
             // Accumulate sales
             salesByProduct[item.nm_id] = (salesByProduct[item.nm_id] || 0) + item.quantity;
             
-            // Calculate average expenses per item
+            // Initialize expenses object if it doesn't exist
             if (!expensesByProduct[item.nm_id]) {
               expensesByProduct[item.nm_id] = {
                 logistics: 0,
@@ -259,10 +259,11 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
               };
             }
             
-            expensesByProduct[item.nm_id].logistics += item.delivery_rub / item.quantity;
-            expensesByProduct[item.nm_id].storage += item.storage_fee / item.quantity;
-            expensesByProduct[item.nm_id].penalties += item.penalty / item.quantity;
-            expensesByProduct[item.nm_id].acceptance += item.acceptance_fee / item.quantity;
+            // Accumulate expenses
+            expensesByProduct[item.nm_id].logistics += item.delivery_rub;
+            expensesByProduct[item.nm_id].storage += item.storage_fee;
+            expensesByProduct[item.nm_id].penalties += item.penalty;
+            expensesByProduct[item.nm_id].acceptance += item.acceptance_fee;
           }
         });
 
@@ -278,6 +279,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
         // Save sales data to localStorage
         localStorage.setItem(`sales_${selectedStore.id}`, JSON.stringify(salesByProduct));
+        console.log('Saved sales data:', salesByProduct);
+        console.log('Calculated expenses:', expensesByProduct);
       }
 
       const response = await fetch("https://content-api.wildberries.ru/content/v2/get/cards/list", {
@@ -318,7 +321,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
       const updatedProducts = data.cards.map((product: Product) => {
         const currentPrice = prices[product.nmID];
-        const productExpenses = salesReport ? expensesByProduct[product.nmID] : null;
+        const productExpenses = expensesByProduct ? expensesByProduct[product.nmID] : null;
         
         console.log(`Processing product ${product.nmID}:`, {
           price: currentPrice,
