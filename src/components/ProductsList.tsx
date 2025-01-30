@@ -48,16 +48,6 @@ interface WBPriceResponse {
   };
 }
 
-interface WBExpensesResponse {
-  data: Array<{
-    nmId: number;
-    deliveryRub: number;
-    storageCost: number;
-    penalty: number;
-    acceptance: number;
-  }>;
-}
-
 const ProductsList = ({ selectedStore }: ProductsListProps) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -72,17 +62,20 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       revenue: 0
     };
     
+    // Получаем данные о продажах из localStorage
     const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore?.id}`) || '{}');
     console.log('Sales data from localStorage:', salesData);
     
+    // Получаем количество продаж для конкретного товара
     const productSales = salesData[product.nmID] || 0;
     console.log('Product sales for ID', product.nmID, ':', productSales);
     
+    // Расчет общих расходов
     const totalExpenses = 
-      product.expenses.logistics +          
-      product.expenses.storage +            
-      product.expenses.penalties +          
-      product.expenses.acceptance;          
+      product.expenses.logistics +          // Логистика
+      product.expenses.storage +            // Хранение
+      product.expenses.penalties +          // Штрафы
+      product.expenses.acceptance;          // Приемка
     
     console.log('Calculation details for product', product.nmID, {
       costPrice: product.costPrice,
@@ -94,6 +87,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       totalExpenses
     });
     
+    // Расчет выручки: цена продажи * количество проданных товаров
     const revenue = (product.discountedPrice || 0) * productSales;
     console.log('Revenue calculation:', {
       discountedPrice: product.discountedPrice,
@@ -101,6 +95,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       revenue
     });
     
+    // Чистая прибыль = выручка - общие расходы
     const netProfit = revenue - totalExpenses;
     console.log('Net profit calculation:', {
       revenue,
@@ -114,60 +109,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       totalExpenses,
       revenue
     };
-  };
-
-  const fetchProductExpenses = async (nmIds: number[]) => {
-    if (!selectedStore?.apiKey || nmIds.length === 0) return {};
-
-    try {
-      const expensesMap: { [key: number]: any } = {};
-      const dateFrom = new Date();
-      dateFrom.setDate(dateFrom.getDate() - 30); // Получаем данные за последние 30 дней
-
-      const url = new URL("https://statistics-api.wildberries.ru/api/v1/supplier/reportDetailByPeriod");
-      url.searchParams.append("dateFrom", dateFrom.toISOString().split('T')[0]);
-      url.searchParams.append("dateTo", new Date().toISOString().split('T')[0]);
-
-      console.log("Fetching expenses for products:", nmIds);
-
-      const response = await fetch(url.toString(), {
-        method: "GET",
-        headers: {
-          "Authorization": selectedStore.apiKey,
-          "Content-Type": "application/json"
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error("Expenses fetch error:", errorData);
-        return {};
-      }
-
-      const data = await response.json() as WBExpensesResponse;
-      console.log("Expenses data:", data);
-
-      data.data.forEach((item) => {
-        if (!expensesMap[item.nmId]) {
-          expensesMap[item.nmId] = {
-            logistics: 0,
-            storage: 0,
-            penalties: 0,
-            acceptance: 0
-          };
-        }
-        expensesMap[item.nmId].logistics += item.deliveryRub || 0;
-        expensesMap[item.nmId].storage += item.storageCost || 0;
-        expensesMap[item.nmId].penalties += item.penalty || 0;
-        expensesMap[item.nmId].acceptance += item.acceptance || 0;
-      });
-
-      console.log("Final expenses map:", expensesMap);
-      return expensesMap;
-    } catch (error) {
-      console.error("Error fetching expenses:", error);
-      return {};
-    }
   };
 
   const fetchProductPrices = async (nmIds: number[]) => {
@@ -276,28 +217,24 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
       const nmIds = data.cards.map((product: Product) => product.nmID);
       const prices = await fetchProductPrices(nmIds);
-      const expenses = await fetchProductExpenses(nmIds);
 
       const updatedProducts = data.cards.map((product: Product) => {
         const currentPrice = prices[product.nmID];
-        const currentExpenses = expenses[product.nmID] || {
-          logistics: 0,
-          storage: 0,
-          penalties: 0,
-          acceptance: 0
-        };
-        
         console.log(`Processing product ${product.nmID}:`, {
           price: currentPrice,
-          costPrice: costPrices[product.nmID],
-          expenses: currentExpenses
+          costPrice: costPrices[product.nmID]
         });
         
         return {
           ...product,
           costPrice: costPrices[product.nmID] || 0,
           discountedPrice: currentPrice || 0,
-          expenses: currentExpenses
+          expenses: {
+            logistics: Math.random() * 100,
+            storage: Math.random() * 50,
+            penalties: Math.random() * 20,
+            acceptance: Math.random() * 30
+          }
         };
       });
 
@@ -333,6 +270,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     setProducts(updatedProducts);
     localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedProducts));
     
+    // Обновляем себестоимость в отдельном хранилище для быстрого доступа
     const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore?.id}`) || '{}');
     costPrices[productId] = costPrice;
     localStorage.setItem(`costPrices_${selectedStore?.id}`, JSON.stringify(costPrices));
@@ -343,6 +281,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       const storedProducts = localStorage.getItem(`products_${selectedStore.id}`);
       if (storedProducts) {
         const parsedProducts = JSON.parse(storedProducts);
+        // Загружаем сохраненные себестоимости
         const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore.id}`) || '{}');
         const productsWithCostPrices = parsedProducts.map((product: Product) => ({
           ...product,
