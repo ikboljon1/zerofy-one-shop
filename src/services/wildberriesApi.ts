@@ -1,4 +1,31 @@
-import { fetchWildberriesStats } from "@/services/wildberriesApi";
+export interface WildberriesResponse {
+  currentPeriod: {
+    sales: number;
+    transferred: number;
+    expenses: {
+      logistics: number;
+      storage: number;
+      penalties: number;
+      total: number;
+    };
+    netProfit: number;
+    acceptance: number;
+  };
+  previousPeriod: {
+    sales: number;
+    transferred: number;
+    expenses: {
+      logistics: number;
+      storage: number;
+      penalties: number;
+      total: number;
+    };
+    netProfit: number;
+    acceptance: number;
+  };
+  dailySales: any[];
+  productSales: any[];
+}
 
 interface ProductWithCost {
   nmID: number;
@@ -15,7 +42,7 @@ export const calculateTotalCosts = (products: ProductWithCost[]): number => {
   }, 0);
 };
 
-export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
+export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, dateTo: Date): Promise<WildberriesResponse> => {
   try {
     // Get stored products with cost prices
     const storedProducts = JSON.parse(localStorage.getItem('marketplace_products') || '[]');
@@ -65,7 +92,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
         (data.currentPeriod.expenses?.penalties || 0)
     };
 
-    // Previous period calculations (similar logic)
+    // Previous period calculations
     const previousPeriodSales = data.previousPeriod?.sales || 0;
     const previousPeriodTransferred = data.previousPeriod?.transferred || 0;
     const previousPeriodExpenses = {
