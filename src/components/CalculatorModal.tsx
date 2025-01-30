@@ -20,6 +20,7 @@ interface Expenses {
   storage: number;
   penalties: number;
   acceptance: number;
+  price?: number;
 }
 
 const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
@@ -29,7 +30,8 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
     logistics: 0,
     storage: 0,
     penalties: 0,
-    acceptance: 0
+    acceptance: 0,
+    price: 0
   });
   const [result, setResult] = useState<{
     minPrice: number;
@@ -66,7 +68,10 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
 
       if (productWithMaxExpenses) {
         setCostPrice(productWithMaxExpenses.costPrice?.toString() || "0");
-        setExpenses(productWithMaxExpenses.expenses);
+        setExpenses({
+          ...productWithMaxExpenses.expenses,
+          price: productWithMaxExpenses.price || 0
+        });
         
         // Log found product for debugging
         console.log('Product with highest expenses:', productWithMaxExpenses);
@@ -140,6 +145,12 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
           <Card className="p-4">
             <h3 className="text-sm font-medium mb-2">Максимальные расходы:</h3>
             <div className="space-y-2">
+              {expenses.price !== undefined && expenses.price > 0 && (
+                <div className="flex justify-between">
+                  <span>Цена товара:</span>
+                  <span>{expenses.price.toFixed(2)} ₽</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span>Логистика:</span>
                 <span>{expenses.logistics.toFixed(2)} ₽</span>

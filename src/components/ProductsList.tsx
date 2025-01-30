@@ -16,6 +16,7 @@ interface Product {
     c246x328: string;
   }>;
   costPrice?: number;
+  price?: number;
   expenses?: {
     logistics: number;
     storage: number;
