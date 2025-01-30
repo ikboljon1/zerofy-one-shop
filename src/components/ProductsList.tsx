@@ -48,11 +48,59 @@ interface WBPriceResponse {
   };
 }
 
+interface WBReportItem {
+  realizationreport_id: string;
+  date_from: string;
+  date_to: string;
+  nm_id: number;
+  doc_type_name: string;
+  quantity: number;
+  retail_amount: number;
+  ppvz_for_pay: number;
+  delivery_rub: number;
+  penalty: number;
+  storage_fee: number;
+  acceptance_fee: number;
+}
+
 const ProductsList = ({ selectedStore }: ProductsListProps) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+
+  const fetchSalesReport = async () => {
+    if (!selectedStore?.apiKey) return null;
+
+    const dateFrom = new Date();
+    dateFrom.setDate(dateFrom.getDate() - 30); // Last 30 days
+    const dateTo = new Date();
+
+    const formatDate = (date: Date) => {
+      return date.toISOString().split('T')[0];
+    };
+
+    try {
+      const response = await fetch(
+        `https://statistics-api.wildberries.ru/api/v1/supplier/sales?dateFrom=${formatDate(dateFrom)}&dateTo=${formatDate(dateTo)}`,
+        {
+          headers: {
+            Authorization: selectedStore.apiKey,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch sales report');
+      }
+
+      const data = await response.json() as WBReportItem[];
+      return data;
+    } catch (error) {
+      console.error('Error fetching sales report:', error);
+      return null;
+    }
+  };
 
   const calculateNetProfit = (product: Product) => {
     if (!product.costPrice || !product.expenses) return {
@@ -62,20 +110,20 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       revenue: 0
     };
     
-    // Получаем данные о продажах из localStorage
+    // Get sales data from localStorage
     const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore?.id}`) || '{}');
     console.log('Sales data from localStorage:', salesData);
     
-    // Получаем количество продаж для конкретного товара
+    // Get number of sales for specific product
     const productSales = salesData[product.nmID] || 0;
     console.log('Product sales for ID', product.nmID, ':', productSales);
     
-    // Расчет общих расходов
+    // Calculate total expenses
     const totalExpenses = 
-      product.expenses.logistics +          // Логистика
-      product.expenses.storage +            // Хранение
-      product.expenses.penalties +          // Штрафы
-      product.expenses.acceptance;          // Приемка
+      (product.expenses.logistics * productSales) +    // Logistics per sale
+      (product.expenses.storage * productSales) +      // Storage per sale
+      (product.expenses.penalties * productSales) +    // Penalties per sale
+      (product.expenses.acceptance * productSales);    // Acceptance per sale
     
     console.log('Calculation details for product', product.nmID, {
       costPrice: product.costPrice,
@@ -87,7 +135,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       totalExpenses
     });
     
-    // Расчет выручки: цена продажи * количество проданных товаров
+    // Calculate revenue: sale price * number of sold items
     const revenue = (product.discountedPrice || 0) * productSales;
     console.log('Revenue calculation:', {
       discountedPrice: product.discountedPrice,
@@ -95,11 +143,12 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       revenue
     });
     
-    // Чистая прибыль = выручка - общие расходы
-    const netProfit = revenue - totalExpenses;
+    // Net profit = revenue - total expenses - (cost price * number of sales)
+    const netProfit = revenue - totalExpenses - (product.costPrice * productSales);
     console.log('Net profit calculation:', {
       revenue,
       totalExpenses,
+      costPriceTotal: product.costPrice * productSales,
       netProfit
     });
     
@@ -182,6 +231,55 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
     setIsLoading(true);
     try {
+      // Fetch sales report first
+      const salesReport = await fetchSalesReport();
+      
+      if (salesReport) {
+        // Process sales data
+        const salesByProduct: { [key: number]: number } = {};
+        const expensesByProduct: { [key: number]: {
+          logistics: number,
+          storage: number,
+          penalties: number,
+          acceptance: number
+        }} = {};
+
+        salesReport.forEach(item => {
+          if (item.doc_type_name === "Продажа") {
+            // Accumulate sales
+            salesByProduct[item.nm_id] = (salesByProduct[item.nm_id] || 0) + item.quantity;
+            
+            // Calculate average expenses per item
+            if (!expensesByProduct[item.nm_id]) {
+              expensesByProduct[item.nm_id] = {
+                logistics: 0,
+                storage: 0,
+                penalties: 0,
+                acceptance: 0
+              };
+            }
+            
+            expensesByProduct[item.nm_id].logistics += item.delivery_rub / item.quantity;
+            expensesByProduct[item.nm_id].storage += item.storage_fee / item.quantity;
+            expensesByProduct[item.nm_id].penalties += item.penalty / item.quantity;
+            expensesByProduct[item.nm_id].acceptance += item.acceptance_fee / item.quantity;
+          }
+        });
+
+        // Calculate average expenses per item
+        Object.keys(expensesByProduct).forEach(nmId => {
+          const numId = Number(nmId);
+          const sales = salesByProduct[numId] || 1;
+          expensesByProduct[numId].logistics /= sales;
+          expensesByProduct[numId].storage /= sales;
+          expensesByProduct[numId].penalties /= sales;
+          expensesByProduct[numId].acceptance /= sales;
+        });
+
+        // Save sales data to localStorage
+        localStorage.setItem(`sales_${selectedStore.id}`, JSON.stringify(salesByProduct));
+      }
+
       const response = await fetch("https://content-api.wildberries.ru/content/v2/get/cards/list", {
         method: "POST",
         headers: {
@@ -220,20 +318,23 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
       const updatedProducts = data.cards.map((product: Product) => {
         const currentPrice = prices[product.nmID];
+        const productExpenses = salesReport ? expensesByProduct[product.nmID] : null;
+        
         console.log(`Processing product ${product.nmID}:`, {
           price: currentPrice,
-          costPrice: costPrices[product.nmID]
+          costPrice: costPrices[product.nmID],
+          expenses: productExpenses
         });
         
         return {
           ...product,
           costPrice: costPrices[product.nmID] || 0,
           discountedPrice: currentPrice || 0,
-          expenses: {
-            logistics: Math.random() * 100,
-            storage: Math.random() * 50,
-            penalties: Math.random() * 20,
-            acceptance: Math.random() * 30
+          expenses: productExpenses || {
+            logistics: 0,
+            storage: 0,
+            penalties: 0,
+            acceptance: 0
           }
         };
       });
