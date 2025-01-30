@@ -281,7 +281,7 @@ const calculateProductStats = (data: WildberriesReportItem[]) => {
     if (item.doc_type_name === "Продажа") {
       currentStats.sales += item.retail_amount || 0;
       currentStats.quantity += item.quantity || 0;
-      // Суммируем расходы для каждой продажи
+      // Суммируем фактические расходы из API для каждой продажи
       currentStats.logistics += item.delivery_rub || 0;
       currentStats.storage += item.storage_fee || 0;
       currentStats.penalties += item.penalty || 0;
@@ -290,7 +290,7 @@ const calculateProductStats = (data: WildberriesReportItem[]) => {
       currentStats.returns += item.retail_amount || 0;
     }
 
-    // Обновляем прибыль с учетом общих расходов
+    // Обновляем прибыль с учетом фактических общих расходов
     currentStats.profit = currentStats.sales - (
       currentStats.logistics +
       currentStats.storage +
@@ -299,6 +299,7 @@ const calculateProductStats = (data: WildberriesReportItem[]) => {
       currentStats.returns
     );
 
+    // Рассчитываем среднюю цену продажи
     currentStats.price = currentStats.sales / (currentStats.quantity || 1);
 
     productStats.set(item.subject_name, currentStats);
