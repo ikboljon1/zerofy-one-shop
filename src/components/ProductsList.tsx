@@ -95,15 +95,22 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       
       if (data.data?.listGoods) {
         data.data.listGoods.forEach((item) => {
-          // Get the first size's price data
-          const firstSize = item.sizes?.[0];
-          if (item.nmID && firstSize) {
-            // Use clubDiscountedPrice as the main price, falling back to discountedPrice or regular price
-            const price = firstSize.clubDiscountedPrice || 
-                         firstSize.discountedPrice || 
-                         firstSize.price || 0;
-            priceMap[item.nmID] = price;
-            console.log(`Price for ${item.nmID} (${item.vendorCode}): ${price}`);
+          if (item.sizes && item.sizes.length > 0) {
+            const firstSize = item.sizes[0];
+            const price = firstSize.clubDiscountedPrice || firstSize.discountedPrice || firstSize.price;
+            if (price) {
+              priceMap[item.nmID] = price;
+              console.log(`Price found for ${item.nmID} (${item.vendorCode}):`, {
+                clubPrice: firstSize.clubDiscountedPrice,
+                discountedPrice: firstSize.discountedPrice,
+                regularPrice: firstSize.price,
+                selectedPrice: price
+              });
+            } else {
+              console.log(`No valid price found for ${item.nmID} (${item.vendorCode})`);
+            }
+          } else {
+            console.log(`No sizes found for ${item.nmID} (${item.vendorCode})`);
           }
         });
       }
@@ -284,7 +291,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       Цена товара (с учетом скидки WB Клуба):
                     </label>
                     <div className="text-sm font-medium">
-                      {product.clubPrice ? `${product.clubPrice.toFixed(2)} ₽` : "Нет данных"}
+                      {product.clubPrice ? `${product.clubPrice.toFixed(2)} ₽` : "Нет данных о цене"}
                     </div>
                   </div>
                   {product.expenses && (
