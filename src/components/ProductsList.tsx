@@ -69,12 +69,12 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     const productSales = product.quantity || salesData[product.nmID] || 0;
     console.log('Product sales for ID', product.nmID, ':', productSales);
     
-    // Теперь используем общие расходы, полученные из API
+    // Используем общие расходы из API
     const totalExpenses = 
-      product.expenses.logistics +     // Общая логистика для всех продаж
-      product.expenses.storage +       // Общее хранение для всех продаж
-      product.expenses.penalties +     // Общие штрафы для всех продаж
-      product.expenses.acceptance;     // Общая приемка для всех продаж
+      product.expenses.logistics +     // Общая логистика
+      product.expenses.storage +       // Общее хранение
+      product.expenses.penalties +     // Общие штрафы
+      product.expenses.acceptance;     // Общая приемка
     
     console.log('Calculation details for product', product.nmID, {
       costPrice: product.costPrice,

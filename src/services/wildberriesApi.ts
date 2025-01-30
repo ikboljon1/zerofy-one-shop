@@ -281,7 +281,7 @@ const calculateProductStats = (data: WildberriesReportItem[]) => {
     if (item.doc_type_name === "Продажа") {
       currentStats.sales += item.retail_amount || 0;
       currentStats.quantity += item.quantity || 0;
-      // Суммируем общие расходы для каждой продажи
+      // Суммируем расходы для каждой продажи
       currentStats.logistics += item.delivery_rub || 0;
       currentStats.storage += item.storage_fee || 0;
       currentStats.penalties += item.penalty || 0;
