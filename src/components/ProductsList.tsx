@@ -210,6 +210,14 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       placeholder="Введите себестоимость"
                     />
                   </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">
+                      Цена товара:
+                    </label>
+                    <div className="text-sm font-medium">
+                      {product.price ? `${product.price.toFixed(2)} ₽` : "Нет данных"}
+                    </div>
+                  </div>
                   {product.expenses && (
                     <div className="space-y-1.5 border-t pt-2">
                       <div className="flex justify-between text-xs">
