@@ -234,24 +234,22 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       // Fetch sales report first
       const salesReport = await fetchSalesReport();
       
-      // Initialize expenses tracking object outside the conditional block
-      let expensesByProduct: { [key: number]: {
-        logistics: number,
-        storage: number,
-        penalties: number,
-        acceptance: number
-      }} = {};
-      
       if (salesReport) {
         // Process sales data
         const salesByProduct: { [key: number]: number } = {};
+        const expensesByProduct: { [key: number]: {
+          logistics: number,
+          storage: number,
+          penalties: number,
+          acceptance: number
+        }} = {};
 
         salesReport.forEach(item => {
           if (item.doc_type_name === "Продажа") {
             // Accumulate sales
             salesByProduct[item.nm_id] = (salesByProduct[item.nm_id] || 0) + item.quantity;
             
-            // Initialize expenses object if it doesn't exist
+            // Calculate average expenses per item
             if (!expensesByProduct[item.nm_id]) {
               expensesByProduct[item.nm_id] = {
                 logistics: 0,
@@ -261,11 +259,10 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
               };
             }
             
-            // Accumulate expenses
-            expensesByProduct[item.nm_id].logistics += item.delivery_rub;
-            expensesByProduct[item.nm_id].storage += item.storage_fee;
-            expensesByProduct[item.nm_id].penalties += item.penalty;
-            expensesByProduct[item.nm_id].acceptance += item.acceptance_fee;
+            expensesByProduct[item.nm_id].logistics += item.delivery_rub / item.quantity;
+            expensesByProduct[item.nm_id].storage += item.storage_fee / item.quantity;
+            expensesByProduct[item.nm_id].penalties += item.penalty / item.quantity;
+            expensesByProduct[item.nm_id].acceptance += item.acceptance_fee / item.quantity;
           }
         });
 
@@ -281,8 +278,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
         // Save sales data to localStorage
         localStorage.setItem(`sales_${selectedStore.id}`, JSON.stringify(salesByProduct));
-        console.log('Saved sales data:', salesByProduct);
-        console.log('Calculated expenses:', expensesByProduct);
       }
 
       const response = await fetch("https://content-api.wildberries.ru/content/v2/get/cards/list", {
@@ -323,12 +318,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
       const updatedProducts = data.cards.map((product: Product) => {
         const currentPrice = prices[product.nmID];
-        const productExpenses = expensesByProduct[product.nmID] || {
-          logistics: 0,
-          storage: 0,
-          penalties: 0,
-          acceptance: 0
-        };
+        const productExpenses = salesReport ? expensesByProduct[product.nmID] : null;
         
         console.log(`Processing product ${product.nmID}:`, {
           price: currentPrice,
@@ -340,7 +330,12 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           ...product,
           costPrice: costPrices[product.nmID] || 0,
           discountedPrice: currentPrice || 0,
-          expenses: productExpenses
+          expenses: productExpenses || {
+            logistics: 0,
+            storage: 0,
+            penalties: 0,
+            acceptance: 0
+          }
         };
       });
 
