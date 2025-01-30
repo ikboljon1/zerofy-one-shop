@@ -55,7 +55,12 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   const isMobile = useIsMobile();
 
   const calculateNetProfit = (product: Product) => {
-    if (!product.costPrice || !product.expenses) return 0;
+    if (!product.costPrice || !product.expenses) return {
+      netProfit: 0,
+      productSales: 0,
+      totalExpenses: 0,
+      revenue: 0
+    };
     
     const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore?.id}`) || '{}');
     const productSales = salesData[product.nmID] || 0;
