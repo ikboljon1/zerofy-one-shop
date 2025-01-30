@@ -25,7 +25,6 @@ import Chart from "@/components/Chart";
 import ProductsComponent from "@/components/Products";
 import Stores from "@/components/Stores";
 import CalculatorModal from "@/components/CalculatorModal";
-import Products from "@/pages/Products";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,6 +50,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import Profile from "@/components/Profile";
+import ProductsList from "@/components/ProductsList";
+import Products from "@/pages/Products";
 
 const salesData = [
   { name: "Jan", value: 300000 },
@@ -133,6 +134,10 @@ const Index = () => {
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
+    toast({
+      title: "Navigation",
+      description: `Switched to ${tab} view`,
+    });
   };
 
   const productSubMenu = [
@@ -503,6 +508,7 @@ const Index = () => {
               topProfitableProducts={mockTopProfitableProducts}
               topUnprofitableProducts={mockTopUnprofitableProducts}
             />
+            <ProductsList selectedStore={selectedStore} />
           </motion.div>
         )}
         {activeTab === "analytics" && (

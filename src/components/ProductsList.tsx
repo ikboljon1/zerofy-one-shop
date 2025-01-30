@@ -17,6 +17,7 @@ interface Product {
   }>;
   costPrice?: number;
   price?: number;
+  clubPrice?: number;
   expenses?: {
     logistics: number;
     storage: number;
@@ -66,18 +67,14 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   };
 
   const fetchProductPrices = async (nmIds: number[]) => {
-    if (!selectedStore?.apiKey || nmIds.length === 0) {
-      console.log("No products to fetch prices for");
-      return {};
-    }
+    if (!selectedStore?.apiKey) return {};
 
     try {
       const url = new URL("https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter");
       url.searchParams.append("limit", "1000");
       url.searchParams.append("filterNmID", nmIds.join(','));
 
-      console.log("Fetching prices for nmIds:", nmIds);
-      console.log("Request URL:", url.toString());
+      console.log("Fetching prices with URL:", url.toString());
 
       const response = await fetch(url.toString(), {
         method: "GET",
@@ -102,12 +99,13 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         data.data.listGoods.forEach((item) => {
           if (item.sizes && item.sizes.length > 0) {
             const firstSize = item.sizes[0];
-            const basePrice = firstSize.price;
-            priceMap[item.nmID] = basePrice;
+            // Берем цену из первого размера
+            const price = firstSize.price || 0;
+            priceMap[item.nmID] = price;
             console.log(`Price set for ${item.nmID}:`, {
               nmID: item.nmID,
               vendorCode: item.vendorCode,
-              basePrice: basePrice,
+              price: price,
               firstSize: firstSize
             });
           } else {
@@ -161,12 +159,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       const data = await response.json();
       console.log("Products data:", data);
       
-      if (!data.cards || !Array.isArray(data.cards)) {
-        console.log("No products found in response");
-        setProducts([]);
-        return;
-      }
-
+      // Загружаем существующие цены из localStorage
       const storedProducts = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
       const costPrices = storedProducts.reduce((acc: Record<number, number>, product: Product) => {
         if (product.costPrice) {
@@ -175,10 +168,11 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         return acc;
       }, {});
 
+      // Получаем актуальные цены
       const nmIds = data.cards.map((product: Product) => product.nmID);
-      console.log("Fetching prices for products:", nmIds);
       const prices = await fetchProductPrices(nmIds);
 
+      // Объединяем новые продукты с существующими ценами
       const updatedProducts = data.cards.map((product: Product) => {
         const currentPrice = prices[product.nmID];
         console.log(`Processing product ${product.nmID}:`, {
@@ -227,6 +221,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedProducts));
   };
 
+  // Загружаем продукты из localStorage при изменении магазина
   useState(() => {
     if (selectedStore) {
       const storedProducts = localStorage.getItem(`products_${selectedStore.id}`);
@@ -251,15 +246,22 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <Package className="h-5 w-5" />
+          <h2 className="text-xl font-semibold">Товары</h2>
+        </div>
+        <Button onClick={syncProducts} disabled={isLoading}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          Синхронизировать
+        </Button>
+      </div>
+
       {products.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-8 text-center">
             <Package className="h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-muted-foreground">Нет товаров для отображения</p>
-            <Button onClick={syncProducts} disabled={isLoading} className="mt-4">
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              Синхронизировать
-            </Button>
           </CardContent>
         </Card>
       ) : (
@@ -302,30 +304,32 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       {product.price ? `${product.price.toFixed(2)} ₽` : "0.00 ₽"}
                     </div>
                   </div>
-                  <div className="space-y-1.5 border-t pt-2">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Логистика:</span>
-                      <span>{product.expenses?.logistics.toFixed(2)} ₽</span>
+                  {product.expenses && (
+                    <div className="space-y-1.5 border-t pt-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Логистика:</span>
+                        <span>{product.expenses.logistics.toFixed(2)} ₽</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Хранение:</span>
+                        <span>{product.expenses.storage.toFixed(2)} ₽</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Штрафы:</span>
+                        <span>{product.expenses.penalties.toFixed(2)} ₽</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Приемка:</span>
+                        <span>{product.expenses.acceptance.toFixed(2)} ₽</span>
+                      </div>
+                      <div className="flex justify-between text-sm font-medium border-t pt-2">
+                        <span>Чистая прибыль:</span>
+                        <span className={calculateNetProfit(product) >= 0 ? "text-green-500" : "text-red-500"}>
+                          {calculateNetProfit(product).toFixed(2)} ₽
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Хранение:</span>
-                      <span>{product.expenses?.storage.toFixed(2)} ₽</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Штрафы:</span>
-                      <span>{product.expenses?.penalties.toFixed(2)} ₽</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Приемка:</span>
-                      <span>{product.expenses?.acceptance.toFixed(2)} ₽</span>
-                    </div>
-                    <div className="flex justify-between text-sm font-medium border-t pt-2">
-                      <span>Чистая прибыль:</span>
-                      <span className={calculateNetProfit(product) >= 0 ? "text-green-500" : "text-red-500"}>
-                        {calculateNetProfit(product).toFixed(2)} ₽
-                      </span>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
