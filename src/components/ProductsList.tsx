@@ -91,30 +91,30 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       }
 
       const data = await response.json() as WBPriceResponse;
+      console.log("Raw price data:", data);
+      
       const priceMap: { [key: number]: number } = {};
       
       if (data.data?.listGoods) {
         data.data.listGoods.forEach((item) => {
           if (item.sizes && item.sizes.length > 0) {
             const firstSize = item.sizes[0];
-            const price = firstSize.clubDiscountedPrice || firstSize.discountedPrice || firstSize.price;
-            if (price) {
-              priceMap[item.nmID] = price;
-              console.log(`Price found for ${item.nmID} (${item.vendorCode}):`, {
-                clubPrice: firstSize.clubDiscountedPrice,
-                discountedPrice: firstSize.discountedPrice,
-                regularPrice: firstSize.price,
-                selectedPrice: price
-              });
-            } else {
-              console.log(`No valid price found for ${item.nmID} (${item.vendorCode})`);
-            }
+            // Берем цену из первого размера
+            const price = firstSize.price || 0;
+            priceMap[item.nmID] = price;
+            console.log(`Price set for ${item.nmID}:`, {
+              nmID: item.nmID,
+              vendorCode: item.vendorCode,
+              price: price,
+              firstSize: firstSize
+            });
           } else {
-            console.log(`No sizes found for ${item.nmID} (${item.vendorCode})`);
+            console.log(`No sizes found for ${item.nmID}`);
           }
         });
       }
 
+      console.log("Final price map:", priceMap);
       return priceMap;
     } catch (error) {
       console.error("Error fetching prices:", error);
@@ -157,6 +157,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       }
 
       const data = await response.json();
+      console.log("Products data:", data);
       
       // Загружаем существующие цены из localStorage
       const storedProducts = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
@@ -172,18 +173,27 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       const prices = await fetchProductPrices(nmIds);
 
       // Объединяем новые продукты с существующими ценами
-      const updatedProducts = data.cards.map((product: Product) => ({
-        ...product,
-        costPrice: costPrices[product.nmID] || 0,
-        clubPrice: prices[product.nmID] || 0,
-        expenses: {
-          logistics: Math.random() * 100,
-          storage: Math.random() * 50,
-          penalties: Math.random() * 20,
-          acceptance: Math.random() * 30
-        }
-      }));
+      const updatedProducts = data.cards.map((product: Product) => {
+        const currentPrice = prices[product.nmID];
+        console.log(`Processing product ${product.nmID}:`, {
+          price: currentPrice,
+          costPrice: costPrices[product.nmID]
+        });
+        
+        return {
+          ...product,
+          costPrice: costPrices[product.nmID] || 0,
+          price: currentPrice || 0,
+          expenses: {
+            logistics: Math.random() * 100,
+            storage: Math.random() * 50,
+            penalties: Math.random() * 20,
+            acceptance: Math.random() * 30
+          }
+        };
+      });
 
+      console.log("Updated products:", updatedProducts);
       setProducts(updatedProducts);
       localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(updatedProducts));
 
@@ -288,10 +298,10 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs text-muted-foreground">
-                      Цена товара (с учетом скидки WB Клуба):
+                      Цена товара:
                     </label>
                     <div className="text-sm font-medium">
-                      {product.clubPrice ? `${product.clubPrice.toFixed(2)} ₽` : "Нет данных о цене"}
+                      {product.price ? `${product.price.toFixed(2)} ₽` : "0.00 ₽"}
                     </div>
                   </div>
                   {product.expenses && (
