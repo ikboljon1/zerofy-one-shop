@@ -268,7 +268,9 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
             logistics: Math.random() * 100,
             storage: Math.random() * 50,
             penalties: Math.random() * 20,
-            acceptance: Math.random() * 30
+            acceptance: Math.random() * 30,
+            deductions: Math.random() * 40,  // Added deductions
+            transferred: Math.random() * 1000  // Added transferred amount
           }
         };
       });
