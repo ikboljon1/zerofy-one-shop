@@ -102,7 +102,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         data.data.listGoods.forEach((item) => {
           if (item.sizes && item.sizes.length > 0) {
             const firstSize = item.sizes[0];
-            // Take the base price from the first size
             const basePrice = firstSize.price;
             priceMap[item.nmID] = basePrice;
             console.log(`Price set for ${item.nmID}:`, {
@@ -168,7 +167,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         return;
       }
 
-      // Load existing prices from localStorage
       const storedProducts = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
       const costPrices = storedProducts.reduce((acc: Record<number, number>, product: Product) => {
         if (product.costPrice) {
@@ -177,12 +175,10 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         return acc;
       }, {});
 
-      // Get current prices
       const nmIds = data.cards.map((product: Product) => product.nmID);
       console.log("Fetching prices for products:", nmIds);
       const prices = await fetchProductPrices(nmIds);
 
-      // Combine new products with existing prices
       const updatedProducts = data.cards.map((product: Product) => {
         const currentPrice = prices[product.nmID];
         console.log(`Processing product ${product.nmID}:`, {
@@ -231,7 +227,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedProducts));
   };
 
-  // Load products from localStorage when store changes
   useState(() => {
     if (selectedStore) {
       const storedProducts = localStorage.getItem(`products_${selectedStore.id}`);
@@ -307,32 +302,30 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       {product.price ? `${product.price.toFixed(2)} ₽` : "0.00 ₽"}
                     </div>
                   </div>
-                  {product.expenses && (
-                    <div className="space-y-1.5 border-t pt-2">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Логистика:</span>
-                        <span>{product.expenses.logistics.toFixed(2)} ₽</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Хранение:</span>
-                        <span>{product.expenses.storage.toFixed(2)} ₽</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Штрафы:</span>
-                        <span>{product.expenses.penalties.toFixed(2)} ₽</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Приемка:</span>
-                        <span>{product.expenses.acceptance.toFixed(2)} ₽</span>
-                      </div>
-                      <div className="flex justify-between text-sm font-medium border-t pt-2">
-                        <span>Чистая прибыль:</span>
-                        <span className={calculateNetProfit(product) >= 0 ? "text-green-500" : "text-red-500"}>
-                          {calculateNetProfit(product).toFixed(2)} ₽
-                        </span>
-                      </div>
+                  <div className="space-y-1.5 border-t pt-2">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Логистика:</span>
+                      <span>{product.expenses?.logistics.toFixed(2)} ₽</span>
                     </div>
-                  )}
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Хранение:</span>
+                      <span>{product.expenses?.storage.toFixed(2)} ₽</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Штрафы:</span>
+                      <span>{product.expenses?.penalties.toFixed(2)} ₽</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Приемка:</span>
+                      <span>{product.expenses?.acceptance.toFixed(2)} ₽</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-medium border-t pt-2">
+                      <span>Чистая прибыль:</span>
+                      <span className={calculateNetProfit(product) >= 0 ? "text-green-500" : "text-red-500"}>
+                        {calculateNetProfit(product).toFixed(2)} ₽
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
