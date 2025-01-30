@@ -223,8 +223,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     const updatedProducts = products.map(product => {
       if (product.nmID === productId) {
         const updatedProduct = { ...product, costPrice };
-        const netProfit = calculateNetProfit(updatedProduct);
-        return { ...updatedProduct, netProfit };
+        return updatedProduct;
       }
       return product;
     });
@@ -232,18 +231,24 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     setProducts(updatedProducts);
     localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedProducts));
     
-    const dashboardData = JSON.parse(localStorage.getItem(`dashboard_${selectedStore?.id}`) || '{}');
-    const totalNetProfit = updatedProducts.reduce((sum, product) => sum + calculateNetProfit(product), 0);
-    
-    dashboardData.netProfit = totalNetProfit;
-    localStorage.setItem(`dashboard_${selectedStore?.id}`, JSON.stringify(dashboardData));
+    // Обновляем себестоимость в отдельном хранилище для быстрого доступа
+    const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore?.id}`) || '{}');
+    costPrices[productId] = costPrice;
+    localStorage.setItem(`costPrices_${selectedStore?.id}`, JSON.stringify(costPrices));
   };
 
   useState(() => {
     if (selectedStore) {
       const storedProducts = localStorage.getItem(`products_${selectedStore.id}`);
       if (storedProducts) {
-        setProducts(JSON.parse(storedProducts));
+        const parsedProducts = JSON.parse(storedProducts);
+        // Загружаем сохраненные себестоимости
+        const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore.id}`) || '{}');
+        const productsWithCostPrices = parsedProducts.map((product: Product) => ({
+          ...product,
+          costPrice: costPrices[product.nmID] || product.costPrice || 0
+        }));
+        setProducts(productsWithCostPrices);
       } else {
         setProducts([]);
       }
@@ -312,6 +317,11 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       className="h-8 text-sm"
                       placeholder="Введите себестоимость"
                     />
+                    {product.costPrice > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Текущая себестоимость: {product.costPrice} ₽
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs text-muted-foreground">
