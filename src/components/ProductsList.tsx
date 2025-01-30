@@ -63,20 +63,17 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       revenue: 0
     };
     
-    // Получаем данные о продажах из localStorage
     const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore?.id}`) || '{}');
     console.log('Sales data from localStorage:', salesData);
     
-    // Получаем количество продаж для конкретного товара
     const productSales = product.quantity || salesData[product.nmID] || 0;
     console.log('Product sales for ID', product.nmID, ':', productSales);
     
-    // Расчет общих расходов с учетом количества проданных товаров
     const totalExpenses = 
-      (product.expenses.logistics * productSales) +     // Логистика
-      (product.expenses.storage * productSales) +       // Хранение
-      (product.expenses.penalties * productSales) +     // Штрафы
-      (product.expenses.acceptance * productSales);     // Приемка
+      (product.expenses.logistics * productSales) +     
+      (product.expenses.storage * productSales) +       
+      (product.expenses.penalties * productSales) +     
+      (product.expenses.acceptance * productSales);     
     
     console.log('Calculation details for product', product.nmID, {
       costPrice: product.costPrice,
@@ -88,7 +85,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       totalExpenses
     });
     
-    // Расчет выручки: цена продажи * количество проданных товаров
     const revenue = (product.discountedPrice || 0) * productSales;
     console.log('Revenue calculation:', {
       discountedPrice: product.discountedPrice,
@@ -96,7 +92,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       revenue
     });
     
-    // Чистая прибыль = выручка - общие расходы - (себестоимость * количество)
     const netProfit = revenue - totalExpenses - (product.costPrice * productSales);
     console.log('Net profit calculation:', {
       revenue,
@@ -200,7 +195,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
       const quantityMap: { [key: number]: number } = {};
       
-      // Группируем количество по nmId
       data.forEach((item: any) => {
         if (item.doc_type_name === "Продажа") {
           const nmId = item.nm_id;
@@ -264,7 +258,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       const nmIds = data.cards.map((product: Product) => product.nmID);
       const prices = await fetchProductPrices(nmIds);
       
-      // Получаем количество проданных товаров за последние 30 дней
       const endDate = new Date();
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - 30);
@@ -326,7 +319,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     setProducts(updatedProducts);
     localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedProducts));
     
-    // Обновляем себестоимость в отдельном хранилище для быстрого доступа
     const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore?.id}`) || '{}');
     costPrices[productId] = costPrice;
     localStorage.setItem(`costPrices_${selectedStore?.id}`, JSON.stringify(costPrices));
@@ -337,7 +329,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       const storedProducts = localStorage.getItem(`products_${selectedStore.id}`);
       if (storedProducts) {
         const parsedProducts = JSON.parse(storedProducts);
-        // Загружаем сохраненные себестоимости
         const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore.id}`) || '{}');
         const productsWithCostPrices = parsedProducts.map((product: Product) => ({
           ...product,
@@ -435,20 +426,20 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                     {product.expenses && (
                       <div className="space-y-1.5 border-t pt-2">
                         <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Логистика:</span>
-                          <span>{product.expenses.logistics.toFixed(2)} ₽</span>
+                          <span className="text-muted-foreground">Общая логистика:</span>
+                          <span>{(product.expenses.logistics * (product.quantity || 0)).toFixed(2)} ₽</span>
                         </div>
                         <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Хранение:</span>
-                          <span>{product.expenses.storage.toFixed(2)} ₽</span>
+                          <span className="text-muted-foreground">Общее хранение:</span>
+                          <span>{(product.expenses.storage * (product.quantity || 0)).toFixed(2)} ₽</span>
                         </div>
                         <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Штрафы:</span>
-                          <span>{product.expenses.penalties.toFixed(2)} ₽</span>
+                          <span className="text-muted-foreground">Общие штрафы:</span>
+                          <span>{(product.expenses.penalties * (product.quantity || 0)).toFixed(2)} ₽</span>
                         </div>
                         <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Приемка:</span>
-                          <span>{product.expenses.acceptance.toFixed(2)} ₽</span>
+                          <span className="text-muted-foreground">Общая приемка:</span>
+                          <span>{(product.expenses.acceptance * (product.quantity || 0)).toFixed(2)} ₽</span>
                         </div>
                         <div className="flex justify-between text-xs font-medium border-t pt-2">
                           <span className="text-muted-foreground">Общие расходы:</span>
