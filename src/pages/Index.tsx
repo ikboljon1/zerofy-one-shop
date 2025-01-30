@@ -51,7 +51,6 @@ import {
 } from "recharts";
 import Profile from "@/components/Profile";
 import ProductsList from "@/components/ProductsList";
-import Products from "@/pages/Products";
 
 const salesData = [
   { name: "Jan", value: 300000 },
@@ -134,10 +133,6 @@ const Index = () => {
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
-    toast({
-      title: "Navigation",
-      description: `Switched to ${tab} view`,
-    });
   };
 
   const productSubMenu = [
@@ -508,7 +503,6 @@ const Index = () => {
               topProfitableProducts={mockTopProfitableProducts}
               topUnprofitableProducts={mockTopUnprofitableProducts}
             />
-            <ProductsList selectedStore={selectedStore} />
           </motion.div>
         )}
         {activeTab === "analytics" && (
@@ -526,7 +520,7 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <Products selectedStore={selectedStore} />
+            <ProductsList selectedStore={selectedStore} />
           </motion.div>
         )}
         {activeTab === "stores" && (
