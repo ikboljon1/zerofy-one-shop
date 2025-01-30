@@ -33,6 +33,10 @@ interface ProductWithCost {
   quantity: number;
 }
 
+const formatDate = (date: Date): string => {
+  return date.toISOString().split('T')[0];
+};
+
 export const calculateTotalCosts = (products: ProductWithCost[]): number => {
   return products.reduce((total, product) => {
     if (product.costPrice && product.quantity) {
@@ -53,8 +57,17 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       return acc;
     }, {});
 
+    // Construct URL with query parameters
+    const params = new URLSearchParams({
+      dateFrom: formatDate(dateFrom),
+      dateTo: formatDate(dateTo)
+    });
+
+    const url = `https://statistics-api.wildberries.ru/api/v1/supplier/sales?${params.toString()}`;
+    console.log('Fetching stats with URL:', url);
+
     // Fetch sales data from API
-    const response = await fetch("https://statistics-api.wildberries.ru/api/v1/supplier/sales", {
+    const response = await fetch(url, {
       method: "GET",
       headers: {
         "Authorization": apiKey,
@@ -63,6 +76,8 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API Error Response:', errorText);
       throw new Error("Failed to fetch statistics");
     }
 
@@ -80,16 +95,16 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
     console.log("Total costs from sold products:", totalCosts);
 
     // Current period calculations
-    const currentPeriodSales = data.currentPeriod.sales || 0;
-    const currentPeriodTransferred = data.currentPeriod.transferred || 0;
+    const currentPeriodSales = data.currentPeriod?.sales || 0;
+    const currentPeriodTransferred = data.currentPeriod?.transferred || 0;
     const currentPeriodExpenses = {
-      logistics: data.currentPeriod.expenses?.logistics || 0,
-      storage: data.currentPeriod.expenses?.storage || 0,
-      penalties: data.currentPeriod.expenses?.penalties || 0,
+      logistics: data.currentPeriod?.expenses?.logistics || 0,
+      storage: data.currentPeriod?.expenses?.storage || 0,
+      penalties: data.currentPeriod?.expenses?.penalties || 0,
       total: totalCosts + 
-        (data.currentPeriod.expenses?.logistics || 0) + 
-        (data.currentPeriod.expenses?.storage || 0) + 
-        (data.currentPeriod.expenses?.penalties || 0)
+        (data.currentPeriod?.expenses?.logistics || 0) + 
+        (data.currentPeriod?.expenses?.storage || 0) + 
+        (data.currentPeriod?.expenses?.penalties || 0)
     };
 
     // Previous period calculations
@@ -123,7 +138,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
         transferred: currentPeriodTransferred,
         expenses: currentPeriodExpenses,
         netProfit: currentNetProfit,
-        acceptance: data.currentPeriod.acceptance || 0
+        acceptance: data.currentPeriod?.acceptance || 0
       },
       previousPeriod: {
         sales: previousPeriodSales,
