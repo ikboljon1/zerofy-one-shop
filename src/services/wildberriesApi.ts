@@ -407,6 +407,73 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
   return stats;
 };
 
+const getTopProducts = async (data: WildberriesReportItem[], apiKey: string) => {
+  // Create a map to store product data
+  const productMap = new Map<string, {
+    sales: number;
+    profit: number;
+    nmId: string;
+  }>();
+
+  // Calculate sales and profit for each product
+  data.forEach((item) => {
+    if (item.doc_type_name === "Продажа") {
+      const nmId = item.nm_id;
+      const currentData = productMap.get(nmId) || {
+        sales: 0,
+        profit: 0,
+        nmId: nmId
+      };
+
+      currentData.sales += item.quantity || 0;
+      currentData.profit += item.ppvz_for_pay || 0;
+      
+      // Subtract expenses
+      currentData.profit -= (
+        (item.delivery_rub || 0) +
+        (item.storage_fee || 0) +
+        (item.penalty || 0) +
+        (item.acceptance || 0)
+      );
+
+      productMap.set(nmId, currentData);
+    }
+  });
+
+  // Convert map to array and sort by profit
+  const sortedProducts = Array.from(productMap.values())
+    .sort((a, b) => b.profit - a.profit);
+
+  // Get product details from content API
+  const nmIds = sortedProducts.map(p => p.nmId);
+  const productInfo = await fetchProductNames(apiKey, nmIds);
+
+  // Prepare top profitable and unprofitable products
+  const topProfitable = sortedProducts
+    .slice(0, 5)
+    .map(product => ({
+      name: productInfo.get(product.nmId)?.name || 'Неизвестный товар',
+      price: product.sales.toString(),
+      profit: product.profit.toFixed(2),
+      image: productInfo.get(product.nmId)?.image || ''
+    }));
+
+  const topUnprofitable = sortedProducts
+    .slice(-5)
+    .reverse()
+    .map(product => ({
+      name: productInfo.get(product.nmId)?.name || 'Неизвестный товар',
+      price: product.sales.toString(),
+      profit: product.profit.toFixed(2),
+      image: productInfo.get(product.nmId)?.image || ''
+    }));
+
+  return {
+    topProfitable,
+    topUnprofitable
+  };
+};
+
 export const fetchWildberriesStats = async (
   apiKey: string,
   dateFrom: Date,
