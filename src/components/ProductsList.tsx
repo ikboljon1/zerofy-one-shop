@@ -17,6 +17,7 @@ interface Product {
   }>;
   costPrice?: number;
   price?: number;
+  clubPrice?: number;
   expenses?: {
     logistics: number;
     storage: number;
@@ -48,7 +49,39 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       product.expenses.penalties + 
       product.expenses.acceptance;
     
-    return -totalExpenses; // Пока возвращаем отрицательные расходы, позже добавим доход
+    return -totalExpenses;
+  };
+
+  const fetchProductPrices = async (nmIds: number[]) => {
+    if (!selectedStore?.apiKey) return {};
+
+    try {
+      const response = await fetch("https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter", {
+        method: "GET",
+        headers: {
+          "Authorization": selectedStore.apiKey,
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch prices");
+      }
+
+      const data = await response.json();
+      const priceMap: { [key: number]: number } = {};
+      
+      data.data.listGoods.forEach((item: any) => {
+        if (item.nmID && item.sizes && item.sizes[0]) {
+          priceMap[item.nmID] = item.sizes[0].clubDiscountedPrice || 0;
+        }
+      });
+
+      return priceMap;
+    } catch (error) {
+      console.error("Error fetching prices:", error);
+      return {};
+    }
   };
 
   const syncProducts = async () => {
@@ -96,12 +129,17 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         return acc;
       }, {});
 
+      // Получаем актуальные цены
+      const nmIds = data.cards.map((product: Product) => product.nmID);
+      const prices = await fetchProductPrices(nmIds);
+
       // Объединяем новые продукты с существующими ценами
       const updatedProducts = data.cards.map((product: Product) => ({
         ...product,
         costPrice: costPrices[product.nmID] || 0,
+        clubPrice: prices[product.nmID] || 0,
         expenses: {
-          logistics: Math.random() * 100, // Временные данные для демонстрации
+          logistics: Math.random() * 100,
           storage: Math.random() * 50,
           penalties: Math.random() * 20,
           acceptance: Math.random() * 30
@@ -212,10 +250,10 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs text-muted-foreground">
-                      Цена товара:
+                      Цена товара (с учетом скидки WB Клуба):
                     </label>
                     <div className="text-sm font-medium">
-                      {product.price ? `${product.price.toFixed(2)} ₽` : "Нет данных"}
+                      {product.clubPrice ? `${product.clubPrice.toFixed(2)} ₽` : "Нет данных"}
                     </div>
                   </div>
                   {product.expenses && (
