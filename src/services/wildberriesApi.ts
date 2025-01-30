@@ -34,9 +34,12 @@ interface ProductWithCost {
 }
 
 export const calculateTotalCosts = (products: ProductWithCost[]): number => {
+  console.log("Calculating total costs for products:", products);
   return products.reduce((total, product) => {
     if (product.costPrice && product.quantity) {
-      return total + (product.costPrice * product.quantity);
+      const productCost = product.costPrice * product.quantity;
+      console.log(`Product ${product.nmID}: Cost ${product.costPrice} × Quantity ${product.quantity} = ${productCost}`);
+      return total + productCost;
     }
     return total;
   }, 0);
@@ -45,13 +48,17 @@ export const calculateTotalCosts = (products: ProductWithCost[]): number => {
 export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, dateTo: Date): Promise<WildberriesResponse> => {
   try {
     // Get stored products with cost prices
-    const storedProducts = JSON.parse(localStorage.getItem('marketplace_products') || '[]');
+    const storedProducts = JSON.parse(localStorage.getItem(`products_${apiKey}`) || '[]');
+    console.log("Stored products with costs:", storedProducts);
+    
     const productCosts = storedProducts.reduce((acc: Record<number, number>, product: ProductWithCost) => {
       if (product.costPrice) {
         acc[product.nmID] = product.costPrice;
       }
       return acc;
     }, {});
+
+    console.log("Product costs mapping:", productCosts);
 
     // Fetch sales data from API
     const response = await fetch("https://statistics-api.wildberries.ru/api/v1/supplier/sales", {
@@ -76,8 +83,10 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       costPrice: productCosts[sale.nmId] || 0
     }));
 
-    const totalCosts = calculateTotalCosts(soldProducts);
-    console.log("Total costs from sold products:", totalCosts);
+    console.log("Sold products with costs:", soldProducts);
+
+    const totalProductCosts = calculateTotalCosts(soldProducts);
+    console.log("Total product costs:", totalProductCosts);
 
     // Current period calculations
     const currentPeriodSales = data.currentPeriod.sales || 0;
@@ -86,7 +95,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       logistics: data.currentPeriod.expenses?.logistics || 0,
       storage: data.currentPeriod.expenses?.storage || 0,
       penalties: data.currentPeriod.expenses?.penalties || 0,
-      total: totalCosts + 
+      total: totalProductCosts + 
         (data.currentPeriod.expenses?.logistics || 0) + 
         (data.currentPeriod.expenses?.storage || 0) + 
         (data.currentPeriod.expenses?.penalties || 0)
@@ -104,14 +113,13 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
         (data.previousPeriod?.expenses?.penalties || 0)
     };
 
-    // Calculate net profit including cost prices
+    // Calculate net profit including product costs
     const currentNetProfit = currentPeriodSales - currentPeriodExpenses.total;
     const previousNetProfit = previousPeriodSales - previousPeriodExpenses.total;
 
-    console.log("Calculated metrics:", {
+    console.log("Final calculations:", {
       currentPeriod: {
         sales: currentPeriodSales,
-        transferred: currentPeriodTransferred,
         expenses: currentPeriodExpenses,
         netProfit: currentNetProfit
       }
