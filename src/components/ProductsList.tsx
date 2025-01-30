@@ -56,7 +56,16 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     if (!selectedStore?.apiKey) return {};
 
     try {
-      const response = await fetch("https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter", {
+      // Create URL with required parameters
+      const url = new URL("https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter");
+      url.searchParams.append("limit", "1000"); // Maximum allowed limit
+      
+      // If we have specific nmIds, add them to filter
+      if (nmIds.length > 0) {
+        url.searchParams.append("filterNmID", nmIds.join(';'));
+      }
+
+      const response = await fetch(url.toString(), {
         method: "GET",
         headers: {
           "Authorization": selectedStore.apiKey,
@@ -65,17 +74,21 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       });
 
       if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Price fetch error details:", errorData);
         throw new Error("Failed to fetch prices");
       }
 
       const data = await response.json();
       const priceMap: { [key: number]: number } = {};
       
-      data.data.listGoods.forEach((item: any) => {
-        if (item.nmID && item.sizes && item.sizes[0]) {
-          priceMap[item.nmID] = item.sizes[0].clubDiscountedPrice || 0;
-        }
-      });
+      if (data.data?.listGoods) {
+        data.data.listGoods.forEach((item: any) => {
+          if (item.nmID && item.sizes && item.sizes[0]) {
+            priceMap[item.nmID] = item.sizes[0].clubDiscountedPrice || 0;
+          }
+        });
+      }
 
       return priceMap;
     } catch (error) {
