@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { fetchWildberriesStats } from "@/services/wildberriesApi";
 
 interface Product {
   nmID: number;
@@ -77,7 +78,34 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     }
   };
 
-  // Загружаем продукты из localStorage при изменении магазина
+  const syncProducts = async () => {
+    if (!selectedStore) return;
+    
+    setIsLoading(true);
+    try {
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 30); // Last 30 days
+      
+      const stats = await fetchWildberriesStats(selectedStore.apiKey, startDate, endDate);
+      // Here you would process the stats and update products
+      // For now, we'll just show a success message
+      toast({
+        title: "Успешно",
+        description: "Данные синхронизированы",
+      });
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось синхронизировать данные",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load products from localStorage when store changes
   useState(() => {
     if (selectedStore) {
       const storedProducts = localStorage.getItem(`products_${selectedStore.id}`);

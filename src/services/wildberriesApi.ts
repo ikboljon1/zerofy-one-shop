@@ -396,26 +396,29 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
   data.forEach(item => {
     const saleDate = item.sale_dt.split('T')[0];
     const currentSales = dailySales.get(saleDate) || { sales: 0, previousSales: 0 };
-    currentSales.sales += item.retail_amount || 0;
+    
+    // Ensure we're working with numbers
+    const retailAmount = Number(item.retail_amount) || 0;
+    currentSales.sales += retailAmount;
     dailySales.set(saleDate, currentSales);
 
     const currentProduct = productSales.get(item.subject_name) || { quantity: 0, nmId: item.nm_id };
-    const quantity = item.quantity || 0;
+    const quantity = Number(item.quantity) || 0;
     currentProduct.quantity += quantity;
     productSales.set(item.subject_name, currentProduct);
 
-    // Calculate cost price impact
-    const costPrice = costPrices.get(item.nm_id) || 0;
+    // Calculate cost price impact using stored cost prices
+    const costPrice = Number(costPrices.get(item.nm_id)) || 0;
     totalCostPrice += costPrice * quantity;
 
-    stats.currentPeriod.sales += item.retail_amount || 0;
-    stats.currentPeriod.transferred += item.ppvz_for_pay || 0;
+    stats.currentPeriod.sales += retailAmount;
+    stats.currentPeriod.transferred += Number(item.ppvz_for_pay) || 0;
     
-    const logistics = item.delivery_rub || 0;
-    const storage = item.storage_fee || 0;
-    const penalties = item.penalty || 0;
-    const acceptance = item.acceptance || 0;
-    const deduction = item.deduction || 0;
+    const logistics = Number(item.delivery_rub) || 0;
+    const storage = Number(item.storage_fee) || 0;
+    const penalties = Number(item.penalty) || 0;
+    const acceptance = Number(item.acceptance) || 0;
+    const deduction = Number(item.deduction) || 0;
 
     stats.currentPeriod.expenses.logistics += logistics;
     stats.currentPeriod.expenses.storage += storage;
