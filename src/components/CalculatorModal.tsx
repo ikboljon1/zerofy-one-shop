@@ -40,7 +40,7 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Находим продукт с наибольшими расходами из localStorage
+    // Find product with highest expenses from localStorage
     const findProductWithHighestExpenses = () => {
       const allStores = Object.keys(localStorage).filter(key => key.startsWith('products_'));
       let maxExpenses = 0;
@@ -67,6 +67,9 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
       if (productWithMaxExpenses) {
         setCostPrice(productWithMaxExpenses.costPrice?.toString() || "0");
         setExpenses(productWithMaxExpenses.expenses);
+        
+        // Log found product for debugging
+        console.log('Product with highest expenses:', productWithMaxExpenses);
       }
     };
 
@@ -78,6 +81,8 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
   const calculate = () => {
     const cost = parseFloat(costPrice);
     const profit = parseFloat(targetProfit);
+    
+    // Calculate total expenses
     const totalExpenses = 
       expenses.logistics +
       expenses.storage +
@@ -93,6 +98,7 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
       return;
     }
 
+    // Calculate minimum price considering all expenses and desired profit margin
     const totalCost = cost + totalExpenses;
     const minPrice = totalCost / (1 - profit / 100);
     const profitAmount = minPrice - totalCost;
@@ -132,7 +138,7 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
             />
           </div>
           <Card className="p-4">
-            <h3 className="text-sm font-medium mb-2">Дополнительные расходы:</h3>
+            <h3 className="text-sm font-medium mb-2">Максимальные расходы:</h3>
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span>Логистика:</span>

@@ -180,72 +180,61 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       ) : (
         <div className={`grid gap-4 ${isMobile ? 'grid-cols-2' : 'md:grid-cols-3'}`}>
           {products.map((product) => (
-            <Card key={product.nmID} className="flex flex-col">
+            <Card key={product.nmID} className="flex flex-col h-full">
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-medium">
-                  {product.title || product.vendorCode}
+                <CardTitle className={`${isMobile ? 'text-sm' : 'text-base'} font-medium line-clamp-2`}>
+                  {product.title || "Неизвестный товар"}
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Артикул WB: {product.nmID}
+                <p className="text-xs text-muted-foreground">
+                  ID: {product.nmID}
                 </p>
               </CardHeader>
-              <CardContent className="flex-1">
-                <div className="space-y-4">
-                  <img
-                    src={product.photos?.[0]?.c246x328 || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"}
-                    alt={product.title}
-                    className="w-full h-[200px] object-cover rounded-lg"
-                  />
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Артикул:</span>
-                      <span>{product.vendorCode}</span>
-                    </div>
-                    {product.brand && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Бренд:</span>
-                        <span>{product.brand}</span>
-                      </div>
-                    )}
-                    <div className="space-y-2">
-                      <label htmlFor={`costPrice-${product.nmID}`} className="text-sm text-muted-foreground">
-                        Себестоимость:
-                      </label>
-                      <Input
-                        id={`costPrice-${product.nmID}`}
-                        type="number"
-                        value={product.costPrice || ""}
-                        onChange={(e) => updateCostPrice(product.nmID, Number(e.target.value))}
-                        placeholder="Введите себестоимость"
-                      />
-                    </div>
-                    {product.expenses && (
-                      <div className="mt-4 space-y-2 border-t pt-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Логистика:</span>
-                          <span>{product.expenses.logistics.toFixed(2)} ₽</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Хранение:</span>
-                          <span>{product.expenses.storage.toFixed(2)} ₽</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Штрафы:</span>
-                          <span>{product.expenses.penalties.toFixed(2)} ₽</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Приемка:</span>
-                          <span>{product.expenses.acceptance.toFixed(2)} ₽</span>
-                        </div>
-                        <div className="flex justify-between text-sm font-semibold border-t pt-2">
-                          <span>Чистая прибыль:</span>
-                          <span className={calculateNetProfit(product) >= 0 ? "text-green-500" : "text-red-500"}>
-                            {calculateNetProfit(product).toFixed(2)} ₽
-                          </span>
-                        </div>
-                      </div>
-                    )}
+              <CardContent className="flex-1 space-y-3">
+                <img
+                  src={product.photos?.[0]?.c246x328 || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"}
+                  alt={product.title}
+                  className="w-full aspect-square object-cover rounded-lg"
+                />
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <label htmlFor={`costPrice-${product.nmID}`} className="text-xs text-muted-foreground">
+                      Себестоимость:
+                    </label>
+                    <Input
+                      id={`costPrice-${product.nmID}`}
+                      type="number"
+                      value={product.costPrice || ""}
+                      onChange={(e) => updateCostPrice(product.nmID, Number(e.target.value))}
+                      className="h-8 text-sm"
+                      placeholder="Введите себестоимость"
+                    />
                   </div>
+                  {product.expenses && (
+                    <div className="space-y-1.5 border-t pt-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Логистика:</span>
+                        <span>{product.expenses.logistics.toFixed(2)} ₽</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Хранение:</span>
+                        <span>{product.expenses.storage.toFixed(2)} ₽</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Штрафы:</span>
+                        <span>{product.expenses.penalties.toFixed(2)} ₽</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Приемка:</span>
+                        <span>{product.expenses.acceptance.toFixed(2)} ₽</span>
+                      </div>
+                      <div className="flex justify-between text-sm font-medium border-t pt-2">
+                        <span>Чистая прибыль:</span>
+                        <span className={calculateNetProfit(product) >= 0 ? "text-green-500" : "text-red-500"}>
+                          {calculateNetProfit(product).toFixed(2)} ₽
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
