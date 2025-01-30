@@ -18,6 +18,7 @@ interface Product {
   costPrice?: number;
   price?: number;
   clubPrice?: number;
+  clubDiscountedPrice?: number;
   expenses?: {
     logistics: number;
     storage: number;
@@ -56,19 +57,17 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   const calculateNetProfit = (product: Product) => {
     if (!product.costPrice || !product.expenses) return 0;
     
-    // Get the total sales amount from localStorage
     const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore?.id}`) || '{}');
     const productSales = salesData[product.nmID] || 0;
     
     const totalExpenses = 
-      (product.costPrice * productSales) + // Cost price multiplied by quantity sold
+      (product.costPrice * productSales) + 
       product.expenses.logistics + 
       product.expenses.storage + 
       product.expenses.penalties + 
       product.expenses.acceptance;
     
-    // Calculate revenue (price * quantity sold)
-    const revenue = (product.price || 0) * productSales;
+    const revenue = (product.clubDiscountedPrice || 0) * productSales;
     
     return revenue - totalExpenses;
   };
@@ -77,16 +76,14 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     if (!selectedStore?.apiKey || nmIds.length === 0) return {};
 
     try {
-      // Split nmIds into chunks of 20
       const chunkSize = 20;
       const priceMap: { [key: number]: number } = {};
 
-      // Process nmIds in chunks
       for (let i = 0; i < nmIds.length; i += chunkSize) {
         const chunk = nmIds.slice(i, i + chunkSize);
         const url = new URL("https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter");
         url.searchParams.append("limit", "1000");
-        url.searchParams.append("nmId", chunk.join(',')); // Changed from filterNmID to nmId
+        url.searchParams.append("nmId", chunk.join(','));
 
         console.log(`Fetching prices for chunk ${i / chunkSize + 1}, IDs:`, chunk);
 
@@ -101,7 +98,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         if (!response.ok) {
           const errorData = await response.text();
           console.error(`Price fetch error for chunk ${i / chunkSize + 1}:`, errorData);
-          continue; // Skip this chunk if there's an error, but continue with others
+          continue;
         }
 
         const data = await response.json() as WBPriceResponse;
@@ -111,19 +108,18 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           data.data.listGoods.forEach((item) => {
             if (item.sizes && item.sizes.length > 0) {
               const firstSize = item.sizes[0];
-              const price = firstSize.price || 0;
-              priceMap[item.nmID] = price;
+              const clubDiscountedPrice = firstSize.clubDiscountedPrice || 0;
+              priceMap[item.nmID] = clubDiscountedPrice;
               console.log(`Price set for ${item.nmID}:`, {
                 nmID: item.nmID,
                 vendorCode: item.vendorCode,
-                price: price,
+                clubDiscountedPrice: clubDiscountedPrice,
                 firstSize: firstSize
               });
             }
           });
         }
 
-        // Add a small delay between requests to avoid rate limiting
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
@@ -172,7 +168,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       const data = await response.json();
       console.log("Products data:", data);
       
-      // Загружаем существующие цены из localStorage
       const storedProducts = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
       const costPrices = storedProducts.reduce((acc: Record<number, number>, product: Product) => {
         if (product.costPrice) {
@@ -181,11 +176,9 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         return acc;
       }, {});
 
-      // Получаем актуальные цены
       const nmIds = data.cards.map((product: Product) => product.nmID);
       const prices = await fetchProductPrices(nmIds);
 
-      // Объединяем новые продукты с существующими ценами
       const updatedProducts = data.cards.map((product: Product) => {
         const currentPrice = prices[product.nmID];
         console.log(`Processing product ${product.nmID}:`, {
@@ -196,7 +189,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         return {
           ...product,
           costPrice: costPrices[product.nmID] || 0,
-          price: currentPrice || 0,
+          clubDiscountedPrice: currentPrice || 0,
           expenses: {
             logistics: Math.random() * 100,
             storage: Math.random() * 50,
@@ -230,7 +223,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     const updatedProducts = products.map(product => {
       if (product.nmID === productId) {
         const updatedProduct = { ...product, costPrice };
-        // Recalculate net profit
         const netProfit = calculateNetProfit(updatedProduct);
         return { ...updatedProduct, netProfit };
       }
@@ -240,7 +232,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     setProducts(updatedProducts);
     localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedProducts));
     
-    // Update dashboard data
     const dashboardData = JSON.parse(localStorage.getItem(`dashboard_${selectedStore?.id}`) || '{}');
     const totalNetProfit = updatedProducts.reduce((sum, product) => sum + calculateNetProfit(product), 0);
     
@@ -248,7 +239,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     localStorage.setItem(`dashboard_${selectedStore?.id}`, JSON.stringify(dashboardData));
   };
 
-  // Загружаем продукты из localStorage при изменении магазина
   useState(() => {
     if (selectedStore) {
       const storedProducts = localStorage.getItem(`products_${selectedStore.id}`);
@@ -328,7 +318,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       Цена товара:
                     </label>
                     <div className="text-sm font-medium">
-                      {product.price ? `${product.price.toFixed(2)} ₽` : "0.00 ₽"}
+                      {product.clubDiscountedPrice ? `${product.clubDiscountedPrice.toFixed(2)} ₽` : "0.00 ₽"}
                     </div>
                   </div>
                   {product.expenses && (
