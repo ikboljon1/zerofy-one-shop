@@ -56,14 +56,9 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     if (!selectedStore?.apiKey) return {};
 
     try {
-      // Create URL with required parameters
       const url = new URL("https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter");
-      url.searchParams.append("limit", "1000"); // Maximum allowed limit
-      
-      // If we have specific nmIds, add them to filter
-      if (nmIds.length > 0) {
-        url.searchParams.append("filterNmID", nmIds.join(';'));
-      }
+      url.searchParams.append("limit", "1000");
+      url.searchParams.append("filterNmID", nmIds.join(';'));
 
       const response = await fetch(url.toString(), {
         method: "GET",
@@ -74,8 +69,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Price fetch error details:", errorData);
         throw new Error("Failed to fetch prices");
       }
 
