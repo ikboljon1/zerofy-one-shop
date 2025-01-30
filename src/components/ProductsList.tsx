@@ -397,36 +397,30 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                         placeholder="Введите себестоимость"
                       />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">
-                        Цена товара:
-                      </label>
-                      <div className="text-sm font-medium">
-                        {product.discountedPrice ? `${product.discountedPrice.toFixed(2)} ₽` : "0.00 ₽"}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">
+                          Цена товара:
+                        </label>
+                        <div className="text-sm font-medium">
+                          {product.discountedPrice ? `${product.discountedPrice.toFixed(2)} ₽` : "0.00 ₽"}
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">
-                        Сумма продаж:
-                      </label>
-                      <div className="text-sm font-medium">
-                        {profitDetails.salesAmount.toFixed(2)} ₽
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">
+                          Сумма продаж:
+                        </label>
+                        <div className="text-sm font-medium">
+                          {profitDetails.salesAmount.toFixed(2)} ₽
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">
-                        Перечислено:
-                      </label>
-                      <div className="text-sm font-medium">
-                        {profitDetails.transferredAmount.toFixed(2)} ₽
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">
-                        Продано за 30 дней:
-                      </label>
-                      <div className="text-sm font-medium">
-                        {product.quantity || 0} шт.
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">
+                          Перечислено:
+                        </label>
+                        <div className="text-sm font-medium">
+                          {profitDetails.transferredAmount.toFixed(2)} ₽
+                        </div>
                       </div>
                     </div>
                     {product.expenses && (
