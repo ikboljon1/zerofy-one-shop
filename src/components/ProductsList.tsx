@@ -80,7 +80,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       acceptance: 0
     };
     
-    // Используем общие расходы напрямую из данных API
     const totalExpenses = 
       productExpenses.logistics +
       productExpenses.storage +

@@ -250,133 +250,66 @@ const fetchProductNames = async (apiKey: string, nmIds: string[]): Promise<Map<s
   }
 };
 
-const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Promise<WildberriesResponse> => {
-  const stats: WildberriesResponse = {
-    currentPeriod: {
-      sales: 0,
-      transferred: 0,
-      expenses: {
-        total: 0,
-        logistics: 0,
-        storage: 0,
-        penalties: 0
-      },
-      netProfit: 0,
-      acceptance: 0
-    },
-    dailySales: [],
-    productSales: []
-  };
-
-  const expensesByProduct = new Map<string, {
-    logistics: number;
-    storage: number;
-    penalties: number;
-    acceptance: number;
-    quantity: number;
+const calculateProductStats = (data: WildberriesReportItem[]) => {
+  const productStats = new Map<string, {
+    name: string,
+    profit: number,
+    price: number,
+    sales: number,
+    quantity: number,
+    returns: number,
+    logistics: number,
+    storage: number,
+    penalties: number,
+    acceptance: number,
+    deductions: number,
+    nmId: string
   }>();
 
-  console.log('Calculating expenses by product...');
-
   data.forEach(item => {
-    if (!expensesByProduct.has(item.nm_id)) {
-      expensesByProduct.set(item.nm_id, {
-        logistics: 0,
-        storage: 0,
-        penalties: 0,
-        acceptance: 0,
-        quantity: 0
-      });
-    }
+    const currentStats = productStats.get(item.nm_id) || {
+      name: item.subject_name,
+      profit: 0,
+      price: 0,
+      sales: 0,
+      quantity: 0,
+      returns: 0,
+      logistics: 0,
+      storage: 0,
+      penalties: 0,
+      acceptance: 0,
+      deductions: 0,
+      nmId: item.nm_id
+    };
 
-    const currentExpenses = expensesByProduct.get(item.nm_id)!;
-    
-    currentExpenses.logistics += item.delivery_rub || 0;
-    currentExpenses.storage += item.storage_fee || 0;
-    currentExpenses.penalties += item.penalty || 0;
-    currentExpenses.acceptance += item.acceptance || 0;
-    
     if (item.doc_type_name === "Продажа") {
-      currentExpenses.quantity += item.quantity || 0;
+      currentStats.sales += item.retail_amount || 0;
+      currentStats.quantity += item.quantity || 0;
+      currentStats.logistics += item.delivery_rub || 0;
+      currentStats.storage += item.storage_fee || 0;
+      currentStats.penalties += item.penalty || 0;
+      currentStats.acceptance += item.acceptance || 0;
+      currentStats.deductions += item.deduction || 0;
+    } else if (item.doc_type_name === "Возврат") {
+      currentStats.returns += item.quantity || 0;
     }
 
-    expensesByProduct.set(item.nm_id, currentExpenses);
+    currentStats.profit = currentStats.sales - (
+      currentStats.logistics +
+      currentStats.storage +
+      currentStats.penalties +
+      currentStats.acceptance +
+      currentStats.deductions
+    );
 
-    stats.currentPeriod.sales += item.retail_amount || 0;
-    stats.currentPeriod.transferred += item.ppvz_for_pay || 0;
-    stats.currentPeriod.expenses.logistics += item.delivery_rub || 0;
-    stats.currentPeriod.expenses.storage += item.storage_fee || 0;
-    stats.currentPeriod.expenses.penalties += item.penalty || 0;
-    stats.currentPeriod.acceptance += item.acceptance || 0;
-    stats.currentPeriod.expenses.total += (item.delivery_rub || 0) + 
-                                        (item.storage_fee || 0) + 
-                                        (item.penalty || 0) + 
-                                        (item.acceptance || 0) + 
-                                        (item.deduction || 0);
+    if (currentStats.quantity > 0) {
+      currentStats.price = currentStats.sales / currentStats.quantity;
+    }
+
+    productStats.set(item.nm_id, currentStats);
   });
 
-  console.log('Expenses by product:', Object.fromEntries(expensesByProduct));
-
-  const storeId = localStorage.getItem('currentStoreId');
-  if (storeId) {
-    const salesData: { [key: string]: number } = {};
-    const expensesData: { [key: string]: any } = {};
-
-    expensesByProduct.forEach((expenses, nmId) => {
-      salesData[nmId] = expenses.quantity;
-      expensesData[nmId] = {
-        logistics: expenses.logistics,
-        storage: expenses.storage,
-        penalties: expenses.penalties,
-        acceptance: expenses.acceptance
-      };
-    });
-
-    console.log('Saving to localStorage:', {
-      salesData,
-      expensesData
-    });
-
-    localStorage.setItem(`sales_${storeId}`, JSON.stringify(salesData));
-    localStorage.setItem(`expenses_${storeId}`, JSON.stringify(expensesData));
-  }
-
-  stats.currentPeriod.netProfit = 
-    stats.currentPeriod.transferred - stats.currentPeriod.expenses.total;
-
-  const dailySales = new Map<string, { sales: number; previousSales: number }>();
-  const productSales = new Map<string, number>();
-
-  data.forEach(item => {
-    const saleDate = item.sale_dt.split('T')[0];
-    const currentSales = dailySales.get(saleDate) || { sales: 0, previousSales: 0 };
-    currentSales.sales += item.retail_amount || 0;
-    dailySales.set(saleDate, currentSales);
-
-    const currentQuantity = productSales.get(item.subject_name) || 0;
-    productSales.set(item.subject_name, currentQuantity + (item.quantity || 0));
-  });
-
-  stats.dailySales = Array.from(dailySales.entries())
-    .map(([date, values]) => ({
-      date,
-      ...values
-    }))
-    .sort((a, b) => a.date.localeCompare(b.date));
-
-  stats.productSales = Array.from(productSales.entries())
-    .map(([name, quantity]) => ({
-      subject_name: name,
-      quantity
-    }))
-    .sort((a, b) => b.quantity - a.quantity)
-    .slice(0, 10);
-
-  const { topProfitable, topUnprofitable } = await getTopProducts(data, apiKey);
-  stats.topProfitableProducts = topProfitable;
-  stats.topUnprofitableProducts = topUnprofitable;
-
-  return stats;
+  return Array.from(productStats.values());
 };
 
 const getTopProducts = async (data: WildberriesReportItem[], apiKey: string) => {
@@ -437,6 +370,117 @@ const getTopProducts = async (data: WildberriesReportItem[], apiKey: string) => 
   });
 
   return { topProfitable, topUnprofitable };
+};
+
+const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Promise<WildberriesResponse> => {
+  const stats: WildberriesResponse = {
+    currentPeriod: {
+      sales: 0,
+      transferred: 0,
+      expenses: {
+        total: 0,
+        logistics: 0,
+        storage: 0,
+        penalties: 0
+      },
+      netProfit: 0,
+      acceptance: 0
+    },
+    dailySales: [],
+    productSales: []
+  };
+
+  const dailySales = new Map<string, { sales: number; previousSales: number }>();
+  const productSales = new Map<string, number>();
+  const salesByProduct = new Map<string, number>();
+
+  data.forEach(item => {
+    const saleDate = item.sale_dt.split('T')[0];
+    const currentSales = dailySales.get(saleDate) || { sales: 0, previousSales: 0 };
+    currentSales.sales += item.retail_amount || 0;
+    dailySales.set(saleDate, currentSales);
+
+    const currentQuantity = productSales.get(item.subject_name) || 0;
+    productSales.set(item.subject_name, currentQuantity + (item.quantity || 0));
+
+    stats.currentPeriod.sales += item.retail_amount || 0;
+    stats.currentPeriod.transferred += item.ppvz_for_pay || 0;
+    
+    const logistics = item.delivery_rub || 0;
+    const storage = item.storage_fee || 0;
+    const penalties = item.penalty || 0;
+    const acceptance = item.acceptance || 0;
+    const deduction = item.deduction || 0;
+
+    stats.currentPeriod.expenses.logistics += logistics;
+    stats.currentPeriod.expenses.storage += storage;
+    stats.currentPeriod.expenses.penalties += penalties;
+    stats.currentPeriod.acceptance += acceptance;
+
+    stats.currentPeriod.expenses.total += logistics + storage + penalties + acceptance + deduction;
+    
+    if (item.doc_type_name === "Продажа") {
+      const currentSalesByProduct = salesByProduct.get(item.nm_id) || 0;
+      salesByProduct.set(item.nm_id, currentSalesByProduct + (item.quantity || 0));
+    }
+  });
+
+  stats.currentPeriod.netProfit = 
+    stats.currentPeriod.transferred - stats.currentPeriod.expenses.total;
+
+  const sortedDailySales = Array.from(dailySales.entries())
+    .map(([date, values]) => ({
+      date,
+      ...values
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const sortedProductSales = Array.from(productSales.entries())
+    .map(([name, quantity]) => ({
+      subject_name: name,
+      quantity
+    }))
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 10);
+
+  stats.dailySales = sortedDailySales;
+  stats.productSales = sortedProductSales;
+
+  const salesData: { [key: string]: number } = {};
+  const expensesData: { [key: string]: any } = {};
+  
+  data.forEach(item => {
+    if (item.doc_type_name === "Продажа") {
+      const nmId = item.nm_id;
+      if (!salesData[nmId]) {
+        salesData[nmId] = 0;
+        expensesData[nmId] = {
+          logistics: 0,
+          storage: 0,
+          penalties: 0,
+          acceptance: 0
+        };
+      }
+      salesData[nmId] += item.quantity || 0;
+      expensesData[nmId].logistics += item.delivery_rub || 0;
+      expensesData[nmId].storage += item.storage_fee || 0;
+      expensesData[nmId].penalties += item.penalty || 0;
+      expensesData[nmId].acceptance += item.acceptance || 0;
+    }
+  });
+
+  const storeId = localStorage.getItem('currentStoreId');
+  if (storeId) {
+    localStorage.setItem(`sales_${storeId}`, JSON.stringify(salesData));
+    localStorage.setItem(`expenses_${storeId}`, JSON.stringify(expensesData));
+  }
+
+  const { topProfitable, topUnprofitable } = await getTopProducts(data, apiKey);
+  
+  stats.topProfitableProducts = topProfitable;
+  stats.topUnprofitableProducts = topUnprofitable;
+
+  return stats;
 };
 
 export const fetchWildberriesStats = async (
