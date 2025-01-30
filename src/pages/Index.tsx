@@ -135,6 +135,14 @@ const Index = () => {
     setActiveTab(tab);
   };
 
+  const handleCostPriceUpdate = () => {
+    // Trigger stats refresh when cost price is updated
+    const statsComponent = document.querySelector('stats-component');
+    if (statsComponent) {
+      statsComponent.dispatchEvent(new Event('refresh'));
+    }
+  };
+
   const productSubMenu = [
     { icon: ShoppingBag, label: "Магазины", value: "stores" },
     { icon: FileText, label: "Отчеты", value: "reports" },
@@ -520,7 +528,10 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <ProductsList selectedStore={selectedStore} />
+            <ProductsList 
+              selectedStore={selectedStore} 
+              onCostPriceUpdate={handleCostPriceUpdate}
+            />
           </motion.div>
         )}
         {activeTab === "stores" && (

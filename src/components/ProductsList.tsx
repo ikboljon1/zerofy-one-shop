@@ -31,6 +31,7 @@ interface ProductsListProps {
     id: string;
     apiKey: string;
   } | null;
+  onCostPriceUpdate?: () => void;  // New prop for dashboard refresh
 }
 
 interface WBPriceResponse {
@@ -47,7 +48,7 @@ interface WBPriceResponse {
   };
 }
 
-const ProductsList = ({ selectedStore }: ProductsListProps) => {
+const ProductsList = ({ selectedStore, onCostPriceUpdate }: ProductsListProps) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -225,6 +226,11 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     );
     setProducts(updatedProducts);
     localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedProducts));
+    
+    // Trigger dashboard refresh after updating cost price
+    if (onCostPriceUpdate) {
+      onCostPriceUpdate();
+    }
   };
 
   // Загружаем продукты из localStorage при изменении магазина
