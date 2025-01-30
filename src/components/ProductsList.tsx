@@ -129,11 +129,12 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     try {
       const expensesMap: { [key: number]: any } = {};
       const dateFrom = new Date();
-      dateFrom.setDate(dateFrom.getDate() - 30); // Получаем данные за последние 30 дней
+      dateFrom.setDate(dateFrom.getDate() - 30);
 
-      const url = new URL("https://statistics-api.wildberries.ru/api/v1/supplier/reportDetailByPeriod");
+      const url = new URL("https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod");
       url.searchParams.append("dateFrom", dateFrom.toISOString().split('T')[0]);
       url.searchParams.append("dateTo", new Date().toISOString().split('T')[0]);
+      url.searchParams.append("limit", "100000");
 
       console.log("Fetching expenses for products:", nmIds);
 
