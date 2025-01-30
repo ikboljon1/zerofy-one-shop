@@ -11,6 +11,7 @@ interface Product {
   vendorCode: string;
   brand: string;
   title: string;
+  retail_price?: number;
   photos: Array<{
     big: string;
     c246x328: string;
@@ -33,19 +34,6 @@ interface ProductsListProps {
   } | null;
 }
 
-interface WBPriceResponse {
-  data: {
-    listGoods: Array<{
-      nmID: number;
-      sizes: Array<{
-        price: number;
-        discountedPrice: number;
-        clubDiscountedPrice: number;
-      }>;
-    }>;
-  };
-}
-
 const ProductsList = ({ selectedStore }: ProductsListProps) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -63,52 +51,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       product.expenses.acceptance;
     
     return -totalExpenses;
-  };
-
-  const fetchProductPrices = async (nmIds: number[]) => {
-    if (!selectedStore?.apiKey) return {};
-
-    try {
-      const url = new URL("https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter");
-      url.searchParams.append("limit", "1000");
-      url.searchParams.append("filterNmID", nmIds.join(','));
-
-      console.log("Fetching prices with URL:", url.toString());
-
-      const response = await fetch(url.toString(), {
-        method: "GET",
-        headers: {
-          "Authorization": selectedStore.apiKey,
-          "Content-Type": "application/json"
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error("Price fetch error details:", errorData);
-        throw new Error("Failed to fetch prices");
-      }
-
-      const data = await response.json() as WBPriceResponse;
-      const priceMap: { [key: number]: number } = {};
-      
-      if (data.data?.listGoods) {
-        data.data.listGoods.forEach((item) => {
-          if (item.nmID && item.sizes && item.sizes[0]) {
-            // Use clubDiscountedPrice as the main price, falling back to discountedPrice or regular price
-            const price = item.sizes[0].clubDiscountedPrice || 
-                         item.sizes[0].discountedPrice || 
-                         item.sizes[0].price || 0;
-            priceMap[item.nmID] = price;
-          }
-        });
-      }
-
-      return priceMap;
-    } catch (error) {
-      console.error("Error fetching prices:", error);
-      return {};
-    }
   };
 
   const syncProducts = async () => {
@@ -156,15 +98,11 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         return acc;
       }, {});
 
-      // Получаем актуальные цены
-      const nmIds = data.cards.map((product: Product) => product.nmID);
-      const prices = await fetchProductPrices(nmIds);
-
       // Объединяем новые продукты с существующими ценами
       const updatedProducts = data.cards.map((product: Product) => ({
         ...product,
         costPrice: costPrices[product.nmID] || 0,
-        clubPrice: prices[product.nmID] || 0,
+        price: product.retail_price || 0, // Используем retail_price из данных API
         expenses: {
           logistics: Math.random() * 100,
           storage: Math.random() * 50,
