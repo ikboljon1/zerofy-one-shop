@@ -52,10 +52,10 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     const productSales = salesData[product.nmID] || 0;
 
     const totalExpenses = product.expenses ? (
-      (product.expenses.logistics || 0) +
-      (product.expenses.storage || 0) +
-      (product.expenses.penalties || 0) +
-      (product.expenses.acceptance || 0)
+      (product.expenses.logistics * productSales) +
+      (product.expenses.storage * productSales) +
+      (product.expenses.penalties * productSales) +
+      (product.expenses.acceptance * productSales)
     ) : 0;
 
     const revenue = (product.discountedPrice || 0) * productSales;
@@ -134,10 +134,10 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         return {
           ...product,
           expenses: {
-            logistics: statsData.currentPeriod.expenses.logistics / productSales,
-            storage: statsData.currentPeriod.expenses.storage / productSales,
-            penalties: statsData.currentPeriod.expenses.penalties / productSales,
-            acceptance: statsData.currentPeriod.acceptance / productSales
+            logistics: (statsData.currentPeriod.expenses.logistics * productSales) || 0,
+            storage: (statsData.currentPeriod.expenses.storage * productSales) || 0,
+            penalties: (statsData.currentPeriod.expenses.penalties * productSales) || 0,
+            acceptance: (statsData.currentPeriod.acceptance * productSales) || 0
           }
         };
       });
@@ -161,6 +161,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     }
   };
 
+  // ... keep existing code (render method and product cards)
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -179,7 +181,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
               </>
             ) : (
               <>
-                <RefreshCw className="mr-2 h-4 w-4" />
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                 Синхронизировать
               </>
             )}
