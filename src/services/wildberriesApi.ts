@@ -281,16 +281,17 @@ const calculateProductStats = (data: WildberriesReportItem[]) => {
     if (item.doc_type_name === "Продажа") {
       currentStats.sales += item.retail_amount || 0;
       currentStats.quantity += item.quantity || 0;
+      // Суммируем общие расходы для каждой продажи
+      currentStats.logistics += item.delivery_rub || 0;
+      currentStats.storage += item.storage_fee || 0;
+      currentStats.penalties += item.penalty || 0;
+      currentStats.deductions += item.deduction || 0;
     } else if (item.doc_type_name === "Возврат") {
       currentStats.returns += item.retail_amount || 0;
     }
 
-    currentStats.logistics += item.delivery_rub || 0;
-    currentStats.storage += item.storage_fee || 0;
-    currentStats.penalties += item.penalty || 0;
-    currentStats.deductions += item.deduction || 0;
-    
-    currentStats.profit = item.ppvz_for_pay - (
+    // Обновляем прибыль с учетом общих расходов
+    currentStats.profit = currentStats.sales - (
       currentStats.logistics +
       currentStats.storage +
       currentStats.penalties +
@@ -298,7 +299,7 @@ const calculateProductStats = (data: WildberriesReportItem[]) => {
       currentStats.returns
     );
 
-    currentStats.price = item.retail_amount / (item.quantity || 1);
+    currentStats.price = currentStats.sales / (currentStats.quantity || 1);
 
     productStats.set(item.subject_name, currentStats);
   });

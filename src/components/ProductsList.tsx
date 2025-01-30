@@ -69,11 +69,12 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     const productSales = product.quantity || salesData[product.nmID] || 0;
     console.log('Product sales for ID', product.nmID, ':', productSales);
     
+    // Теперь используем общие расходы, полученные из API
     const totalExpenses = 
-      (product.expenses.logistics * productSales) +     
-      (product.expenses.storage * productSales) +       
-      (product.expenses.penalties * productSales) +     
-      (product.expenses.acceptance * productSales);     
+      product.expenses.logistics +     // Общая логистика для всех продаж
+      product.expenses.storage +       // Общее хранение для всех продаж
+      product.expenses.penalties +     // Общие штрафы для всех продаж
+      product.expenses.acceptance;     // Общая приемка для всех продаж
     
     console.log('Calculation details for product', product.nmID, {
       costPrice: product.costPrice,
@@ -427,19 +428,19 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       <div className="space-y-1.5 border-t pt-2">
                         <div className="flex justify-between text-xs">
                           <span className="text-muted-foreground">Общая логистика:</span>
-                          <span>{(product.expenses.logistics * (product.quantity || 0)).toFixed(2)} ₽</span>
+                          <span>{product.expenses.logistics.toFixed(2)} ₽</span>
                         </div>
                         <div className="flex justify-between text-xs">
                           <span className="text-muted-foreground">Общее хранение:</span>
-                          <span>{(product.expenses.storage * (product.quantity || 0)).toFixed(2)} ₽</span>
+                          <span>{product.expenses.storage.toFixed(2)} ₽</span>
                         </div>
                         <div className="flex justify-between text-xs">
                           <span className="text-muted-foreground">Общие штрафы:</span>
-                          <span>{(product.expenses.penalties * (product.quantity || 0)).toFixed(2)} ₽</span>
+                          <span>{product.expenses.penalties.toFixed(2)} ₽</span>
                         </div>
                         <div className="flex justify-between text-xs">
                           <span className="text-muted-foreground">Общая приемка:</span>
-                          <span>{(product.expenses.acceptance * (product.quantity || 0)).toFixed(2)} ₽</span>
+                          <span>{product.expenses.acceptance.toFixed(2)} ₽</span>
                         </div>
                         <div className="flex justify-between text-xs font-medium border-t pt-2">
                           <span className="text-muted-foreground">Общие расходы:</span>
