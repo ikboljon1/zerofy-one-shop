@@ -62,20 +62,51 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       revenue: 0
     };
     
+    // Получаем данные о продажах из localStorage
     const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore?.id}`) || '{}');
+    console.log('Sales data from localStorage:', salesData);
+    
+    // Получаем количество продаж для конкретного товара
     const productSales = salesData[product.nmID] || 0;
+    console.log('Product sales for ID', product.nmID, ':', productSales);
     
+    // Расчет общих расходов
     const totalExpenses = 
-      (product.costPrice * productSales) + 
-      product.expenses.logistics + 
-      product.expenses.storage + 
-      product.expenses.penalties + 
-      product.expenses.acceptance;
+      (product.costPrice * productSales) + // Себестоимость * количество проданных товаров
+      product.expenses.logistics +          // Логистика
+      product.expenses.storage +            // Хранение
+      product.expenses.penalties +          // Штрафы
+      product.expenses.acceptance;          // Приемка
     
+    console.log('Calculation details for product', product.nmID, {
+      costPrice: product.costPrice,
+      productSales,
+      costPriceTotal: product.costPrice * productSales,
+      logistics: product.expenses.logistics,
+      storage: product.expenses.storage,
+      penalties: product.expenses.penalties,
+      acceptance: product.expenses.acceptance,
+      totalExpenses
+    });
+    
+    // Расчет выручки: цена продажи * количество проданных товаров
     const revenue = (product.discountedPrice || 0) * productSales;
+    console.log('Revenue calculation:', {
+      discountedPrice: product.discountedPrice,
+      productSales,
+      revenue
+    });
+    
+    // Чистая прибыль = выручка - общие расходы
+    const netProfit = revenue - totalExpenses;
+    console.log('Net profit calculation:', {
+      revenue,
+      totalExpenses,
+      netProfit
+    });
     
     return {
-      netProfit: revenue - totalExpenses,
+      netProfit,
       productSales,
       totalExpenses,
       revenue
@@ -347,16 +378,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                     {product.expenses && (
                       <div className="space-y-1.5 border-t pt-2">
                         <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Количество продаж:</span>
-                          <span>{profitDetails.productSales} шт.</span>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Общая выручка:</span>
-                          <span>{profitDetails.revenue.toFixed(2)} ₽</span>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Расходы на товар:</span>
-                          <span>{(product.costPrice * profitDetails.productSales).toFixed(2)} ₽</span>
+                          <span className="text-muted-foreground">Расчет себестоимости:</span>
+                          <span>{product.costPrice} ₽ × {profitDetails.productSales} шт. = {(product.costPrice * profitDetails.productSales).toFixed(2)} ₽</span>
                         </div>
                         <div className="flex justify-between text-xs">
                           <span className="text-muted-foreground">Логистика:</span>
@@ -377,6 +400,10 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                         <div className="flex justify-between text-xs">
                           <span className="text-muted-foreground">Общие расходы:</span>
                           <span>{profitDetails.totalExpenses.toFixed(2)} ₽</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Выручка:</span>
+                          <span>{product.discountedPrice} ₽ × {profitDetails.productSales} шт. = {profitDetails.revenue.toFixed(2)} ₽</span>
                         </div>
                         <div className="flex justify-between text-sm font-medium border-t pt-2">
                           <span>Чистая прибыль:</span>
