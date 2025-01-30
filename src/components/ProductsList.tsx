@@ -234,15 +234,17 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       // Fetch sales report first
       const salesReport = await fetchSalesReport();
       
+      // Initialize expenses tracking object outside the conditional block
+      let expensesByProduct: { [key: number]: {
+        logistics: number,
+        storage: number,
+        penalties: number,
+        acceptance: number
+      }} = {};
+      
       if (salesReport) {
         // Process sales data
         const salesByProduct: { [key: number]: number } = {};
-        const expensesByProduct: { [key: number]: {
-          logistics: number,
-          storage: number,
-          penalties: number,
-          acceptance: number
-        }} = {};
 
         salesReport.forEach(item => {
           if (item.doc_type_name === "Продажа") {
@@ -321,7 +323,12 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
       const updatedProducts = data.cards.map((product: Product) => {
         const currentPrice = prices[product.nmID];
-        const productExpenses = expensesByProduct ? expensesByProduct[product.nmID] : null;
+        const productExpenses = expensesByProduct[product.nmID] || {
+          logistics: 0,
+          storage: 0,
+          penalties: 0,
+          acceptance: 0
+        };
         
         console.log(`Processing product ${product.nmID}:`, {
           price: currentPrice,
@@ -333,12 +340,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           ...product,
           costPrice: costPrices[product.nmID] || 0,
           discountedPrice: currentPrice || 0,
-          expenses: productExpenses || {
-            logistics: 0,
-            storage: 0,
-            penalties: 0,
-            acceptance: 0
-          }
+          expenses: productExpenses
         };
       });
 
