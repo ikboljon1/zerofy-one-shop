@@ -79,7 +79,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         const chunk = nmIds.slice(i, i + chunkSize);
         const url = new URL("https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter");
         url.searchParams.append("limit", "1000");
-        url.searchParams.append("filterNmID", chunk.join(','));
+        url.searchParams.append("nmId", chunk.join(',')); // Changed from filterNmID to nmId
 
         console.log(`Fetching prices for chunk ${i / chunkSize + 1}, IDs:`, chunk);
 
