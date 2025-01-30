@@ -58,7 +58,9 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     try {
       const url = new URL("https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter");
       url.searchParams.append("limit", "1000");
-      url.searchParams.append("filterNmID", nmIds.join(';'));
+      url.searchParams.append("filterNmID", nmIds.join(','));  // Changed separator from ; to ,
+
+      console.log("Fetching prices with URL:", url.toString()); // Debug log
 
       const response = await fetch(url.toString(), {
         method: "GET",
@@ -69,6 +71,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       });
 
       if (!response.ok) {
+        const errorData = await response.text();
+        console.error("Price fetch error details:", errorData);
         throw new Error("Failed to fetch prices");
       }
 
