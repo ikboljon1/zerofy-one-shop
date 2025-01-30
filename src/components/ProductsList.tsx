@@ -19,7 +19,6 @@ interface Product {
   price?: number;
   discountedPrice?: number;
   clubPrice?: number;
-  quantity?: number;
   expenses?: {
     logistics: number;
     storage: number;
@@ -56,7 +55,6 @@ interface WBExpensesResponse {
     storageCost: number;
     penalty: number;
     acceptance: number;
-    quantity?: number;
   }>;
 }
 
@@ -71,16 +69,14 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       netProfit: 0,
       productSales: 0,
       totalExpenses: 0,
-      revenue: 0,
-      quantity: 0
+      revenue: 0
     };
     
     const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore?.id}`) || '{}');
     console.log('Sales data from localStorage:', salesData);
     
     const productSales = salesData[product.nmID] || 0;
-    const quantity = product.quantity || 0;
-    console.log('Product sales for ID', product.nmID, ':', productSales, 'Quantity:', quantity);
+    console.log('Product sales for ID', product.nmID, ':', productSales);
     
     const totalExpenses = 
       product.expenses.logistics +          
@@ -91,7 +87,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     console.log('Calculation details for product', product.nmID, {
       costPrice: product.costPrice,
       productSales,
-      quantity,
       logistics: product.expenses.logistics,
       storage: product.expenses.storage,
       penalties: product.expenses.penalties,
@@ -99,18 +94,17 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       totalExpenses
     });
     
-    const revenue = (product.discountedPrice || 0) * quantity;
+    const revenue = (product.discountedPrice || 0) * productSales;
     console.log('Revenue calculation:', {
       discountedPrice: product.discountedPrice,
-      quantity,
+      productSales,
       revenue
     });
     
-    const netProfit = revenue - (totalExpenses * quantity) - (product.costPrice * quantity);
+    const netProfit = revenue - totalExpenses;
     console.log('Net profit calculation:', {
       revenue,
-      totalExpenses: totalExpenses * quantity,
-      costPrice: product.costPrice * quantity,
+      totalExpenses,
       netProfit
     });
     
@@ -118,8 +112,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       netProfit,
       productSales,
       totalExpenses,
-      revenue,
-      quantity
+      revenue
     };
   };
 
@@ -129,12 +122,11 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     try {
       const expensesMap: { [key: number]: any } = {};
       const dateFrom = new Date();
-      dateFrom.setDate(dateFrom.getDate() - 30);
+      dateFrom.setDate(dateFrom.getDate() - 30); // Получаем данные за последние 30 дней
 
-      const url = new URL("https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod");
+      const url = new URL("https://statistics-api.wildberries.ru/api/v1/supplier/reportDetailByPeriod");
       url.searchParams.append("dateFrom", dateFrom.toISOString().split('T')[0]);
       url.searchParams.append("dateTo", new Date().toISOString().split('T')[0]);
-      url.searchParams.append("limit", "100000");
 
       console.log("Fetching expenses for products:", nmIds);
 
@@ -161,15 +153,13 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
             logistics: 0,
             storage: 0,
             penalties: 0,
-            acceptance: 0,
-            quantity: 0
+            acceptance: 0
           };
         }
         expensesMap[item.nmId].logistics += item.deliveryRub || 0;
         expensesMap[item.nmId].storage += item.storageCost || 0;
         expensesMap[item.nmId].penalties += item.penalty || 0;
         expensesMap[item.nmId].acceptance += item.acceptance || 0;
-        expensesMap[item.nmId].quantity = (expensesMap[item.nmId].quantity || 0) + (item.quantity || 0);
       });
 
       console.log("Final expenses map:", expensesMap);
@@ -294,28 +284,20 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           logistics: 0,
           storage: 0,
           penalties: 0,
-          acceptance: 0,
-          quantity: 0
+          acceptance: 0
         };
         
         console.log(`Processing product ${product.nmID}:`, {
           price: currentPrice,
           costPrice: costPrices[product.nmID],
-          expenses: currentExpenses,
-          quantity: currentExpenses.quantity
+          expenses: currentExpenses
         });
         
         return {
           ...product,
           costPrice: costPrices[product.nmID] || 0,
           discountedPrice: currentPrice || 0,
-          quantity: currentExpenses.quantity || 0,
-          expenses: {
-            logistics: currentExpenses.logistics || 0,
-            storage: currentExpenses.storage || 0,
-            penalties: currentExpenses.penalties || 0,
-            acceptance: currentExpenses.acceptance || 0
-          }
+          expenses: currentExpenses
         };
       });
 
@@ -447,14 +429,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                         {product.discountedPrice ? `${product.discountedPrice.toFixed(2)} ₽` : "0.00 ₽"}
                       </div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">
-                        Количество проданных товаров:
-                      </label>
-                      <div className="text-sm font-medium">
-                        {product.quantity || 0} шт.
-                      </div>
-                    </div>
                     {product.expenses && (
                       <div className="space-y-1.5 border-t pt-2">
                         <div className="flex justify-between text-xs">
@@ -475,7 +449,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                         </div>
                         <div className="flex justify-between text-xs font-medium border-t pt-2">
                           <span className="text-muted-foreground">Общие расходы:</span>
-                          <span>{(profitDetails.totalExpenses * (product.quantity || 0)).toFixed(2)} ₽</span>
+                          <span>{profitDetails.totalExpenses.toFixed(2)} ₽</span>
                         </div>
                         <div className="flex justify-between text-sm font-medium border-t pt-2">
                           <span>Чистая прибыль:</span>
