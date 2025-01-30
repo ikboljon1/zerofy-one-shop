@@ -9,6 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
+import { fetchWildberriesStats } from "@/services/wildberriesApi";
 
 interface Product {
   nmID: number;
@@ -46,37 +47,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
-  const fetchProductPrices = async (nmIds: number[]): Promise<Record<number, number>> => {
-    if (!selectedStore?.apiKey) return {};
-
-    try {
-      const response = await fetch(
-        "https://suppliers-api.wildberries.ru/public/api/v1/info",
-        {
-          method: "POST",
-          headers: {
-            "Authorization": selectedStore.apiKey,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ nmIds })
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch product prices');
-      }
-
-      const data = await response.json();
-      return data.reduce((acc: Record<number, number>, item: any) => {
-        acc[item.nmId] = item.price;
-        return acc;
-      }, {});
-    } catch (error) {
-      console.error('Error fetching product prices:', error);
-      return {};
-    }
-  };
-
   const calculateNetProfit = (product: Product) => {
     const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore?.id}`) || "{}");
     const productSales = salesData[product.nmID] || 0;
@@ -89,7 +59,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     ) : 0;
 
     const revenue = (product.discountedPrice || 0) * productSales;
-
     const netProfit = revenue - totalExpenses - ((product.costPrice || 0) * productSales);
 
     return {
@@ -140,47 +109,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     </Popover>
   );
 
-  const fetchSalesReport = async () => {
-    if (!selectedStore?.apiKey) return null;
-
-    const formatDate = (date: Date) => {
-      return date.toISOString().split('T')[0];
-    };
-
-    try {
-      const response = await fetch(
-        `https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod?dateFrom=${formatDate(dateFrom)}&dateTo=${formatDate(dateTo)}&limit=100000`,
-        {
-          headers: {
-            Authorization: selectedStore.apiKey,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch sales report');
-      }
-
-      const data = await response.json();
-      
-      const salesReport = {
-        dateFrom: formatDate(dateFrom),
-        dateTo: formatDate(dateTo),
-        data: data
-      };
-      
-      localStorage.setItem(`sales_report_${selectedStore.id}`, JSON.stringify(salesReport));
-      console.log('Saved sales report:', salesReport);
-      
-      return data;
-    } catch (error) {
-      console.error('Error fetching sales report:', error);
-      return null;
-    }
-  };
-
   const syncProducts = async () => {
-    if (!selectedStore) {
+    if (!selectedStore?.apiKey) {
       toast({
         title: "Ошибка",
         description: "Пожалуйста, выберите магазин",
@@ -191,112 +121,25 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
     setIsLoading(true);
     try {
-      let expensesByProduct: { [key: number]: {
-        logistics: number,
-        storage: number,
-        penalties: number,
-        acceptance: number
-      }} = {};
-
-      const salesReport = await fetchSalesReport();
+      const statsData = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
       
-      if (salesReport) {
-        const salesByProduct: { [key: number]: number } = {};
-
-        salesReport.forEach((item: any) => {
-          if (item.doc_type_name === "Продажа") {
-            salesByProduct[item.nm_id] = (salesByProduct[item.nm_id] || 0) + item.quantity;
-            
-            if (!expensesByProduct[item.nm_id]) {
-              expensesByProduct[item.nm_id] = {
-                logistics: 0,
-                storage: 0,
-                penalties: 0,
-                acceptance: 0
-              };
-            }
-            
-            expensesByProduct[item.nm_id].logistics += item.delivery_rub || 0;
-            expensesByProduct[item.nm_id].storage += item.storage_fee || 0;
-            expensesByProduct[item.nm_id].penalties += item.penalty || 0;
-            expensesByProduct[item.nm_id].acceptance += item.acceptance || 0;
-          }
-        });
-
-        Object.keys(expensesByProduct).forEach(nmId => {
-          const numId = Number(nmId);
-          const sales = salesByProduct[numId] || 1;
-          expensesByProduct[numId].logistics /= sales;
-          expensesByProduct[numId].storage /= sales;
-          expensesByProduct[numId].penalties /= sales;
-          expensesByProduct[numId].acceptance /= sales;
-        });
-
-        localStorage.setItem(`sales_${selectedStore.id}`, JSON.stringify(salesByProduct));
-        console.log('Saved sales data:', salesByProduct);
-        console.log('Calculated expenses:', expensesByProduct);
-      }
-
-      const response = await fetch("https://content-api.wildberries.ru/content/v2/get/cards/list", {
-        method: "POST",
-        headers: {
-          "Authorization": selectedStore.apiKey,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          settings: {
-            cursor: {
-              limit: 100
-            },
-            filter: {
-              withPhoto: -1
-            }
-          }
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch products");
-      }
-
-      const data = await response.json();
-      console.log("Products data:", data);
-      
-      const storedProducts = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
-      const costPrices = storedProducts.reduce((acc: Record<number, number>, product: Product) => {
-        if (product.costPrice) {
-          acc[product.nmID] = product.costPrice;
-        }
-        return acc;
-      }, {});
-
-      const nmIds = data.cards.map((product: Product) => product.nmID);
-      const prices = await fetchProductPrices(nmIds);
-
-      const updatedProducts = data.cards.map((product: Product) => {
-        const currentPrice = prices[product.nmID];
-        const productExpenses = expensesByProduct[product.nmID] || {
-          logistics: 0,
-          storage: 0,
-          penalties: 0,
-          acceptance: 0
-        };
-        
-        console.log(`Processing product ${product.nmID}:`, {
-          price: currentPrice,
-          costPrice: costPrices[product.nmID],
-          expenses: productExpenses
-        });
+      // Process the stats data to update products
+      const updatedProducts = products.map(product => {
+        const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore.id}`) || "{}");
+        const productSales = salesData[product.nmID] || 0;
         
         return {
           ...product,
-          costPrice: costPrices[product.nmID] || 0,
-          discountedPrice: currentPrice || 0,
-          expenses: productExpenses
+          discountedPrice: product.price || 0,
+          expenses: {
+            logistics: statsData.currentPeriod.expenses.logistics / productSales || 0,
+            storage: statsData.currentPeriod.expenses.storage / productSales || 0,
+            penalties: statsData.currentPeriod.expenses.penalties / productSales || 0,
+            acceptance: statsData.currentPeriod.acceptance / productSales || 0
+          }
         };
       });
 
-      console.log("Updated products:", updatedProducts);
       setProducts(updatedProducts);
       localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(updatedProducts));
 
