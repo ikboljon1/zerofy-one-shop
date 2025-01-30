@@ -47,6 +47,16 @@ export const calculateTotalCosts = (products: ProductWithCost[]): number => {
 
 export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, dateTo: Date): Promise<WildberriesResponse> => {
   try {
+    // Format dates as required by the API (YYYY-MM-DD)
+    const formatDate = (date: Date) => {
+      return date.toISOString().split('T')[0];
+    };
+
+    const queryParams = new URLSearchParams({
+      dateFrom: formatDate(dateFrom),
+      dateTo: formatDate(dateTo)
+    });
+
     // Get stored products with cost prices
     const storedProducts = JSON.parse(localStorage.getItem(`products_${apiKey}`) || '[]');
     console.log("Stored products with costs:", storedProducts);
@@ -61,8 +71,8 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
 
     console.log("Product costs mapping:", productCosts);
 
-    // Fetch sales data from API
-    const response = await fetch("https://statistics-api.wildberries.ru/api/v1/supplier/sales", {
+    // Fetch sales data from API with date parameters
+    const response = await fetch(`https://statistics-api.wildberries.ru/api/v1/supplier/sales?${queryParams}`, {
       method: "GET",
       headers: {
         "Authorization": apiKey,
@@ -71,6 +81,8 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
     });
 
     if (!response.ok) {
+      const errorData = await response.text();
+      console.error("API Error Response:", errorData);
       throw new Error("Failed to fetch statistics");
     }
 
