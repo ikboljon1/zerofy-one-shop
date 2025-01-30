@@ -386,6 +386,7 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
 
   const dailySales = new Map<string, { sales: number; previousSales: number }>();
   const productSales = new Map<string, number>();
+  const salesByProduct = new Map<string, number>();
 
   data.forEach(item => {
     const saleDate = item.sale_dt.split('T')[0];
@@ -411,6 +412,11 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
     stats.currentPeriod.acceptance += acceptance;
 
     stats.currentPeriod.expenses.total += logistics + storage + penalties + acceptance + deduction;
+    
+    if (item.doc_type_name === "Продажа") {
+      const currentSalesByProduct = salesByProduct.get(item.nm_id) || 0;
+      salesByProduct.set(item.nm_id, currentSalesByProduct + (item.quantity || 0));
+    }
   });
 
   stats.currentPeriod.netProfit = 
@@ -433,6 +439,18 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
 
   stats.dailySales = sortedDailySales;
   stats.productSales = sortedProductSales;
+
+  // Save sales data to localStorage
+  const salesData: { [key: string]: number } = {};
+  salesByProduct.forEach((value, key) => {
+    salesData[key] = value;
+  });
+  
+  // Get store ID from localStorage (you'll need to set this when selecting a store)
+  const storeId = localStorage.getItem('currentStoreId');
+  if (storeId) {
+    localStorage.setItem(`sales_${storeId}`, JSON.stringify(salesData));
+  }
 
   const { topProfitable, topUnprofitable } = await getTopProducts(data, apiKey);
   

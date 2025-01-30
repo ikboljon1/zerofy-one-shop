@@ -56,14 +56,21 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   const calculateNetProfit = (product: Product) => {
     if (!product.costPrice || !product.expenses) return 0;
     
+    // Get the total sales amount from localStorage
+    const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore?.id}`) || '{}');
+    const productSales = salesData[product.nmID] || 0;
+    
     const totalExpenses = 
-      product.costPrice + 
+      (product.costPrice * productSales) + // Cost price multiplied by quantity sold
       product.expenses.logistics + 
       product.expenses.storage + 
       product.expenses.penalties + 
       product.expenses.acceptance;
     
-    return -totalExpenses;
+    // Calculate revenue (price * quantity sold)
+    const revenue = (product.price || 0) * productSales;
+    
+    return revenue - totalExpenses;
   };
 
   const fetchProductPrices = async (nmIds: number[]) => {
@@ -220,11 +227,25 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   };
 
   const updateCostPrice = (productId: number, costPrice: number) => {
-    const updatedProducts = products.map(product => 
-      product.nmID === productId ? { ...product, costPrice } : product
-    );
+    const updatedProducts = products.map(product => {
+      if (product.nmID === productId) {
+        const updatedProduct = { ...product, costPrice };
+        // Recalculate net profit
+        const netProfit = calculateNetProfit(updatedProduct);
+        return { ...updatedProduct, netProfit };
+      }
+      return product;
+    });
+    
     setProducts(updatedProducts);
     localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedProducts));
+    
+    // Update dashboard data
+    const dashboardData = JSON.parse(localStorage.getItem(`dashboard_${selectedStore?.id}`) || '{}');
+    const totalNetProfit = updatedProducts.reduce((sum, product) => sum + calculateNetProfit(product), 0);
+    
+    dashboardData.netProfit = totalNetProfit;
+    localStorage.setItem(`dashboard_${selectedStore?.id}`, JSON.stringify(dashboardData));
   };
 
   // Загружаем продукты из localStorage при изменении магазина
