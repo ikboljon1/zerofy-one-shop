@@ -220,7 +220,6 @@ const fetchProductNames = async (apiKey: string, nmIds: string[]): Promise<Map<s
   };
 
   try {
-    // Changed to use POST method and include payload
     const data = await fetchWithRetry(
       WB_CONTENT_URL, 
       headers, 
@@ -281,7 +280,6 @@ const calculateProductStats = (data: WildberriesReportItem[]) => {
     if (item.doc_type_name === "Продажа") {
       currentStats.sales += item.retail_amount || 0;
       currentStats.quantity += item.quantity || 0;
-      // Суммируем фактические расходы из API для каждой продажи
       currentStats.logistics += item.delivery_rub || 0;
       currentStats.storage += item.storage_fee || 0;
       currentStats.penalties += item.penalty || 0;
@@ -290,7 +288,6 @@ const calculateProductStats = (data: WildberriesReportItem[]) => {
       currentStats.returns += item.retail_amount || 0;
     }
 
-    // Обновляем прибыль с учетом фактических общих расходов
     currentStats.profit = currentStats.sales - (
       currentStats.logistics +
       currentStats.storage +
@@ -299,7 +296,6 @@ const calculateProductStats = (data: WildberriesReportItem[]) => {
       currentStats.returns
     );
 
-    // Рассчитываем среднюю цену продажи
     currentStats.price = currentStats.sales / (currentStats.quantity || 1);
 
     productStats.set(item.subject_name, currentStats);
@@ -442,13 +438,11 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
   stats.dailySales = sortedDailySales;
   stats.productSales = sortedProductSales;
 
-  // Save sales data to localStorage
   const salesData: { [key: string]: number } = {};
   salesByProduct.forEach((value, key) => {
     salesData[key] = value;
   });
   
-  // Get store ID from localStorage (you'll need to set this when selecting a store)
   const storeId = localStorage.getItem('currentStoreId');
   if (storeId) {
     localStorage.setItem(`sales_${storeId}`, JSON.stringify(salesData));
@@ -473,5 +467,74 @@ export const fetchWildberriesStats = async (
   } catch (error) {
     console.error('Ошибка получения статистики Wildberries:', error);
     throw new Error('Не удалось загрузить статистику Wildberries');
+  }
+};
+
+const fetchProductQuantities = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
+  try {
+    const url = new URL("https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod");
+    url.searchParams.append("dateFrom", dateFrom.toISOString().split('T')[0]);
+    url.searchParams.append("dateTo", dateTo.toISOString().split('T')[0]);
+    url.searchParams.append("limit", "100000");
+
+    console.log('Fetching data with URL:', url.toString());
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error fetching data:', errorText);
+      return {};
+    }
+
+    const data = await response.json();
+    console.log('API response data:', data);
+
+    const aggregatedData: {
+      [key: number]: {
+        quantity: number;
+        expenses: {
+          logistics: number;
+          storage: number;
+          penalties: number;
+          acceptance: number;
+        };
+      };
+    } = {};
+
+    data.forEach((item: any) => {
+      const nmId = item.nm_id;
+      if (!aggregatedData[nmId]) {
+        aggregatedData[nmId] = {
+          quantity: 0,
+          expenses: {
+            logistics: 0,
+            storage: 0,
+            penalties: 0,
+            acceptance: 0
+          }
+        };
+      }
+
+      if (item.doc_type_name === "Продажа") {
+        aggregatedData[nmId].quantity += (item.quantity || 0);
+      }
+
+      aggregatedData[nmId].expenses.logistics += (item.delivery_rub || 0);
+      aggregatedData[nmId].expenses.storage += (item.storage_fee || 0);
+      aggregatedData[nmId].expenses.penalties += (item.penalty || 0);
+      aggregatedData[nmId].expenses.acceptance += (item.acceptance || 0);
+    });
+
+    console.log('Aggregated data:', aggregatedData);
+    return aggregatedData;
+  } catch (error) {
+    console.error('Error in fetchProductQuantities:', error);
+    return {};
   }
 };

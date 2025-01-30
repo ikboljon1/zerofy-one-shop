@@ -69,21 +69,17 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     const productSales = product.quantity || salesData[product.nmID] || 0;
     console.log('Product sales for ID', product.nmID, ':', productSales);
     
-    // Используем фактические общие расходы из API
-    const totalExpenses = 
-      product.expenses.logistics +     // Фактическая общая логистика
-      product.expenses.storage +       // Фактическое общее хранение
-      product.expenses.penalties +     // Фактические общие штрафы
-      product.expenses.acceptance;     // Фактическая общая приемка
+    // Используем общие расходы из API без умножения на количество
+    const totalExpenses = product.expenses.logistics + 
+                         product.expenses.storage + 
+                         product.expenses.penalties + 
+                         product.expenses.acceptance;
     
     console.log('Calculation details for product', product.nmID, {
       costPrice: product.costPrice,
       productSales,
-      logistics: product.expenses.logistics,
-      storage: product.expenses.storage,
-      penalties: product.expenses.penalties,
-      acceptance: product.expenses.acceptance,
-      totalExpenses
+      totalExpenses,
+      expenses: product.expenses
     });
     
     const revenue = (product.discountedPrice || 0) * productSales;
@@ -93,6 +89,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       revenue
     });
     
+    // Чистая прибыль = выручка - общие расходы - (себестоимость * количество)
     const netProfit = revenue - totalExpenses - (product.costPrice * productSales);
     console.log('Net profit calculation:', {
       revenue,
@@ -176,7 +173,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       url.searchParams.append("dateTo", dateTo.toISOString().split('T')[0]);
       url.searchParams.append("limit", "100000");
 
-      console.log('Fetching quantities with URL:', url.toString());
+      console.log('Fetching data with URL:', url.toString());
 
       const response = await fetch(url.toString(), {
         headers: {
@@ -187,24 +184,55 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Error fetching quantities:', errorText);
+        console.error('Error fetching data:', errorText);
         return {};
       }
 
       const data = await response.json();
-      console.log('Quantities data:', data);
+      console.log('API response data:', data);
 
-      const quantityMap: { [key: number]: number } = {};
-      
+      // Создаем объект для хранения агрегированных данных по каждому товару
+      const aggregatedData: {
+        [key: number]: {
+          quantity: number;
+          expenses: {
+            logistics: number;
+            storage: number;
+            penalties: number;
+            acceptance: number;
+          };
+        };
+      } = {};
+
+      // Агрегируем данные по каждому товару
       data.forEach((item: any) => {
-        if (item.doc_type_name === "Продажа") {
-          const nmId = item.nm_id;
-          quantityMap[nmId] = (quantityMap[nmId] || 0) + (item.quantity || 0);
+        const nmId = item.nm_id;
+        if (!aggregatedData[nmId]) {
+          aggregatedData[nmId] = {
+            quantity: 0,
+            expenses: {
+              logistics: 0,
+              storage: 0,
+              penalties: 0,
+              acceptance: 0
+            }
+          };
         }
+
+        // Суммируем количество проданных товаров
+        if (item.doc_type_name === "Продажа") {
+          aggregatedData[nmId].quantity += (item.quantity || 0);
+        }
+
+        // Суммируем все расходы
+        aggregatedData[nmId].expenses.logistics += (item.delivery_rub || 0);
+        aggregatedData[nmId].expenses.storage += (item.storage_fee || 0);
+        aggregatedData[nmId].expenses.penalties += (item.penalty || 0);
+        aggregatedData[nmId].expenses.acceptance += (item.acceptance || 0);
       });
 
-      console.log('Final quantity map:', quantityMap);
-      return quantityMap;
+      console.log('Aggregated data:', aggregatedData);
+      return aggregatedData;
     } catch (error) {
       console.error('Error in fetchProductQuantities:', error);
       return {};
@@ -266,25 +294,29 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
       const updatedProducts = data.cards.map((product: Product) => {
         const currentPrice = prices[product.nmID];
-        const quantity = quantities[product.nmID] || 0;
+        const productData = quantities[product.nmID] || {
+          quantity: 0,
+          expenses: {
+            logistics: 0,
+            storage: 0,
+            penalties: 0,
+            acceptance: 0
+          }
+        };
         
         console.log(`Processing product ${product.nmID}:`, {
           price: currentPrice,
           costPrice: costPrices[product.nmID],
-          quantity: quantity
+          quantity: productData.quantity,
+          expenses: productData.expenses
         });
         
         return {
           ...product,
           costPrice: costPrices[product.nmID] || 0,
           discountedPrice: currentPrice || 0,
-          quantity: quantity,
-          expenses: {
-            logistics: Math.random() * 100,
-            storage: Math.random() * 50,
-            penalties: Math.random() * 20,
-            acceptance: Math.random() * 30
-          }
+          quantity: productData.quantity,
+          expenses: productData.expenses
         };
       });
 
