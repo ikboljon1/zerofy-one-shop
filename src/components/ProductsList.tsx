@@ -69,7 +69,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     };
     
     const productSales = product.quantity || 0;
-    const salesAmount = product.expenses.ppvz_for_pay || 0; // Используем ppvz_for_pay как сумму продаж
+    const salesAmount = product.expenses.ppvz_for_pay || 0;
     const transferredAmount = product.expenses.ppvz_for_pay || 0;
     
     const totalExpenses = 
