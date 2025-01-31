@@ -69,9 +69,22 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       soldQuantity: 0
     };
     
+    console.log('Calculating for product:', {
+      nmId: product.nmID,
+      title: product.title,
+      expenses: product.expenses
+    });
+    
     const productSales = product.quantity || 0;
-    const salesAmount = product.expenses.retail_price || 0; // Изменено на retail_price
+    const salesAmount = product.expenses.retail_price || 0;
     const transferredAmount = product.expenses.ppvz_for_pay || 0;
+    
+    console.log('Sales calculation:', {
+      productSales,
+      salesAmount,
+      transferredAmount,
+      retail_price: product.expenses.retail_price
+    });
     
     const totalExpenses = 
       product.expenses.logistics +
@@ -268,8 +281,17 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       const expensesMap = new Map();
       const salesMap = new Map();
       
+      console.log('Processing storage data items:', storageData.length);
+      
       storageData.forEach((item: any) => {
         const nmId = item.nm_id;
+        console.log('Processing item:', {
+          nmId,
+          doc_type_name: item.doc_type_name,
+          retail_price: item.retail_price,
+          quantity: item.quantity
+        });
+
         if (!expensesMap.has(nmId)) {
           expensesMap.set(nmId, {
             logistics: 0,
@@ -278,7 +300,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
             acceptance: 0,
             deductions: 0,
             ppvz_for_pay: 0,
-            retail_price: 0 // Изменено с retail_amount на retail_price
+            retail_price: 0
           });
         }
         
@@ -291,13 +313,22 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         expenses.ppvz_for_pay += item.ppvz_for_pay || 0;
 
         if (item.doc_type_name === "Продажа") {
-          expenses.retail_price += item.retail_price || 0; // Изменено с retail_amount на retail_price
+          expenses.retail_price += item.retail_price || 0;
+          console.log('Adding sale:', {
+            nmId,
+            retail_price: item.retail_price,
+            current_total: expenses.retail_price
+          });
+          
           if (!salesMap.has(nmId)) {
             salesMap.set(nmId, 0);
           }
-          salesMap.set(nmId, salesMap.get(nmId) + (item.retail_price || 0)); // Изменено с retail_amount на retail_price
+          salesMap.set(nmId, salesMap.get(nmId) + (item.retail_price || 0));
         }
       });
+
+      console.log('Final expenses map:', Object.fromEntries(expensesMap));
+      console.log('Final sales map:', Object.fromEntries(salesMap));
 
       const quantities = await fetchProductQuantities(selectedStore.apiKey, startDate, endDate);
 
@@ -311,7 +342,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           acceptance: 0,
           deductions: 0,
           ppvz_for_pay: 0,
-          retail_price: 0 // Изменено с retail_amount на retail_price
+          retail_price: 0
         };
         
         console.log(`Processing product ${product.nmID}:`, {
