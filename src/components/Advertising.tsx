@@ -117,6 +117,18 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const currentCampaigns = campaigns.slice(startIndex, endIndex);
 
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(p => p - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(p => p + 1);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -143,10 +155,15 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
         <Pagination>
           <PaginationContent>
             <PaginationItem>
-              <PaginationPrevious
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handlePreviousPage}
                 disabled={currentPage === 1}
-              />
+                className="gap-1 pl-2.5"
+              >
+                <span>Previous</span>
+              </Button>
             </PaginationItem>
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
               <PaginationItem key={page}>
@@ -159,10 +176,15 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
               </PaginationItem>
             ))}
             <PaginationItem>
-              <PaginationNext
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleNextPage}
                 disabled={currentPage === totalPages}
-              />
+                className="gap-1 pr-2.5"
+              >
+                <span>Next</span>
+              </Button>
             </PaginationItem>
           </PaginationContent>
         </Pagination>
