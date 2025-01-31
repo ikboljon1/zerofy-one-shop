@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card } from "./ui/card";
 import { getAdvertCosts, getAdvertStats, getAdvertBalance } from "@/services/advertisingApi";
 import { Button } from "./ui/button";
-import { RefreshCw, CheckCircle, PauseCircle, Archive, Target, Zap, Filter, Wallet } from "lucide-react";
+import { RefreshCw, CheckCircle, PauseCircle, Archive, Target, Zap, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CampaignDetails from "./CampaignDetails";
 import {
@@ -52,6 +52,14 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
       // Fetch costs data
       const costsData = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
       
+      if (costsData.length === 0) {
+        toast({
+          title: "Информация",
+          description: "Нет данных о рекламных кампаниях за выбранный период",
+        });
+        return;
+      }
+
       // Fetch stats for each campaign to get real status and type
       const statsPromises = costsData.map(cost => 
         getAdvertStats(cost.advertId, selectedStore.apiKey)
@@ -92,6 +100,8 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
         description: error instanceof Error ? error.message : "Не удалось загрузить данные",
         variant: "destructive",
       });
+      setCampaigns([]);
+      setBalance(0);
     } finally {
       setLoading(false);
     }
@@ -207,7 +217,7 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
           </div>
           <Button onClick={fetchData} disabled={loading} className="w-full">
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Обновить
+            {loading ? 'Обновление...' : 'Обновить'}
           </Button>
         </div>
       </div>
