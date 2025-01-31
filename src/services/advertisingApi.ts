@@ -16,25 +16,12 @@ interface AdvertCost {
 
 interface AdvertStats {
   advertId: number;
-  views: number;
-  clicks: number;
-  ctr: number;
-  cpc: number;
-  sum: number;
-  atbs: number;
-  orders: number;
-  cr: number;
-  shks: number;
-  sum_price: number;
+  status: 'active' | 'paused' | 'archived' | 'ready';
+  type: 'auction' | 'automatic';
 }
 
-interface AdvertPayment {
-  id: number;
-  date: string;
-  sum: number;
-  type: string;
-  statusId: number;
-  cardStatus: string;
+interface AdvertBalance {
+  balance: number;
 }
 
 const createApiInstance = (apiKey: string) => {
@@ -66,18 +53,10 @@ export const getAdvertCosts = async (dateFrom: Date, dateTo: Date, apiKey: strin
   }
 };
 
-export const getAdvertFullStats = async (dateFrom: Date, dateTo: Date, campaignIds: number[], apiKey: string): Promise<AdvertStats[]> => {
+export const getAdvertStats = async (campaignId: number, apiKey: string): Promise<AdvertStats> => {
   try {
     const api = createApiInstance(apiKey);
-    const payload = campaignIds.map(id => ({
-      id,
-      dates: [
-        dateFrom.toISOString().split('T')[0],
-        dateTo.toISOString().split('T')[0]
-      ]
-    }));
-
-    const response = await api.post(`/v2/fullstats`, payload);
+    const response = await api.get(`/v1/campaign/${campaignId}/stats`);
     return response.data;
   } catch (error) {
     console.error('Error fetching advert stats:', error);
@@ -88,20 +67,15 @@ export const getAdvertFullStats = async (dateFrom: Date, dateTo: Date, campaignI
   }
 };
 
-export const getAdvertPayments = async (dateFrom: Date, dateTo: Date, apiKey: string): Promise<AdvertPayment[]> => {
+export const getAdvertBalance = async (apiKey: string): Promise<AdvertBalance> => {
   try {
     const api = createApiInstance(apiKey);
-    const params = {
-      from: dateFrom.toISOString().split('T')[0],
-      to: dateTo.toISOString().split('T')[0]
-    };
-    
-    const response = await api.get(`/v1/payments`, { params });
+    const response = await api.get(`/v1/balance`);
     return response.data;
   } catch (error) {
-    console.error('Error fetching advert payments:', error);
+    console.error('Error fetching advert balance:', error);
     if (error instanceof AxiosError) {
-      throw new Error(`Failed to fetch advert payments: ${error.response?.data?.message || error.message}`);
+      throw new Error(`Failed to fetch advert balance: ${error.response?.data?.message || error.message}`);
     }
     throw error;
   }

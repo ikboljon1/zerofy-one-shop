@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Card } from "./ui/card";
-import { getAdvertCosts } from "@/services/advertisingApi";
+import { getAdvertCosts, getAdvertStats, getAdvertBalance } from "@/services/advertisingApi";
 import { Button } from "./ui/button";
 import { RefreshCw, CheckCircle, PauseCircle, Archive, Target, Zap, Filter, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -30,6 +30,7 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all-active");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [balance, setBalance] = useState<number>(0);
   const { toast } = useToast();
 
   const fetchData = async () => {
@@ -48,17 +49,25 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
       const dateFrom = new Date();
       dateFrom.setDate(dateFrom.getDate() - 30);
 
+      // Fetch costs data
       const costsData = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
+      
+      // Fetch stats for each campaign to get real status and type
+      const statsPromises = costsData.map(cost => 
+        getAdvertStats(cost.advertId, selectedStore.apiKey)
+      );
+      const statsData = await Promise.all(statsPromises);
 
+      // Combine costs and stats data
       const uniqueCampaigns = Array.from(
         new Map(
-          costsData.map(cost => [
+          costsData.map((cost, index) => [
             cost.advertId,
             {
               advertId: cost.advertId,
               campName: cost.campName,
-              status: ['active', 'paused', 'archived', 'ready'][Math.floor(Math.random() * 4)] as Campaign['status'],
-              type: Math.random() > 0.5 ? 'auction' as const : 'automatic' as const
+              status: statsData[index]?.status || 'active',
+              type: statsData[index]?.type || 'auction'
             }
           ])
         ).values()
@@ -66,6 +75,10 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
 
       setCampaigns(uniqueCampaigns);
       
+      // Fetch and set real balance
+      const balanceData = await getAdvertBalance(selectedStore.apiKey);
+      setBalance(balanceData.balance);
+
       localStorage.setItem(`campaigns_${selectedStore.id}`, JSON.stringify(uniqueCampaigns));
 
       toast({
@@ -189,7 +202,7 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
             <Wallet className="h-5 w-5 text-primary" />
             <div>
               <p className="text-sm text-muted-foreground">Баланс</p>
-              <p className="font-semibold">50,000 ₽</p>
+              <p className="font-semibold">{balance.toLocaleString('ru-RU')} ₽</p>
             </div>
           </div>
           <Button onClick={fetchData} disabled={loading} className="w-full">
