@@ -18,30 +18,16 @@ interface AdvertStats {
   advertId: number;
   status: 'active' | 'paused' | 'archived' | 'ready';
   type: 'auction' | 'automatic';
-  dates: string[];
   views: number;
   clicks: number;
   ctr: number;
-  cpc: number;
-  sum: number;
-  atbs: number;
   orders: number;
   cr: number;
-  shks: number;
-  sum_price: number;
-  days: Array<{
-    date: string;
-    views: number;
-    clicks: number;
-    ctr: number;
-    cpc: number;
-    sum: number;
-    atbs: number;
-    orders: number;
-    cr: number;
-    shks: number;
-    sum_price: number;
-  }>;
+  sum: number;
+}
+
+interface AdvertBalance {
+  balance: number;
 }
 
 interface AdvertPayment {
@@ -49,10 +35,6 @@ interface AdvertPayment {
   date: string;
   sum: number;
   type: string;
-}
-
-interface AdvertBalanceResponse {
-  balance: number;
 }
 
 const createApiInstance = (apiKey: string) => {
@@ -71,6 +53,7 @@ const handleApiError = (error: unknown) => {
       throw new Error("Ошибка авторизации. Пожалуйста, проверьте API ключ");
     }
     if (error.response?.status === 404) {
+      // Возвращаем пустой массив вместо ошибки, если данные не найдены
       return [];
     }
     throw new Error(error.response?.data?.message || "Произошла ошибка при запросе к API");
@@ -105,43 +88,27 @@ export const getAdvertStats = async (
     }
 
     const api = createApiInstance(apiKey);
-    const requestData = {
-      id: campaignIds,
-      dates: getDatesArray(dateFrom, dateTo)
+    const params = {
+      from: dateFrom.toISOString().split('T')[0],
+      to: dateTo.toISOString().split('T')[0],
+      campaignIds: campaignIds.join(',')
     };
     
-    const response = await api.post(`/v2/fullstats`, requestData);
-    
-    // Save to localStorage
-    const cacheKey = `advert_stats_${campaignIds.join('_')}`;
-    localStorage.setItem(cacheKey, JSON.stringify({
-      timestamp: new Date().getTime(),
-      data: response.data
-    }));
-    
+    const response = await api.get(`/v1/stats`, { params });
     return response.data || [];
   } catch (error) {
-    // Try to get cached data if request fails
-    const cacheKey = `advert_stats_${campaignIds.join('_')}`;
-    const cachedData = localStorage.getItem(cacheKey);
-    if (cachedData) {
-      const parsed = JSON.parse(cachedData);
-      // Return cached data if it's less than 1 hour old
-      if (new Date().getTime() - parsed.timestamp < 3600000) {
-        return parsed.data;
-      }
-    }
     return handleApiError(error);
   }
 };
 
-export const getAdvertBalance = async (apiKey: string): Promise<AdvertBalanceResponse> => {
+export const getAdvertBalance = async (apiKey: string): Promise<AdvertBalance> => {
   try {
     const api = createApiInstance(apiKey);
-    const response = await api.get('/v1/balance');
-    return response.data;
+    const response = await api.get(`/v1/balance`);
+    return response.data || { balance: 0 };
   } catch (error) {
-    throw handleApiError(error);
+    console.error('Error fetching balance:', error);
+    return { balance: 0 };
   }
 };
 
@@ -158,18 +125,4 @@ export const getAdvertPayments = async (dateFrom: Date, dateTo: Date, apiKey: st
   } catch (error) {
     return handleApiError(error);
   }
-};
-
-// Helper function to generate array of dates between dateFrom and dateTo
-const getDatesArray = (dateFrom: Date, dateTo: Date): string[] => {
-  const dates: string[] = [];
-  const currentDate = new Date(dateFrom);
-  const endDate = new Date(dateTo);
-  
-  while (currentDate <= endDate) {
-    dates.push(currentDate.toISOString().split('T')[0]);
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
-  
-  return dates;
 };

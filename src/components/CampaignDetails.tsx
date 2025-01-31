@@ -13,9 +13,18 @@ interface CampaignDetailsProps {
   onBack: () => void;
 }
 
+interface CampaignStats {
+  views: number;
+  clicks: number;
+  ctr: number;
+  orders: number;
+  cr: number;
+  sum: number;
+}
+
 const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignDetailsProps) => {
   const [costs, setCosts] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<CampaignStats | null>(null);
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -95,18 +104,18 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <StatCard
             title="Показы"
-            value={stats.views?.toLocaleString('ru-RU') || '0'}
+            value={stats.views.toLocaleString('ru-RU')}
             icon={TrendingUp}
           />
           <StatCard
             title="Клики"
-            value={stats.clicks?.toLocaleString('ru-RU') || '0'}
+            value={stats.clicks.toLocaleString('ru-RU')}
             icon={TrendingDown}
             trend={stats.ctr}
           />
           <StatCard
             title="CTR"
-            value={`${(stats.ctr || 0).toFixed(2)}%`}
+            value={`${stats.ctr.toFixed(2)}%`}
             icon={TrendingUp}
           />
         </div>
@@ -141,16 +150,12 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
           {stats ? (
             <div className="space-y-4">
               {[
-                { label: 'Показы', value: stats.views?.toLocaleString('ru-RU') || '0' },
-                { label: 'Клики', value: stats.clicks?.toLocaleString('ru-RU') || '0' },
-                { label: 'CTR', value: `${(stats.ctr || 0).toFixed(2)}%` },
-                { label: 'Заказы', value: stats.orders?.toLocaleString('ru-RU') || '0' },
-                { label: 'CR', value: `${(stats.cr || 0).toFixed(2)}%` },
-                { label: 'Сумма', value: `${(stats.sum || 0).toLocaleString('ru-RU')} ₽` },
-                { label: 'CPC', value: `${(stats.cpc || 0).toFixed(2)} ₽` },
-                { label: 'Добавлено в корзину', value: stats.atbs?.toLocaleString('ru-RU') || '0' },
-                { label: 'Заказано товаров', value: stats.shks?.toLocaleString('ru-RU') || '0' },
-                { label: 'Сумма заказов', value: `${(stats.sum_price || 0).toLocaleString('ru-RU')} ₽` }
+                { label: 'Показы', value: stats.views },
+                { label: 'Клики', value: stats.clicks },
+                { label: 'CTR', value: `${stats.ctr.toFixed(2)}%` },
+                { label: 'Заказы', value: stats.orders },
+                { label: 'CR', value: `${stats.cr.toFixed(2)}%` },
+                { label: 'Сумма', value: `${stats.sum.toLocaleString('ru-RU')} ₽` }
               ].map((item, index) => (
                 <div key={index} className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-4">
                   <div className="flex justify-between items-center">
