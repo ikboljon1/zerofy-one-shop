@@ -37,7 +37,7 @@ interface AdvertPayment {
   cardStatus: string;
 }
 
-export const getAdvertCosts = async (dateFrom: Date, dateTo: Date) => {
+export const getAdvertCosts = async (dateFrom: Date, dateTo: Date): Promise<AdvertCost[]> => {
   try {
     const params = {
       from: dateFrom.toISOString().split('T')[0],
@@ -55,7 +55,7 @@ export const getAdvertCosts = async (dateFrom: Date, dateTo: Date) => {
   }
 };
 
-export const getAdvertFullStats = async (dateFrom: Date, dateTo: Date, campaignIds: number[]) => {
+export const getAdvertFullStats = async (dateFrom: Date, dateTo: Date, campaignIds: number[]): Promise<AdvertStats[]> => {
   try {
     const payload = campaignIds.map(id => ({
       id,
@@ -76,7 +76,7 @@ export const getAdvertFullStats = async (dateFrom: Date, dateTo: Date, campaignI
   }
 };
 
-export const getAdvertPayments = async (dateFrom: Date, dateTo: Date) => {
+export const getAdvertPayments = async (dateFrom: Date, dateTo: Date): Promise<AdvertPayment[]> => {
   try {
     const params = {
       from: dateFrom.toISOString().split('T')[0],
