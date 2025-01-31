@@ -65,6 +65,11 @@ export const fetchAdvertisingStats = async (
       dates
     }));
 
+    console.log('Sending request to WB API:', {
+      url: ADVERTISING_API_URL,
+      body: JSON.stringify(requests)
+    });
+
     const response = await fetch(ADVERTISING_API_URL, {
       method: 'POST',
       headers: {
@@ -75,7 +80,13 @@ export const fetchAdvertisingStats = async (
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch advertising stats');
+      const errorText = await response.text();
+      console.error('WB API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
+      throw new Error(`Failed to fetch advertising stats: ${response.status} ${response.statusText}`);
     }
 
     return await response.json();
@@ -87,6 +98,8 @@ export const fetchAdvertisingStats = async (
 
 export const fetchCampaignsList = async (apiKey: string): Promise<Campaign[]> => {
   try {
+    console.log('Fetching campaigns list from:', CAMPAIGNS_API_URL);
+    
     const response = await fetch(CAMPAIGNS_API_URL, {
       method: 'GET',
       headers: {
@@ -96,7 +109,13 @@ export const fetchCampaignsList = async (apiKey: string): Promise<Campaign[]> =>
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch campaigns list');
+      const errorText = await response.text();
+      console.error('WB API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
+      throw new Error(`Failed to fetch campaigns list: ${response.status} ${response.statusText}`);
     }
 
     return await response.json();
