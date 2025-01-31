@@ -397,18 +397,18 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">
-                          Продано:
+                          Сумма:
                         </label>
                         <div className="text-sm font-medium">
-                          {profitDetails.soldQuantity} шт.
+                          {profitDetails.salesAmount.toFixed(2)} ₽
                         </div>
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">
-                          Перечислено:
+                          Продано за 30 дней:
                         </label>
                         <div className="text-sm font-medium">
-                          {profitDetails.transferredAmount.toFixed(2)} ₽
+                          {profitDetails.soldQuantity} шт.
                         </div>
                       </div>
                     </div>
@@ -427,8 +427,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                     </div>
                     <div className="space-y-1.5 border-t pt-2">
                       <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Сумма:</span>
-                        <span>{profitDetails.salesAmount.toFixed(2)} ₽</span>
+                        <span className="text-muted-foreground">Перечислено:</span>
+                        <span>{profitDetails.transferredAmount.toFixed(2)} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Общая логистика:</span>
