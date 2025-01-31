@@ -37,7 +37,7 @@ interface AdvertisingRequest {
 }
 
 const ADVERTISING_API_URL = 'https://advert-api.wb.ru/adv/v0/fullstats';
-const CAMPAIGNS_API_URL = 'https://advert-api.wb.ru/adv/v0/adverts';
+const CAMPAIGNS_API_URL = 'https://advert-api.wb.ru/adv/v0/advert';
 
 export const fetchAdvertisingStats = async (
   apiKey: string,
