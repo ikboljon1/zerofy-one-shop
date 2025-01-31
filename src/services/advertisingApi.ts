@@ -30,13 +30,6 @@ interface AdvertBalance {
   balance: number;
 }
 
-interface AdvertPayment {
-  id: number;
-  date: string;
-  sum: number;
-  type: string;
-}
-
 const createApiInstance = (apiKey: string) => {
   return axios.create({
     baseURL: BASE_URL,
@@ -53,7 +46,8 @@ const handleApiError = (error: unknown) => {
       throw new Error("Ошибка авторизации. Пожалуйста, проверьте API ключ");
     }
     if (error.response?.status === 404) {
-      throw new Error("Данные не найдены");
+      // Возвращаем пустой массив вместо ошибки, если данные не найдены
+      return [];
     }
     throw new Error(error.response?.data?.message || "Произошла ошибка при запросе к API");
   }
@@ -69,15 +63,23 @@ export const getAdvertCosts = async (dateFrom: Date, dateTo: Date, apiKey: strin
     };
     
     const response = await api.get(`/v1/upd`, { params });
-    return response.data;
+    return response.data || [];
   } catch (error) {
-    handleApiError(error);
-    return [];
+    return handleApiError(error);
   }
 };
 
-export const getAdvertStats = async (dateFrom: Date, dateTo: Date, campaignIds: number[], apiKey: string): Promise<AdvertStats[]> => {
+export const getAdvertStats = async (
+  dateFrom: Date,
+  dateTo: Date,
+  campaignIds: number[],
+  apiKey: string
+): Promise<AdvertStats[]> => {
   try {
+    if (!campaignIds.length) {
+      return [];
+    }
+
     const api = createApiInstance(apiKey);
     const params = {
       from: dateFrom.toISOString().split('T')[0],
@@ -86,10 +88,9 @@ export const getAdvertStats = async (dateFrom: Date, dateTo: Date, campaignIds: 
     };
     
     const response = await api.get(`/v1/stats`, { params });
-    return response.data;
+    return response.data || [];
   } catch (error) {
-    handleApiError(error);
-    return [];
+    return handleApiError(error);
   }
 };
 
@@ -97,25 +98,9 @@ export const getAdvertBalance = async (apiKey: string): Promise<AdvertBalance> =
   try {
     const api = createApiInstance(apiKey);
     const response = await api.get(`/v1/balance`);
-    return response.data;
+    return response.data || { balance: 0 };
   } catch (error) {
-    handleApiError(error);
+    console.error('Error fetching balance:', error);
     return { balance: 0 };
-  }
-};
-
-export const getAdvertPayments = async (dateFrom: Date, dateTo: Date, apiKey: string): Promise<AdvertPayment[]> => {
-  try {
-    const api = createApiInstance(apiKey);
-    const params = {
-      from: dateFrom.toISOString().split('T')[0],
-      to: dateTo.toISOString().split('T')[0]
-    };
-    
-    const response = await api.get(`/v1/payments`, { params });
-    return response.data;
-  } catch (error) {
-    handleApiError(error);
-    return [];
   }
 };
