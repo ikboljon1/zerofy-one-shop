@@ -77,3 +77,30 @@ export const fetchAdvertisingStats = async (
     throw error;
   }
 };
+
+export interface Campaign {
+  id: number;
+  name: string;
+  status: number;
+}
+
+export const fetchCampaignsList = async (apiKey: string): Promise<Campaign[]> => {
+  try {
+    const response = await fetch('https://advert-api.wildberries.ru/adv/v2/list', {
+      method: 'GET',
+      headers: {
+        'Authorization': apiKey,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch campaigns list');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching campaigns list:', error);
+    throw error;
+  }
+};

@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import {
   Table,
@@ -13,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { fetchAdvertisingStats } from "@/services/advertisingApi";
+import { fetchAdvertisingStats, fetchCampaignsList, Campaign } from "@/services/advertisingApi";
 import { Megaphone, RefreshCw } from "lucide-react";
 
 interface AdvertisingProps {
@@ -23,14 +21,41 @@ interface AdvertisingProps {
 export default function Advertising({ selectedStore }: AdvertisingProps) {
   const [stats, setStats] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [campaignId, setCampaignId] = useState<string>("");
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<number | null>(null);
   const { toast } = useToast();
 
-  const fetchStats = async () => {
-    if (!selectedStore?.apiKey || !campaignId) {
+  const fetchCampaigns = async () => {
+    if (!selectedStore?.apiKey) {
       toast({
         title: "Ошибка",
-        description: "Выберите магазин и введите ID кампании",
+        description: "Выберите магазин",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const data = await fetchCampaignsList(selectedStore.apiKey);
+      setCampaigns(data);
+    } catch (error) {
+      console.error('Error fetching campaigns:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось получить список кампаний",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchStats = async (campaignId: number) => {
+    if (!selectedStore?.apiKey) {
+      toast({
+        title: "Ошибка",
+        description: "Выберите магазин",
         variant: "destructive",
       });
       return;
@@ -44,7 +69,7 @@ export default function Advertising({ selectedStore }: AdvertisingProps) {
 
       const data = await fetchAdvertisingStats(
         selectedStore.apiKey,
-        [parseInt(campaignId)],
+        [campaignId],
         lastWeek,
         today
       );
@@ -66,6 +91,17 @@ export default function Advertising({ selectedStore }: AdvertisingProps) {
     }
   };
 
+  useEffect(() => {
+    if (selectedStore?.apiKey) {
+      fetchCampaigns();
+    }
+  }, [selectedStore]);
+
+  const handleCampaignSelect = (campaignId: number) => {
+    setSelectedCampaignId(campaignId);
+    fetchStats(campaignId);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -77,31 +113,56 @@ export default function Advertising({ selectedStore }: AdvertisingProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Статистика рекламной кампании</CardTitle>
+          <CardTitle>Рекламные кампании</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 mb-6">
-            <div className="flex-1">
-              <Label htmlFor="campaignId">ID кампании</Label>
-              <Input
-                id="campaignId"
-                value={campaignId}
-                onChange={(e) => setCampaignId(e.target.value)}
-                placeholder="Введите ID рекламной кампании"
-              />
-            </div>
-            <div className="flex items-end">
-              <Button 
-                onClick={fetchStats} 
-                disabled={isLoading || !selectedStore}
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                {isLoading ? "Загрузка..." : "Обновить статистику"}
-              </Button>
-            </div>
+          <div className="space-y-4">
+            {!selectedStore ? (
+              <div className="text-center text-muted-foreground">
+                Выберите магазин для просмотра рекламных кампаний
+              </div>
+            ) : campaigns.length === 0 ? (
+              <div className="text-center text-muted-foreground">
+                {isLoading ? "Загрузка кампаний..." : "Нет активных рекламных кампаний"}
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {campaigns.map((campaign) => (
+                  <Card 
+                    key={campaign.id}
+                    className={`cursor-pointer transition-colors hover:bg-accent ${
+                      selectedCampaignId === campaign.id ? 'border-primary' : ''
+                    }`}
+                    onClick={() => handleCampaignSelect(campaign.id)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h3 className="font-medium">Кампания #{campaign.id}</h3>
+                          <p className="text-sm text-muted-foreground">{campaign.name}</p>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCampaignSelect(campaign.id);
+                          }}
+                        >
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Обновить статистику
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
+        </CardContent>
+      </Card>
 
-          {stats.length > 0 && stats.map((campaign) => (
+      {stats.length > 0 && stats.map((campaign) => (
             <div key={campaign.advertId} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card>
@@ -229,9 +290,7 @@ export default function Advertising({ selectedStore }: AdvertisingProps) {
                 </Card>
               )}
             </div>
-          ))}
-        </CardContent>
-      </Card>
+      ))}
     </div>
   );
 }
