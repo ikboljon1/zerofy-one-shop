@@ -30,6 +30,13 @@ interface AdvertBalance {
   balance: number;
 }
 
+interface AdvertPayment {
+  id: number;
+  date: string;
+  sum: number;
+  type: string;
+}
+
 const createApiInstance = (apiKey: string) => {
   return axios.create({
     baseURL: BASE_URL,
@@ -69,24 +76,20 @@ export const getAdvertCosts = async (dateFrom: Date, dateTo: Date, apiKey: strin
   }
 };
 
-export const getAdvertStats = async (campaignId: number, apiKey: string): Promise<AdvertStats> => {
+export const getAdvertStats = async (dateFrom: Date, dateTo: Date, campaignIds: number[], apiKey: string): Promise<AdvertStats[]> => {
   try {
     const api = createApiInstance(apiKey);
-    const response = await api.get(`/v1/campaign/${campaignId}/stats`);
+    const params = {
+      from: dateFrom.toISOString().split('T')[0],
+      to: dateTo.toISOString().split('T')[0],
+      campaignIds: campaignIds.join(',')
+    };
+    
+    const response = await api.get(`/v1/stats`, { params });
     return response.data;
   } catch (error) {
     handleApiError(error);
-    return {
-      advertId: campaignId,
-      status: 'active',
-      type: 'auction',
-      views: 0,
-      clicks: 0,
-      ctr: 0,
-      orders: 0,
-      cr: 0,
-      sum: 0
-    };
+    return [];
   }
 };
 
@@ -98,5 +101,21 @@ export const getAdvertBalance = async (apiKey: string): Promise<AdvertBalance> =
   } catch (error) {
     handleApiError(error);
     return { balance: 0 };
+  }
+};
+
+export const getAdvertPayments = async (dateFrom: Date, dateTo: Date, apiKey: string): Promise<AdvertPayment[]> => {
+  try {
+    const api = createApiInstance(apiKey);
+    const params = {
+      from: dateFrom.toISOString().split('T')[0],
+      to: dateTo.toISOString().split('T')[0]
+    };
+    
+    const response = await api.get(`/v1/payments`, { params });
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+    return [];
   }
 };

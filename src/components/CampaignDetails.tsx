@@ -1,6 +1,6 @@
 import { Card } from "./ui/card";
 import { useEffect, useState } from "react";
-import { getAdvertCosts, getAdvertFullStats, getAdvertPayments } from "@/services/advertisingApi";
+import { getAdvertCosts, getAdvertStats, getAdvertPayments } from "@/services/advertisingApi";
 import { Button } from "./ui/button";
 import { RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -37,7 +37,7 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
 
       const [costsData, statsData, paymentsData] = await Promise.all([
         getAdvertCosts(dateFrom, dateTo, apiKey),
-        getAdvertFullStats(dateFrom, dateTo, [campaignId], apiKey),
+        getAdvertStats(dateFrom, dateTo, [campaignId], apiKey),
         getAdvertPayments(dateFrom, dateTo, apiKey)
       ]);
 
