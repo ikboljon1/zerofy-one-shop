@@ -16,7 +16,9 @@ import {
   ArrowUp,
   ArrowDown,
   Megaphone,
-  RefreshCw
+  RefreshCw,
+  Settings,
+  LogOut
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -35,25 +37,73 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "@/hooks/use-theme";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-import Profile from "@/components/Profile";
-import ProductsList from "@/components/ProductsList";
+
+// Определяем меню профиля
+const profileMenu = [
+  {
+    label: "Настройки",
+    value: "settings",
+    icon: Settings,
+  },
+  {
+    label: "Выйти",
+    value: "logout",
+    icon: LogOut,
+  },
+];
+
+// Мок-данные для топ продуктов
+const mockTopProfitableProducts = [
+  {
+    name: "Товар 1",
+    price: "1000",
+    profit: "300",
+    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
+  },
+  {
+    name: "Товар 2",
+    price: "2000",
+    profit: "500",
+    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
+  },
+  {
+    name: "Товар 3",
+    price: "1500",
+    profit: "400",
+    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
+  }
+];
+
+const mockTopUnprofitableProducts = [
+  {
+    name: "Товар 4",
+    price: "1000",
+    profit: "-100",
+    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
+  },
+  {
+    name: "Товар 5",
+    price: "2000",
+    profit: "-200",
+    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
+  },
+  {
+    name: "Товар 6",
+    price: "1500",
+    profit: "-150",
+    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
+  }
+];
+
+// Функция рендеринга аналитики
+const renderAnalytics = () => {
+  return (
+    <div className="grid gap-6">
+      <h2 className="text-2xl font-bold">Аналитика</h2>
+      <Chart />
+    </div>
+  );
+};
 
 const salesData = [
   { name: "Jan", value: 300000 },
