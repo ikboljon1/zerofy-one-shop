@@ -234,19 +234,74 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       const nmIds = data.cards.map((product: Product) => product.nmID);
       const prices = await fetchProductPrices(nmIds);
       
+      // Получаем данные о хранении из API
       const endDate = new Date();
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - 30);
+      
+      const url = new URL("https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod");
+      url.searchParams.append("dateFrom", startDate.toISOString().split('T')[0]);
+      url.searchParams.append("dateTo", endDate.toISOString().split('T')[0]);
+      url.searchParams.append("limit", "100000");
+
+      const storageResponse = await fetch(url.toString(), {
+        headers: {
+          "Authorization": selectedStore.apiKey,
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (!storageResponse.ok) {
+        throw new Error("Failed to fetch storage data");
+      }
+
+      const storageData = await storageResponse.json();
+      console.log("Storage data:", storageData);
+
+      // Создаем мапу для хранения расходов по каждому товару
+      const expensesMap = new Map();
+      
+      storageData.forEach((item: any) => {
+        const nmId = item.nm_id;
+        if (!expensesMap.has(nmId)) {
+          expensesMap.set(nmId, {
+            logistics: 0,
+            storage: 0,
+            penalties: 0,
+            acceptance: 0,
+            deductions: 0,
+            ppvz_for_pay: 0
+          });
+        }
+        
+        const expenses = expensesMap.get(nmId);
+        expenses.logistics += item.delivery_rub || 0;
+        expenses.storage += item.storage_fee || 0;
+        expenses.penalties += item.penalty || 0;
+        expenses.acceptance += item.acceptance || 0;
+        expenses.deductions += item.deduction || 0;
+        expenses.ppvz_for_pay += item.ppvz_for_pay || 0;
+      });
+
       const quantities = await fetchProductQuantities(selectedStore.apiKey, startDate, endDate);
 
       const updatedProducts = data.cards.map((product: Product) => {
         const currentPrice = prices[product.nmID];
         const quantity = quantities[product.nmID] || 0;
+        const productExpenses = expensesMap.get(product.nmID) || {
+          logistics: 0,
+          storage: 0,
+          penalties: 0,
+          acceptance: 0,
+          deductions: 0,
+          ppvz_for_pay: 0
+        };
         
         console.log(`Processing product ${product.nmID}:`, {
           price: currentPrice,
           costPrice: costPrices[product.nmID],
-          quantity: quantity
+          quantity: quantity,
+          expenses: productExpenses
         });
         
         return {
@@ -254,14 +309,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           costPrice: costPrices[product.nmID] || 0,
           discountedPrice: currentPrice || 0,
           quantity: quantity,
-          expenses: {
-            logistics: Math.random() * 100,
-            storage: Math.random() * 50,
-            penalties: Math.random() * 20,
-            acceptance: Math.random() * 30,
-            deductions: Math.random() * 40,
-            ppvz_for_pay: Math.random() * 1000
-          }
+          expenses: productExpenses
         };
       });
 
