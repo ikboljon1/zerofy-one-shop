@@ -125,17 +125,16 @@ export const getAdvertStats = async (
     const response = await api.get(`/v2/fullstats`, { params });
     const data: FullStatsResponse = response.data;
 
-    // Transform the response to match the expected AdvertStats format
     return campaignIds.map(id => ({
       advertId: id,
       status: 'active',
       type: 'auction',
-      views: data.views,
-      clicks: data.clicks,
-      ctr: data.ctr,
-      orders: data.orders,
-      cr: data.cr,
-      sum: data.sum,
+      views: data.views || 0,
+      clicks: data.clicks || 0,
+      ctr: data.ctr || 0,
+      orders: data.orders || 0,
+      cr: data.cr || 0,
+      sum: data.sum || 0,
       atbs: data.atbs,
       shks: data.shks,
       sum_price: data.sum_price
@@ -149,7 +148,7 @@ export const getAdvertBalance = async (apiKey: string): Promise<AdvertBalanceRes
   try {
     const api = createApiInstance(apiKey);
     const response = await api.get(`/v1/balance`);
-    return response.data || { balance: 0 };
+    return { balance: response.data?.balance || 0 };
   } catch (error) {
     console.error('Error fetching balance:', error);
     return { balance: 0 };
