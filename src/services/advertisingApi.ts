@@ -31,21 +31,38 @@ interface AdvertisingStats {
   advertId: number;
 }
 
-interface AdvertisingRequest {
-  id: number;
-  dates: string[];
-}
-
 export interface Campaign {
   id: number;
   name: string;
   status: number;
 }
 
+interface AdvertCost {
+  updNum: string;
+  updTime: string;
+  updSum: number;
+  advertId: number;
+  campName: string;
+  advertType: string;
+  paymentType: string;
+  advertStatus: string;
+}
+
+interface AdvertPayment {
+  id: number;
+  date: string;
+  sum: number;
+  type: string;
+  statusId: number;
+  cardStatus: string;
+}
+
 // API endpoints
-const BASE_URL = 'https://advert-api.wildberries.ru';
-const ADVERTISING_API_URL = `${BASE_URL}/adv/v2/fullstats`;
-const CAMPAIGNS_API_URL = `${BASE_URL}/adv/v2/adverts`;
+const BASE_URL = 'https://advert-api.wildberries.ru/adv';
+const ADVERTISING_API_URL = `${BASE_URL}/v2/fullstats`;
+const CAMPAIGNS_API_URL = `${BASE_URL}/v2/adverts`;
+const COSTS_API_URL = `${BASE_URL}/v1/upd`;
+const PAYMENTS_API_URL = `${BASE_URL}/v1/payments`;
 
 export const fetchAdvertisingStats = async (
   apiKey: string,
@@ -54,22 +71,17 @@ export const fetchAdvertisingStats = async (
   dateTo: Date
 ): Promise<AdvertisingStats[]> => {
   try {
-    const dates = [];
-    const currentDate = new Date(dateFrom);
-    
-    while (currentDate <= dateTo) {
-      dates.push(currentDate.toISOString().split('T')[0]);
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    const requests: AdvertisingRequest[] = campaignIds.map(id => ({
+    const payload = campaignIds.map(id => ({
       id,
-      dates
+      dates: [
+        dateFrom.toISOString().split('T')[0],
+        dateTo.toISOString().split('T')[0]
+      ]
     }));
 
-    console.log('Sending request to WB API:', {
+    console.log('Fetching advertising stats:', {
       url: ADVERTISING_API_URL,
-      body: JSON.stringify(requests)
+      payload
     });
 
     const response = await fetch(ADVERTISING_API_URL, {
@@ -78,7 +90,7 @@ export const fetchAdvertisingStats = async (
         'Authorization': apiKey,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(requests)
+      body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
@@ -123,6 +135,76 @@ export const fetchCampaignsList = async (apiKey: string): Promise<Campaign[]> =>
     return await response.json();
   } catch (error) {
     console.error('Error fetching campaigns list:', error);
+    throw error;
+  }
+};
+
+export const fetchAdvertCosts = async (
+  apiKey: string,
+  dateFrom: Date,
+  dateTo: Date
+): Promise<AdvertCost[]> => {
+  try {
+    const params = new URLSearchParams({
+      from: dateFrom.toISOString().split('T')[0],
+      to: dateTo.toISOString().split('T')[0]
+    });
+
+    const response = await fetch(`${COSTS_API_URL}?${params}`, {
+      headers: {
+        'Authorization': apiKey,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('WB API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
+      throw new Error(`Failed to fetch advert costs: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching advert costs:', error);
+    throw error;
+  }
+};
+
+export const fetchAdvertPayments = async (
+  apiKey: string,
+  dateFrom: Date,
+  dateTo: Date
+): Promise<AdvertPayment[]> => {
+  try {
+    const params = new URLSearchParams({
+      from: dateFrom.toISOString().split('T')[0],
+      to: dateTo.toISOString().split('T')[0]
+    });
+
+    const response = await fetch(`${PAYMENTS_API_URL}?${params}`, {
+      headers: {
+        'Authorization': apiKey,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('WB API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
+      throw new Error(`Failed to fetch advert payments: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching advert payments:', error);
     throw error;
   }
 };
