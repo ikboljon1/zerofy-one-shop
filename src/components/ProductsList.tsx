@@ -58,19 +58,26 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   const isMobile = useIsMobile();
 
   const calculateNetProfit = (product: Product) => {
-    const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore?.id}`) || '{}');
-    const productSales = product.quantity || salesData[product.nmID] || 0;
+    if (!product.expenses) return {
+      netProfit: 0,
+      productSales: 0,
+      totalExpenses: 0,
+      revenue: 0,
+      salesAmount: 0,
+      transferredAmount: 0,
+      soldQuantity: 0
+    };
     
-    const salesAmount = (product.discountedPrice || 0) * productSales;
-    const transferredAmount = product.expenses?.ppvz_for_pay || 0;
+    const productSales = product.quantity || 0;
+    const salesAmount = product.expenses.ppvz_for_pay || 0; // Используем ppvz_for_pay как сумму продаж
+    const transferredAmount = product.expenses.ppvz_for_pay || 0;
     
-    const totalExpenses = product.expenses ? (
+    const totalExpenses = 
       product.expenses.logistics +
       product.expenses.storage +
       product.expenses.penalties +
       product.expenses.acceptance +
-      (product.expenses.deductions || 0)
-    ) : 0;
+      (product.expenses.deductions || 0);
     
     const netProfit = transferredAmount - totalExpenses;
     
@@ -234,7 +241,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       const nmIds = data.cards.map((product: Product) => product.nmID);
       const prices = await fetchProductPrices(nmIds);
       
-      // Получаем данные о хранении из API
       const endDate = new Date();
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - 30);
@@ -258,8 +264,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       const storageData = await storageResponse.json();
       console.log("Storage data:", storageData);
 
-      // Создаем мапу для хранения расходов по каждому товару
       const expensesMap = new Map();
+      const salesMap = new Map(); // Добавляем мапу для хранения сумм продаж
       
       storageData.forEach((item: any) => {
         const nmId = item.nm_id;
@@ -281,6 +287,14 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         expenses.acceptance += item.acceptance || 0;
         expenses.deductions += item.deduction || 0;
         expenses.ppvz_for_pay += item.ppvz_for_pay || 0;
+
+        // Суммируем retail_amount для каждого товара
+        if (item.doc_type_name === "Продажа") {
+          if (!salesMap.has(nmId)) {
+            salesMap.set(nmId, 0);
+          }
+          salesMap.set(nmId, salesMap.get(nmId) + (item.retail_amount || 0));
+        }
       });
 
       const quantities = await fetchProductQuantities(selectedStore.apiKey, startDate, endDate);
@@ -301,7 +315,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           price: currentPrice,
           costPrice: costPrices[product.nmID],
           quantity: quantity,
-          expenses: productExpenses
+          expenses: productExpenses,
+          salesAmount: salesMap.get(product.nmID) || 0
         });
         
         return {
