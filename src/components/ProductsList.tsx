@@ -27,7 +27,7 @@ interface Product {
     acceptance: number;
     deductions?: number;
     ppvz_for_pay?: number;
-    retail_amount?: number; // Добавлено для retail_amount
+    retail_price?: number; // Изменено с retail_amount на retail_price
   };
 }
 
@@ -70,7 +70,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     };
     
     const productSales = product.quantity || 0;
-    const salesAmount = product.expenses.retail_amount || 0; // Изменено на retail_amount
+    const salesAmount = product.expenses.retail_price || 0; // Изменено на retail_price
     const transferredAmount = product.expenses.ppvz_for_pay || 0;
     
     const totalExpenses = 
@@ -266,7 +266,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       console.log("Storage data:", storageData);
 
       const expensesMap = new Map();
-      const salesMap = new Map(); // Добавляем мапу для хранения сумм продаж
+      const salesMap = new Map();
       
       storageData.forEach((item: any) => {
         const nmId = item.nm_id;
@@ -278,7 +278,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
             acceptance: 0,
             deductions: 0,
             ppvz_for_pay: 0,
-            retail_amount: 0 // Добавлено для retail_amount
+            retail_price: 0 // Изменено с retail_amount на retail_price
           });
         }
         
@@ -290,13 +290,12 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         expenses.deductions += item.deduction || 0;
         expenses.ppvz_for_pay += item.ppvz_for_pay || 0;
 
-        // Суммируем retail_amount для каждого товара
         if (item.doc_type_name === "Продажа") {
-          expenses.retail_amount += item.retail_amount || 0; // Суммируем retail_amount
+          expenses.retail_price += item.retail_price || 0; // Изменено с retail_amount на retail_price
           if (!salesMap.has(nmId)) {
             salesMap.set(nmId, 0);
           }
-          salesMap.set(nmId, salesMap.get(nmId) + (item.retail_amount || 0));
+          salesMap.set(nmId, salesMap.get(nmId) + (item.retail_price || 0)); // Изменено с retail_amount на retail_price
         }
       });
 
@@ -312,7 +311,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           acceptance: 0,
           deductions: 0,
           ppvz_for_pay: 0,
-          retail_amount: 0 // Добавлено для retail_amount
+          retail_price: 0 // Изменено с retail_amount на retail_price
         };
         
         console.log(`Processing product ${product.nmID}:`, {
