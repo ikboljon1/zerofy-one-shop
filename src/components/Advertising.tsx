@@ -2,11 +2,22 @@ import { useEffect, useState } from "react";
 import { Card } from "./ui/card";
 import { getAdvertCosts, getAdvertFullStats, getAdvertPayments } from "@/services/advertisingApi";
 import { Button } from "./ui/button";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, ChevronRight, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface AdvertisingProps {
   selectedStore?: { id: string; apiKey: string } | null;
+}
+
+interface Campaign {
+  advertId: number;
+  campName: string;
+  stats?: any;
 }
 
 const Advertising = ({ selectedStore }: AdvertisingProps) => {
@@ -14,6 +25,8 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
   const [stats, setStats] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [openCampaignId, setOpenCampaignId] = useState<number | null>(null);
   const { toast } = useToast();
 
   const fetchData = async () => {
@@ -32,15 +45,26 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
       const dateFrom = new Date();
       dateFrom.setDate(dateFrom.getDate() - 30);
 
-      const [costsData, statsData, paymentsData] = await Promise.all([
-        getAdvertCosts(dateFrom, dateTo),
-        getAdvertFullStats(dateFrom, dateTo, [8960367, 9876543]), // Example campaign IDs
-        getAdvertPayments(dateFrom, dateTo)
+      const [costsData, paymentsData] = await Promise.all([
+        getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey),
+        getAdvertPayments(dateFrom, dateTo, selectedStore.apiKey)
       ]);
 
       setCosts(costsData);
-      setStats(statsData);
       setPayments(paymentsData);
+
+      // Extract unique campaigns from costs data
+      const uniqueCampaigns = costsData.reduce((acc: Campaign[], cost: any) => {
+        if (!acc.find(c => c.advertId === cost.advertId)) {
+          acc.push({
+            advertId: cost.advertId,
+            campName: cost.campName
+          });
+        }
+        return acc;
+      }, []);
+
+      setCampaigns(uniqueCampaigns);
 
       toast({
         title: "Успех",
@@ -55,6 +79,42 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCampaignStats = async (campaignId: number) => {
+    if (!selectedStore) return;
+
+    try {
+      const dateTo = new Date();
+      const dateFrom = new Date();
+      dateFrom.setDate(dateFrom.getDate() - 30);
+
+      const statsData = await getAdvertFullStats(dateFrom, dateTo, [campaignId], selectedStore.apiKey);
+      
+      setCampaigns(prevCampaigns => 
+        prevCampaigns.map(campaign => 
+          campaign.advertId === campaignId 
+            ? { ...campaign, stats: statsData[0] }
+            : campaign
+        )
+      );
+    } catch (error) {
+      console.error('Error fetching campaign stats:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить статистику кампании",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCampaignClick = async (campaignId: number) => {
+    if (openCampaignId === campaignId) {
+      setOpenCampaignId(null);
+    } else {
+      setOpenCampaignId(campaignId);
+      await fetchCampaignStats(campaignId);
     }
   };
 
@@ -99,15 +159,36 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
 
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-4">Статистика кампаний</h3>
-          <div className="space-y-4">
-            {stats.map((stat, index) => (
-              <div key={index} className="border-b pb-2">
-                <p>ID: {stat.advertId}</p>
-                <p>Показы: {stat.views}</p>
-                <p>Клики: {stat.clicks}</p>
-                <p>CTR: {stat.ctr}%</p>
-                <p>Заказы: {stat.orders}</p>
-              </div>
+          <div className="space-y-2">
+            {campaigns.map((campaign) => (
+              <Collapsible
+                key={campaign.advertId}
+                open={openCampaignId === campaign.advertId}
+                onOpenChange={() => handleCampaignClick(campaign.advertId)}
+              >
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-muted rounded-md">
+                  <span>{campaign.campName}</span>
+                  {openCampaignId === campaign.advertId ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </CollapsibleTrigger>
+                <CollapsibleContent className="p-2">
+                  {campaign.stats ? (
+                    <div className="space-y-2">
+                      <p>Показы: {campaign.stats.views}</p>
+                      <p>Клики: {campaign.stats.clicks}</p>
+                      <p>CTR: {campaign.stats.ctr}%</p>
+                      <p>Заказы: {campaign.stats.orders}</p>
+                      <p>CR: {campaign.stats.cr}%</p>
+                      <p>Сумма: {campaign.stats.sum}</p>
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">Загрузка статистики...</p>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
             ))}
           </div>
         </Card>

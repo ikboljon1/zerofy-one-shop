@@ -1,5 +1,5 @@
 import { AxiosError } from 'axios';
-import { api } from './api';
+import axios from 'axios';
 
 const BASE_URL = "https://advert-api.wildberries.ru/adv";
 
@@ -37,14 +37,25 @@ interface AdvertPayment {
   cardStatus: string;
 }
 
-export const getAdvertCosts = async (dateFrom: Date, dateTo: Date): Promise<AdvertCost[]> => {
+const createApiInstance = (apiKey: string) => {
+  return axios.create({
+    baseURL: BASE_URL,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': apiKey
+    }
+  });
+};
+
+export const getAdvertCosts = async (dateFrom: Date, dateTo: Date, apiKey: string): Promise<AdvertCost[]> => {
   try {
+    const api = createApiInstance(apiKey);
     const params = {
       from: dateFrom.toISOString().split('T')[0],
       to: dateTo.toISOString().split('T')[0]
     };
     
-    const response = await api.get<AdvertCost[]>(`${BASE_URL}/v1/upd`, { params });
+    const response = await api.get(`/v1/upd`, { params });
     return response.data;
   } catch (error) {
     console.error('Error fetching advert costs:', error);
@@ -55,8 +66,9 @@ export const getAdvertCosts = async (dateFrom: Date, dateTo: Date): Promise<Adve
   }
 };
 
-export const getAdvertFullStats = async (dateFrom: Date, dateTo: Date, campaignIds: number[]): Promise<AdvertStats[]> => {
+export const getAdvertFullStats = async (dateFrom: Date, dateTo: Date, campaignIds: number[], apiKey: string): Promise<AdvertStats[]> => {
   try {
+    const api = createApiInstance(apiKey);
     const payload = campaignIds.map(id => ({
       id,
       dates: [
@@ -65,7 +77,7 @@ export const getAdvertFullStats = async (dateFrom: Date, dateTo: Date, campaignI
       ]
     }));
 
-    const response = await api.post<AdvertStats[]>(`${BASE_URL}/v2/fullstats`, payload);
+    const response = await api.post(`/v2/fullstats`, payload);
     return response.data;
   } catch (error) {
     console.error('Error fetching advert stats:', error);
@@ -76,14 +88,15 @@ export const getAdvertFullStats = async (dateFrom: Date, dateTo: Date, campaignI
   }
 };
 
-export const getAdvertPayments = async (dateFrom: Date, dateTo: Date): Promise<AdvertPayment[]> => {
+export const getAdvertPayments = async (dateFrom: Date, dateTo: Date, apiKey: string): Promise<AdvertPayment[]> => {
   try {
+    const api = createApiInstance(apiKey);
     const params = {
       from: dateFrom.toISOString().split('T')[0],
       to: dateTo.toISOString().split('T')[0]
     };
     
-    const response = await api.get<AdvertPayment[]>(`${BASE_URL}/v1/payments`, { params });
+    const response = await api.get(`/v1/payments`, { params });
     return response.data;
   } catch (error) {
     console.error('Error fetching advert payments:', error);
