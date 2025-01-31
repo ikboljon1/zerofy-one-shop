@@ -61,13 +61,9 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore?.id}`) || '{}');
     const productSales = product.quantity || salesData[product.nmID] || 0;
     
-    // Calculate total sales amount (price * quantity)
     const salesAmount = (product.discountedPrice || 0) * productSales;
-    
-    // Get transferred amount from ppvz_for_pay
     const transferredAmount = product.expenses?.ppvz_for_pay || 0;
     
-    // Calculate total expenses including deductions
     const totalExpenses = product.expenses ? (
       product.expenses.logistics +
       product.expenses.storage +
@@ -76,7 +72,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       (product.expenses.deductions || 0)
     ) : 0;
     
-    // Net profit is now ppvz_for_pay minus total expenses
     const netProfit = transferredAmount - totalExpenses;
     
     return {
@@ -388,18 +383,18 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">
-                          Перечислено:
+                          Сумма:
                         </label>
                         <div className="text-sm font-medium">
-                          {profitDetails.transferredAmount.toFixed(2)} ₽
+                          {profitDetails.salesAmount.toFixed(2)} ₽
                         </div>
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">
-                          Продано за 30 дней:
+                          Перечислено:
                         </label>
                         <div className="text-sm font-medium">
-                          {profitDetails.soldQuantity} шт.
+                          {profitDetails.transferredAmount.toFixed(2)} ₽
                         </div>
                       </div>
                     </div>
@@ -418,8 +413,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                     </div>
                     <div className="space-y-1.5 border-t pt-2">
                       <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Сумма:</span>
-                        <span>{profitDetails.salesAmount.toFixed(2)} ₽</span>
+                        <span className="text-muted-foreground">Продано за 30 дней:</span>
+                        <span>{profitDetails.soldQuantity} шт.</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Общая логистика:</span>
