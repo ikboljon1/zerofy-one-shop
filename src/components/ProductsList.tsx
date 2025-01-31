@@ -58,16 +58,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   const isMobile = useIsMobile();
 
   const calculateNetProfit = (product: Product) => {
-    if (!product.costPrice || !product.expenses) return {
-      netProfit: 0,
-      productSales: 0,
-      totalExpenses: 0,
-      revenue: 0,
-      salesAmount: 0,
-      transferredAmount: 0,
-      soldQuantity: 0
-    };
-    
     const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore?.id}`) || '{}');
     const productSales = product.quantity || salesData[product.nmID] || 0;
     
@@ -75,15 +65,16 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     const salesAmount = (product.discountedPrice || 0) * productSales;
     
     // Get transferred amount from ppvz_for_pay
-    const transferredAmount = product.expenses.ppvz_for_pay || 0;
+    const transferredAmount = product.expenses?.ppvz_for_pay || 0;
     
     // Calculate total expenses including deductions
-    const totalExpenses = 
-      product.expenses.logistics +     // Total logistics
-      product.expenses.storage +       // Total storage
-      product.expenses.penalties +     // Total penalties
-      product.expenses.acceptance +    // Total acceptance
-      (product.expenses.deductions || 0); // Add deductions
+    const totalExpenses = product.expenses ? (
+      product.expenses.logistics +
+      product.expenses.storage +
+      product.expenses.penalties +
+      product.expenses.acceptance +
+      (product.expenses.deductions || 0)
+    ) : 0;
     
     // Net profit is now ppvz_for_pay minus total expenses
     const netProfit = transferredAmount - totalExpenses;
@@ -274,7 +265,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
             penalties: Math.random() * 20,
             acceptance: Math.random() * 30,
             deductions: Math.random() * 40,
-            ppvz_for_pay: Math.random() * 1000  // Changed from transferred to ppvz_for_pay
+            ppvz_for_pay: Math.random() * 1000
           }
         };
       });
@@ -397,10 +388,10 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">
-                          Сумма:
+                          Перечислено:
                         </label>
                         <div className="text-sm font-medium">
-                          {profitDetails.salesAmount.toFixed(2)} ₽
+                          {profitDetails.transferredAmount.toFixed(2)} ₽
                         </div>
                       </div>
                       <div className="space-y-1">
@@ -427,8 +418,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                     </div>
                     <div className="space-y-1.5 border-t pt-2">
                       <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Перечислено:</span>
-                        <span>{profitDetails.transferredAmount.toFixed(2)} ₽</span>
+                        <span className="text-muted-foreground">Сумма:</span>
+                        <span>{profitDetails.salesAmount.toFixed(2)} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Общая логистика:</span>
