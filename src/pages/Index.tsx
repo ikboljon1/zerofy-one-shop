@@ -30,6 +30,8 @@ import ProductsComponent from "@/components/Products";
 import Stores from "@/components/Stores";
 import CalculatorModal from "@/components/CalculatorModal";
 import Advertising from "@/components/Advertising";
+import ProductsList from "@/components/ProductsList";
+import Profile from "@/components/Profile";
 import {
   DropdownMenu,
   DropdownMenuContent,
