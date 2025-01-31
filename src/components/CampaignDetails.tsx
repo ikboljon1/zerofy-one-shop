@@ -2,8 +2,9 @@ import { Card } from "./ui/card";
 import { useEffect, useState } from "react";
 import { getAdvertCosts, getAdvertStats, getAdvertPayments } from "@/services/advertisingApi";
 import { Button } from "./ui/button";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, TrendingUp, TrendingDown, DollarSign, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 interface CampaignDetailsProps {
   campaignId: number;
@@ -41,7 +42,6 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
         getAdvertPayments(dateFrom, dateTo, apiKey)
       ]);
 
-      // Filter costs for this campaign
       const campaignCosts = costsData.filter(cost => cost.advertId === campaignId);
       setCosts(campaignCosts);
       setStats(statsData[0]);
@@ -67,6 +67,24 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
     fetchData();
   }, [campaignId]);
 
+  const StatCard = ({ title, value, icon: Icon, trend }: { title: string; value: string; icon: any; trend?: number }) => (
+    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between mb-2">
+        <div className="p-2 bg-primary/10 rounded-full">
+          <Icon className="h-5 w-5 text-primary" />
+        </div>
+        {trend !== undefined && (
+          <div className={`flex items-center ${trend >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+            {trend >= 0 ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+            <span className="text-sm font-medium ml-1">{Math.abs(trend)}%</span>
+          </div>
+        )}
+      </div>
+      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</h3>
+      <p className="text-2xl font-bold mt-1">{value}</p>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -82,46 +100,99 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
         </Button>
       </div>
 
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <StatCard
+            title="Показы"
+            value={stats.views.toLocaleString('ru-RU')}
+            icon={TrendingUp}
+          />
+          <StatCard
+            title="Клики"
+            value={stats.clicks.toLocaleString('ru-RU')}
+            icon={TrendingDown}
+            trend={stats.ctr}
+          />
+          <StatCard
+            title="CTR"
+            value={`${stats.ctr.toFixed(2)}%`}
+            icon={TrendingUp}
+          />
+        </div>
+      )}
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">История затрат</h3>
-          <div className="space-y-4">
-            {costs.map((cost, index) => (
-              <div key={index} className="border-b pb-2">
-                <p>Сумма: {cost.updSum.toLocaleString('ru-RU')} ₽</p>
-                <p>Дата: {new Date(cost.updTime).toLocaleDateString('ru-RU')}</p>
-              </div>
-            ))}
+        <Card className="p-6 bg-gradient-to-br from-[#fdfcfb] to-[#e2d1c3] dark:from-gray-800 dark:to-gray-700">
+          <h3 className="text-lg font-semibold mb-4 flex items-center">
+            <DollarSign className="h-5 w-5 mr-2 text-primary" />
+            История затрат
+          </h3>
+          <div className="space-y-4 max-h-[400px] overflow-y-auto scrollbar-hide">
+            {costs.length > 0 ? (
+              costs.map((cost, index) => (
+                <div key={index} className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-4 transition-all hover:translate-y-[-2px]">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-lg">{cost.updSum.toLocaleString('ru-RU')} ₽</span>
+                    <span className="text-sm text-gray-500">
+                      {format(new Date(cost.updTime), 'dd.MM.yyyy HH:mm')}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-gray-500">Нет данных о затратах</p>
+            )}
           </div>
         </Card>
 
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Статистика</h3>
+        <Card className="p-6 bg-gradient-to-br from-[#accbee] to-[#e7f0fd] dark:from-gray-800 dark:to-gray-700">
+          <h3 className="text-lg font-semibold mb-4">Подробная статистика</h3>
           {stats ? (
-            <div className="space-y-2">
-              <p>Показы: {stats.views.toLocaleString('ru-RU')}</p>
-              <p>Клики: {stats.clicks.toLocaleString('ru-RU')}</p>
-              <p>CTR: {stats.ctr.toFixed(2)}%</p>
-              <p>Заказы: {stats.orders.toLocaleString('ru-RU')}</p>
-              <p>CR: {stats.cr.toFixed(2)}%</p>
-              <p>Сумма: {stats.sum.toLocaleString('ru-RU')} ₽</p>
+            <div className="space-y-4">
+              {[
+                { label: 'Показы', value: stats.views },
+                { label: 'Клики', value: stats.clicks },
+                { label: 'CTR', value: `${stats.ctr.toFixed(2)}%` },
+                { label: 'Заказы', value: stats.orders },
+                { label: 'CR', value: `${stats.cr.toFixed(2)}%` },
+                { label: 'Сумма', value: `${stats.sum.toLocaleString('ru-RU')} ₽` }
+              ].map((item, index) => (
+                <div key={index} className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 dark:text-gray-300">{item.label}</span>
+                    <span className="font-semibold">{item.value}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
-            <p className="text-muted-foreground">Загрузка статистики...</p>
+            <p className="text-center text-gray-500">Загрузка статистики...</p>
           )}
         </Card>
 
-        <Card className="p-6">
+        <Card className="p-6 bg-gradient-to-br from-[#d299c2] to-[#fef9d7] dark:from-gray-800 dark:to-gray-700">
           <h3 className="text-lg font-semibold mb-4">История пополнений</h3>
-          <div className="space-y-4">
-            {payments.map((payment, index) => (
-              <div key={index} className="border-b pb-2">
-                <p>ID: {payment.id}</p>
-                <p>Сумма: {payment.sum.toLocaleString('ru-RU')} ₽</p>
-                <p>Дата: {new Date(payment.date).toLocaleDateString('ru-RU')}</p>
-                <p>Тип: {payment.type}</p>
-              </div>
-            ))}
+          <div className="space-y-4 max-h-[400px] overflow-y-auto scrollbar-hide">
+            {payments.length > 0 ? (
+              payments.map((payment, index) => (
+                <div key={index} className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-4 transition-all hover:translate-y-[-2px]">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-semibold text-lg">{payment.sum.toLocaleString('ru-RU')} ₽</span>
+                    <span className="text-sm text-gray-500">
+                      {format(new Date(payment.date), 'dd.MM.yyyy')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">ID: {payment.id}</span>
+                    <span className="text-sm font-medium bg-primary/10 text-primary px-2 py-1 rounded">
+                      {payment.type}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-gray-500">Нет данных о пополнениях</p>
+            )}
           </div>
         </Card>
       </div>
