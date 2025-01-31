@@ -12,12 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-} from "@/components/ui/pagination";
 
 interface AdvertisingProps {
   selectedStore?: { id: string; apiKey: string } | null;
@@ -30,12 +24,9 @@ interface Campaign {
   type: 'auction' | 'automatic';
 }
 
-const ITEMS_PER_PAGE = 8;
-
 const Advertising = ({ selectedStore }: AdvertisingProps) => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all-active");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -59,7 +50,6 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
 
       const costsData = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
 
-      // Extract unique campaigns and add mock status and type
       const uniqueCampaigns = Array.from(
         new Map(
           costsData.map(cost => [
@@ -76,7 +66,6 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
 
       setCampaigns(uniqueCampaigns);
       
-      // Save to localStorage
       localStorage.setItem(`campaigns_${selectedStore.id}`, JSON.stringify(uniqueCampaigns));
 
       toast({
@@ -118,23 +107,6 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
 
     return matchesStatus && matchesType;
   });
-
-  const totalPages = Math.ceil(filteredCampaigns.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentCampaigns = filteredCampaigns.slice(startIndex, endIndex);
-
-  const handlePreviousPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(p => p - 1);
-    }
-  };
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(p => p + 1);
-    }
-  };
 
   if (!selectedStore) {
     return (
@@ -228,7 +200,7 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {currentCampaigns.map((campaign) => (
+        {filteredCampaigns.map((campaign) => (
           <Card
             key={campaign.advertId}
             className="p-4 hover:bg-accent cursor-pointer transition-colors"
@@ -244,45 +216,6 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
           </Card>
         ))}
       </div>
-
-      {totalPages > 1 && (
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handlePreviousPage}
-                disabled={currentPage === 1}
-                className="gap-1 pl-2.5"
-              >
-                <span>Previous</span>
-              </Button>
-            </PaginationItem>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <PaginationItem key={page}>
-                <PaginationLink
-                  onClick={() => setCurrentPage(page)}
-                  isActive={currentPage === page}
-                >
-                  {page}
-                </PaginationLink>
-              </PaginationItem>
-            ))}
-            <PaginationItem>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleNextPage}
-                disabled={currentPage === totalPages}
-                className="gap-1 pr-2.5"
-              >
-                <span>Next</span>
-              </Button>
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      )}
     </div>
   );
 };
