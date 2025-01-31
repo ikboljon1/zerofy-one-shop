@@ -27,6 +27,7 @@ interface Product {
     acceptance: number;
     deductions?: number;
     ppvz_for_pay?: number;
+    retail_amount?: number;
   };
 }
 
@@ -69,8 +70,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     };
     
     const productSales = product.quantity || 0;
-    const salesAmount = product.expenses.ppvz_for_pay || 0; // Используем ppvz_for_pay как сумму продаж
-    const transferredAmount = product.expenses.ppvz_for_pay || 0;
+    const salesAmount = product.expenses.retail_amount || 0; // Используем retail_amount как общую сумму продаж
+    const transferredAmount = product.expenses.ppvz_for_pay || 0; // Используем ppvz_for_pay как сумму к перечислению
     
     const totalExpenses = 
       product.expenses.logistics +
