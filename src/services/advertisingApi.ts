@@ -36,7 +36,8 @@ interface AdvertisingRequest {
   dates?: string[];
 }
 
-const ADVERTISING_API_URL = 'https://advert-api.wildberries.ru/adv/v2/fullstats';
+const ADVERTISING_API_URL = 'https://advert-api.wb.ru/adv/v0/fullstats';
+const CAMPAIGNS_API_URL = 'https://advert-api.wb.ru/adv/v0/adverts';
 
 export const fetchAdvertisingStats = async (
   apiKey: string,
@@ -86,7 +87,7 @@ export interface Campaign {
 
 export const fetchCampaignsList = async (apiKey: string): Promise<Campaign[]> => {
   try {
-    const response = await fetch('https://advert-api.wildberries.ru/adv/v2/list', {
+    const response = await fetch(CAMPAIGNS_API_URL, {
       method: 'GET',
       headers: {
         'Authorization': apiKey,
