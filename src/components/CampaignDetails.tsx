@@ -20,12 +20,7 @@ interface CampaignStats {
   orders: number;
   cr: number;
   sum: number;
-  atbs?: number;
-  shks?: number;
-  sum_price?: number;
 }
-
-const STORAGE_KEY = 'campaign_stats_';
 
 const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignDetailsProps) => {
   const [costs, setCosts] = useState<any[]>([]);
@@ -33,23 +28,6 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-
-  useEffect(() => {
-    const cachedData = localStorage.getItem(`${STORAGE_KEY}${campaignId}`);
-    if (cachedData) {
-      try {
-        const { costs, stats, payments } = JSON.parse(cachedData);
-        setCosts(costs || []);
-        setStats(stats || null);
-        setPayments(payments || []);
-      } catch (error) {
-        console.error('Error parsing cached data:', error);
-        fetchData();
-      }
-    } else {
-      fetchData();
-    }
-  }, [campaignId]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -65,27 +43,9 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
       ]);
 
       const campaignCosts = costsData.filter(cost => cost.advertId === campaignId);
-      const campaignStats = statsData[0] || {
-        views: 0,
-        clicks: 0,
-        ctr: 0,
-        orders: 0,
-        cr: 0,
-        sum: 0
-      };
-
       setCosts(campaignCosts);
-      setStats(campaignStats);
+      setStats(statsData[0]);
       setPayments(paymentsData);
-
-      // Cache the new data
-      const dataToCache = {
-        costs: campaignCosts,
-        stats: campaignStats,
-        payments: paymentsData,
-        timestamp: new Date().toISOString()
-      };
-      localStorage.setItem(`${STORAGE_KEY}${campaignId}`, JSON.stringify(dataToCache));
 
       toast({
         title: "Успех",
@@ -102,6 +62,10 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, [campaignId]);
 
   const StatCard = ({ title, value, icon: Icon, trend }: { title: string; value: string; icon: any; trend?: number }) => (
     <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
@@ -132,11 +96,11 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
         </div>
         <Button onClick={fetchData} disabled={loading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          {loading ? 'Обновление...' : 'Обновить'}
+          Обновить
         </Button>
       </div>
 
-      {stats ? (
+      {stats && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <StatCard
             title="Показы"
@@ -155,15 +119,6 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
             icon={TrendingUp}
           />
         </div>
-      ) : loading ? (
-        <div className="flex items-center justify-center py-8">
-          <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-          <span className="ml-2 text-lg">Загрузка статистики...</span>
-        </div>
-      ) : (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">Нет данных для отображения</p>
-        </div>
       )}
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -173,7 +128,7 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
             История затрат
           </h3>
           <div className="space-y-4 max-h-[400px] overflow-y-auto scrollbar-hide">
-            {costs && costs.length > 0 ? (
+            {costs.length > 0 ? (
               costs.map((cost, index) => (
                 <div key={index} className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-4 transition-all hover:translate-y-[-2px]">
                   <div className="flex justify-between items-center">
@@ -218,7 +173,7 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
         <Card className="p-6 bg-gradient-to-br from-[#d299c2] to-[#fef9d7] dark:from-gray-800 dark:to-gray-700">
           <h3 className="text-lg font-semibold mb-4">История пополнений</h3>
           <div className="space-y-4 max-h-[400px] overflow-y-auto scrollbar-hide">
-            {payments && payments.length > 0 ? (
+            {payments.length > 0 ? (
               payments.map((payment, index) => (
                 <div key={index} className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-4 transition-all hover:translate-y-[-2px]">
                   <div className="flex justify-between items-center mb-2">
