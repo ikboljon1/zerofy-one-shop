@@ -386,19 +386,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                     className="w-full aspect-square object-cover rounded-lg"
                   />
                   <div className="space-y-2">
-                    <div className="space-y-1">
-                      <label htmlFor={`costPrice-${product.nmID}`} className="text-xs text-muted-foreground">
-                        Себестоимость:
-                      </label>
-                      <Input
-                        id={`costPrice-${product.nmID}`}
-                        type="number"
-                        value={product.costPrice || ""}
-                        onChange={(e) => updateCostPrice(product.nmID, Number(e.target.value))}
-                        className="h-8 text-sm"
-                        placeholder="Введите себестоимость"
-                      />
-                    </div>
                     <div className="grid grid-cols-3 gap-2">
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">
@@ -418,17 +405,30 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">
-                          Сумма продаж:
+                          Перечислено за 30 дней:
                         </label>
                         <div className="text-sm font-medium">
-                          {profitDetails.salesAmount.toFixed(2)} ₽
+                          {profitDetails.transferredAmount.toFixed(2)} ₽
                         </div>
                       </div>
                     </div>
+                    <div className="space-y-1">
+                      <label htmlFor={`costPrice-${product.nmID}`} className="text-xs text-muted-foreground">
+                        Себестоимость:
+                      </label>
+                      <Input
+                        id={`costPrice-${product.nmID}`}
+                        type="number"
+                        value={product.costPrice || ""}
+                        onChange={(e) => updateCostPrice(product.nmID, Number(e.target.value))}
+                        className="h-8 text-sm"
+                        placeholder="Введите себестоимость"
+                      />
+                    </div>
                     <div className="space-y-1.5 border-t pt-2">
                       <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Перечислено за 30 дней:</span>
-                        <span>{profitDetails.transferredAmount.toFixed(2)} ₽</span>
+                        <span className="text-muted-foreground">Сумма продаж за 30 дней:</span>
+                        <span>{profitDetails.salesAmount.toFixed(2)} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Общая логистика за 30 дней:</span>
