@@ -16,6 +16,8 @@ interface AdvertCost {
 
 interface AdvertStats {
   advertId: number;
+  status: 'active' | 'paused' | 'archived' | 'ready';
+  type: 'auction' | 'automatic';
   dates: string[];
   views: number;
   clicks: number;
@@ -47,6 +49,10 @@ interface AdvertPayment {
   date: string;
   sum: number;
   type: string;
+}
+
+interface AdvertBalanceResponse {
+  balance: number;
 }
 
 const createApiInstance = (apiKey: string) => {
@@ -129,16 +135,11 @@ export const getAdvertStats = async (
   }
 };
 
-export const getAdvertPayments = async (dateFrom: Date, dateTo: Date, apiKey: string): Promise<AdvertPayment[]> => {
+export const getAdvertBalance = async (apiKey: string): Promise<AdvertBalanceResponse> => {
   try {
     const api = createApiInstance(apiKey);
-    const params = {
-      from: dateFrom.toISOString().split('T')[0],
-      to: dateTo.toISOString().split('T')[0]
-    };
-    
-    const response = await api.get(`/v1/payments`, { params });
-    return response.data || [];
+    const response = await api.get('/v1/balance');
+    return response.data;
   } catch (error) {
     return handleApiError(error);
   }
