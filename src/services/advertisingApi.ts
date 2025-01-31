@@ -84,9 +84,11 @@ const handleApiError = (error: unknown) => {
     if (error.response?.status === 404) {
       return [];
     }
-    throw new Error(error.response?.data?.message || "Произошла ошибка при запросе к API");
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    }
   }
-  throw error;
+  throw new Error("Произошла ошибка при запросе к API. Пожалуйста, попробуйте позже");
 };
 
 export const getAdvertCosts = async (dateFrom: Date, dateTo: Date, apiKey: string): Promise<AdvertCost[]> => {
@@ -100,6 +102,7 @@ export const getAdvertCosts = async (dateFrom: Date, dateTo: Date, apiKey: strin
     const response = await api.get(`/v1/upd`, { params });
     return response.data || [];
   } catch (error) {
+    console.error('Error in getAdvertCosts:', error);
     return handleApiError(error);
   }
 };
@@ -125,6 +128,21 @@ export const getAdvertStats = async (
     const response = await api.get(`/v2/fullstats`, { params });
     const data: FullStatsResponse = response.data;
 
+    if (!data) {
+      console.warn('No data received from fullstats endpoint');
+      return campaignIds.map(id => ({
+        advertId: id,
+        status: 'active',
+        type: 'auction',
+        views: 0,
+        clicks: 0,
+        ctr: 0,
+        orders: 0,
+        cr: 0,
+        sum: 0
+      }));
+    }
+
     return campaignIds.map(id => ({
       advertId: id,
       status: 'active',
@@ -140,6 +158,7 @@ export const getAdvertStats = async (
       sum_price: data.sum_price
     }));
   } catch (error) {
+    console.error('Error in getAdvertStats:', error);
     return handleApiError(error);
   }
 };
@@ -150,7 +169,7 @@ export const getAdvertBalance = async (apiKey: string): Promise<AdvertBalanceRes
     const response = await api.get(`/v1/balance`);
     return { balance: response.data?.balance || 0 };
   } catch (error) {
-    console.error('Error fetching balance:', error);
+    console.error('Error in getAdvertBalance:', error);
     return { balance: 0 };
   }
 };
@@ -166,6 +185,7 @@ export const getAdvertPayments = async (dateFrom: Date, dateTo: Date, apiKey: st
     const response = await api.get(`/v1/payments`, { params });
     return response.data || [];
   } catch (error) {
+    console.error('Error in getAdvertPayments:', error);
     return handleApiError(error);
   }
 };
