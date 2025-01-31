@@ -141,6 +141,21 @@ export const getAdvertBalance = async (apiKey: string): Promise<AdvertBalanceRes
     const response = await api.get('/v1/balance');
     return response.data;
   } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+export const getAdvertPayments = async (dateFrom: Date, dateTo: Date, apiKey: string): Promise<AdvertPayment[]> => {
+  try {
+    const api = createApiInstance(apiKey);
+    const params = {
+      from: dateFrom.toISOString().split('T')[0],
+      to: dateTo.toISOString().split('T')[0]
+    };
+    
+    const response = await api.get(`/v1/payments`, { params });
+    return response.data || [];
+  } catch (error) {
     return handleApiError(error);
   }
 };
