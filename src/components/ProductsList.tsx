@@ -72,17 +72,20 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     console.log('Calculating for product:', {
       nmId: product.nmID,
       title: product.title,
-      expenses: product.expenses
+      expenses: product.expenses,
+      costPrice: product.costPrice,
     });
     
     const productSales = product.quantity || 0;
     const salesAmount = product.expenses.retail_price || 0;
     const transferredAmount = product.expenses.ppvz_for_pay || 0;
+    const costPriceTotal = (product.costPrice || 0) * productSales;
     
     console.log('Sales calculation:', {
       productSales,
       salesAmount,
       transferredAmount,
+      costPriceTotal,
       retail_price: product.expenses.retail_price
     });
     
@@ -93,7 +96,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       product.expenses.acceptance +
       (product.expenses.deductions || 0);
     
-    const netProfit = transferredAmount - totalExpenses;
+    const netProfit = transferredAmount - costPriceTotal - totalExpenses;
     
     return {
       netProfit,
