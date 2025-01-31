@@ -12,9 +12,18 @@ interface CampaignDetailsProps {
   onBack: () => void;
 }
 
+interface CampaignStats {
+  views: number;
+  clicks: number;
+  ctr: number;
+  orders: number;
+  cr: number;
+  sum: number;
+}
+
 const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignDetailsProps) => {
   const [costs, setCosts] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>();
+  const [stats, setStats] = useState<CampaignStats | null>(null);
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -38,14 +47,6 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
       setStats(statsData[0]);
       setPayments(paymentsData);
 
-      // Save data to localStorage
-      localStorage.setItem(`campaign_${campaignId}`, JSON.stringify({
-        costs: campaignCosts,
-        stats: statsData[0],
-        payments: paymentsData,
-        lastUpdate: new Date().toISOString()
-      }));
-
       toast({
         title: "Успех",
         description: "Данные успешно обновлены",
@@ -63,14 +64,6 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
   };
 
   useEffect(() => {
-    // Try to load data from localStorage first
-    const savedData = localStorage.getItem(`campaign_${campaignId}`);
-    if (savedData) {
-      const parsed = JSON.parse(savedData);
-      setCosts(parsed.costs);
-      setStats(parsed.stats);
-      setPayments(parsed.payments);
-    }
     fetchData();
   }, [campaignId]);
 
@@ -95,8 +88,8 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
           <div className="space-y-4">
             {costs.map((cost, index) => (
               <div key={index} className="border-b pb-2">
-                <p>Сумма: {cost.updSum}</p>
-                <p>Дата: {new Date(cost.updTime).toLocaleDateString()}</p>
+                <p>Сумма: {cost.updSum.toLocaleString('ru-RU')} ₽</p>
+                <p>Дата: {new Date(cost.updTime).toLocaleDateString('ru-RU')}</p>
               </div>
             ))}
           </div>
@@ -106,12 +99,12 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
           <h3 className="text-lg font-semibold mb-4">Статистика</h3>
           {stats ? (
             <div className="space-y-2">
-              <p>Показы: {stats.views}</p>
-              <p>Клики: {stats.clicks}</p>
-              <p>CTR: {stats.ctr}%</p>
-              <p>Заказы: {stats.orders}</p>
-              <p>CR: {stats.cr}%</p>
-              <p>Сумма: {stats.sum}</p>
+              <p>Показы: {stats.views.toLocaleString('ru-RU')}</p>
+              <p>Клики: {stats.clicks.toLocaleString('ru-RU')}</p>
+              <p>CTR: {stats.ctr.toFixed(2)}%</p>
+              <p>Заказы: {stats.orders.toLocaleString('ru-RU')}</p>
+              <p>CR: {stats.cr.toFixed(2)}%</p>
+              <p>Сумма: {stats.sum.toLocaleString('ru-RU')} ₽</p>
             </div>
           ) : (
             <p className="text-muted-foreground">Загрузка статистики...</p>
@@ -124,8 +117,8 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
             {payments.map((payment, index) => (
               <div key={index} className="border-b pb-2">
                 <p>ID: {payment.id}</p>
-                <p>Сумма: {payment.sum}</p>
-                <p>Дата: {new Date(payment.date).toLocaleDateString()}</p>
+                <p>Сумма: {payment.sum.toLocaleString('ru-RU')} ₽</p>
+                <p>Дата: {new Date(payment.date).toLocaleDateString('ru-RU')}</p>
                 <p>Тип: {payment.type}</p>
               </div>
             ))}
