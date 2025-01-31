@@ -24,9 +24,12 @@ interface AdvertStats {
   orders: number;
   cr: number;
   sum: number;
+  atbs?: number;
+  shks?: number;
+  sum_price?: number;
 }
 
-interface AdvertBalance {
+interface AdvertBalanceResponse {
   balance: number;
 }
 
@@ -35,6 +38,32 @@ interface AdvertPayment {
   date: string;
   sum: number;
   type: string;
+}
+
+interface FullStatsResponse {
+  views: number;
+  clicks: number;
+  ctr: number;
+  cpc: number;
+  sum: number;
+  atbs: number;
+  orders: number;
+  cr: number;
+  shks: number;
+  sum_price: number;
+  days: Array<{
+    date: string;
+    views: number;
+    clicks: number;
+    ctr: number;
+    cpc: number;
+    sum: number;
+    atbs: number;
+    orders: number;
+    cr: number;
+    shks: number;
+    sum_price: number;
+  }>;
 }
 
 const createApiInstance = (apiKey: string) => {
@@ -53,7 +82,6 @@ const handleApiError = (error: unknown) => {
       throw new Error("Ошибка авторизации. Пожалуйста, проверьте API ключ");
     }
     if (error.response?.status === 404) {
-      // Возвращаем пустой массив вместо ошибки, если данные не найдены
       return [];
     }
     throw new Error(error.response?.data?.message || "Произошла ошибка при запросе к API");
@@ -94,14 +122,30 @@ export const getAdvertStats = async (
       campaignIds: campaignIds.join(',')
     };
     
-    const response = await api.get(`/v1/stats`, { params });
-    return response.data || [];
+    const response = await api.get(`/v2/fullstats`, { params });
+    const data: FullStatsResponse = response.data;
+
+    // Transform the response to match the expected AdvertStats format
+    return campaignIds.map(id => ({
+      advertId: id,
+      status: 'active',
+      type: 'auction',
+      views: data.views,
+      clicks: data.clicks,
+      ctr: data.ctr,
+      orders: data.orders,
+      cr: data.cr,
+      sum: data.sum,
+      atbs: data.atbs,
+      shks: data.shks,
+      sum_price: data.sum_price
+    }));
   } catch (error) {
     return handleApiError(error);
   }
 };
 
-export const getAdvertBalance = async (apiKey: string): Promise<AdvertBalance> => {
+export const getAdvertBalance = async (apiKey: string): Promise<AdvertBalanceResponse> => {
   try {
     const api = createApiInstance(apiKey);
     const response = await api.get(`/v1/balance`);

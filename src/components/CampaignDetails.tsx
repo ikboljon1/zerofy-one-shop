@@ -20,7 +20,12 @@ interface CampaignStats {
   orders: number;
   cr: number;
   sum: number;
+  atbs?: number;
+  shks?: number;
+  sum_price?: number;
 }
+
+const STORAGE_KEY = 'campaign_stats_';
 
 const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignDetailsProps) => {
   const [costs, setCosts] = useState<any[]>([]);
@@ -28,6 +33,18 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const cachedData = localStorage.getItem(`${STORAGE_KEY}${campaignId}`);
+    if (cachedData) {
+      const { costs, stats, payments } = JSON.parse(cachedData);
+      setCosts(costs);
+      setStats(stats);
+      setPayments(payments);
+    } else {
+      fetchData();
+    }
+  }, [campaignId]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -43,9 +60,19 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
       ]);
 
       const campaignCosts = costsData.filter(cost => cost.advertId === campaignId);
+      const campaignStats = statsData[0];
+
       setCosts(campaignCosts);
-      setStats(statsData[0]);
+      setStats(campaignStats);
       setPayments(paymentsData);
+
+      const dataToCache = {
+        costs: campaignCosts,
+        stats: campaignStats,
+        payments: paymentsData,
+        timestamp: new Date().toISOString()
+      };
+      localStorage.setItem(`${STORAGE_KEY}${campaignId}`, JSON.stringify(dataToCache));
 
       toast({
         title: "Успех",
@@ -62,10 +89,6 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchData();
-  }, [campaignId]);
 
   const StatCard = ({ title, value, icon: Icon, trend }: { title: string; value: string; icon: any; trend?: number }) => (
     <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
@@ -96,11 +119,11 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
         </div>
         <Button onClick={fetchData} disabled={loading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Обновить
+          {loading ? 'Обновление...' : 'Обновить'}
         </Button>
       </div>
 
-      {stats && (
+      {stats ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <StatCard
             title="Показы"
@@ -118,6 +141,15 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
             value={`${stats.ctr.toFixed(2)}%`}
             icon={TrendingUp}
           />
+        </div>
+      ) : loading ? (
+        <div className="flex items-center justify-center py-8">
+          <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2 text-lg">Загрузка статистики...</span>
+        </div>
+      ) : (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">Нет данных для отображения</p>
         </div>
       )}
 
