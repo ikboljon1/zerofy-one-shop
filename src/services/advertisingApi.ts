@@ -33,11 +33,17 @@ interface AdvertisingStats {
 
 interface AdvertisingRequest {
   id: number;
-  dates?: string[];
+  dates: string[];
 }
 
-const ADVERTISING_API_URL = 'https://advert-api.wb.ru/adv/v0/fullstats';
-const CAMPAIGNS_API_URL = 'https://advert-api.wb.ru/adv/v0/advert';
+export interface Campaign {
+  id: number;
+  name: string;
+  status: number;
+}
+
+const ADVERTISING_API_URL = 'https://advert-api.wildberries.ru/adv/v2/fullstats';
+const CAMPAIGNS_API_URL = 'https://advert-api.wildberries.ru/adv/v0/advert';
 
 export const fetchAdvertisingStats = async (
   apiKey: string,
@@ -78,12 +84,6 @@ export const fetchAdvertisingStats = async (
     throw error;
   }
 };
-
-export interface Campaign {
-  id: number;
-  name: string;
-  status: number;
-}
 
 export const fetchCampaignsList = async (apiKey: string): Promise<Campaign[]> => {
   try {
