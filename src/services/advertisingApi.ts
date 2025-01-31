@@ -30,6 +30,13 @@ interface AdvertBalance {
   balance: number;
 }
 
+interface AdvertPayment {
+  id: number;
+  date: string;
+  sum: number;
+  type: string;
+}
+
 const createApiInstance = (apiKey: string) => {
   return axios.create({
     baseURL: BASE_URL,
@@ -102,5 +109,20 @@ export const getAdvertBalance = async (apiKey: string): Promise<AdvertBalance> =
   } catch (error) {
     console.error('Error fetching balance:', error);
     return { balance: 0 };
+  }
+};
+
+export const getAdvertPayments = async (dateFrom: Date, dateTo: Date, apiKey: string): Promise<AdvertPayment[]> => {
+  try {
+    const api = createApiInstance(apiKey);
+    const params = {
+      from: dateFrom.toISOString().split('T')[0],
+      to: dateTo.toISOString().split('T')[0]
+    };
+    
+    const response = await api.get(`/v1/payments`, { params });
+    return response.data || [];
+  } catch (error) {
+    return handleApiError(error);
   }
 };
