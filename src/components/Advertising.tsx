@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card } from "./ui/card";
 import { getAdvertCosts } from "@/services/advertisingApi";
 import { Button } from "./ui/button";
-import { RefreshCw, CheckCircle, PauseCircle, Archive, Target, Automation, Filter, Wallet } from "lucide-react";
+import { RefreshCw, CheckCircle, PauseCircle, Archive, Target, Zap, Filter, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CampaignDetails from "./CampaignDetails";
 import {
@@ -68,7 +68,7 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
               advertId: cost.advertId,
               campName: cost.campName,
               status: ['active', 'paused', 'archived', 'ready'][Math.floor(Math.random() * 4)] as Campaign['status'],
-              type: Math.random() > 0.5 ? 'auction' : 'automatic'
+              type: Math.random() > 0.5 ? 'auction' as const : 'automatic' as const
             }
           ])
         ).values()
@@ -172,7 +172,7 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
   const getTypeIcon = (type: Campaign['type']) => {
     return type === 'auction' 
       ? <Target className="h-4 w-4" />
-      : <Automation className="h-4 w-4" />;
+      : <Zap className="h-4 w-4" />;
   };
 
   return (
