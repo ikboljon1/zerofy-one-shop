@@ -60,22 +60,20 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
         return;
       }
 
-      // Fetch stats for each campaign to get real status and type
-      const statsPromises = costsData.map(cost => 
-        getAdvertStats(cost.advertId, selectedStore.apiKey)
-      );
-      const statsData = await Promise.all(statsPromises);
+      // Fetch stats for each campaign
+      const campaignIds = costsData.map(cost => cost.advertId);
+      const statsData = await getAdvertStats(dateFrom, dateTo, campaignIds, selectedStore.apiKey);
 
       // Combine costs and stats data
       const uniqueCampaigns = Array.from(
         new Map(
-          costsData.map((cost, index) => [
+          costsData.map((cost) => [
             cost.advertId,
             {
               advertId: cost.advertId,
               campName: cost.campName,
-              status: statsData[index]?.status || 'active',
-              type: statsData[index]?.type || 'auction'
+              status: statsData.find(stat => stat.advertId === cost.advertId)?.status || 'active',
+              type: statsData.find(stat => stat.advertId === cost.advertId)?.type || 'auction'
             }
           ])
         ).values()
