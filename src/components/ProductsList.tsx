@@ -64,7 +64,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       totalExpenses: 0,
       revenue: 0,
       salesAmount: 0,
-      transferredAmount: 0
+      transferredAmount: 0,
+      soldQuantity: 0
     };
     
     const salesData = JSON.parse(localStorage.getItem(`sales_${selectedStore?.id}`) || '{}');
@@ -93,7 +94,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       totalExpenses,
       revenue: salesAmount,
       salesAmount,
-      transferredAmount
+      transferredAmount,
+      soldQuantity: productSales
     };
   };
 
@@ -408,55 +410,57 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">
+                          Продано за 30 дней:
+                        </label>
+                        <div className="text-sm font-medium">
+                          {profitDetails.soldQuantity} шт.
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">
                           Сумма продаж:
                         </label>
                         <div className="text-sm font-medium">
                           {profitDetails.salesAmount.toFixed(2)} ₽
                         </div>
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">
-                          Перечислено:
-                        </label>
-                        <div className="text-sm font-medium">
-                          {profitDetails.transferredAmount.toFixed(2)} ₽
-                        </div>
+                    </div>
+                    <div className="space-y-1.5 border-t pt-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Перечислено за 30 дней:</span>
+                        <span>{profitDetails.transferredAmount.toFixed(2)} ₽</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Общая логистика за 30 дней:</span>
+                        <span>{product.expenses.logistics.toFixed(2)} ₽</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Общее хранение за 30 дней:</span>
+                        <span>{product.expenses.storage.toFixed(2)} ₽</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Общие штрафы за 30 дней:</span>
+                        <span>{product.expenses.penalties.toFixed(2)} ₽</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Общая приемка за 30 дней:</span>
+                        <span>{product.expenses.acceptance.toFixed(2)} ₽</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Прочие удержания за 30 дней:</span>
+                        <span>{(product.expenses.deductions || 0).toFixed(2)} ₽</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-medium border-t pt-2">
+                        <span className="text-muted-foreground">Общие расходы за 30 дней:</span>
+                        <span>{profitDetails.totalExpenses.toFixed(2)} ₽</span>
+                      </div>
+                      <div className="flex justify-between text-sm font-medium border-t pt-2">
+                        <span>Чистая прибыль за 30 дней:</span>
+                        <span className={profitDetails.netProfit >= 0 ? "text-green-500" : "text-red-500"}>
+                          {profitDetails.netProfit.toFixed(2)} ₽
+                        </span>
                       </div>
                     </div>
-                    {product.expenses && (
-                      <div className="space-y-1.5 border-t pt-2">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Общая логистика:</span>
-                          <span>{product.expenses.logistics.toFixed(2)} ₽</span>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Общее хранение:</span>
-                          <span>{product.expenses.storage.toFixed(2)} ₽</span>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Общие штрафы:</span>
-                          <span>{product.expenses.penalties.toFixed(2)} ₽</span>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Общая приемка:</span>
-                          <span>{product.expenses.acceptance.toFixed(2)} ₽</span>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Прочие удержания:</span>
-                          <span>{(product.expenses.deductions || 0).toFixed(2)} ₽</span>
-                        </div>
-                        <div className="flex justify-between text-xs font-medium border-t pt-2">
-                          <span className="text-muted-foreground">Общие расходы:</span>
-                          <span>{profitDetails.totalExpenses.toFixed(2)} ₽</span>
-                        </div>
-                        <div className="flex justify-between text-sm font-medium border-t pt-2">
-                          <span>Чистая прибыль:</span>
-                          <span className={profitDetails.netProfit >= 0 ? "text-green-500" : "text-red-500"}>
-                            {profitDetails.netProfit.toFixed(2)} ₽
-                          </span>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </CardContent>
               </Card>
