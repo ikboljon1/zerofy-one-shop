@@ -42,8 +42,10 @@ export interface Campaign {
   status: number;
 }
 
-const ADVERTISING_API_URL = 'https://advert-api.wildberries.ru/adv/v2/fullstats';
-const CAMPAIGNS_API_URL = 'https://advert-api.wildberries.ru/adv/v0/adverts';
+// API endpoints
+const BASE_URL = 'https://advert-api.wildberries.ru';
+const ADVERTISING_API_URL = `${BASE_URL}/adv/v2/fullstats`;
+const CAMPAIGNS_API_URL = `${BASE_URL}/adv/v0/adverts`;
 
 export const fetchAdvertisingStats = async (
   apiKey: string,
