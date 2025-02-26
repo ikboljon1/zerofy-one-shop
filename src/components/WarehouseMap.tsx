@@ -39,12 +39,19 @@ const WarehouseMap: React.FC<WarehouseMapProps> = ({ className, apiKey }) => {
   const { toast } = useToast();
 
   const loadWarehouseData = async () => {
-    if (!apiKey) return;
+    if (!apiKey) {
+      console.log('No API key provided');
+      return;
+    }
 
     setIsLoading(true);
     try {
+      console.log('Fetching warehouses with API key:', apiKey);
       const warehousesData = await fetchWarehouses(apiKey);
+      console.log('Warehouses data:', warehousesData);
+      
       const remainsData = await fetchWarehouseRemains(apiKey);
+      console.log('Remains data:', remainsData);
 
       // Обрабатываем данные и создаем объединенный массив
       const processedWarehouses: WarehouseData[] = warehousesData.map(warehouse => {
@@ -75,8 +82,8 @@ const WarehouseMap: React.FC<WarehouseMapProps> = ({ className, apiKey }) => {
         };
       });
 
-      setWarehouses(processedWarehouses);
       console.log('Processed warehouses:', processedWarehouses);
+      setWarehouses(processedWarehouses);
 
     } catch (error) {
       console.error('Error loading warehouse data:', error);
@@ -92,6 +99,7 @@ const WarehouseMap: React.FC<WarehouseMapProps> = ({ className, apiKey }) => {
 
   useEffect(() => {
     if (apiKey) {
+      console.log('Loading warehouse data with API key:', apiKey);
       loadWarehouseData();
     }
   }, [apiKey]);
@@ -99,6 +107,7 @@ const WarehouseMap: React.FC<WarehouseMapProps> = ({ className, apiKey }) => {
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
+    console.log('Initializing map');
     // Инициализация карты
     map.current = L.map(mapContainer.current).setView([55.7522, 37.6156], 4);
 
@@ -118,6 +127,7 @@ const WarehouseMap: React.FC<WarehouseMapProps> = ({ className, apiKey }) => {
   useEffect(() => {
     if (!map.current || warehouses.length === 0) return;
 
+    console.log('Adding markers to map');
     // Очищаем существующие маркеры
     map.current.eachLayer((layer) => {
       if (layer instanceof L.Marker) {
@@ -141,6 +151,7 @@ const WarehouseMap: React.FC<WarehouseMapProps> = ({ className, apiKey }) => {
 
     // Добавление маркеров для складов
     warehouses.forEach(warehouse => {
+      console.log('Adding marker for warehouse:', warehouse.name);
       const marker = L.marker(warehouse.coordinates as L.LatLngExpression, {
         icon: createCustomIcon(warehouse.status)
       })
