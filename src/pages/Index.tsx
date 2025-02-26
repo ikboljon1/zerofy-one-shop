@@ -40,7 +40,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "@/hooks/use-theme";
 
-// Определяем меню профиля
 const profileMenu = [
   {
     label: "Настройки",
@@ -54,7 +53,6 @@ const profileMenu = [
   },
 ];
 
-// Мок-данные для топ продуктов
 const mockTopProfitableProducts = [
   {
     name: "Товар 1",
@@ -97,7 +95,6 @@ const mockTopUnprofitableProducts = [
   }
 ];
 
-// Функция рендеринга аналитики
 const renderAnalytics = () => {
   return (
     <div className="grid gap-6">
@@ -187,6 +184,10 @@ const Index = () => {
   const [selectedStore, setSelectedStore] = useState<{id: string; apiKey: string} | null>(null);
 
   const handleTabChange = (tab: string) => {
+    if (tab === "analytics") {
+      window.location.href = "/analytics";
+      return;
+    }
     setActiveTab(tab);
   };
 
