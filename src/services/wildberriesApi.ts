@@ -29,6 +29,7 @@ export interface WildberriesResponse {
   topUnprofitableProducts?: Array<{
     name: string;
     price: string;
+    profit: string;
     image: string;
   }>;
 }
