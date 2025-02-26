@@ -1,6 +1,6 @@
-
-import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY } from "@/types/store";
+import { Store, NewStore, STORES_STORAGE_KEY, STATS_STORAGE_KEY } from "@/types/store";
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
+import { useStore } from "@/store";
 
 export const getLastWeekDateRange = () => {
   const now = new Date();
@@ -10,8 +10,24 @@ export const getLastWeekDateRange = () => {
 };
 
 export const loadStores = (): Store[] => {
-  const savedStores = localStorage.getItem(STORES_STORAGE_KEY);
-  return savedStores ? JSON.parse(savedStores) : [];
+  try {
+    const rawStores = localStorage.getItem(STORES_STORAGE_KEY);
+    if (!rawStores) return [];
+    
+    const stores = JSON.parse(rawStores) as Store[];
+    
+    // Восстанавливаем выбранный магазин в глобальное состояние
+    const selectedStore = stores.find(store => store.isSelected);
+    if (selectedStore) {
+      const { setSelectedStore } = useStore.getState();
+      setSelectedStore(selectedStore);
+    }
+    
+    return stores;
+  } catch (error) {
+    console.error("Ошибка загрузки магазинов:", error);
+    return [];
+  }
 };
 
 export const saveStores = (stores: Store[]): void => {
