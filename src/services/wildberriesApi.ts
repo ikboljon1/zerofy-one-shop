@@ -500,40 +500,46 @@ export const fetchWarehouses = async (apiKey: string): Promise<Warehouse[]> => {
 
 export const fetchWarehouseRemains = async (apiKey: string): Promise<WarehouseRemains[]> => {
   try {
-    const taskResponse = await fetch(`${WB_ANALYTICS_API}/api/v1/warehouse_remains/tasks`, {
-      method: 'POST',
+    // Сначала получим список складов
+    const warehouses = await fetchWarehouses(apiKey);
+    
+    // Получаем остатки через API stocks
+    const response = await fetch('https://statistics-api.wildberries.ru/api/v1/supplier/stocks', {
       headers: {
         'Authorization': apiKey,
         'Content-Type': 'application/json'
       }
     });
 
-    if (!taskResponse.ok) {
-      throw new Error('Failed to create warehouse remains task');
-    }
-
-    const { data: { taskId } } = await taskResponse.json();
-
-    // Ждем некоторое время, чтобы отчет сгенерировался
-    await new Promise(resolve => setTimeout(resolve, 5000));
-
-    const remainsResponse = await fetch(
-      `${WB_ANALYTICS_API}/api/v1/warehouse_remains/tasks/${taskId}/download`,
-      {
-        headers: {
-          'Authorization': apiKey,
-          'Content-Type': 'application/json'
-        }
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error('Too many requests. Please try again later.');
       }
-    );
-
-    if (!remainsResponse.ok) {
-      throw new Error('Failed to fetch warehouse remains');
+      throw new Error('Failed to fetch warehouse stocks');
     }
 
-    const data = await remainsResponse.json();
-    console.log('Warehouse remains data:', data);
-    return data;
+    const data = await response.json();
+    console.log('Warehouse stocks data:', data);
+
+    // Преобразуем данные в нужный формат
+    const remains: WarehouseRemains[] = data.map((item: any) => ({
+      brand: item.brand || '',
+      subjectName: item.subject || '',
+      vendorCode: item.supplierArticle || '',
+      nmId: item.nmId || 0,
+      barcode: item.barcode || '',
+      techSize: item.techSize || '',
+      volume: item.volume || 0,
+      inWayToClient: item.inWayToClient || 0,
+      inWayFromClient: item.inWayFromClient || 0,
+      quantityWarehousesFull: item.quantityFull || 0,
+      warehouses: warehouses.map(warehouse => ({
+        warehouseName: warehouse.name,
+        quantity: item.stocks?.find((stock: any) => stock.warehouseName === warehouse.name)?.quantity || 0
+      }))
+    }));
+
+    return remains;
   } catch (error) {
     console.error('Error fetching warehouse remains:', error);
     throw error;
