@@ -65,11 +65,13 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   }, []);
 
   useEffect(() => {
-    try {
-      console.log("Сохранение магазинов:", stores);
-      localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(stores));
-    } catch (error) {
-      console.error("Ошибка при сохранении магазинов:", error);
+    if (stores.length > 0) {
+      try {
+        console.log("Сохранение магазинов:", stores);
+        localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(stores));
+      } catch (error) {
+        console.error("Ошибка при сохранении магазинов:", error);
+      }
     }
   }, [stores]);
 
@@ -136,20 +138,17 @@ export default function Stores({ onStoreSelect }: StoresProps) {
 
       console.log("Создан новый магазин:", store);
 
-      // Fetch initial stats for the store
       const stats = await fetchStoreStats(store);
       if (stats) {
         store.stats = stats;
       }
 
-      setStores(prevStores => {
-        const newStores = [...prevStores, store];
-        console.log("Обновленный список магазинов:", newStores);
-        return newStores;
-      });
+      setStores(prevStores => [...prevStores, store]);
       
+      // Очищаем форму и закрываем диалог
       setNewStore({});
       setIsOpen(false);
+      
       toast({
         title: "Успешно",
         description: "Магазин успешно добавлен",
@@ -231,7 +230,15 @@ export default function Stores({ onStoreSelect }: StoresProps) {
           <ShoppingBag className="h-5 w-5" />
           <h2 className="text-xl font-semibold">Магазины</h2>
         </div>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <Dialog 
+          open={isOpen} 
+          onOpenChange={(open) => {
+            setIsOpen(open);
+            if (!open) {
+              setNewStore({}); // Очищаем форму при закрытии
+            }
+          }}
+        >
           <DialogTrigger asChild>
             <Button disabled={isLoading}>
               <Plus className="h-4 w-4 mr-2" />
@@ -248,7 +255,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
                 <Select
                   value={newStore.marketplace}
                   onValueChange={(value: Marketplace) =>
-                    setNewStore({ ...newStore, marketplace: value })
+                    setNewStore(prev => ({ ...prev, marketplace: value }))
                   }
                 >
                   <SelectTrigger>
@@ -268,7 +275,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
                 <Input
                   id="name"
                   value={newStore.name || ""}
-                  onChange={(e) => setNewStore({ ...newStore, name: e.target.value })}
+                  onChange={(e) => setNewStore(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="Введите название магазина"
                 />
               </div>
@@ -277,7 +284,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
                 <Input
                   id="apiKey"
                   value={newStore.apiKey || ""}
-                  onChange={(e) => setNewStore({ ...newStore, apiKey: e.target.value })}
+                  onChange={(e) => setNewStore(prev => ({ ...prev, apiKey: e.target.value }))}
                   type="password"
                   placeholder="Введите API ключ"
                 />
