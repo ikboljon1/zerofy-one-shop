@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ShoppingBag, Plus, Store, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -51,7 +51,6 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  // Загрузка магазинов при монтировании
   useEffect(() => {
     const savedStores = localStorage.getItem(STORES_STORAGE_KEY);
     if (savedStores) {
@@ -66,9 +65,11 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         });
       }
     }
-  }, [toast]);
+  }, []);
 
   const handleAddStore = async () => {
+    console.log("Starting store addition...");
+    
     if (!newStore.marketplace || !newStore.name || !newStore.apiKey) {
       toast({
         title: "Ошибка",
@@ -90,17 +91,23 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         lastFetchDate: new Date().toISOString()
       };
 
+      console.log("Created new store object:", store);
+
       if (store.marketplace === "Wildberries") {
         const { from, to } = getLastWeekDateRange();
-        const stats = await fetchWildberriesStats(store.apiKey, from, to);
-        if (stats) {
-          store.stats = stats;
-          localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify({
-            storeId: store.id,
-            dateFrom: from.toISOString(),
-            dateTo: to.toISOString(),
-            stats: stats
-          }));
+        try {
+          const stats = await fetchWildberriesStats(store.apiKey, from, to);
+          if (stats) {
+            store.stats = stats;
+            localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify({
+              storeId: store.id,
+              dateFrom: from.toISOString(),
+              dateTo: to.toISOString(),
+              stats: stats
+            }));
+          }
+        } catch (error) {
+          console.error("Error fetching Wildberries stats:", error);
         }
       }
 
@@ -108,8 +115,11 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       setStores(updatedStores);
       localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(updatedStores));
       
+      console.log("Store added successfully:", store);
+      
       setNewStore({});
       setIsOpen(false);
+      setIsLoading(false);
       
       toast({
         title: "Успешно",
@@ -122,7 +132,6 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         description: "Не удалось добавить магазин",
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -218,6 +227,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
             setIsOpen(open);
             if (!open) {
               setNewStore({});
+              setIsLoading(false);
             }
           }}
         >
@@ -230,6 +240,9 @@ export default function Stores({ onStoreSelect }: StoresProps) {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Добавить новый магазин</DialogTitle>
+              <DialogDescription>
+                Заполните информацию о магазине ниже.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
