@@ -834,6 +834,14 @@ const Index = () => {
                 </Button>
                 <Button 
                   variant="ghost" 
+                  onClick={() => handleTabChange("warehouses")}
+                  className={activeTab === "warehouses" ? "bg-accent" : ""}
+                >
+                  <WarehouseIcon className="mr-2 h-4 w-4" />
+                  Склады
+                </Button>
+                <Button 
+                  variant="ghost" 
                   onClick={() => handleTabChange("advertising")}
                   className={activeTab === "advertising" ? "bg-accent" : ""}
                 >
@@ -921,6 +929,15 @@ const Index = () => {
             <Stores onStoreSelect={setSelectedStore} />
           </motion.div>
         )}
+        {activeTab === "warehouses" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Warehouses />
+          </motion.div>
+        )}
         {activeTab === "advertising" && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -966,6 +983,13 @@ const Index = () => {
               <span className="text-xs">Товары</span>
             </button>
             <button
+              className={`flex flex-col items-center space-y-1 ${activeTab === "warehouses" ? "text-primary" : "text-muted-foreground"}`}
+              onClick={() => handleTabChange("warehouses")}
+            >
+              <WarehouseIcon className="h-5 w-5" />
+              <span className="text-xs">Склады</span>
+            </button>
+            <button
               className={`flex flex-col items-center space-y-1 ${activeTab === "stores" ? "text-primary" : "text-muted-foreground"}`}
               onClick={() => handleTabChange("stores")}
             >
@@ -978,13 +1002,6 @@ const Index = () => {
             >
               <Megaphone className="h-5 w-5" />
               <span className="text-xs">Реклама</span>
-            </button>
-            <button
-              className={`flex flex-col items-center space-y-1 ${activeTab === "profile" ? "text-primary" : "text-muted-foreground"}`}
-              onClick={() => handleTabChange("profile")}
-            >
-              <User className="h-5 w-5" />
-              <span className="text-xs">Профиль</span>
             </button>
           </div>
         </nav>
