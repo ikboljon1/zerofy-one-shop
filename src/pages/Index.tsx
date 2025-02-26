@@ -31,7 +31,8 @@ import {
   Truck,
   WarehouseIcon,
   AlertCircle,
-  PieChart as PieChartIcon
+  PieChart as PieChartIcon,
+  Target
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -165,6 +166,15 @@ const renderAnalytics = () => {
     { date: "07.05.2024", logistic: 1600, storage: 800, penalties: 350 }
   ];
 
+  // Данные по расходам на рекламу
+  const advertisingData = [
+    { name: "Реклама в поиске", value: 12500 },
+    { name: "Баннерная реклама", value: 8700 },
+    { name: "Реклама в карточках", value: 7300 },
+    { name: "Автоматическая реклама", value: 5200 },
+    { name: "Другие форматы", value: 4100 }
+  ];
+
   // Временные демонстрационные данные
   const demoData = {
     currentPeriod: {
@@ -173,7 +183,8 @@ const renderAnalytics = () => {
         total: 125000,
         logistics: 45000,
         storage: 35000,
-        penalties: 15000
+        penalties: 15000,
+        advertising: 30000
       },
       netProfit: 875000,
       acceptance: 30000
@@ -483,7 +494,7 @@ const renderAnalytics = () => {
         {/* Детальный анализ расходов */}
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-6">Структура расходов</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="flex flex-col bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background border border-purple-200 dark:border-purple-800 rounded-xl p-6">
               <div className="flex justify-between items-center mb-2">
                 <h4 className="text-base font-medium">Логистика</h4>
@@ -557,6 +568,78 @@ const renderAnalytics = () => {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Новый блок с рекламными расходами */}
+            <div className="flex flex-col bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-background border border-amber-200 dark:border-amber-800 rounded-xl p-6">
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="text-base font-medium">Реклама</h4>
+                <div className="bg-amber-100 dark:bg-amber-900/60 p-2 rounded-md">
+                  <Target className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold">{data.currentPeriod.expenses.advertising.toLocaleString()} ₽</p>
+              <span className="text-xs text-muted-foreground mt-1">
+                {((data.currentPeriod.expenses.advertising / data.currentPeriod.expenses.total) * 100).toFixed(1)}% от общих расходов
+              </span>
+              <div className="mt-4 pt-4 border-t border-amber-200 dark:border-amber-800/50">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Поисковая реклама</span>
+                    <span className="font-medium">{(data.currentPeriod.expenses.advertising * 0.6).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Баннерная реклама</span>
+                    <span className="font-medium">{(data.currentPeriod.expenses.advertising * 0.4).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Диаграмма распределения расходов на рекламу */}
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold">Структура расходов на рекламу</h3>
+            <div className="bg-amber-100 dark:bg-amber-900/60 p-2 rounded-md">
+              <Target className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={advertisingData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={80}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {advertisingData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: any) => [`${value.toLocaleString()} ₽`, '']}
+                    contentStyle={{ background: '#ffffff', borderRadius: '4px', border: '1px solid #e5e7eb' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="space-y-4">
+              {advertisingData.map((item, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                    <span className="text-sm">{item.name}</span>
+                  </div>
+                  <span className="font-medium">{item.value.toLocaleString()} ₽</span>
+                </div>
+              ))}
             </div>
           </div>
         </Card>
