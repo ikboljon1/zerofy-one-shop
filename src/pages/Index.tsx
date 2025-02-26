@@ -1,4 +1,5 @@
 
+// Добавляем импорт в начало файла, вместе с остальными импортами
 import { useState } from "react";
 import { 
   Home, 
@@ -46,6 +47,7 @@ import CalculatorModal from "@/components/CalculatorModal";
 import Advertising from "@/components/Advertising";
 import ProductsList from "@/components/ProductsList";
 import Profile from "@/components/Profile";
+import Warehouses from "@/pages/Warehouses";
 import {
   DropdownMenu,
   DropdownMenuContent,
