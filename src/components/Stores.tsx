@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ShoppingBag, Plus, Store, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -50,17 +51,26 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  // Load stores from localStorage on component mount
   useEffect(() => {
     const savedStores = localStorage.getItem(STORES_STORAGE_KEY);
     if (savedStores) {
-      setStores(JSON.parse(savedStores));
+      try {
+        const parsedStores = JSON.parse(savedStores);
+        console.log("Загруженные магазины:", parsedStores);
+        setStores(parsedStores);
+      } catch (error) {
+        console.error("Ошибка при загрузке магазинов:", error);
+      }
     }
   }, []);
 
-  // Save stores to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(stores));
+    try {
+      console.log("Сохранение магазинов:", stores);
+      localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(stores));
+    } catch (error) {
+      console.error("Ошибка при сохранении магазинов:", error);
+    }
   }, [stores]);
 
   const getLastWeekDateRange = () => {
@@ -76,7 +86,6 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         const { from, to } = getLastWeekDateRange();
         const stats = await fetchWildberriesStats(store.apiKey, from, to);
         
-        // Save stats to localStorage
         const statsData = {
           storeId: store.id,
           dateFrom: from.toISOString(),
@@ -85,10 +94,11 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         };
         
         localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify(statsData));
+        console.log("Статистика получена:", statsData);
         
         return stats;
       } catch (error) {
-        console.error('Error fetching store stats:', error);
+        console.error('Ошибка получения статистики:', error);
         toast({
           title: "Ошибка",
           description: "Не удалось получить статистику магазина",
@@ -101,6 +111,8 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   };
 
   const handleAddStore = async () => {
+    console.log("Начало добавления магазина", newStore);
+    
     if (!newStore.marketplace || !newStore.name || !newStore.apiKey) {
       toast({
         title: "Ошибка",
@@ -122,13 +134,20 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         lastFetchDate: new Date().toISOString()
       };
 
+      console.log("Создан новый магазин:", store);
+
       // Fetch initial stats for the store
       const stats = await fetchStoreStats(store);
       if (stats) {
         store.stats = stats;
       }
 
-      setStores([...stores, store]);
+      setStores(prevStores => {
+        const newStores = [...prevStores, store];
+        console.log("Обновленный список магазинов:", newStores);
+        return newStores;
+      });
+      
       setNewStore({});
       setIsOpen(false);
       toast({
@@ -136,6 +155,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         description: "Магазин успешно добавлен",
       });
     } catch (error) {
+      console.error("Ошибка при добавлении магазина:", error);
       toast({
         title: "Ошибка",
         description: "Не удалось добавить магазин",
@@ -176,6 +196,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         });
       }
     } catch (error) {
+      console.error("Ошибка при обновлении статистики:", error);
       toast({
         title: "Ошибка",
         description: "Не удалось обновить статистику",
