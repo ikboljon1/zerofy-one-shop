@@ -184,4 +184,3 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     </div>
   );
 }
-
