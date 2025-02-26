@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -28,6 +27,7 @@ import {
   Pie,
   Cell
 } from "recharts";
+import { fetchWildberriesStats } from "@/services/wildberriesApi";
 
 const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1'];
 
@@ -37,30 +37,40 @@ const Analytics = () => {
   const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState(false);
-  const [statsData, setStatsData] = useState<any>({
-    currentPeriod: {
-      sales: 1250000,
-      expenses: {
-        total: 125000,
-        logistics: 45000,
-        storage: 35000,
-        penalties: 15000
-      },
-      netProfit: 875000,
-      acceptance: 30000
-    },
-    dailySales: Array.from({ length: 30 }, (_, i) => ({
-      date: new Date(2024, 0, i + 1).toISOString(),
-      sales: Math.floor(Math.random() * 50000) + 20000
-    })),
-    productSales: [
-      { subject_name: "Футболки", quantity: 150 },
-      { subject_name: "Джинсы", quantity: 120 },
-      { subject_name: "Куртки", quantity: 80 },
-      { subject_name: "Обувь", quantity: 200 },
-      { subject_name: "Аксессуары", quantity: 95 }
-    ]
-  });
+  const [statsData, setStatsData] = useState<any>(null);
+
+  const getSelectedStore = () => {
+    const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
+    return stores.find((store: any) => store.isSelected) || null;
+  };
+
+  const fetchStats = async () => {
+    try {
+      setIsLoading(true);
+      const selectedStore = getSelectedStore();
+      
+      if (!selectedStore) {
+        toast({
+          title: "Внимание",
+          description: "Выберите основной магазин в разделе 'Магазины'",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const data = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
+      setStatsData(data);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить статистику",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const renderDatePicker = (date: Date, onChange: (date: Date) => void, label: string) => (
     <Popover>
@@ -98,7 +108,7 @@ const Analytics = () => {
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         {renderDatePicker(dateFrom, setDateFrom, "Выберите начальную дату")}
         {renderDatePicker(dateTo, setDateTo, "Выберите конечную дату")}
-        <Button onClick={() => setIsLoading(true)} disabled={isLoading}>
+        <Button onClick={fetchStats} disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -110,153 +120,161 @@ const Analytics = () => {
         </Button>
       </div>
 
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Анализ продаж</h3>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span>Общая сумма продаж:</span>
-                <span className="font-semibold">{statsData.currentPeriod.sales.toLocaleString()} ₽</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>Средний чек:</span>
-                <span className="font-semibold">
-                  {(statsData.currentPeriod.sales / statsData.productSales.reduce((acc: number, curr: any) => acc + curr.quantity, 0)).toLocaleString()} ₽
-                </span>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Анализ возвратов</h3>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span>Сумма возвратов:</span>
-                <span className="font-semibold text-red-500">
-                  {statsData.currentPeriod.expenses.total.toLocaleString()} ₽
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>Процент возвратов:</span>
-                <span className="font-semibold text-red-500">
-                  {((statsData.currentPeriod.expenses.total / statsData.currentPeriod.sales) * 100).toFixed(2)}%
-                </span>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Прибыльность</h3>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span>Чистая прибыль:</span>
-                <span className="font-semibold text-green-500">
-                  {statsData.currentPeriod.netProfit.toLocaleString()} ₽
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>Рентабельность:</span>
-                <span className="font-semibold">
-                  {((statsData.currentPeriod.netProfit / statsData.currentPeriod.sales) * 100).toFixed(2)}%
-                </span>
-              </div>
-            </div>
-          </Card>
+      {!statsData ? (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">
+            Выберите период для просмотра аналитики
+          </p>
         </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Анализ продаж</h3>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span>Общая сумма продаж:</span>
+                  <span className="font-semibold">{statsData.currentPeriod.sales.toLocaleString()} ₽</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Средний чек:</span>
+                  <span className="font-semibold">
+                    {(statsData.currentPeriod.sales / statsData.productSales.reduce((acc: number, curr: any) => acc + curr.quantity, 0)).toLocaleString()} ₽
+                  </span>
+                </div>
+              </div>
+            </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Динамика продаж</h3>
-            <div className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={statsData.dailySales}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="date" 
-                    tickFormatter={(value) => {
-                      const date = new Date(value);
-                      return `${date.getDate()}.${date.getMonth() + 1}`;
-                    }}
-                  />
-                  <YAxis />
-                  <Tooltip 
-                    formatter={(value: any) => [`${value.toLocaleString()} ₽`, 'Продажи']}
-                    labelFormatter={(label) => {
-                      const date = new Date(label);
-                      return format(date, 'dd.MM.yyyy');
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="sales"
-                    stroke="#8B5CF6"
-                    fill="#8B5CF680"
-                    name="Продажи"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Анализ возвратов</h3>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span>Сумма возвратов:</span>
+                  <span className="font-semibold text-red-500">
+                    {statsData.currentPeriod.expenses.total.toLocaleString()} ₽
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Процент возвратов:</span>
+                  <span className="font-semibold text-red-500">
+                    {((statsData.currentPeriod.expenses.total / statsData.currentPeriod.sales) * 100).toFixed(2)}%
+                  </span>
+                </div>
+              </div>
+            </Card>
 
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Структура продаж по товарам</h3>
-            <div className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={statsData.productSales}
-                    dataKey="quantity"
-                    nameKey="subject_name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    label
-                  >
-                    {statsData.productSales.map((_: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </div>
-
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Детальный анализ расходов</h3>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-4 bg-background rounded-lg border">
-                <h4 className="text-sm font-medium text-muted-foreground">Логистика</h4>
-                <p className="text-2xl font-bold mt-2">
-                  {statsData.currentPeriod.expenses.logistics.toLocaleString()} ₽
-                </p>
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Прибыльность</h3>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span>Чистая прибыль:</span>
+                  <span className="font-semibold text-green-500">
+                    {statsData.currentPeriod.netProfit.toLocaleString()} ₽
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Рентабельность:</span>
+                  <span className="font-semibold">
+                    {((statsData.currentPeriod.netProfit / statsData.currentPeriod.sales) * 100).toFixed(2)}%
+                  </span>
+                </div>
               </div>
-              <div className="p-4 bg-background rounded-lg border">
-                <h4 className="text-sm font-medium text-muted-foreground">Хранение</h4>
-                <p className="text-2xl font-bold mt-2">
-                  {statsData.currentPeriod.expenses.storage.toLocaleString()} ₽
-                </p>
-              </div>
-              <div className="p-4 bg-background rounded-lg border">
-                <h4 className="text-sm font-medium text-muted-foreground">Штрафы</h4>
-                <p className="text-2xl font-bold mt-2">
-                  {statsData.currentPeriod.expenses.penalties.toLocaleString()} ₽
-                </p>
-              </div>
-              <div className="p-4 bg-background rounded-lg border">
-                <h4 className="text-sm font-medium text-muted-foreground">Приемка</h4>
-                <p className="text-2xl font-bold mt-2">
-                  {statsData.currentPeriod.acceptance.toLocaleString()} ₽
-                </p>
-              </div>
-            </div>
+            </Card>
           </div>
-        </Card>
-      </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Динамика продаж</h3>
+              <div className="h-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={statsData.dailySales}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="date" 
+                      tickFormatter={(value) => {
+                        const date = new Date(value);
+                        return `${date.getDate()}.${date.getMonth() + 1}`;
+                      }}
+                    />
+                    <YAxis />
+                    <Tooltip 
+                      formatter={(value: any) => [`${value.toLocaleString()} ₽`, 'Продажи']}
+                      labelFormatter={(label) => {
+                        const date = new Date(label);
+                        return format(date, 'dd.MM.yyyy');
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="sales"
+                      stroke="#8B5CF6"
+                      fill="#8B5CF680"
+                      name="Продажи"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Структура продаж по товарам</h3>
+              <div className="h-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={statsData.productSales}
+                      dataKey="quantity"
+                      nameKey="subject_name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      label
+                    >
+                      {statsData.productSales.map((_: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </div>
+
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Детальный анализ расходов</h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 bg-background rounded-lg border">
+                  <h4 className="text-sm font-medium text-muted-foreground">Логистика</h4>
+                  <p className="text-2xl font-bold mt-2">
+                    {statsData.currentPeriod.expenses.logistics.toLocaleString()} ₽
+                  </p>
+                </div>
+                <div className="p-4 bg-background rounded-lg border">
+                  <h4 className="text-sm font-medium text-muted-foreground">Хранение</h4>
+                  <p className="text-2xl font-bold mt-2">
+                    {statsData.currentPeriod.expenses.storage.toLocaleString()} ₽
+                  </p>
+                </div>
+                <div className="p-4 bg-background rounded-lg border">
+                  <h4 className="text-sm font-medium text-muted-foreground">Штрафы</h4>
+                  <p className="text-2xl font-bold mt-2">
+                    {statsData.currentPeriod.expenses.penalties.toLocaleString()} ₽
+                  </p>
+                </div>
+                <div className="p-4 bg-background rounded-lg border">
+                  <h4 className="text-sm font-medium text-muted-foreground">Приемка</h4>
+                  <p className="text-2xl font-bold mt-2">
+                    {statsData.currentPeriod.acceptance.toLocaleString()} ₽
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
