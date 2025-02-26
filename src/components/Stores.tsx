@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { ShoppingBag, Store } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Store as StoreType, NewStore } from "@/types/store";
+import { Store as StoreType, NewStore, STATS_STORAGE_KEY } from "@/types/store";
 import { loadStores, saveStores, refreshStoreStats } from "@/utils/storeUtils";
 import { AddStoreDialog } from "./stores/AddStoreDialog";
 import { StoreCard } from "./stores/StoreCard";
