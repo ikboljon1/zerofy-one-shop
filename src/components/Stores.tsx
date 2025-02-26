@@ -51,29 +51,44 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  // Загрузка магазинов при монтировании компонента
   useEffect(() => {
-    const savedStores = localStorage.getItem(STORES_STORAGE_KEY);
-    if (savedStores) {
-      try {
+    loadStores();
+  }, []);
+
+  // Загрузка магазинов из localStorage
+  const loadStores = () => {
+    try {
+      const savedStores = localStorage.getItem(STORES_STORAGE_KEY);
+      if (savedStores) {
         const parsedStores = JSON.parse(savedStores);
         console.log("Загруженные магазины:", parsedStores);
         setStores(parsedStores);
-      } catch (error) {
-        console.error("Ошибка при загрузке магазинов:", error);
       }
+    } catch (error) {
+      console.error("Ошибка при загрузке магазинов:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить список магазинов",
+        variant: "destructive",
+      });
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    if (stores.length > 0) {
-      try {
-        console.log("Сохранение магазинов:", stores);
-        localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(stores));
-      } catch (error) {
-        console.error("Ошибка при сохранении магазинов:", error);
-      }
+  // Сохранение магазинов в localStorage
+  const saveStores = (newStores: Store[]) => {
+    try {
+      console.log("Сохранение магазинов:", newStores);
+      localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(newStores));
+    } catch (error) {
+      console.error("Ошибка при сохранении магазинов:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось сохранить список магазинов",
+        variant: "destructive",
+      });
     }
-  }, [stores]);
+  };
 
   const getLastWeekDateRange = () => {
     const now = new Date();
@@ -143,9 +158,10 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         store.stats = stats;
       }
 
-      setStores(prevStores => [...prevStores, store]);
+      const updatedStores = [...stores, store];
+      setStores(updatedStores);
+      saveStores(updatedStores);
       
-      // Очищаем форму и закрываем диалог
       setNewStore({});
       setIsOpen(false);
       
@@ -168,10 +184,13 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   const toggleStoreSelection = (storeId: string) => {
     const selectedStore = stores.find(store => store.id === storeId);
     
-    setStores(stores.map(store => ({
+    const updatedStores = stores.map(store => ({
       ...store,
       isSelected: store.id === storeId ? !store.isSelected : false
-    })));
+    }));
+    
+    setStores(updatedStores);
+    saveStores(updatedStores);
 
     if (selectedStore && onStoreSelect) {
       onStoreSelect({
@@ -186,9 +205,12 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     try {
       const stats = await fetchStoreStats(store);
       if (stats) {
-        setStores(stores.map(s => 
+        const updatedStores = stores.map(s => 
           s.id === store.id ? { ...s, stats } : s
-        ));
+        );
+        setStores(updatedStores);
+        saveStores(updatedStores);
+        
         toast({
           title: "Успешно",
           description: "Статистика магазина обновлена",
@@ -212,9 +234,8 @@ export default function Stores({ onStoreSelect }: StoresProps) {
 
     const updatedStores = stores.filter(store => store.id !== storeId);
     setStores(updatedStores);
-    localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(updatedStores));
+    saveStores(updatedStores);
     
-    // Remove store stats from localStorage
     localStorage.removeItem(`${STATS_STORAGE_KEY}_${storeId}`);
     
     toast({
@@ -235,7 +256,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
           onOpenChange={(open) => {
             setIsOpen(open);
             if (!open) {
-              setNewStore({}); // Очищаем форму при закрытии
+              setNewStore({});
             }
           }}
         >
