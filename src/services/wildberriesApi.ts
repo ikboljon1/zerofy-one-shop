@@ -63,12 +63,10 @@ const WB_CONTENT_URL = "https://suppliers-api.wildberries.ru/content/v2/get/card
 const dataCache: { [key: string]: CachedData } = {};
 const requestTimestamps: { [key: string]: number } = {};
 
-// Increased delays and limits for better rate limiting handling
-const RETRY_DELAY = 60000; // 1 minute delay between retries
-const INITIAL_RETRY_DELAY = 5000; // 5 seconds for first retry
-const MAX_RETRIES = 5;
-const RATE_LIMIT_WINDOW = 60000; // 1 minute window for rate limiting
-const MAX_REQUESTS_PER_WINDOW = 5; // Maximum requests per minute
+const RETRY_DELAY = 2000; // 2 seconds between retries
+const MAX_RETRIES = 3;
+const RATE_LIMIT_WINDOW = 1000; // 1 second window
+const MAX_REQUESTS_PER_WINDOW = 2;
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -76,7 +74,6 @@ const shouldThrottle = (key: string): boolean => {
   const now = Date.now();
   const windowStart = now - RATE_LIMIT_WINDOW;
   
-  // Count requests in the current window
   const requestsInWindow = Object.entries(requestTimestamps)
     .filter(([, timestamp]) => timestamp > windowStart)
     .length;
@@ -87,18 +84,12 @@ const shouldThrottle = (key: string): boolean => {
 const updateRequestTimestamp = (key: string) => {
   requestTimestamps[key] = Date.now();
   
-  // Cleanup old timestamps
   const windowStart = Date.now() - RATE_LIMIT_WINDOW;
   Object.keys(requestTimestamps).forEach(key => {
     if (requestTimestamps[key] < windowStart) {
       delete requestTimestamps[key];
     }
   });
-};
-
-const calculateRetryDelay = (retryCount: number): number => {
-  if (retryCount === 0) return INITIAL_RETRY_DELAY;
-  return Math.min(RETRY_DELAY * Math.pow(2, retryCount - 1), 300000); // Max 5 minutes
 };
 
 const fetchWithRetry = async (
@@ -112,8 +103,7 @@ const fetchWithRetry = async (
   const requestKey = `${url}${params ? params.toString() : ''}`;
 
   if (shouldThrottle(requestKey)) {
-    console.log('Rate limiting in effect, waiting before making request...');
-    await delay(calculateRetryDelay(retryCount));
+    await delay(RETRY_DELAY);
   }
 
   try {
@@ -129,36 +119,23 @@ const fetchWithRetry = async (
     const response = await fetch(fullUrl, requestOptions);
     
     if (response.status === 429) {
-      const retryAfter = response.headers.get('Retry-After');
-      const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : calculateRetryDelay(retryCount);
-      
-      console.log(`Rate limit hit, waiting ${waitTime/1000} seconds before retry ${retryCount + 1}/${MAX_RETRIES}`);
-      
       if (retryCount < MAX_RETRIES) {
-        await delay(waitTime);
+        await delay(RETRY_DELAY * (retryCount + 1));
         return fetchWithRetry(url, headers, params, method, body, retryCount + 1);
       }
     }
 
     if (!response.ok) {
-      const errorData = await response.text();
-      throw new Error(`HTTP error! status: ${response.status}, message: ${errorData}`);
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     return response.json();
   } catch (error) {
     if (retryCount < MAX_RETRIES) {
-      const waitTime = calculateRetryDelay(retryCount);
-      console.log(`Request failed, waiting ${waitTime/1000} seconds before retry ${retryCount + 1}/${MAX_RETRIES}`);
-      await delay(waitTime);
+      await delay(RETRY_DELAY * (retryCount + 1));
       return fetchWithRetry(url, headers, params, method, body, retryCount + 1);
     }
-    
-    if (error instanceof Error) {
-      console.error('Fetch error:', error.message);
-      throw error;
-    }
-    throw new Error('Unknown error occurred');
+    throw error;
   }
 };
 
@@ -220,7 +197,6 @@ const fetchProductNames = async (apiKey: string, nmIds: string[]): Promise<Map<s
   };
 
   try {
-    // Changed to use POST method and include payload
     const data = await fetchWithRetry(
       WB_CONTENT_URL, 
       headers, 
@@ -281,7 +257,6 @@ const calculateProductStats = (data: WildberriesReportItem[]) => {
     if (item.doc_type_name === "Продажа") {
       currentStats.sales += item.retail_amount || 0;
       currentStats.quantity += item.quantity || 0;
-      // Суммируем фактические расходы из API для каждой продажи
       currentStats.logistics += item.delivery_rub || 0;
       currentStats.storage += item.storage_fee || 0;
       currentStats.penalties += item.penalty || 0;
@@ -290,7 +265,6 @@ const calculateProductStats = (data: WildberriesReportItem[]) => {
       currentStats.returns += item.retail_amount || 0;
     }
 
-    // Обновляем прибыль с учетом фактических общих расходов
     currentStats.profit = currentStats.sales - (
       currentStats.logistics +
       currentStats.storage +
@@ -299,7 +273,6 @@ const calculateProductStats = (data: WildberriesReportItem[]) => {
       currentStats.returns
     );
 
-    // Рассчитываем среднюю цену продажи
     currentStats.price = currentStats.sales / (currentStats.quantity || 1);
 
     productStats.set(item.subject_name, currentStats);
@@ -412,13 +385,8 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
     stats.currentPeriod.expenses.storage += storage;
     stats.currentPeriod.expenses.penalties += penalties;
     stats.currentPeriod.acceptance += acceptance;
-
-    stats.currentPeriod.expenses.total += logistics + storage + penalties + acceptance + deduction;
     
-    if (item.doc_type_name === "Продажа") {
-      const currentSalesByProduct = salesByProduct.get(item.nm_id) || 0;
-      salesByProduct.set(item.nm_id, currentSalesByProduct + (item.quantity || 0));
-    }
+    stats.currentPeriod.expenses.total += logistics + storage + penalties + acceptance + deduction;
   });
 
   stats.currentPeriod.netProfit = 
@@ -442,22 +410,23 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
   stats.dailySales = sortedDailySales;
   stats.productSales = sortedProductSales;
 
-  // Save sales data to localStorage
-  const salesData: { [key: string]: number } = {};
-  salesByProduct.forEach((value, key) => {
-    salesData[key] = value;
-  });
+  stats.topProfitableProducts = [
+    {
+      name: "Загрузка...",
+      price: "0",
+      profit: "+0",
+      image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
+    }
+  ];
   
-  // Get store ID from localStorage (you'll need to set this when selecting a store)
-  const storeId = localStorage.getItem('currentStoreId');
-  if (storeId) {
-    localStorage.setItem(`sales_${storeId}`, JSON.stringify(salesData));
-  }
-
-  const { topProfitable, topUnprofitable } = await getTopProducts(data, apiKey);
-  
-  stats.topProfitableProducts = topProfitable;
-  stats.topUnprofitableProducts = topUnprofitable;
+  stats.topUnprofitableProducts = [
+    {
+      name: "Загрузка...",
+      price: "0",
+      profit: "0",
+      image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg"
+    }
+  ];
 
   return stats;
 };

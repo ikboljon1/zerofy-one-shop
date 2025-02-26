@@ -20,19 +20,30 @@ export const saveStores = (stores: Store[]): void => {
 
 export const refreshStoreStats = async (store: Store): Promise<Store | null> => {
   if (store.marketplace === "Wildberries") {
-    const { from, to } = getLastWeekDateRange();
-    const stats = await fetchWildberriesStats(store.apiKey, from, to);
-    if (stats) {
-      const updatedStore = { ...store, stats };
-      localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify({
-        storeId: store.id,
-        dateFrom: from.toISOString(),
-        dateTo: to.toISOString(),
-        stats: stats
-      }));
-      return updatedStore;
+    try {
+      const { from, to } = getLastWeekDateRange();
+      const stats = await fetchWildberriesStats(store.apiKey, from, to);
+      if (stats) {
+        const updatedStore = { 
+          ...store, 
+          stats,
+          lastFetchDate: new Date().toISOString() 
+        };
+        
+        localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify({
+          storeId: store.id,
+          dateFrom: from.toISOString(),
+          dateTo: to.toISOString(),
+          stats: stats
+        }));
+        
+        return updatedStore;
+      }
+    } catch (error) {
+      console.error('Error refreshing stats:', error);
+      // Return store without stats on error
+      return store;
     }
   }
-  return null;
+  return store;
 };
-
