@@ -39,41 +39,67 @@ const WarehouseMap: React.FC<WarehouseMapProps> = ({ className }) => {
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
-    // Инициализация карты
+    // Инициализация карты с более красивым стилем
     map.current = L.map(mapContainer.current).setView([55.7522, 37.6156], 4);
 
-    // Добавление слоя OpenStreetMap
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
+    // Использование красивого темного стиля карты от CartoDB
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd',
+      maxZoom: 19
     }).addTo(map.current);
 
-    // Создание пользовательской иконки маркера
+    // Создание пользовательской иконки маркера с улучшенным дизайном
     const createCustomIcon = (status: string) => {
       return L.divIcon({
         className: 'custom-marker',
-        html: `<div style="background-color: ${getWarehouseStatusColor(status)}; width: 24px; height: 24px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M17 9.5V17.5H7V9.5L12 5.5L17 9.5Z" fill="white" stroke="white" />
+        html: `<div style="
+          background-color: ${getWarehouseStatusColor(status)}; 
+          width: 32px; 
+          height: 32px; 
+          border-radius: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+          border: 2px solid white;
+          transition: all 0.3s ease;
+        ">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17 9.5V17.5H7V9.5L12 5.5L17 9.5Z" fill="white" stroke="white" stroke-width="1.5"/>
           </svg>
         </div>`,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12]
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
       });
     };
 
-    // Добавление маркеров для складов
+    // Добавление маркеров для складов с улучшенным попапом
     warehousesData.forEach(warehouse => {
       const marker = L.marker(warehouse.coordinates as L.LatLngExpression, {
         icon: createCustomIcon(warehouse.status)
       })
         .bindPopup(`
-          <div>
-            <strong>${warehouse.name}</strong><br>
-            Площадь: ${warehouse.size}<br>
-            Товаров: ${warehouse.items.toLocaleString()}<br>
-            Статус: ${getWarehouseStatusText(warehouse.status)}
+          <div style="min-width: 200px; padding: 8px;">
+            <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 8px 0; color: #1a1a1a;">
+              ${warehouse.name}
+            </h3>
+            <div style="font-size: 14px; color: #666; margin-bottom: 4px;">
+              <strong>Площадь:</strong> ${warehouse.size}
+            </div>
+            <div style="font-size: 14px; color: #666; margin-bottom: 4px;">
+              <strong>Товаров:</strong> ${warehouse.items.toLocaleString()}
+            </div>
+            <div style="font-size: 14px;">
+              <strong>Статус:</strong> 
+              <span style="color: ${getWarehouseStatusColor(warehouse.status)}; font-weight: 500;">
+                ${getWarehouseStatusText(warehouse.status)}
+              </span>
+            </div>
           </div>
-        `)
+        `, {
+          className: 'custom-popup'
+        })
         .addTo(map.current!);
 
       marker.on('click', () => {
@@ -81,20 +107,45 @@ const WarehouseMap: React.FC<WarehouseMapProps> = ({ className }) => {
       });
     });
 
-    // Добавление линий маршрутов
+    // Добавление улучшенных линий маршрутов
     routes.forEach(route => {
       const origin = warehousesData.find(w => w.id === route.origin);
       const destination = warehousesData.find(w => w.id === route.destination);
 
       if (origin && destination) {
-        L.polyline([origin.coordinates, destination.coordinates], {
-          color: '#6B7280',
+        const path = L.polyline([origin.coordinates, destination.coordinates], {
+          color: '#4F46E5',
           weight: 2,
-          opacity: 0.5,
-          dashArray: '5, 10'
+          opacity: 0.7,
+          dashArray: '6, 12',
+          className: 'animated-line'
+        }).addTo(map.current!);
+
+        // Добавляем анимированную стрелку на маршрут
+        const arrowHead = L.polylineDecorator(path, {
+          patterns: [
+            {
+              offset: '50%',
+              repeat: 0,
+              symbol: L.Symbol.arrowHead({
+                pixelSize: 12,
+                polygon: false,
+                pathOptions: {
+                  color: '#4F46E5',
+                  fillOpacity: 1,
+                  weight: 2
+                }
+              })
+            }
+          ]
         }).addTo(map.current!);
       }
     });
+
+    // Добавляем красивые элементы управления
+    L.control.zoom({
+      position: 'bottomright'
+    }).addTo(map.current);
 
     return () => {
       if (map.current) {
@@ -227,6 +278,29 @@ const WarehouseMap: React.FC<WarehouseMapProps> = ({ className }) => {
               .custom-marker {
                 background: none;
                 border: none;
+              }
+              .custom-marker:hover {
+                transform: scale(1.1);
+                transition: transform 0.2s ease;
+              }
+              .leaflet-popup-content-wrapper {
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+              }
+              .leaflet-popup-content {
+                margin: 0;
+                padding: 0;
+              }
+              .leaflet-container {
+                font-family: system-ui, -apple-system, sans-serif;
+              }
+              .animated-line {
+                animation: dash 30s linear infinite;
+              }
+              @keyframes dash {
+                to {
+                  stroke-dashoffset: -1000;
+                }
               }
             `}
           </style>
