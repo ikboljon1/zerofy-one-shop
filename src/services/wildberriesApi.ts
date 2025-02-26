@@ -474,7 +474,8 @@ export const fetchWildberriesStats = async (
 
 export const fetchWarehouses = async (apiKey: string): Promise<Warehouse[]> => {
   try {
-    const response = await fetch('https://suppliers-api.wildberries.ru/api/v3/offices', {
+    console.log('Fetching warehouses with API key:', apiKey);
+    const response = await fetch(`${WB_MARKETPLACE_API}/api/v3/warehouses`, {
       headers: {
         'Authorization': apiKey,
         'Content-Type': 'application/json'
@@ -482,6 +483,9 @@ export const fetchWarehouses = async (apiKey: string): Promise<Warehouse[]> => {
     });
 
     if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error('Too many requests. Please try again later.');
+      }
       throw new Error('Failed to fetch warehouses');
     }
 
@@ -496,18 +500,38 @@ export const fetchWarehouses = async (apiKey: string): Promise<Warehouse[]> => {
 
 export const fetchWarehouseRemains = async (apiKey: string): Promise<WarehouseRemains[]> => {
   try {
-    const response = await fetch('https://statistics-api.wildberries.ru/api/v1/supplier/stocks', {
+    const taskResponse = await fetch(`${WB_ANALYTICS_API}/api/v1/warehouse_remains/tasks`, {
+      method: 'POST',
       headers: {
         'Authorization': apiKey,
         'Content-Type': 'application/json'
       }
     });
 
-    if (!response.ok) {
+    if (!taskResponse.ok) {
+      throw new Error('Failed to create warehouse remains task');
+    }
+
+    const { data: { taskId } } = await taskResponse.json();
+
+    // Ждем некоторое время, чтобы отчет сгенерировался
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    const remainsResponse = await fetch(
+      `${WB_ANALYTICS_API}/api/v1/warehouse_remains/tasks/${taskId}/download`,
+      {
+        headers: {
+          'Authorization': apiKey,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!remainsResponse.ok) {
       throw new Error('Failed to fetch warehouse remains');
     }
 
-    const data = await response.json();
+    const data = await remainsResponse.json();
     console.log('Warehouse remains data:', data);
     return data;
   } catch (error) {
