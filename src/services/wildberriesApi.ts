@@ -29,7 +29,6 @@ export interface WildberriesResponse {
   topUnprofitableProducts?: Array<{
     name: string;
     price: string;
-    profit: string;
     image: string;
   }>;
 }
@@ -474,7 +473,7 @@ export const fetchWildberriesStats = async (
 
 export const fetchWarehouses = async (apiKey: string): Promise<Warehouse[]> => {
   try {
-    const response = await fetch(`${WB_MARKETPLACE_API}/api/v3/warehouses`, {
+    const response = await fetch('https://suppliers-api.wildberries.ru/api/v3/offices', {
       headers: {
         'Authorization': apiKey,
         'Content-Type': 'application/json'
@@ -496,40 +495,18 @@ export const fetchWarehouses = async (apiKey: string): Promise<Warehouse[]> => {
 
 export const fetchWarehouseRemains = async (apiKey: string): Promise<WarehouseRemains[]> => {
   try {
-    // Создаем задание на генерацию отчета
-    const taskResponse = await fetch(`${WB_ANALYTICS_API}/api/v1/warehouse_remains/tasks`, {
-      method: 'POST',
+    const response = await fetch('https://statistics-api.wildberries.ru/api/v1/supplier/stocks', {
       headers: {
         'Authorization': apiKey,
         'Content-Type': 'application/json'
       }
     });
 
-    if (!taskResponse.ok) {
-      throw new Error('Failed to create warehouse remains task');
+    if (!response.ok) {
+      throw new Error('Failed to fetch warehouse remains');
     }
 
-    const { task_id } = await taskResponse.json();
-
-    // Ждем 5 секунд перед запросом результата
-    await new Promise(resolve => setTimeout(resolve, 5000));
-
-    // Получаем отчет
-    const reportResponse = await fetch(
-      `${WB_ANALYTICS_API}/api/v1/warehouse_remains/tasks/${task_id}/download`,
-      {
-        headers: {
-          'Authorization': apiKey,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    if (!reportResponse.ok) {
-      throw new Error('Failed to fetch warehouse remains report');
-    }
-
-    const data = await reportResponse.json();
+    const data = await response.json();
     console.log('Warehouse remains data:', data);
     return data;
   } catch (error) {
