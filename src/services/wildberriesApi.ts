@@ -57,8 +57,35 @@ interface CachedData {
   data: WildberriesReportItem[];
 }
 
+interface Warehouse {
+  name: string;
+  officeId: number;
+  id: number;
+  cargoType: 1 | 2 | 3;
+  deliveryType: 1 | 2 | 3;
+}
+
+interface WarehouseRemains {
+  brand: string;
+  subjectName: string;
+  vendorCode: string;
+  nmId: number;
+  barcode: string;
+  techSize: string;
+  volume: number;
+  inWayToClient: number;
+  inWayFromClient: number;
+  quantityWarehousesFull: number;
+  warehouses: Array<{
+    warehouseName: string;
+    quantity: number;
+  }>;
+}
+
 const WB_REPORT_URL = 'https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod';
 const WB_CONTENT_URL = "https://suppliers-api.wildberries.ru/content/v2/get/cards/list";
+const WB_MARKETPLACE_API = 'https://marketplace-api.wildberries.ru';
+const WB_ANALYTICS_API = 'https://seller-analytics-api.wildberries.ru';
 
 const dataCache: { [key: string]: CachedData } = {};
 const requestTimestamps: { [key: string]: number } = {};
@@ -442,5 +469,71 @@ export const fetchWildberriesStats = async (
   } catch (error) {
     console.error('Ошибка получения статистики Wildberries:', error);
     throw new Error('Не удалось загрузить статистику Wildberries');
+  }
+};
+
+export const fetchWarehouses = async (apiKey: string): Promise<Warehouse[]> => {
+  try {
+    const response = await fetch(`${WB_MARKETPLACE_API}/api/v3/warehouses`, {
+      headers: {
+        'Authorization': apiKey,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch warehouses');
+    }
+
+    const data = await response.json();
+    console.log('Warehouses data:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching warehouses:', error);
+    throw error;
+  }
+};
+
+export const fetchWarehouseRemains = async (apiKey: string): Promise<WarehouseRemains[]> => {
+  try {
+    // Создаем задание на генерацию отчета
+    const taskResponse = await fetch(`${WB_ANALYTICS_API}/api/v1/warehouse_remains/tasks`, {
+      method: 'POST',
+      headers: {
+        'Authorization': apiKey,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!taskResponse.ok) {
+      throw new Error('Failed to create warehouse remains task');
+    }
+
+    const { task_id } = await taskResponse.json();
+
+    // Ждем 5 секунд перед запросом результата
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    // Получаем отчет
+    const reportResponse = await fetch(
+      `${WB_ANALYTICS_API}/api/v1/warehouse_remains/tasks/${task_id}/download`,
+      {
+        headers: {
+          'Authorization': apiKey,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!reportResponse.ok) {
+      throw new Error('Failed to fetch warehouse remains report');
+    }
+
+    const data = await reportResponse.json();
+    console.log('Warehouse remains data:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching warehouse remains:', error);
+    throw error;
   }
 };
