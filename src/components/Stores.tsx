@@ -51,85 +51,24 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  // Загрузка магазинов при монтировании компонента
+  // Загрузка магазинов при монтировании
   useEffect(() => {
-    loadStores();
-  }, []);
-
-  // Загрузка магазинов из localStorage
-  const loadStores = () => {
-    try {
-      const savedStores = localStorage.getItem(STORES_STORAGE_KEY);
-      if (savedStores) {
-        const parsedStores = JSON.parse(savedStores);
-        console.log("Загруженные магазины:", parsedStores);
-        setStores(parsedStores);
-      }
-    } catch (error) {
-      console.error("Ошибка при загрузке магазинов:", error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось загрузить список магазинов",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Сохранение магазинов в localStorage
-  const saveStores = (newStores: Store[]) => {
-    try {
-      console.log("Сохранение магазинов:", newStores);
-      localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(newStores));
-    } catch (error) {
-      console.error("Ошибка при сохранении магазинов:", error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось сохранить список магазинов",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const getLastWeekDateRange = () => {
-    const now = new Date();
-    const lastWeek = new Date(now);
-    lastWeek.setDate(now.getDate() - 7);
-    return { from: lastWeek, to: now };
-  };
-
-  const fetchStoreStats = async (store: Store) => {
-    if (store.marketplace === "Wildberries") {
+    const savedStores = localStorage.getItem(STORES_STORAGE_KEY);
+    if (savedStores) {
       try {
-        const { from, to } = getLastWeekDateRange();
-        const stats = await fetchWildberriesStats(store.apiKey, from, to);
-        
-        const statsData = {
-          storeId: store.id,
-          dateFrom: from.toISOString(),
-          dateTo: to.toISOString(),
-          stats: stats
-        };
-        
-        localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify(statsData));
-        console.log("Статистика получена:", statsData);
-        
-        return stats;
+        setStores(JSON.parse(savedStores));
       } catch (error) {
-        console.error('Ошибка получения статистики:', error);
+        console.error("Ошибка загрузки магазинов:", error);
         toast({
           title: "Ошибка",
-          description: "Не удалось получить статистику магазина",
+          description: "Не удалось загрузить список магазинов",
           variant: "destructive",
         });
-        return null;
       }
     }
-    return null;
-  };
+  }, [toast]);
 
   const handleAddStore = async () => {
-    console.log("Начало добавления магазина", newStore);
-    
     if (!newStore.marketplace || !newStore.name || !newStore.apiKey) {
       toast({
         title: "Ошибка",
@@ -151,16 +90,23 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         lastFetchDate: new Date().toISOString()
       };
 
-      console.log("Создан новый магазин:", store);
-
-      const stats = await fetchStoreStats(store);
-      if (stats) {
-        store.stats = stats;
+      if (store.marketplace === "Wildberries") {
+        const { from, to } = getLastWeekDateRange();
+        const stats = await fetchWildberriesStats(store.apiKey, from, to);
+        if (stats) {
+          store.stats = stats;
+          localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify({
+            storeId: store.id,
+            dateFrom: from.toISOString(),
+            dateTo: to.toISOString(),
+            stats: stats
+          }));
+        }
       }
 
       const updatedStores = [...stores, store];
       setStores(updatedStores);
-      saveStores(updatedStores);
+      localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(updatedStores));
       
       setNewStore({});
       setIsOpen(false);
@@ -182,16 +128,15 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   };
 
   const toggleStoreSelection = (storeId: string) => {
-    const selectedStore = stores.find(store => store.id === storeId);
-    
     const updatedStores = stores.map(store => ({
       ...store,
       isSelected: store.id === storeId ? !store.isSelected : false
     }));
     
     setStores(updatedStores);
-    saveStores(updatedStores);
+    localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(updatedStores));
 
+    const selectedStore = stores.find(store => store.id === storeId);
     if (selectedStore && onStoreSelect) {
       onStoreSelect({
         id: selectedStore.id,
@@ -200,21 +145,38 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     }
   };
 
+  const getLastWeekDateRange = () => {
+    const now = new Date();
+    const lastWeek = new Date(now);
+    lastWeek.setDate(now.getDate() - 7);
+    return { from: lastWeek, to: now };
+  };
+
   const refreshStoreStats = async (store: Store) => {
     setIsLoading(true);
     try {
-      const stats = await fetchStoreStats(store);
-      if (stats) {
-        const updatedStores = stores.map(s => 
-          s.id === store.id ? { ...s, stats } : s
-        );
-        setStores(updatedStores);
-        saveStores(updatedStores);
-        
-        toast({
-          title: "Успешно",
-          description: "Статистика магазина обновлена",
-        });
+      if (store.marketplace === "Wildberries") {
+        const { from, to } = getLastWeekDateRange();
+        const stats = await fetchWildberriesStats(store.apiKey, from, to);
+        if (stats) {
+          const updatedStores = stores.map(s => 
+            s.id === store.id ? { ...s, stats } : s
+          );
+          setStores(updatedStores);
+          localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(updatedStores));
+          
+          localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify({
+            storeId: store.id,
+            dateFrom: from.toISOString(),
+            dateTo: to.toISOString(),
+            stats: stats
+          }));
+          
+          toast({
+            title: "Успешно",
+            description: "Статистика магазина обновлена",
+          });
+        }
       }
     } catch (error) {
       console.error("Ошибка при обновлении статистики:", error);
@@ -234,8 +196,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
 
     const updatedStores = stores.filter(store => store.id !== storeId);
     setStores(updatedStores);
-    saveStores(updatedStores);
-    
+    localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(updatedStores));
     localStorage.removeItem(`${STATS_STORAGE_KEY}_${storeId}`);
     
     toast({
