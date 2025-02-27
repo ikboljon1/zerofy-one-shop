@@ -134,7 +134,9 @@ const Analytics = () => {
     }
   }, [selectedStore]);
 
-  const handleDateFromChange = (date: Date) => {
+  const handleDateFromChange = (date: Date | undefined) => {
+    if (!date) return;
+    
     if (date > dateTo) {
       toast({
         title: "Ошибка",
@@ -144,9 +146,12 @@ const Analytics = () => {
       return;
     }
     setDateFrom(date);
+    console.log("Date from changed to:", date);
   };
 
-  const handleDateToChange = (date: Date) => {
+  const handleDateToChange = (date: Date | undefined) => {
+    if (!date) return;
+    
     if (date < dateFrom) {
       toast({
         title: "Ошибка",
@@ -156,9 +161,10 @@ const Analytics = () => {
       return;
     }
     setDateTo(date);
+    console.log("Date to changed to:", date);
   };
 
-  const renderDatePicker = (date: Date, onChange: (date: Date) => void, label: string) => (
+  const renderDatePicker = (date: Date, onChange: (date: Date | undefined) => void, label: string) => (
     <Popover>
       <PopoverTrigger asChild>
         <Button
@@ -176,7 +182,7 @@ const Analytics = () => {
         <Calendar
           mode="single"
           selected={date}
-          onSelect={(date) => date && onChange(date)}
+          onSelect={onChange}
           initialFocus
         />
       </PopoverContent>
