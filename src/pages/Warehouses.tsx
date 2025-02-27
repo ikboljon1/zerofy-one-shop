@@ -4,24 +4,8 @@ import WarehouseMap from '@/components/WarehouseMap';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { WarehouseIcon, TruckIcon, BarChart3Icon, ClipboardListIcon } from 'lucide-react';
-import { useStore } from '@/store';
 
 const Warehouses: React.FC = () => {
-  const { selectedStore } = useStore();
-
-  if (!selectedStore) {
-    return (
-      <div className="container px-4 py-6">
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-            <WarehouseIcon className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Для просмотра информации о складах необходимо выбрать магазин на главной странице</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="container px-4 py-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -49,7 +33,7 @@ const Warehouses: React.FC = () => {
         </TabsList>
 
         <TabsContent value="map" className="space-y-4">
-          <WarehouseMap apiKey={selectedStore.apiKey} />
+          <WarehouseMap />
         </TabsContent>
 
         <TabsContent value="inventory" className="space-y-4">

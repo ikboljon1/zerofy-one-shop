@@ -7,7 +7,6 @@ import { Store as StoreType, NewStore, STATS_STORAGE_KEY } from "@/types/store";
 import { loadStores, saveStores, refreshStoreStats } from "@/utils/storeUtils";
 import { AddStoreDialog } from "./stores/AddStoreDialog";
 import { StoreCard } from "./stores/StoreCard";
-import { useStore } from "@/store";
 
 interface StoresProps {
   onStoreSelect?: (store: { id: string; apiKey: string }) => void;
@@ -18,7 +17,6 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { setSelectedStore } = useStore();
 
   useEffect(() => {
     try {
@@ -95,9 +93,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     setStores(updatedStores);
     saveStores(updatedStores);
 
-    const selectedStore = updatedStores.find(store => store.id === storeId && store.isSelected);
-    setSelectedStore(selectedStore || null);
-
+    const selectedStore = stores.find(store => store.id === storeId);
     if (selectedStore && onStoreSelect) {
       onStoreSelect({
         id: selectedStore.id,
@@ -117,10 +113,6 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         setStores(updatedStores);
         saveStores(updatedStores);
         
-        if (updatedStore.isSelected) {
-          setSelectedStore(updatedStore);
-        }
-
         toast({
           title: "Успешно",
           description: "Статистика магазина обновлена",
@@ -141,10 +133,6 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   const handleDeleteStore = (storeId: string) => {
     const storeToDelete = stores.find(store => store.id === storeId);
     if (!storeToDelete) return;
-
-    if (storeToDelete.isSelected) {
-      setSelectedStore(null);
-    }
 
     const updatedStores = stores.filter(store => store.id !== storeId);
     setStores(updatedStores);
