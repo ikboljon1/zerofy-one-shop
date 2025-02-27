@@ -42,6 +42,7 @@ import {
 } from "recharts";
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
 import { useStore } from "@/store";
+import { Store } from "@/types/store";
 
 const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1'];
 const STORES_STORAGE_KEY = 'marketplace_stores';
@@ -50,7 +51,7 @@ const STATS_STORAGE_KEY = 'marketplace_stats';
 const Analytics = () => {
   const isMobile = useIsMobile();
   const { toast } = useToast();
-  const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
+  const [dateFrom, setDateFrom] = useState<Date>(subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState(false);
   const [statsData, setStatsData] = useState<any>(null);
@@ -62,13 +63,23 @@ const Analytics = () => {
       try {
         const data = JSON.parse(storedStats);
         setStatsData(data.stats);
-        setDateFrom(new Date(data.dateFrom));
-        setDateTo(new Date(data.dateTo));
-        console.log("Loaded stored stats for period:", data.dateFrom, "to", data.dateTo);
-        console.log("Loaded stats data:", data.stats);
+        
+        // Проверяем валидность дат и устанавливаем их
+        if (data.dateFrom && data.dateTo) {
+          const fromDate = new Date(data.dateFrom);
+          const toDate = new Date(data.dateTo);
+          
+          if (!isNaN(fromDate.getTime()) && !isNaN(toDate.getTime())) {
+            setDateFrom(fromDate);
+            setDateTo(toDate);
+            console.log("Установлены даты из сохраненных данных:", fromDate, toDate);
+          }
+        }
+        
+        console.log("Загружены данные статистики из хранилища:", data.stats);
         return true;
       } catch (error) {
-        console.error("Error parsing stored stats:", error);
+        console.error("Ошибка при разборе сохраненных данных:", error);
         return false;
       }
     }
@@ -89,20 +100,20 @@ const Analytics = () => {
         return;
       }
 
-      console.log("Fetching stats for period:", dateFrom, "to", dateTo);
-      console.log("Using store:", selectedStore);
+      console.log("Запрос статистики за период:", dateFrom, "до", dateTo);
+      console.log("Магазин:", selectedStore.name, "API ключ:", selectedStore.apiKey);
       
       const data = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
-      console.log("Fetched stats data:", data);
+      console.log("Получены данные статистики:", data);
       
-      // Save new stats to localStorage
+      // Сохраняем статистику в localStorage
       const statsData = {
         storeId: selectedStore.id,
         dateFrom: dateFrom.toISOString(),
         dateTo: dateTo.toISOString(),
         stats: data
       };
-      console.log("Saving stats to localStorage:", statsData);
+      
       localStorage.setItem(`${STATS_STORAGE_KEY}_${selectedStore.id}`, JSON.stringify(statsData));
       
       setStatsData(data);
@@ -112,10 +123,10 @@ const Analytics = () => {
         description: "Статистика успешно загружена",
       });
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error('Ошибка загрузки статистики:', error);
       toast({
         title: "Ошибка",
-        description: "Не удалось загрузить статистику",
+        description: "Не удалось загрузить статистику. Проверьте API ключ и подключение.",
         variant: "destructive"
       });
     } finally {
@@ -125,18 +136,22 @@ const Analytics = () => {
 
   useEffect(() => {
     if (selectedStore) {
-      console.log("Selected store changed, loading stats for:", selectedStore.name);
+      console.log("Выбран магазин:", selectedStore.name);
       const hasStoredStats = loadStoredStats(selectedStore.id);
       if (!hasStoredStats) {
-        console.log("No stored stats found, fetching new stats");
+        console.log("Сохраненных данных не найдено, загружаем новые");
         fetchStats();
       }
     }
   }, [selectedStore]);
 
+  // Обработчик для начальной даты
   const handleDateFromChange = (date: Date | undefined) => {
     if (!date) return;
     
+    console.log("Выбрана начальная дата:", date);
+    
+    // Проверяем, что начальная дата не позже конечной
     if (date > dateTo) {
       toast({
         title: "Ошибка",
@@ -145,13 +160,17 @@ const Analytics = () => {
       });
       return;
     }
+    
     setDateFrom(date);
-    console.log("Date from changed to:", date);
   };
 
+  // Обработчик для конечной даты
   const handleDateToChange = (date: Date | undefined) => {
     if (!date) return;
     
+    console.log("Выбрана конечная дата:", date);
+    
+    // Проверяем, что конечная дата не раньше начальной
     if (date < dateFrom) {
       toast({
         title: "Ошибка",
@@ -160,8 +179,8 @@ const Analytics = () => {
       });
       return;
     }
+    
     setDateTo(date);
-    console.log("Date to changed to:", date);
   };
 
   const renderDatePicker = (date: Date, onChange: (date: Date | undefined) => void, label: string) => (
@@ -175,7 +194,7 @@ const Analytics = () => {
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? format(date, "PPP") : <span>{label}</span>}
+          {date ? format(date, "dd.MM.yyyy") : <span>{label}</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">
@@ -239,14 +258,14 @@ const Analytics = () => {
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         {renderDatePicker(dateFrom, handleDateFromChange, "Выберите начальную дату")}
         {renderDatePicker(dateTo, handleDateToChange, "Выберите конечную дату")}
-        <Button onClick={fetchStats} disabled={isLoading}>
+        <Button onClick={fetchStats} disabled={isLoading} className="bg-blue-600 hover:bg-blue-700">
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Загрузка...
             </>
           ) : (
-            "Обновить"
+            "Обновить статистику"
           )}
         </Button>
       </div>
@@ -636,7 +655,7 @@ const Analytics = () => {
       ) : (
         <div className="text-center py-8">
           <p className="text-muted-foreground">
-            Выберите период для просмотра статистики
+            Выберите период для просмотра статистики и нажмите "Обновить статистику"
           </p>
         </div>
       )}
