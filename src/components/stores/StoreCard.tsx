@@ -3,7 +3,7 @@ import { Store } from "@/types/store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2 } from "lucide-react";
+import { Trash2, Target } from "lucide-react";
 
 interface StoreCardProps {
   store: Store;
@@ -68,6 +68,30 @@ export function StoreCard({
               </div>
             </>
           )}
+          
+          {store.adsStats && (
+            <>
+              <div className="mt-4 pt-2 border-t">
+                <div className="flex items-center gap-1 mb-2">
+                  <Target className="h-4 w-4 text-primary" />
+                  <span className="font-medium">Реклама:</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Всего расходов:</span>
+                  <span className="font-medium">{store.adsStats.total.toLocaleString()} ₽</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Поисковая реклама:</span>
+                  <span className="font-medium">{store.adsStats.searchAds.toLocaleString()} ₽</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Баннерная реклама:</span>
+                  <span className="font-medium">{store.adsStats.bannerAds.toLocaleString()} ₽</span>
+                </div>
+              </div>
+            </>
+          )}
+          
           <Button 
             variant="outline" 
             className="w-full mt-4"
@@ -81,4 +105,3 @@ export function StoreCard({
     </Card>
   );
 }
-

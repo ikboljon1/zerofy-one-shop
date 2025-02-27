@@ -1,6 +1,7 @@
 
 import { AxiosError } from 'axios';
 import axios from 'axios';
+import { ExpenseStructure } from '@/types/store';
 
 const BASE_URL = "https://advert-api.wildberries.ru/adv";
 
@@ -28,7 +29,7 @@ interface CampaignStats {
   sum: number;
 }
 
-interface AdvertCost {
+export interface AdvertCost {
   updNum: string;
   updTime: string;
   updSum: number;
@@ -39,7 +40,7 @@ interface AdvertCost {
   advertStatus: string;
 }
 
-interface AdvertBalance {
+export interface AdvertBalance {
   balance: number;
 }
 
@@ -48,6 +49,18 @@ interface AdvertPayment {
   date: string;
   sum: number;
   type: string;
+}
+
+export interface AdvertStat {
+  advertId: number;
+  type: 'auction' | 'automatic';
+  status: 'active' | 'paused' | 'archived' | 'ready';
+  views: number;
+  clicks: number;
+  ctr: number;
+  orders: number;
+  cr: number;
+  sum: number;
 }
 
 const createApiInstance = (apiKey: string) => {
@@ -122,6 +135,79 @@ export const getAdvertCosts = async (dateFrom: Date, dateTo: Date, apiKey: strin
   }
 };
 
+export const getAdvertStats = async (dateFrom: Date, dateTo: Date, campaignIds: number[], apiKey: string): Promise<AdvertStat[]> => {
+  try {
+    console.log("Получаем детальную статистику по кампаниям:", campaignIds);
+    const dates = getDatesArray(dateFrom, dateTo);
+    
+    if (dates.length === 0 || campaignIds.length === 0) {
+      console.log("Нет дат или кампаний для получения статистики");
+      return [];
+    }
+    
+    const api = createApiInstance(apiKey);
+    
+    const payload = campaignIds.map(id => ({
+      id,
+      dates
+    }));
+    
+    const response = await api.post(`/v2/fullstats`, payload);
+    console.log("Получена полная статистика кампаний:", response.data);
+    
+    // Преобразуем и добавляем информацию о типе и статусе
+    const campaignsList = await getCampaignsList(apiKey);
+    const campaignsInfo: Record<number, { type: string; status: string }> = {};
+    
+    for (const advertType of campaignsList.adverts || []) {
+      for (const campaign of advertType.advert_list || []) {
+        campaignsInfo[campaign.advertId] = {
+          type: advertType.type === 9 ? 'automatic' : 'auction',
+          status: mapStatusString(campaign.status)
+        };
+      }
+    }
+    
+    // Добавляем тип и статус к каждой кампании
+    return response.data.map((stat: any) => ({
+      ...stat,
+      type: campaignsInfo[stat.advertId]?.type || 'auction',
+      status: campaignsInfo[stat.advertId]?.status || 'active'
+    }));
+  } catch (error) {
+    console.error('Error fetching advert stats:', error);
+    return [];
+  }
+};
+
+const mapStatusString = (status: string): 'active' | 'paused' | 'archived' | 'ready' => {
+  const statusMap: Record<string, 'active' | 'paused' | 'archived' | 'ready'> = {
+    "active": "active",
+    "paused": "paused",
+    "archived": "archived",
+    "ready": "ready",
+    "1": "active",
+    "2": "paused",
+    "3": "archived",
+    "4": "ready"
+  };
+  
+  return statusMap[status] || "active";
+};
+
+const getDatesArray = (from: Date, to: Date): string[] => {
+  const dates: string[] = [];
+  const currentDate = new Date(from);
+  const endDate = new Date(to);
+  
+  while (currentDate <= endDate) {
+    dates.push(currentDate.toISOString().split('T')[0]);
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  return dates;
+};
+
 export const getAdvertBalance = async (apiKey: string): Promise<AdvertBalance> => {
   try {
     const api = createApiInstance(apiKey);
@@ -152,14 +238,7 @@ export const getAdvertPayments = async (dateFrom: Date, dateTo: Date, apiKey: st
 export const getAdvertisingExpenseStructure = async (
   apiKey: string,
   days: number = 7
-): Promise<{ 
-  searchAds: number;
-  bannerAds: number;
-  cardAds: number;
-  autoAds: number;
-  otherAds: number;
-  total: number;
-}> => {
+): Promise<ExpenseStructure> => {
   try {
     console.log("Получаем структуру расходов на рекламу за", days, "дней");
     

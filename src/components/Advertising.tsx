@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card } from "./ui/card";
 import { getAdvertCosts, getAdvertStats, getAdvertBalance } from "@/services/advertisingApi";
@@ -12,10 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-interface AdvertisingProps {
-  selectedStore?: { id: string; apiKey: string } | null;
-}
+import { useStore } from "@/store";
+import AdvertisingStats from "./AdvertisingStats";
 
 interface Campaign {
   advertId: number;
@@ -24,7 +23,7 @@ interface Campaign {
   type: 'auction' | 'automatic';
 }
 
-const Advertising = ({ selectedStore }: AdvertisingProps) => {
+const Advertising = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
@@ -32,6 +31,7 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [balance, setBalance] = useState<number>(0);
   const { toast } = useToast();
+  const { selectedStore } = useStore();
 
   const fetchData = async () => {
     if (!selectedStore) {
@@ -170,6 +170,9 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
 
   return (
     <div className="space-y-6">
+      {/* Компонент рекламной статистики */}
+      <AdvertisingStats apiKey={selectedStore.apiKey} />
+
       <div className="flex justify-between items-start">
         <div>
           <h2 className="text-2xl font-bold">Рекламные кампании</h2>

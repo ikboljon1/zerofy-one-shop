@@ -4,24 +4,28 @@ import { ShoppingBag, Store } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Store as StoreType, NewStore, STATS_STORAGE_KEY } from "@/types/store";
-import { loadStores, saveStores, refreshStoreStats } from "@/utils/storeUtils";
+import { loadStores, saveStores, refreshStoreStats, refreshStoreAdsStats } from "@/utils/storeUtils";
 import { AddStoreDialog } from "./stores/AddStoreDialog";
 import { StoreCard } from "./stores/StoreCard";
+import { useStore } from "@/store";
 
-interface StoresProps {
-  onStoreSelect?: (store: { id: string; apiKey: string }) => void;
-}
-
-export default function Stores({ onStoreSelect }: StoresProps) {
+export default function Stores() {
   const [stores, setStores] = useState<StoreType[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { setSelectedStore, updateStores } = useStore();
 
   useEffect(() => {
     try {
       const savedStores = loadStores();
       setStores(savedStores);
+      
+      // Автоматически выбираем магазин, если он выбран в списке
+      const selectedStore = savedStores.find(store => store.isSelected);
+      if (selectedStore) {
+        setSelectedStore(selectedStore);
+      }
     } catch (error) {
       console.error("Ошибка загрузки магазинов:", error);
       toast({
@@ -67,6 +71,9 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       
       console.log("Store added successfully:", storeToAdd);
       
+      // Обновляем хранилище
+      updateStores();
+      
       setIsOpen(false);
       toast({
         title: "Успешно",
@@ -84,21 +91,58 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     }
   };
 
-  const handleToggleSelection = (storeId: string) => {
-    const updatedStores = stores.map(store => ({
-      ...store,
-      isSelected: store.id === storeId ? !store.isSelected : false
-    }));
+  const handleToggleSelection = async (storeId: string) => {
+    setIsLoading(true);
     
-    setStores(updatedStores);
-    saveStores(updatedStores);
-
-    const selectedStore = stores.find(store => store.id === storeId);
-    if (selectedStore && onStoreSelect) {
-      onStoreSelect({
-        id: selectedStore.id,
-        apiKey: selectedStore.apiKey
+    try {
+      const updatedStores = stores.map(store => ({
+        ...store,
+        isSelected: store.id === storeId ? !store.isSelected : false
+      }));
+      
+      setStores(updatedStores);
+      saveStores(updatedStores);
+      
+      // Получаем выбранный магазин
+      const selectedStore = updatedStores.find(store => store.id === storeId && store.isSelected);
+      
+      if (selectedStore) {
+        console.log("Выбран магазин:", selectedStore.name);
+        
+        // Обновляем статистику рекламы при выборе магазина
+        const storeWithAdsStats = await refreshStoreAdsStats(selectedStore);
+        
+        if (storeWithAdsStats) {
+          console.log("Обновлена рекламная статистика:", storeWithAdsStats.adsStats);
+          
+          // Обновляем магазин с обновленной рекламной статистикой
+          const storesWithUpdatedAds = updatedStores.map(s => 
+            s.id === storeId ? storeWithAdsStats : s
+          );
+          
+          setStores(storesWithUpdatedAds);
+          saveStores(storesWithUpdatedAds);
+          
+          // Устанавливаем выбранный магазин в контексте
+          setSelectedStore(storeWithAdsStats);
+        } else {
+          setSelectedStore(selectedStore);
+        }
+      } else {
+        setSelectedStore(null);
+      }
+      
+      // Обновляем хранилище
+      updateStores();
+    } catch (error) {
+      console.error("Ошибка при выборе магазина:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обновить данные магазина",
+        variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -107,11 +151,24 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     try {
       const updatedStore = await refreshStoreStats(store);
       if (updatedStore) {
+        // Также обновляем рекламную статистику
+        const storeWithAdsStats = await refreshStoreAdsStats(updatedStore);
+        const finalStore = storeWithAdsStats || updatedStore;
+        
         const updatedStores = stores.map(s => 
-          s.id === store.id ? updatedStore : s
+          s.id === store.id ? finalStore : s
         );
+        
         setStores(updatedStores);
         saveStores(updatedStores);
+        
+        // Если это выбранный магазин, обновляем его в контексте
+        if (finalStore.isSelected) {
+          setSelectedStore(finalStore);
+        }
+        
+        // Обновляем хранилище
+        updateStores();
         
         toast({
           title: "Успешно",
@@ -138,6 +195,14 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     setStores(updatedStores);
     saveStores(updatedStores);
     localStorage.removeItem(`${STATS_STORAGE_KEY}_${storeId}`);
+    
+    // Если удаляем выбранный магазин, сбрасываем выбор
+    if (storeToDelete.isSelected) {
+      setSelectedStore(null);
+    }
+    
+    // Обновляем хранилище
+    updateStores();
     
     toast({
       title: "Магазин удален",
