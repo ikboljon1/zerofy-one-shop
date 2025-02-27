@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -52,34 +52,6 @@ const Analytics = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [statsData, setStatsData] = useState<any>(null);
 
-  // Демонстрационные данные для детализации штрафов и удержаний
-  const penaltiesData = [
-    { name: "Брак товара", value: 5000 },
-    { name: "Недопоставка", value: 3500 },
-    { name: "Нарушение упаковки", value: 2800 },
-    { name: "Нарушение маркировки", value: 1200 },
-    { name: "Другие причины", value: 2500 }
-  ];
-
-  const returnsData = [
-    { name: "Не подошел размер", value: 12000 },
-    { name: "Не соответствует описанию", value: 8500 },
-    { name: "Брак", value: 6300 },
-    { name: "Передумал", value: 4200 },
-    { name: "Другие причины", value: 3000 }
-  ];
-
-  // Данные по удержаниям по дням
-  const deductionsTimelineData = [
-    { date: "01.05.2024", logistic: 1200, storage: 800, penalties: 500 },
-    { date: "02.05.2024", logistic: 1100, storage: 900, penalties: 300 },
-    { date: "03.05.2024", logistic: 1500, storage: 750, penalties: 800 },
-    { date: "04.05.2024", logistic: 1300, storage: 850, penalties: 200 },
-    { date: "05.05.2024", logistic: 1400, storage: 950, penalties: 600 },
-    { date: "06.05.2024", logistic: 1250, storage: 700, penalties: 400 },
-    { date: "07.05.2024", logistic: 1600, storage: 800, penalties: 350 }
-  ];
-
   const getSelectedStore = () => {
     const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
     return stores.find((store: any) => store.isSelected) || null;
@@ -100,6 +72,7 @@ const Analytics = () => {
       }
 
       const data = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
+      console.log("Fetched data:", data);
       setStatsData(data);
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -112,6 +85,13 @@ const Analytics = () => {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    const selectedStore = getSelectedStore();
+    if (selectedStore) {
+      fetchStats();
+    }
+  }, []);
 
   const renderDatePicker = (date: Date, onChange: (date: Date) => void, label: string) => (
     <Popover>
@@ -144,44 +124,44 @@ const Analytics = () => {
     return `${Math.abs(change).toFixed(1)}%`;
   };
 
-  // Временные демонстрационные данные
-  const demoData = {
+  // Получаем данные об удержаниях по дням
+  const deductionsTimelineData = statsData?.deductionsAnalysis?.deductionsTimeline || [];
+  const penaltiesData = statsData?.deductionsAnalysis?.penaltiesData || [];
+  const returnsData = statsData?.deductionsAnalysis?.returnsData || [];
+  const logisticData = statsData?.deductionsAnalysis?.logisticData || [];
+  const storageData = statsData?.deductionsAnalysis?.storageData || [];
+
+  const data = statsData || {
     currentPeriod: {
-      sales: 1250000,
+      sales: 0,
+      transferred: 0,
       expenses: {
-        total: 125000,
-        logistics: 45000,
-        storage: 35000,
-        penalties: 15000
+        total: 0,
+        logistics: 0,
+        storage: 0,
+        penalties: 0
       },
-      netProfit: 875000,
-      acceptance: 30000
+      netProfit: 0,
+      acceptance: 0
     },
-    dailySales: Array.from({ length: 30 }, (_, i) => ({
-      date: new Date(2024, 0, i + 1).toISOString(),
-      sales: Math.floor(Math.random() * 50000) + 20000
-    })),
-    productSales: [
-      { subject_name: "Футболки", quantity: 150 },
-      { subject_name: "Джинсы", quantity: 120 },
-      { subject_name: "Куртки", quantity: 80 },
-      { subject_name: "Обувь", quantity: 200 },
-      { subject_name: "Аксессуары", quantity: 95 }
-    ],
-    topProfitableProducts: [
-      { name: "Платье летнее", price: "1,200 ₽", profit: "+25,000 ₽", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" },
-      { name: "Кроссовки спортивные", price: "3,500 ₽", profit: "+18,000 ₽", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" },
-      { name: "Джинсы классические", price: "2,800 ₽", profit: "+15,500 ₽", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" }
-    ],
-    topUnprofitableProducts: [
-      { name: "Шарф зимний", price: "800 ₽", profit: "-5,200 ₽", image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg" },
-      { name: "Рубашка офисная", price: "1,500 ₽", profit: "-3,800 ₽", image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg" },
-      { name: "Перчатки кожаные", price: "1,200 ₽", profit: "-2,900 ₽", image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg" }
-    ]
+    dailySales: [],
+    productSales: [],
+    topProfitableProducts: [],
+    topUnprofitableProducts: []
   };
 
-  // Используем демонстрационные данные, если API данные не загружены
-  const data = statsData || demoData;
+  const previousPeriod = data.previousPeriod || {
+    sales: 0,
+    transferred: 0,
+    expenses: {
+      total: 0,
+      logistics: 0,
+      storage: 0,
+      penalties: 0
+    },
+    netProfit: 0,
+    acceptance: 0
+  };
 
   return (
     <div className="space-y-6 p-6">
@@ -210,7 +190,7 @@ const Analytics = () => {
                 <h3 className="text-2xl font-bold">{data.currentPeriod.sales.toLocaleString()} ₽</h3>
                 <div className="flex items-center mt-2 text-sm text-green-600 dark:text-green-400">
                   <ArrowUpRight className="h-4 w-4 mr-1" />
-                  <span>+12.5% с прошлого периода</span>
+                  <span>{calculatePercentageChange(data.currentPeriod.sales, previousPeriod.sales)} с прошлого периода</span>
                 </div>
               </div>
               <div className="bg-purple-100 dark:bg-purple-900/60 p-3 rounded-full">
@@ -223,10 +203,10 @@ const Analytics = () => {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-medium text-muted-foreground mb-1">Количество заказов</p>
-                <h3 className="text-2xl font-bold">{(data.currentPeriod.sales / 2500).toFixed(0)}</h3>
+                <h3 className="text-2xl font-bold">{Math.round(data.currentPeriod.sales / 2500)}</h3>
                 <div className="flex items-center mt-2 text-sm text-green-600 dark:text-green-400">
                   <ArrowUpRight className="h-4 w-4 mr-1" />
-                  <span>+8.2% с прошлого периода</span>
+                  <span>{calculatePercentageChange(data.currentPeriod.sales, previousPeriod.sales)} с прошлого периода</span>
                 </div>
               </div>
               <div className="bg-blue-100 dark:bg-blue-900/60 p-3 rounded-full">
@@ -242,7 +222,7 @@ const Analytics = () => {
                 <h3 className="text-2xl font-bold">{data.currentPeriod.expenses.total.toLocaleString()} ₽</h3>
                 <div className="flex items-center mt-2 text-sm text-red-600 dark:text-red-400">
                   <ArrowDownRight className="h-4 w-4 mr-1" />
-                  <span>+3.7% с прошлого периода</span>
+                  <span>{calculatePercentageChange(data.currentPeriod.expenses.total, previousPeriod.expenses.total)} с прошлого периода</span>
                 </div>
               </div>
               <div className="bg-red-100 dark:bg-red-900/60 p-3 rounded-full">
@@ -258,7 +238,7 @@ const Analytics = () => {
                 <h3 className="text-2xl font-bold">{data.currentPeriod.netProfit.toLocaleString()} ₽</h3>
                 <div className="flex items-center mt-2 text-sm text-green-600 dark:text-green-400">
                   <ArrowUpRight className="h-4 w-4 mr-1" />
-                  <span>+15.3% с прошлого периода</span>
+                  <span>{calculatePercentageChange(data.currentPeriod.netProfit, previousPeriod.netProfit)} с прошлого периода</span>
                 </div>
               </div>
               <div className="bg-green-100 dark:bg-green-900/60 p-3 rounded-full">
@@ -309,12 +289,22 @@ const Analytics = () => {
                   />
                   <Area
                     type="monotone"
-                    dataKey="sales"
+                    dataKey="currentValue"
+                    name="Текущий период"
                     stroke="#8B5CF6"
                     strokeWidth={2}
                     fillOpacity={1}
                     fill="url(#colorSales)"
-                    name="Продажи"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="previousValue"
+                    name="Предыдущий период"
+                    stroke="#EC4899"
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    fillOpacity={0.3}
+                    fill="none"
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -458,14 +448,12 @@ const Analytics = () => {
               </span>
               <div className="mt-4 pt-4 border-t border-purple-200 dark:border-purple-800/50">
                 <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Доставка до клиента</span>
-                    <span className="font-medium">{(data.currentPeriod.expenses.logistics * 0.65).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Доставка на склад</span>
-                    <span className="font-medium">{(data.currentPeriod.expenses.logistics * 0.35).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
-                  </div>
+                  {logisticData.map((item, index) => (
+                    <div key={index} className="flex justify-between text-sm">
+                      <span>{item.name}</span>
+                      <span className="font-medium">{item.value.toLocaleString()} ₽</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -483,14 +471,12 @@ const Analytics = () => {
               </span>
               <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-800/50">
                 <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Хранение на складах</span>
-                    <span className="font-medium">{(data.currentPeriod.expenses.storage * 0.8).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Обработка товаров</span>
-                    <span className="font-medium">{(data.currentPeriod.expenses.storage * 0.2).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
-                  </div>
+                  {storageData.map((item, index) => (
+                    <div key={index} className="flex justify-between text-sm">
+                      <span>{item.name}</span>
+                      <span className="font-medium">{item.value.toLocaleString()} ₽</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
