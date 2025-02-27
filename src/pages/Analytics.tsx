@@ -62,11 +62,17 @@ const Analytics = () => {
   const loadStoredStats = (storeId: string) => {
     const storedStats = localStorage.getItem(`${STATS_STORAGE_KEY}_${storeId}`);
     if (storedStats) {
-      const data = JSON.parse(storedStats);
-      setStatsData(data.stats);
-      setDateFrom(new Date(data.dateFrom));
-      setDateTo(new Date(data.dateTo));
-      return true;
+      try {
+        const data = JSON.parse(storedStats);
+        setStatsData(data.stats);
+        setDateFrom(new Date(data.dateFrom));
+        setDateTo(new Date(data.dateTo));
+        console.log("Loaded stored stats for period:", data.dateFrom, "to", data.dateTo);
+        return true;
+      } catch (error) {
+        console.error("Error parsing stored stats:", error);
+        return false;
+      }
     }
     return false;
   };
@@ -82,10 +88,13 @@ const Analytics = () => {
           description: "Выберите основной магазин в разделе 'Магазины'",
           variant: "destructive"
         });
+        setIsLoading(false);
         return;
       }
 
+      console.log("Fetching stats for period:", dateFrom, "to", dateTo);
       const data = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
+      console.log("Fetched stats data:", data);
       
       // Save new stats to localStorage
       const statsData = {
@@ -97,6 +106,11 @@ const Analytics = () => {
       localStorage.setItem(`${STATS_STORAGE_KEY}_${selectedStore.id}`, JSON.stringify(statsData));
       
       setStatsData(data);
+      
+      toast({
+        title: "Готово",
+        description: "Статистика успешно загружена",
+      });
     } catch (error) {
       console.error('Error fetching stats:', error);
       toast({
@@ -118,6 +132,30 @@ const Analytics = () => {
       }
     }
   }, []);
+
+  const handleDateFromChange = (date: Date) => {
+    if (date > dateTo) {
+      toast({
+        title: "Ошибка",
+        description: "Начальная дата не может быть позже конечной",
+        variant: "destructive"
+      });
+      return;
+    }
+    setDateFrom(date);
+  };
+
+  const handleDateToChange = (date: Date) => {
+    if (date < dateFrom) {
+      toast({
+        title: "Ошибка",
+        description: "Конечная дата не может быть раньше начальной",
+        variant: "destructive"
+      });
+      return;
+    }
+    setDateTo(date);
+  };
 
   const renderDatePicker = (date: Date, onChange: (date: Date) => void, label: string) => (
     <Popover>
@@ -194,8 +232,8 @@ const Analytics = () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        {renderDatePicker(dateFrom, setDateFrom, "Выберите начальную дату")}
-        {renderDatePicker(dateTo, setDateTo, "Выберите конечную дату")}
+        {renderDatePicker(dateFrom, handleDateFromChange, "Выберите начальную дату")}
+        {renderDatePicker(dateTo, handleDateToChange, "Выберите конечную дату")}
         <Button onClick={fetchStats} disabled={isLoading}>
           {isLoading ? (
             <>
