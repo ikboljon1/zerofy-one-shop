@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { Card } from "./ui/card";
-import { getAdvertCosts, getAdvertStats, getAdvertBalance } from "@/services/advertisingApi";
+import { getAdvertCosts, getAdvertStats, getAdvertBalance, AdvertStat } from "@/services/advertisingApi";
 import { Button } from "./ui/button";
 import { RefreshCw, CheckCircle, PauseCircle, Archive, Target, Zap, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -23,7 +23,11 @@ interface Campaign {
   type: 'auction' | 'automatic';
 }
 
-const Advertising = () => {
+interface AdvertisingProps {
+  selectedStore?: { id: string; apiKey: string } | null;
+}
+
+const Advertising = ({ selectedStore }: AdvertisingProps) => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
@@ -31,10 +35,13 @@ const Advertising = () => {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [balance, setBalance] = useState<number>(0);
   const { toast } = useToast();
-  const { selectedStore } = useStore();
+  const storeContext = useStore();
+  
+  // Используем либо переданный selectedStore, либо из контекста
+  const activeStore = selectedStore || storeContext.selectedStore;
 
   const fetchData = async () => {
-    if (!selectedStore) {
+    if (!activeStore) {
       toast({
         title: "Ошибка",
         description: "Выберите магазин для просмотра рекламной статистики",
@@ -50,19 +57,21 @@ const Advertising = () => {
       dateFrom.setDate(dateFrom.getDate() - 30);
 
       // Fetch costs data
-      const costsData = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
+      const costsData = await getAdvertCosts(dateFrom, dateTo, activeStore.apiKey);
       
       if (costsData.length === 0) {
         toast({
           title: "Информация",
           description: "Нет данных о рекламных кампаниях за выбранный период",
         });
+        setCampaigns([]);
+        setLoading(false);
         return;
       }
 
       // Fetch stats for each campaign
       const campaignIds = costsData.map(cost => cost.advertId);
-      const statsData = await getAdvertStats(dateFrom, dateTo, campaignIds, selectedStore.apiKey);
+      const statsData = await getAdvertStats(dateFrom, dateTo, campaignIds, activeStore.apiKey);
 
       // Combine costs and stats data
       const uniqueCampaigns = Array.from(
@@ -72,8 +81,8 @@ const Advertising = () => {
             {
               advertId: cost.advertId,
               campName: cost.campName,
-              status: statsData.find(stat => stat.advertId === cost.advertId)?.status || 'active',
-              type: statsData.find(stat => stat.advertId === cost.advertId)?.type || 'auction'
+              status: (statsData as AdvertStat[]).find(stat => stat.advertId === cost.advertId)?.status || 'active',
+              type: (statsData as AdvertStat[]).find(stat => stat.advertId === cost.advertId)?.type || 'auction'
             }
           ])
         ).values()
@@ -82,10 +91,10 @@ const Advertising = () => {
       setCampaigns(uniqueCampaigns);
       
       // Fetch and set real balance
-      const balanceData = await getAdvertBalance(selectedStore.apiKey);
+      const balanceData = await getAdvertBalance(activeStore.apiKey);
       setBalance(balanceData.balance);
 
-      localStorage.setItem(`campaigns_${selectedStore.id}`, JSON.stringify(uniqueCampaigns));
+      localStorage.setItem(`campaigns_${activeStore.id}`, JSON.stringify(uniqueCampaigns));
 
       toast({
         title: "Успех",
@@ -106,14 +115,14 @@ const Advertising = () => {
   };
 
   useEffect(() => {
-    if (selectedStore) {
-      const savedCampaigns = localStorage.getItem(`campaigns_${selectedStore.id}`);
+    if (activeStore) {
+      const savedCampaigns = localStorage.getItem(`campaigns_${activeStore.id}`);
       if (savedCampaigns) {
         setCampaigns(JSON.parse(savedCampaigns));
       }
       fetchData();
     }
-  }, [selectedStore]);
+  }, [activeStore]);
 
   const filteredCampaigns = campaigns.filter(campaign => {
     const matchesStatus = statusFilter === "all-active" 
@@ -129,7 +138,7 @@ const Advertising = () => {
     return matchesStatus && matchesType;
   });
 
-  if (!selectedStore) {
+  if (!activeStore) {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh]">
         <h2 className="text-2xl font-bold mb-4">Реклама</h2>
@@ -143,7 +152,7 @@ const Advertising = () => {
       <CampaignDetails
         campaignId={selectedCampaign.advertId}
         campaignName={selectedCampaign.campName}
-        apiKey={selectedStore.apiKey}
+        apiKey={activeStore.apiKey}
         onBack={() => setSelectedCampaign(null)}
       />
     );
@@ -171,7 +180,7 @@ const Advertising = () => {
   return (
     <div className="space-y-6">
       {/* Компонент рекламной статистики */}
-      <AdvertisingStats apiKey={selectedStore.apiKey} />
+      <AdvertisingStats apiKey={activeStore.apiKey} />
 
       <div className="flex justify-between items-start">
         <div>

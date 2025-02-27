@@ -9,7 +9,11 @@ import { AddStoreDialog } from "./stores/AddStoreDialog";
 import { StoreCard } from "./stores/StoreCard";
 import { useStore } from "@/store";
 
-export default function Stores() {
+interface StoresProps {
+  onStoreSelect?: (store: { id: string; apiKey: string } | null) => void;
+}
+
+export default function Stores({ onStoreSelect }: StoresProps = {}) {
   const [stores, setStores] = useState<StoreType[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -25,6 +29,12 @@ export default function Stores() {
       const selectedStore = savedStores.find(store => store.isSelected);
       if (selectedStore) {
         setSelectedStore(selectedStore);
+        if (onStoreSelect) {
+          onStoreSelect({ 
+            id: selectedStore.id, 
+            apiKey: selectedStore.apiKey 
+          });
+        }
       }
     } catch (error) {
       console.error("Ошибка загрузки магазинов:", error);
@@ -125,11 +135,30 @@ export default function Stores() {
           
           // Устанавливаем выбранный магазин в контексте
           setSelectedStore(storeWithAdsStats);
+          
+          // Вызываем callback для обновления выбранного магазина в родительском компоненте
+          if (onStoreSelect) {
+            onStoreSelect({ 
+              id: storeWithAdsStats.id, 
+              apiKey: storeWithAdsStats.apiKey 
+            });
+          }
         } else {
           setSelectedStore(selectedStore);
+          
+          // Вызываем callback для обновления выбранного магазина в родительском компоненте
+          if (onStoreSelect) {
+            onStoreSelect({ 
+              id: selectedStore.id, 
+              apiKey: selectedStore.apiKey 
+            });
+          }
         }
       } else {
         setSelectedStore(null);
+        if (onStoreSelect) {
+          onStoreSelect(null);
+        }
       }
       
       // Обновляем хранилище
@@ -165,6 +194,14 @@ export default function Stores() {
         // Если это выбранный магазин, обновляем его в контексте
         if (finalStore.isSelected) {
           setSelectedStore(finalStore);
+          
+          // Обновляем выбранный магазин в родительском компоненте
+          if (onStoreSelect) {
+            onStoreSelect({ 
+              id: finalStore.id, 
+              apiKey: finalStore.apiKey 
+            });
+          }
         }
         
         // Обновляем хранилище
@@ -199,6 +236,9 @@ export default function Stores() {
     // Если удаляем выбранный магазин, сбрасываем выбор
     if (storeToDelete.isSelected) {
       setSelectedStore(null);
+      if (onStoreSelect) {
+        onStoreSelect(null);
+      }
     }
     
     // Обновляем хранилище
