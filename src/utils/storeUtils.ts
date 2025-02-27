@@ -38,8 +38,13 @@ export const saveStores = (stores: Store[]): void => {
 export const refreshStoreStats = async (store: Store): Promise<Store | null> => {
   if (store.marketplace === "Wildberries") {
     try {
+      console.log("Refreshing stats for store:", store.name);
       const { from, to } = getLastWeekDateRange();
+      console.log("Date range:", from, to);
+      
       const stats = await fetchWildberriesStats(store.apiKey, from, to);
+      console.log("Fetched stats:", stats);
+      
       if (stats) {
         const updatedStore = { 
           ...store, 
@@ -48,12 +53,15 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
         };
         
         // Сохраняем статистику в localStorage
-        localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify({
+        const statsData = {
           storeId: store.id,
           dateFrom: from.toISOString(),
           dateTo: to.toISOString(),
           stats: stats
-        }));
+        };
+        
+        console.log("Saving stats to localStorage:", statsData);
+        localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify(statsData));
         
         return updatedStore;
       }

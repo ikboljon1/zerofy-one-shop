@@ -41,6 +41,7 @@ import {
   Bar
 } from "recharts";
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
+import { useStore } from "@/store";
 
 const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1'];
 const STORES_STORAGE_KEY = 'marketplace_stores';
@@ -53,11 +54,7 @@ const Analytics = () => {
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState(false);
   const [statsData, setStatsData] = useState<any>(null);
-
-  const getSelectedStore = () => {
-    const stores = JSON.parse(localStorage.getItem(STORES_STORAGE_KEY) || '[]');
-    return stores.find((store: any) => store.isSelected) || null;
-  };
+  const { selectedStore } = useStore();
 
   const loadStoredStats = (storeId: string) => {
     const storedStats = localStorage.getItem(`${STATS_STORAGE_KEY}_${storeId}`);
@@ -68,6 +65,7 @@ const Analytics = () => {
         setDateFrom(new Date(data.dateFrom));
         setDateTo(new Date(data.dateTo));
         console.log("Loaded stored stats for period:", data.dateFrom, "to", data.dateTo);
+        console.log("Loaded stats data:", data.stats);
         return true;
       } catch (error) {
         console.error("Error parsing stored stats:", error);
@@ -80,7 +78,6 @@ const Analytics = () => {
   const fetchStats = async () => {
     try {
       setIsLoading(true);
-      const selectedStore = getSelectedStore();
       
       if (!selectedStore) {
         toast({
@@ -93,6 +90,8 @@ const Analytics = () => {
       }
 
       console.log("Fetching stats for period:", dateFrom, "to", dateTo);
+      console.log("Using store:", selectedStore);
+      
       const data = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
       console.log("Fetched stats data:", data);
       
@@ -103,6 +102,7 @@ const Analytics = () => {
         dateTo: dateTo.toISOString(),
         stats: data
       };
+      console.log("Saving stats to localStorage:", statsData);
       localStorage.setItem(`${STATS_STORAGE_KEY}_${selectedStore.id}`, JSON.stringify(statsData));
       
       setStatsData(data);
@@ -124,14 +124,15 @@ const Analytics = () => {
   };
 
   useEffect(() => {
-    const selectedStore = getSelectedStore();
     if (selectedStore) {
+      console.log("Selected store changed, loading stats for:", selectedStore.name);
       const hasStoredStats = loadStoredStats(selectedStore.id);
       if (!hasStoredStats) {
+        console.log("No stored stats found, fetching new stats");
         fetchStats();
       }
     }
-  }, []);
+  }, [selectedStore]);
 
   const handleDateFromChange = (date: Date) => {
     if (date > dateTo) {
@@ -226,8 +227,6 @@ const Analytics = () => {
     netProfit: 0,
     acceptance: 0
   };
-
-  const selectedStore = getSelectedStore();
 
   return (
     <div className="space-y-6 p-6">
