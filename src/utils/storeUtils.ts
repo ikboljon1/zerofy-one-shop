@@ -1,3 +1,4 @@
+
 import { Store, NewStore, STORES_STORAGE_KEY, STATS_STORAGE_KEY } from "@/types/store";
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
 import { useStore } from "@/store";
@@ -46,6 +47,7 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           lastFetchDate: new Date().toISOString() 
         };
         
+        // Сохраняем статистику в localStorage
         localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify({
           storeId: store.id,
           dateFrom: from.toISOString(),
