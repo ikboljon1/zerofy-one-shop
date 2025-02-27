@@ -1,43 +1,22 @@
 
-export const STORES_STORAGE_KEY = 'marketplace_stores';
-export const STATS_STORAGE_KEY = 'marketplace_stats';
-export const ADS_STATS_STORAGE_KEY = 'marketplace_ads_stats';
+import { WildberriesResponse } from "@/services/wildberriesApi";
 
-export interface ExpenseStructure {
-  searchAds: number;
-  bannerAds: number;
-  cardAds: number;
-  autoAds: number;
-  otherAds: number;
-  total: number;
-}
-
-export interface NewStore {
-  name: string;
-  marketplace: string;
-  apiKey: string;
-}
+export type Marketplace = "Wildberries" | "Ozon" | "Yandexmarket" | "Uzum";
 
 export interface Store {
   id: string;
+  marketplace: Marketplace;
   name: string;
-  marketplace: string;
   apiKey: string;
   isSelected?: boolean;
+  stats?: WildberriesResponse;
   lastFetchDate?: string;
-  stats?: any;
-  adsStats?: ExpenseStructure;
 }
 
-export interface StatsData {
-  storeId: string;
-  dateFrom: string;
-  dateTo: string;
-  stats: any;
-}
+export interface NewStore extends Partial<Store> {}
 
-export interface AdsStatsData {
-  storeId: string;
-  fetchDate: string;
-  stats: ExpenseStructure;
-}
+export const STORES_STORAGE_KEY = 'marketplace_stores';
+export const STATS_STORAGE_KEY = 'marketplace_stats';
+
+export const marketplaces: Marketplace[] = ["Wildberries", "Ozon", "Yandexmarket", "Uzum"];
+

@@ -1,7 +1,6 @@
 
-import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY, ADS_STATS_STORAGE_KEY } from "@/types/store";
+import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY } from "@/types/store";
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
-import { getAdvertisingExpenseStructure } from "@/services/advertisingApi";
 
 export const getLastWeekDateRange = () => {
   const now = new Date();
@@ -47,47 +46,4 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
     }
   }
   return store;
-};
-
-export const refreshStoreAdsStats = async (store: Store): Promise<Store | null> => {
-  if (store.marketplace === "Wildberries") {
-    try {
-      console.log("Обновляем рекламную статистику для магазина:", store.name);
-      const adsStats = await getAdvertisingExpenseStructure(store.apiKey);
-      
-      if (adsStats) {
-        const updatedStore = {
-          ...store,
-          adsStats,
-          lastFetchDate: new Date().toISOString()
-        };
-        
-        localStorage.setItem(`${ADS_STATS_STORAGE_KEY}_${store.id}`, JSON.stringify({
-          storeId: store.id,
-          fetchDate: new Date().toISOString(),
-          stats: adsStats
-        }));
-        
-        console.log("Сохранена рекламная статистика для магазина:", store.name, adsStats);
-        return updatedStore;
-      }
-    } catch (error) {
-      console.error('Error refreshing ads stats:', error);
-      return store;
-    }
-  }
-  return store;
-};
-
-export const loadStoreAdsStats = (storeId: string) => {
-  const storedStats = localStorage.getItem(`${ADS_STATS_STORAGE_KEY}_${storeId}`);
-  if (storedStats) {
-    try {
-      return JSON.parse(storedStats);
-    } catch (error) {
-      console.error("Error parsing stored ads stats:", error);
-      return null;
-    }
-  }
-  return null;
 };

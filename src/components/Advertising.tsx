@@ -1,7 +1,6 @@
-
 import { useEffect, useState } from "react";
 import { Card } from "./ui/card";
-import { getAdvertCosts, getAdvertStats, getAdvertBalance, AdvertStat } from "@/services/advertisingApi";
+import { getAdvertCosts, getAdvertStats, getAdvertBalance } from "@/services/advertisingApi";
 import { Button } from "./ui/button";
 import { RefreshCw, CheckCircle, PauseCircle, Archive, Target, Zap, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -13,18 +12,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useStore } from "@/store";
-import AdvertisingStats from "./AdvertisingStats";
+
+interface AdvertisingProps {
+  selectedStore?: { id: string; apiKey: string } | null;
+}
 
 interface Campaign {
   advertId: number;
   campName: string;
   status: 'active' | 'paused' | 'archived' | 'ready';
   type: 'auction' | 'automatic';
-}
-
-interface AdvertisingProps {
-  selectedStore?: { id: string; apiKey: string } | null;
 }
 
 const Advertising = ({ selectedStore }: AdvertisingProps) => {
@@ -35,13 +32,9 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [balance, setBalance] = useState<number>(0);
   const { toast } = useToast();
-  const storeContext = useStore();
-  
-  // Используем либо переданный selectedStore, либо из контекста
-  const activeStore = selectedStore || storeContext.selectedStore;
 
   const fetchData = async () => {
-    if (!activeStore) {
+    if (!selectedStore) {
       toast({
         title: "Ошибка",
         description: "Выберите магазин для просмотра рекламной статистики",
@@ -57,21 +50,19 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
       dateFrom.setDate(dateFrom.getDate() - 30);
 
       // Fetch costs data
-      const costsData = await getAdvertCosts(dateFrom, dateTo, activeStore.apiKey);
+      const costsData = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
       
       if (costsData.length === 0) {
         toast({
           title: "Информация",
           description: "Нет данных о рекламных кампаниях за выбранный период",
         });
-        setCampaigns([]);
-        setLoading(false);
         return;
       }
 
       // Fetch stats for each campaign
       const campaignIds = costsData.map(cost => cost.advertId);
-      const statsData = await getAdvertStats(dateFrom, dateTo, campaignIds, activeStore.apiKey);
+      const statsData = await getAdvertStats(dateFrom, dateTo, campaignIds, selectedStore.apiKey);
 
       // Combine costs and stats data
       const uniqueCampaigns = Array.from(
@@ -81,8 +72,8 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
             {
               advertId: cost.advertId,
               campName: cost.campName,
-              status: (statsData as AdvertStat[]).find(stat => stat.advertId === cost.advertId)?.status || 'active',
-              type: (statsData as AdvertStat[]).find(stat => stat.advertId === cost.advertId)?.type || 'auction'
+              status: statsData.find(stat => stat.advertId === cost.advertId)?.status || 'active',
+              type: statsData.find(stat => stat.advertId === cost.advertId)?.type || 'auction'
             }
           ])
         ).values()
@@ -91,10 +82,10 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
       setCampaigns(uniqueCampaigns);
       
       // Fetch and set real balance
-      const balanceData = await getAdvertBalance(activeStore.apiKey);
+      const balanceData = await getAdvertBalance(selectedStore.apiKey);
       setBalance(balanceData.balance);
 
-      localStorage.setItem(`campaigns_${activeStore.id}`, JSON.stringify(uniqueCampaigns));
+      localStorage.setItem(`campaigns_${selectedStore.id}`, JSON.stringify(uniqueCampaigns));
 
       toast({
         title: "Успех",
@@ -115,14 +106,14 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
   };
 
   useEffect(() => {
-    if (activeStore) {
-      const savedCampaigns = localStorage.getItem(`campaigns_${activeStore.id}`);
+    if (selectedStore) {
+      const savedCampaigns = localStorage.getItem(`campaigns_${selectedStore.id}`);
       if (savedCampaigns) {
         setCampaigns(JSON.parse(savedCampaigns));
       }
       fetchData();
     }
-  }, [activeStore]);
+  }, [selectedStore]);
 
   const filteredCampaigns = campaigns.filter(campaign => {
     const matchesStatus = statusFilter === "all-active" 
@@ -138,7 +129,7 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
     return matchesStatus && matchesType;
   });
 
-  if (!activeStore) {
+  if (!selectedStore) {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh]">
         <h2 className="text-2xl font-bold mb-4">Реклама</h2>
@@ -152,7 +143,7 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
       <CampaignDetails
         campaignId={selectedCampaign.advertId}
         campaignName={selectedCampaign.campName}
-        apiKey={activeStore.apiKey}
+        apiKey={selectedStore.apiKey}
         onBack={() => setSelectedCampaign(null)}
       />
     );
@@ -179,9 +170,6 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
 
   return (
     <div className="space-y-6">
-      {/* Компонент рекламной статистики */}
-      <AdvertisingStats apiKey={activeStore.apiKey} />
-
       <div className="flex justify-between items-start">
         <div>
           <h2 className="text-2xl font-bold">Рекламные кампании</h2>
