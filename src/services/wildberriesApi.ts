@@ -82,6 +82,86 @@ interface WarehouseRemains {
   }>;
 }
 
+interface AntifraudDetail {
+  nmID: number;
+  sum: number;
+  currency: string;
+  dateFrom: string;
+  dateTo: string;
+}
+
+interface AntifraudDetailsResponse {
+  details: AntifraudDetail[];
+}
+
+interface IncorrectAttachment {
+  amount: number;
+  date: string;
+  lostReason: string;
+  nmID: number;
+  photoUrl: string;
+  shkID: number;
+}
+
+interface IncorrectAttachmentsResponse {
+  report: IncorrectAttachment[];
+}
+
+interface StorageCoefficient {
+  actualHeight: number;
+  actualLength: number;
+  actualVolume: number;
+  actualWidth: number;
+  date: string;
+  dimensionDifference: number;
+  height: number;
+  length: number;
+  logWarehouseCoef: number;
+  nmID: number;
+  photoUrls: string;
+  title: string;
+  volume: number;
+  width: number;
+}
+
+interface StorageCoefficientResponse {
+  report: StorageCoefficient[];
+}
+
+interface GoodsLabeling {
+  amount: number;
+  date: string;
+  incomeId: number;
+  nmID: number;
+  photoUrls: string[];
+  shkID: number;
+  sku: string;
+}
+
+interface GoodsLabelingResponse {
+  report: GoodsLabeling[];
+}
+
+interface CharacteristicsChange {
+  amount: number;
+  date: string;
+  newBarcode: string;
+  newColor: string;
+  newSa: string;
+  newShkID: number;
+  newSize: string;
+  nmID: number;
+  oldBarcode: string;
+  oldColor: string;
+  oldSa: string;
+  oldShkID: number;
+  oldSize: string;
+}
+
+interface CharacteristicsChangeResponse {
+  report: CharacteristicsChange[];
+}
+
 const WB_REPORT_URL = 'https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod';
 const WB_CONTENT_URL = "https://suppliers-api.wildberries.ru/content/v2/get/cards/list";
 const WB_MARKETPLACE_API = 'https://marketplace-api.wildberries.ru';
@@ -503,8 +583,18 @@ export const fetchWarehouseRemains = async (apiKey: string): Promise<WarehouseRe
     // Сначала получим список складов
     const warehouses = await fetchWarehouses(apiKey);
     
+    // Формируем дату для параметра запроса (текущая дата)
+    const today = new Date();
+    const dateFrom = new Date(today);
+    dateFrom.setDate(today.getDate() - 30);
+    
+    const params = new URLSearchParams({
+      dateFrom: dateFrom.toISOString().split('T')[0],
+      dateTo: today.toISOString().split('T')[0]
+    });
+    
     // Получаем остатки через API stocks
-    const response = await fetch('https://statistics-api.wildberries.ru/api/v1/supplier/stocks', {
+    const response = await fetch(`https://statistics-api.wildberries.ru/api/v1/supplier/stocks?${params}`, {
       headers: {
         'Authorization': apiKey,
         'Content-Type': 'application/json'
@@ -542,6 +632,139 @@ export const fetchWarehouseRemains = async (apiKey: string): Promise<WarehouseRe
     return remains;
   } catch (error) {
     console.error('Error fetching warehouse remains:', error);
+    throw error;
+  }
+};
+
+export const fetchAntifraudDetails = async (apiKey: string, date?: string): Promise<AntifraudDetailsResponse> => {
+  try {
+    let url = `${WB_ANALYTICS_API}/api/v1/analytics/antifraud-details`;
+    if (date) {
+      url += `?date=${date}`;
+    }
+
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': apiKey,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch antifraud details: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching antifraud details:', error);
+    throw error;
+  }
+};
+
+export const fetchIncorrectAttachments = async (
+  apiKey: string,
+  dateFrom: string,
+  dateTo: string
+): Promise<IncorrectAttachmentsResponse> => {
+  try {
+    const url = `${WB_ANALYTICS_API}/api/v1/analytics/incorrect-attachments?dateFrom=${dateFrom}&dateTo=${dateTo}`;
+
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': apiKey,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch incorrect attachments: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching incorrect attachments:', error);
+    throw error;
+  }
+};
+
+export const fetchStorageCoefficient = async (apiKey: string, date?: string): Promise<StorageCoefficientResponse> => {
+  try {
+    let url = `${WB_ANALYTICS_API}/api/v1/analytics/storage-coefficient`;
+    if (date) {
+      url += `?date=${date}`;
+    }
+
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': apiKey,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch storage coefficient: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching storage coefficient:', error);
+    throw error;
+  }
+};
+
+export const fetchGoodsLabeling = async (
+  apiKey: string,
+  dateFrom: string,
+  dateTo: string
+): Promise<GoodsLabelingResponse> => {
+  try {
+    const url = `${WB_ANALYTICS_API}/api/v1/analytics/goods-labeling?dateFrom=${dateFrom}&dateTo=${dateTo}`;
+
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': apiKey,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch goods labeling: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching goods labeling:', error);
+    throw error;
+  }
+};
+
+export const fetchCharacteristicsChange = async (
+  apiKey: string,
+  dateFrom: string,
+  dateTo: string
+): Promise<CharacteristicsChangeResponse> => {
+  try {
+    const url = `${WB_ANALYTICS_API}/api/v1/analytics/characteristics-change?dateFrom=${dateFrom}&dateTo=${dateTo}`;
+
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': apiKey,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch characteristics change: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching characteristics change:', error);
     throw error;
   }
 };
