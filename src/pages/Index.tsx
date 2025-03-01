@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { 
   Home, 
@@ -125,8 +126,7 @@ const renderAnalytics = () => {
     if (!selectedStore) {
       toast({
         title: "Внимание",
-        description: "Выберите основной магазин в разделе 'Магазины'",
-        variant: "destructive"
+        description: "Выберите основной магазин в разделе 'Магазины'"
       });
       return;
     }
@@ -329,6 +329,14 @@ const returnsTableData = [
     returns: 5,
     returnRate: "8.33%"
   }
+];
+
+// Define profileMenu data that was missing
+const profileMenu = [
+  { label: "Profile", value: "profile", icon: User },
+  { label: "Billing", value: "billing", icon: CreditCard },
+  { label: "Settings", value: "settings", icon: Settings },
+  { label: "Logout", value: "logout", icon: LogOut }
 ];
 
 const Index = () => {
