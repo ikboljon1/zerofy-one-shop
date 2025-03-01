@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -81,11 +80,6 @@ const Stats = () => {
         return;
       }
 
-      // Format dates correctly for the API
-      const formattedDateFrom = format(dateFrom, 'yyyy-MM-dd');
-      const formattedDateTo = format(dateTo, 'yyyy-MM-dd');
-
-      console.log("Fetching stats with dates:", formattedDateFrom, formattedDateTo);
       const data = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
       
       // Save new stats to localStorage
@@ -98,10 +92,6 @@ const Stats = () => {
       localStorage.setItem(`${STATS_STORAGE_KEY}_${selectedStore.id}`, JSON.stringify(statsData));
       
       setStatsData(data);
-      toast({
-        title: "Данные обновлены",
-        description: `Период: ${format(dateFrom, 'dd.MM.yyyy')} - ${format(dateTo, 'dd.MM.yyyy')}`,
-      });
     } catch (error) {
       console.error('Error fetching stats:', error);
       toast({
