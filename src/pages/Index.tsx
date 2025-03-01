@@ -1,4 +1,4 @@
-// Добавляем импорт в начало файла, вместе с остальными импортами
+
 import { useState } from "react";
 import { 
   Home, 
@@ -546,4 +546,213 @@ const renderAnalytics = () => {
               </div>
             </div>
 
-            <div className="flex flex-col bg-gradient-to-br from-red-50 to-white dark:from-red-950/20 dark:to-background border border-red-200 dark:border-red-
+            <div className="flex flex-col bg-gradient-to-br from-red-50 to-white dark:from-red-950/20 dark:to-background border border-red-200 dark:border-red-800 rounded-xl p-6">
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="text-base font-medium">Штрафы</h4>
+                <div className="bg-red-100 dark:bg-red-900/60 p-2 rounded-md">
+                  <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold">{data.currentPeriod.expenses.penalties.toLocaleString()} ₽</p>
+              <span className="text-xs text-muted-foreground mt-1">
+                {((data.currentPeriod.expenses.penalties / data.currentPeriod.expenses.total) * 100).toFixed(1)}% от общих расходов
+              </span>
+              <div className="mt-4 pt-4 border-t border-red-200 dark:border-red-800/50">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Брак и дефекты</span>
+                    <span className="font-medium">{(data.currentPeriod.expenses.penalties * 0.4).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Задержки и отмены</span>
+                    <span className="font-medium">{(data.currentPeriod.expenses.penalties * 0.6).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-background border border-amber-200 dark:border-amber-800 rounded-xl p-6">
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="text-base font-medium">Реклама</h4>
+                <div className="bg-amber-100 dark:bg-amber-900/60 p-2 rounded-md">
+                  <Target className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold">{data.currentPeriod.expenses.advertising.toLocaleString()} ₽</p>
+              <span className="text-xs text-muted-foreground mt-1">
+                {((data.currentPeriod.expenses.advertising / data.currentPeriod.expenses.total) * 100).toFixed(1)}% от общих расходов
+              </span>
+              <div className="mt-4 pt-4 border-t border-amber-200 dark:border-amber-800/50">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Поисковая реклама</span>
+                    <span className="font-medium">{(data.currentPeriod.expenses.advertising * 0.65).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Медийная реклама</span>
+                    <span className="font-medium">{(data.currentPeriod.expenses.advertising * 0.35).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+const Index = () => {
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const { toast } = useToast();
+  const { theme, toggleTheme } = useTheme();
+  const isMobile = useIsMobile();
+  const [showCalculator, setShowCalculator] = useState(false);
+
+  const tabs = [
+    {
+      name: "Дашбоард",
+      value: "dashboard",
+      icon: Home,
+    },
+    {
+      name: "Аналитика",
+      value: "analytics",
+      icon: BarChart2,
+    },
+    {
+      name: "Товары",
+      value: "products",
+      icon: Package,
+    },
+    {
+      name: "Заказы",
+      value: "orders",
+      icon: ShoppingBag,
+    },
+    {
+      name: "Отчеты",
+      value: "reports",
+      icon: FileText,
+    },
+    {
+      name: "Реклама",
+      value: "advertising",
+      icon: Megaphone,
+    },
+    {
+      name: "Склады",
+      value: "warehouses",
+      icon: WarehouseIcon,
+    },
+  ];
+  
+  // Логика обработки кнопки обновления
+  const handleRefresh = () => {
+    toast({
+      title: "Данные обновлены",
+      description: "Данные успешно обновлены.",
+    });
+  };
+
+  // Рендер контента в зависимости от активной вкладки
+  const renderContent = () => {
+    switch (activeTab) {
+      case "dashboard":
+        return (
+          <div className="space-y-6">
+            <Stats />
+            <Chart />
+            <ProductsComponent 
+              topProfitableProducts={mockTopProfitableProducts} 
+              topUnprofitableProducts={mockTopUnprofitableProducts} 
+            />
+            <Stores />
+          </div>
+        );
+      case "analytics":
+        return renderAnalytics();
+      case "products":
+        return <ProductsList />;
+      case "advertising":
+        return <Advertising />;
+      case "warehouses":
+        return <Warehouses />;
+      default:
+        return (
+          <div className="flex items-center justify-center h-[400px]">
+            <h2 className="text-xl">Страница в разработке</h2>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="container py-6 max-w-screen-2xl">
+      {/* Верхняя панель */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Панель управления</h1>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={handleRefresh}>
+            <RefreshCw className="h-5 w-5" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={toggleTheme}>
+            {theme === "dark" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setShowCalculator(true)}>
+            <Calculator className="h-4 w-4 mr-2" />
+            Калькулятор
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <User className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {profileMenu.map((item) => (
+                <DropdownMenuItem key={item.value} className="cursor-pointer">
+                  <item.icon className="mr-2 h-4 w-4" />
+                  {item.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Навигация */}
+      <div className="mb-6 border-b pb-2">
+        <div className="flex space-x-4 overflow-x-auto pb-2">
+          {tabs.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setActiveTab(tab.value)}
+              className={`flex items-center px-3 py-2 text-sm font-medium rounded-md whitespace-nowrap ${
+                activeTab === tab.value
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              <tab.icon className="mr-2 h-4 w-4" />
+              {tab.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Основной контент */}
+      <main>{renderContent()}</main>
+
+      {/* Модальное окно калькулятора */}
+      {showCalculator && (
+        <CalculatorModal 
+          open={showCalculator} 
+          onClose={() => setShowCalculator(false)} 
+        />
+      )}
+    </div>
+  );
+};
+
+export default Index;
