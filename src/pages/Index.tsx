@@ -1,4 +1,4 @@
-<lov-code>
+
 import { useState } from "react";
 import { 
   Home, 
@@ -590,4 +590,133 @@ const renderAnalytics = () => {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Медийная реклама</span>
-                    <span className="font-medium">{(data.currentPeriod
+                    <span className="font-medium">{(data.currentPeriod.expenses.advertising * 0.35).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+const Index = () => {
+  const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
+  const isMobile = useIsMobile();
+  const [activeTab, setActiveTab] = useState("analytics");
+  const [showCalculator, setShowCalculator] = useState(false);
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center gap-4">
+          <div className="text-2xl font-bold">WB Dashboard</div>
+          {!isMobile && (
+            <nav className="flex items-center gap-4">
+              <button 
+                className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === "analytics" ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}
+                onClick={() => setActiveTab("analytics")}
+              >
+                <BarChart2 size={16} />
+                <span>Аналитика</span>
+              </button>
+              <button 
+                className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === "products" ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}
+                onClick={() => setActiveTab("products")}
+              >
+                <Package size={16} />
+                <span>Товары</span>
+              </button>
+              <button 
+                className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === "stores" ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}
+                onClick={() => setActiveTab("stores")}
+              >
+                <ShoppingBag size={16} />
+                <span>Магазины</span>
+              </button>
+              <button
+                className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === "warehouses" ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}
+                onClick={() => setActiveTab("warehouses")}
+              >
+                <WarehouseIcon size={16} />
+                <span>Склады</span>
+              </button>
+              <button 
+                className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === "advertising" ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}
+                onClick={() => setActiveTab("advertising")}
+              >
+                <Megaphone size={16} />
+                <span>Реклама</span>
+              </button>
+            </nav>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="icon"
+            onClick={() => {
+              setShowCalculator(true);
+            }}
+          >
+            <Calculator className="size-4" />
+          </Button>
+          <Button 
+            variant="outline" 
+            size="icon"
+            onClick={() => {
+              setTheme(theme === "dark" ? "light" : "dark");
+              toast({
+                title: `Переключен на ${theme === "dark" ? "светлую" : "темную"} тему`,
+              });
+            }}
+          >
+            {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <User className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              {profileMenu.map((item) => (
+                <DropdownMenuItem
+                  key={item.value}
+                  onClick={() => {
+                    if (item.value === "logout") {
+                      toast({
+                        title: "Выход выполнен успешно",
+                      });
+                    }
+                  }}
+                >
+                  <item.icon className="mr-2 size-4" />
+                  {item.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+      <div className="flex-1 overflow-auto p-4">
+        {activeTab === "analytics" && renderAnalytics()}
+        {activeTab === "products" && <ProductsComponent />}
+        {activeTab === "stores" && <Stores />}
+        {activeTab === "warehouses" && <Warehouses />}
+        {activeTab === "advertising" && <Advertising />}
+      </div>
+      {showCalculator && (
+        <CalculatorModal 
+          open={showCalculator}
+          onOpenChange={setShowCalculator}
+        />
+      )}
+    </div>
+  );
+};
+
+export default Index;
