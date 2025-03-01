@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,7 +27,6 @@ const AnalyticsDetails = () => {
   const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 30));
   const [dateTo, setDateTo] = useState<Date>(new Date());
 
-  // Demo data that would typically be fetched based on the date range
   const [data, setData] = useState({
     deductionsTimeline: [
       { date: "01.05", logistic: 1200, storage: 800, penalties: 500 },
@@ -61,18 +59,25 @@ const AnalyticsDetails = () => {
   });
 
   const fetchData = () => {
+    console.log("Обновление детальных данных для периода:", { от: dateFrom, до: dateTo });
     setIsLoading(true);
     
-    // Simulate API call
     setTimeout(() => {
-      // Generate new random data while maintaining structure
-      setData({
-        deductionsTimeline: data.deductionsTimeline.map(item => ({
-          date: item.date,
+      const daysDiff = Math.ceil((dateTo.getTime() - dateFrom.getTime()) / (1000 * 3600 * 24)) + 1;
+      const timelineData = [];
+      
+      for (let i = 0; i < Math.min(7, daysDiff); i++) {
+        const currentDate = format(subDays(dateTo, Math.min(7, daysDiff) - 1 - i), 'dd.MM');
+        timelineData.push({
+          date: currentDate,
           logistic: Math.floor(Math.random() * 800) + 800,
           storage: Math.floor(Math.random() * 400) + 600,
           penalties: Math.floor(Math.random() * 600) + 200
-        })),
+        });
+      }
+      
+      setData({
+        deductionsTimeline: timelineData,
         penalties: data.penalties.map(item => ({
           name: item.name,
           value: Math.floor(Math.random() * 4000) + 1000
@@ -91,10 +96,14 @@ const AnalyticsDetails = () => {
     }, 1500);
   };
   
-  // Update data when date range changes
   useEffect(() => {
     fetchData();
-  }, [dateFrom, dateTo]);
+  }, []);
+
+  const handleDateChange = (fromDate: Date | undefined, toDate: Date | undefined) => {
+    if (fromDate) setDateFrom(fromDate);
+    if (toDate) setDateTo(toDate);
+  };
 
   const renderDatePicker = (date: Date, onChange: (date: Date) => void, label: string) => (
     <Popover>
@@ -124,8 +133,8 @@ const AnalyticsDetails = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        {renderDatePicker(dateFrom, setDateFrom, "Выберите начальную дату")}
-        {renderDatePicker(dateTo, setDateTo, "Выберите конечную дату")}
+        {renderDatePicker(dateFrom, (date) => handleDateChange(date, undefined), "Выберите начальную дату")}
+        {renderDatePicker(dateTo, (date) => handleDateChange(undefined, date), "Выберите конечную дату")}
         <Button 
           onClick={fetchData} 
           disabled={isLoading}
@@ -141,7 +150,6 @@ const AnalyticsDetails = () => {
         </Button>
       </div>
 
-      {/* Detailed analysis of costs */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-6">Структура расходов</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -222,7 +230,6 @@ const AnalyticsDetails = () => {
         </div>
       </Card>
 
-      {/* Deductions timeline */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-4">Структура удержаний по дням</h3>
         <div className="h-[300px]">
@@ -244,7 +251,6 @@ const AnalyticsDetails = () => {
         </div>
       </Card>
 
-      {/* Detailed breakdown of deductions and penalties */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-4">Детализация по штрафам</h3>

@@ -58,9 +58,12 @@ const AnalyticsOverview = () => {
   });
 
   const fetchData = () => {
+    console.log("Обновление данных для периода:", { от: dateFrom, до: dateTo });
     setIsLoading(true);
     
     setTimeout(() => {
+      const daysDiff = Math.ceil((dateTo.getTime() - dateFrom.getTime()) / (1000 * 3600 * 24)) + 1;
+      
       setData({
         summary: {
           totalSales: Math.floor(Math.random() * 500000) + 1000000,
@@ -68,8 +71,8 @@ const AnalyticsOverview = () => {
           totalDeductions: Math.floor(Math.random() * 50000) + 100000,
           netProfit: Math.floor(Math.random() * 300000) + 700000
         },
-        dailySales: Array.from({ length: 30 }, (_, i) => ({
-          date: format(subDays(new Date(), 29 - i), 'yyyy-MM-dd'),
+        dailySales: Array.from({ length: daysDiff }, (_, i) => ({
+          date: format(subDays(dateTo, daysDiff - 1 - i), 'yyyy-MM-dd'),
           sales: Math.floor(Math.random() * 50000) + 20000
         })),
         categories: [
@@ -95,7 +98,12 @@ const AnalyticsOverview = () => {
   
   useEffect(() => {
     fetchData();
-  }, [dateFrom, dateTo]);
+  }, []);
+
+  const handleDateChange = (fromDate: Date | undefined, toDate: Date | undefined) => {
+    if (fromDate) setDateFrom(fromDate);
+    if (toDate) setDateTo(toDate);
+  };
 
   const renderDatePicker = (date: Date, onChange: (date: Date) => void, label: string) => (
     <Popover>
@@ -125,8 +133,8 @@ const AnalyticsOverview = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        {renderDatePicker(dateFrom, setDateFrom, "Выберите начальную дату")}
-        {renderDatePicker(dateTo, setDateTo, "Выберите конечную дату")}
+        {renderDatePicker(dateFrom, (date) => handleDateChange(date, undefined), "Выберите начальную дату")}
+        {renderDatePicker(dateTo, (date) => handleDateChange(undefined, date), "Выберите конечную дату")}
         <Button 
           onClick={fetchData} 
           disabled={isLoading}

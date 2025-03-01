@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,7 +29,6 @@ const AnalyticsPerformance = () => {
   const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 30));
   const [dateTo, setDateTo] = useState<Date>(new Date());
 
-  // Demo data that would typically be fetched based on the date range
   const [data, setData] = useState({
     advertisingData: [
       { name: "Реклама в поиске", value: 12500 },
@@ -67,25 +65,34 @@ const AnalyticsPerformance = () => {
   });
 
   const fetchData = () => {
+    console.log("Обновление данных эффективности для периода:", { от: dateFrom, до: dateTo });
     setIsLoading(true);
     
-    // Simulate API call
     setTimeout(() => {
-      // Generate new random data while maintaining structure
+      const daysDiff = Math.ceil((dateTo.getTime() - dateFrom.getTime()) / (1000 * 3600 * 24)) + 1;
+      const efficiencyData = [];
+      const rateData = [];
+      
+      for (let i = 0; i < Math.min(7, daysDiff); i++) {
+        const currentDate = format(subDays(dateTo, Math.min(7, daysDiff) - 1 - i), 'dd.MM');
+        efficiencyData.push({
+          date: currentDate,
+          costs: Math.floor(Math.random() * 800) + 800,
+          revenue: Math.floor(Math.random() * 3000) + 4000
+        });
+        rateData.push({
+          date: currentDate,
+          rate: parseFloat((Math.random() * 2 + 1.5).toFixed(1))
+        });
+      }
+      
       setData({
         advertisingData: data.advertisingData.map(item => ({
           name: item.name,
           value: Math.floor(Math.random() * 8000) + 4000
         })),
-        advertisingEfficiency: data.advertisingEfficiency.map(item => ({
-          date: item.date,
-          costs: Math.floor(Math.random() * 800) + 800,
-          revenue: Math.floor(Math.random() * 3000) + 4000
-        })),
-        conversionRate: data.conversionRate.map(item => ({
-          date: item.date,
-          rate: parseFloat((Math.random() * 2 + 1.5).toFixed(1))
-        })),
+        advertisingEfficiency: efficiencyData,
+        conversionRate: rateData,
         categoryPerformance: data.categoryPerformance.map(item => ({
           name: item.name,
           sales: Math.floor(Math.random() * 30000) + 10000,
@@ -97,10 +104,14 @@ const AnalyticsPerformance = () => {
     }, 1500);
   };
   
-  // Update data when date range changes
   useEffect(() => {
     fetchData();
-  }, [dateFrom, dateTo]);
+  }, []);
+
+  const handleDateChange = (fromDate: Date | undefined, toDate: Date | undefined) => {
+    if (fromDate) setDateFrom(fromDate);
+    if (toDate) setDateTo(toDate);
+  };
 
   const renderDatePicker = (date: Date, onChange: (date: Date) => void, label: string) => (
     <Popover>
@@ -130,8 +141,8 @@ const AnalyticsPerformance = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        {renderDatePicker(dateFrom, setDateFrom, "Выберите начальную дату")}
-        {renderDatePicker(dateTo, setDateTo, "Выберите конечную дату")}
+        {renderDatePicker(dateFrom, (date) => handleDateChange(date, undefined), "Выберите начальную дату")}
+        {renderDatePicker(dateTo, (date) => handleDateChange(undefined, date), "Выберите конечную дату")}
         <Button 
           onClick={fetchData} 
           disabled={isLoading}
@@ -147,7 +158,6 @@ const AnalyticsPerformance = () => {
         </Button>
       </div>
 
-      {/* Advertising Distribution Chart */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold">Структура расходов на рекламу</h3>
@@ -202,7 +212,6 @@ const AnalyticsPerformance = () => {
         </div>
       </Card>
 
-      {/* Advertising Efficiency */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-4">Эффективность рекламы</h3>
         <div className="h-[300px]">
@@ -223,7 +232,6 @@ const AnalyticsPerformance = () => {
         </div>
       </Card>
 
-      {/* Conversion Rate */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-4">Конверсия</h3>
         <div className="h-[300px]">
@@ -252,7 +260,6 @@ const AnalyticsPerformance = () => {
         </div>
       </Card>
 
-      {/* Category Performance */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold">Эффективность категорий</h3>
