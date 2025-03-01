@@ -105,7 +105,7 @@ const AnalyticsOverview = () => {
   
   const stats = [
     {
-      title: "Общие продажи",
+      title: "Продаж",
       value: `${data.totalSales.toLocaleString('ru-RU')} ₽`,
       change: calculateChange(data.totalSales, data.previousPeriod.totalSales),
       icon: DollarSign,
