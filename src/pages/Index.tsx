@@ -1,4 +1,4 @@
-// Добавляем импорт в начало файла, вместе с остальными импортами
+<lov-code>
 import { useState } from "react";
 import { 
   Home, 
@@ -257,7 +257,7 @@ const renderAnalytics = () => {
           <Card className="p-6 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background border-purple-200 dark:border-purple-800">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Продаж</p>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Общая сумма продаж</p>
                 <h3 className="text-2xl font-bold">{data.currentPeriod.sales.toLocaleString()} ₽</h3>
                 <div className="flex items-center mt-2 text-sm text-green-600 dark:text-green-400">
                   <ArrowUpRight className="h-4 w-4 mr-1" />
@@ -546,4 +546,48 @@ const renderAnalytics = () => {
               </div>
             </div>
 
-            <div className="flex flex-col bg-gradient-to-br from-red-50 to-white dark:from-red-950/20 dark:to-background border border-red-200 dark:border-red-
+            <div className="flex flex-col bg-gradient-to-br from-red-50 to-white dark:from-red-950/20 dark:to-background border border-red-200 dark:border-red-800 rounded-xl p-6">
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="text-base font-medium">Штрафы</h4>
+                <div className="bg-red-100 dark:bg-red-900/60 p-2 rounded-md">
+                  <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold">{data.currentPeriod.expenses.penalties.toLocaleString()} ₽</p>
+              <span className="text-xs text-muted-foreground mt-1">
+                {((data.currentPeriod.expenses.penalties / data.currentPeriod.expenses.total) * 100).toFixed(1)}% от общих расходов
+              </span>
+              <div className="mt-4 pt-4 border-t border-red-200 dark:border-red-800/50">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Брак и дефекты</span>
+                    <span className="font-medium">{(data.currentPeriod.expenses.penalties * 0.4).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Задержки и отмены</span>
+                    <span className="font-medium">{(data.currentPeriod.expenses.penalties * 0.6).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-background border border-amber-200 dark:border-amber-800 rounded-xl p-6">
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="text-base font-medium">Реклама</h4>
+                <div className="bg-amber-100 dark:bg-amber-900/60 p-2 rounded-md">
+                  <Target className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold">{data.currentPeriod.expenses.advertising.toLocaleString()} ₽</p>
+              <span className="text-xs text-muted-foreground mt-1">
+                {((data.currentPeriod.expenses.advertising / data.currentPeriod.expenses.total) * 100).toFixed(1)}% от общих расходов
+              </span>
+              <div className="mt-4 pt-4 border-t border-amber-200 dark:border-amber-800/50">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Поисковая реклама</span>
+                    <span className="font-medium">{(data.currentPeriod.expenses.advertising * 0.65).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Медийная реклама</span>
+                    <span className="font-medium">{(data.currentPeriod
