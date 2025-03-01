@@ -1,4 +1,3 @@
-
 // Добавляем импорт в начало файла, вместе с остальными импортами
 import { useState } from "react";
 import { 
@@ -258,7 +257,7 @@ const renderAnalytics = () => {
           <Card className="p-6 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background border-purple-200 dark:border-purple-800">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Общая сумма продаж</p>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Продаж</p>
                 <h3 className="text-2xl font-bold">{data.currentPeriod.sales.toLocaleString()} ₽</h3>
                 <div className="flex items-center mt-2 text-sm text-green-600 dark:text-green-400">
                   <ArrowUpRight className="h-4 w-4 mr-1" />
