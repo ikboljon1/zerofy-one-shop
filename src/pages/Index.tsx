@@ -603,7 +603,7 @@ const renderAnalytics = () => {
 };
 
 const Index = () => {
-  const { theme, setTheme } = useTheme();
+  const { theme, toggleTheme, setTheme } = useTheme();
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState("analytics");
@@ -704,7 +704,10 @@ const Index = () => {
       </div>
       <div className="flex-1 overflow-auto p-4">
         {activeTab === "analytics" && renderAnalytics()}
-        {activeTab === "products" && <ProductsComponent />}
+        {activeTab === "products" && <ProductsComponent 
+          topProfitableProducts={mockTopProfitableProducts} 
+          topUnprofitableProducts={mockTopUnprofitableProducts} 
+        />}
         {activeTab === "stores" && <Stores />}
         {activeTab === "warehouses" && <Warehouses />}
         {activeTab === "advertising" && <Advertising />}
@@ -712,7 +715,7 @@ const Index = () => {
       {showCalculator && (
         <CalculatorModal 
           open={showCalculator}
-          onOpenChange={setShowCalculator}
+          onClose={() => setShowCalculator(false)}
         />
       )}
     </div>

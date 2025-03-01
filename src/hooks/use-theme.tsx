@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 
 export function useTheme() {
@@ -13,5 +14,5 @@ export function useTheme() {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
-  return { theme, toggleTheme };
+  return { theme, toggleTheme, setTheme };
 }
