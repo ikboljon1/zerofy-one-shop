@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Products from "./pages/Products";
 import Advertising from "./components/Advertising";
 import Warehouses from "./pages/Warehouses";
+import Analytics from "./pages/Analytics";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/products" element={<Products />} />
           <Route path="/advertising" element={<Advertising />} />
           <Route path="/warehouses" element={<Warehouses />} />
+          <Route path="/analytics" element={<Analytics />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
