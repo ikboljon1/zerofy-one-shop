@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -24,8 +23,6 @@ import { fetchWildberriesStats } from "@/services/wildberriesApi";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Chart from "@/components/Chart";
-import { Store } from "@/types/store";
-import { loadStores, refreshStoreStats } from "@/utils/storeUtils";
 
 const calculatePercentageChange = (current: number, previous: number): string => {
   if (previous === 0) return '0%';
@@ -33,68 +30,68 @@ const calculatePercentageChange = (current: number, previous: number): string =>
   return `${Math.abs(change).toFixed(1)}%`;
 };
 
-interface StatsProps {
-  store?: Store;
+interface Store {
+  id: string;
+  marketplace: string;
+  name: string;
+  apiKey: string;
+  isSelected?: boolean;
 }
 
-const Stats = ({ store }: StatsProps) => {
+const STORES_STORAGE_KEY = 'marketplace_stores';
+const STATS_STORAGE_KEY = 'marketplace_stats';
+
+const Stats = () => {
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState(false);
   const [statsData, setStatsData] = useState<any>(null);
-  const [selectedStore, setSelectedStore] = useState<Store | null>(null);
 
-  useEffect(() => {
-    if (store) {
-      setSelectedStore(store);
-      if (store.stats) {
-        setStatsData(store.stats);
-      } else {
-        fetchStats(store);
-      }
-    } else {
-      // Если магазин не передан, проверяем выбранный магазин в хранилище
-      const stores = loadStores();
-      const storeFromStorage = stores.find(s => s.isSelected);
-      if (storeFromStorage) {
-        setSelectedStore(storeFromStorage);
-        if (storeFromStorage.stats) {
-          setStatsData(storeFromStorage.stats);
-        } else {
-          fetchStats(storeFromStorage);
-        }
-      }
+  const getSelectedStore = (): Store | null => {
+    const stores = JSON.parse(localStorage.getItem(STORES_STORAGE_KEY) || '[]');
+    return stores.find((store: Store) => store.isSelected) || null;
+  };
+
+  const loadStoredStats = (storeId: string) => {
+    const storedStats = localStorage.getItem(`${STATS_STORAGE_KEY}_${storeId}`);
+    if (storedStats) {
+      const data = JSON.parse(storedStats);
+      setStatsData(data.stats);
+      setDateFrom(new Date(data.dateFrom));
+      setDateTo(new Date(data.dateTo));
+      return true;
     }
-  }, [store]);
+    return false;
+  };
 
-  const fetchStats = async (storeToFetch: Store) => {
+  const fetchStats = async () => {
     try {
       setIsLoading(true);
+      const selectedStore = getSelectedStore();
       
-      if (!storeToFetch) {
+      if (!selectedStore) {
         toast({
           title: "Внимание",
           description: "Выберите основной магазин в разделе 'Магазины'",
           variant: "destructive"
         });
-        setIsLoading(false);
         return;
       }
 
-      const updatedStore = await refreshStoreStats(storeToFetch);
-      if (updatedStore && updatedStore.stats) {
-        setStatsData(updatedStore.stats);
-        setSelectedStore(updatedStore);
-        
-        // Обновляем список магазинов в локальном хранилище
-        const stores = loadStores();
-        const updatedStores = stores.map(s => 
-          s.id === updatedStore.id ? updatedStore : s
-        );
-        localStorage.setItem('marketplace_stores', JSON.stringify(updatedStores));
-      }
+      const data = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
+      
+      // Save new stats to localStorage
+      const statsData = {
+        storeId: selectedStore.id,
+        dateFrom: dateFrom.toISOString(),
+        dateTo: dateTo.toISOString(),
+        stats: data
+      };
+      localStorage.setItem(`${STATS_STORAGE_KEY}_${selectedStore.id}`, JSON.stringify(statsData));
+      
+      setStatsData(data);
     } catch (error) {
       console.error('Error fetching stats:', error);
       toast({
@@ -107,17 +104,15 @@ const Stats = ({ store }: StatsProps) => {
     }
   };
 
-  const handleRefresh = () => {
+  useEffect(() => {
+    const selectedStore = getSelectedStore();
     if (selectedStore) {
-      fetchStats(selectedStore);
-    } else {
-      toast({
-        title: "Внимание",
-        description: "Выберите основной магазин в разделе 'Магазины'",
-        variant: "destructive"
-      });
+      const hasStoredStats = loadStoredStats(selectedStore.id);
+      if (!hasStoredStats) {
+        fetchStats();
+      }
     }
-  };
+  }, []);
 
   const prepareSalesTrendData = (data: any) => {
     if (!data || !data.dailySales) return [];
@@ -283,13 +278,15 @@ const Stats = ({ store }: StatsProps) => {
     </div>
   );
 
+  const selectedStore = getSelectedStore();
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         {renderDatePicker(dateFrom, setDateFrom, "Выберите начальную дату")}
         {renderDatePicker(dateTo, setDateTo, "Выберите конечную дату")}
         <Button 
-          onClick={handleRefresh} 
+          onClick={fetchStats} 
           disabled={isLoading}
         >
           {isLoading ? (
