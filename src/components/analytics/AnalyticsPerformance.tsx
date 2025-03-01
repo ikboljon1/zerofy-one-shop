@@ -1,277 +1,310 @@
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  LineChart, 
-  Line, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer 
-} from "recharts";
-import { RefreshCw } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format, subDays } from "date-fns";
+import { CalendarIcon, Loader2, Target, Zap } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell
+} from "recharts";
+
+const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1'];
 
 const AnalyticsPerformance = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [data, setData] = useState<any>(null);
-  const { toast } = useToast();
-  const isMobile = useIsMobile();
+  const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 30));
+  const [dateTo, setDateTo] = useState<Date>(new Date());
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // Demo data that would typically be fetched based on the date range
+  const [data, setData] = useState({
+    advertisingData: [
+      { name: "Реклама в поиске", value: 12500 },
+      { name: "Баннерная реклама", value: 8700 },
+      { name: "Реклама в карточках", value: 7300 },
+      { name: "Автоматическая реклама", value: 5200 },
+      { name: "Другие форматы", value: 4100 }
+    ],
+    advertisingEfficiency: [
+      { date: "01.05", costs: 1200, revenue: 5800 },
+      { date: "02.05", costs: 1300, revenue: 6200 },
+      { date: "03.05", costs: 1100, revenue: 5400 },
+      { date: "04.05", costs: 1400, revenue: 6800 },
+      { date: "05.05", costs: 1500, revenue: 7200 },
+      { date: "06.05", costs: 1250, revenue: 6100 },
+      { date: "07.05", costs: 1350, revenue: 6500 }
+    ],
+    conversionRate: [
+      { date: "01.05", rate: 2.5 },
+      { date: "02.05", rate: 2.7 },
+      { date: "03.05", rate: 2.2 },
+      { date: "04.05", rate: 3.1 },
+      { date: "05.05", rate: 3.4 },
+      { date: "06.05", rate: 2.9 },
+      { date: "07.05", rate: 3.2 }
+    ],
+    categoryPerformance: [
+      { name: "Одежда", sales: 45000, profit: 15000, aov: 2500 },
+      { name: "Обувь", sales: 38000, profit: 12000, aov: 3200 },
+      { name: "Аксессуары", sales: 22000, profit: 8000, aov: 1800 },
+      { name: "Косметика", sales: 18000, profit: 6000, aov: 1500 },
+      { name: "Другое", sales: 12000, profit: 4000, aov: 1200 }
+    ]
+  });
 
-  const fetchData = async () => {
+  const fetchData = () => {
     setIsLoading(true);
     
-    // Имитация загрузки данных
+    // Simulate API call
     setTimeout(() => {
+      // Generate new random data while maintaining structure
       setData({
-        monthlyPerformance: [
-          { month: 'Январь', sales: 245000, orders: 320, visitors: 12400 },
-          { month: 'Февраль', sales: 278000, orders: 350, visitors: 13200 },
-          { month: 'Март', sales: 312000, orders: 380, visitors: 14800 },
-          { month: 'Апрель', sales: 298000, orders: 365, visitors: 14200 },
-          { month: 'Май', sales: 342000, orders: 410, visitors: 15600 },
-          { month: 'Июнь', sales: 374000, orders: 435, visitors: 16900 }
-        ],
-        deviceStats: [
-          { name: 'Мобильные', value: 65 },
-          { name: 'Десктоп', value: 30 },
-          { name: 'Планшеты', value: 5 }
-        ],
-        hourlyTraffic: [
-          { hour: '00', visitors: 120 },
-          { hour: '02', visitors: 80 },
-          { hour: '04', visitors: 40 },
-          { hour: '06', visitors: 85 },
-          { hour: '08', visitors: 230 },
-          { hour: '10', visitors: 310 },
-          { hour: '12', visitors: 360 },
-          { hour: '14', visitors: 340 },
-          { hour: '16', visitors: 380 },
-          { hour: '18', visitors: 420 },
-          { hour: '20', visitors: 320 },
-          { hour: '22', visitors: 210 }
-        ]
+        advertisingData: data.advertisingData.map(item => ({
+          name: item.name,
+          value: Math.floor(Math.random() * 8000) + 4000
+        })),
+        advertisingEfficiency: data.advertisingEfficiency.map(item => ({
+          date: item.date,
+          costs: Math.floor(Math.random() * 800) + 800,
+          revenue: Math.floor(Math.random() * 3000) + 4000
+        })),
+        conversionRate: data.conversionRate.map(item => ({
+          date: item.date,
+          rate: parseFloat((Math.random() * 2 + 1.5).toFixed(1))
+        })),
+        categoryPerformance: data.categoryPerformance.map(item => ({
+          name: item.name,
+          sales: Math.floor(Math.random() * 30000) + 10000,
+          profit: Math.floor(Math.random() * 10000) + 4000,
+          aov: Math.floor(Math.random() * 2000) + 1000
+        }))
       });
       setIsLoading(false);
     }, 1500);
   };
-
-  const handleRefresh = () => {
+  
+  // Update data when date range changes
+  useEffect(() => {
     fetchData();
-    toast({
-      title: "Обновление данных",
-      description: "Данные о производительности обновлены"
-    });
-  };
+  }, [dateFrom, dateTo]);
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-background p-3 border rounded-md shadow-md">
-          <p className="font-medium">{`${label}`}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} style={{ color: entry.color }} className="text-sm">
-              {`${entry.name}: ${entry.name === 'Продажи' 
-                ? `${entry.value.toLocaleString()} ₽` 
-                : entry.value.toLocaleString()}`}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
+  const renderDatePicker = (date: Date, onChange: (date: Date) => void, label: string) => (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className={cn(
+            "justify-start text-left font-normal",
+            !date && "text-muted-foreground"
+          )}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {date ? format(date, "dd.MM.yyyy") : <span>{label}</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0">
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={(date) => date && onChange(date)}
+          initialFocus
+        />
+      </PopoverContent>
+    </Popover>
+  );
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Эффективность</h2>
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        {renderDatePicker(dateFrom, setDateFrom, "Выберите начальную дату")}
+        {renderDatePicker(dateTo, setDateTo, "Выберите конечную дату")}
         <Button 
-          variant="outline" 
-          onClick={handleRefresh}
+          onClick={fetchData} 
           disabled={isLoading}
         >
           {isLoading ? (
             <>
-              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-              Обновление...
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Загрузка...
             </>
           ) : (
-            <>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Обновить данные
-            </>
+            "Обновить"
           )}
         </Button>
       </div>
 
-      {isLoading ? (
-        <div className="grid gap-6 grid-cols-1">
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-5 w-40" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-80 w-full" />
-            </CardContent>
-          </Card>
-          
-          <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
-            <Card>
-              <CardHeader>
-                <Skeleton className="h-5 w-40" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-60 w-full" />
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <Skeleton className="h-5 w-40" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-60 w-full" />
-              </CardContent>
-            </Card>
+      {/* Advertising Distribution Chart */}
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold">Структура расходов на рекламу</h3>
+          <div className="bg-amber-100 dark:bg-amber-900/60 p-2 rounded-md">
+            <Target className="h-4 w-4 text-amber-600 dark:text-amber-400" />
           </div>
         </div>
-      ) : data ? (
-        <div className="grid gap-6 grid-cols-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Ежемесячная статистика</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={data.monthlyPerformance}
-                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis 
-                      dataKey="month" 
-                      stroke="#6B7280"
-                    />
-                    <YAxis 
-                      yAxisId="left"
-                      stroke="#6B7280"
-                      tickFormatter={(value) => `${value.toLocaleString()}₽`}
-                    />
-                    <YAxis 
-                      yAxisId="right" 
-                      orientation="right" 
-                      stroke="#6B7280"
-                    />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend />
-                    <Line 
-                      yAxisId="left"
-                      type="monotone" 
-                      dataKey="sales" 
-                      name="Продажи" 
-                      stroke="#8B5CF6" 
-                      activeDot={{ r: 8 }} 
-                    />
-                    <Line 
-                      yAxisId="right"
-                      type="monotone" 
-                      dataKey="orders" 
-                      name="Заказы" 
-                      stroke="#EC4899" 
-                    />
-                    <Line 
-                      yAxisId="right"
-                      type="monotone" 
-                      dataKey="visitors" 
-                      name="Посетители" 
-                      stroke="#10B981" 
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={data.advertisingData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={2}
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {data.advertisingData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value: any) => [`${value.toLocaleString()} ₽`, '']}
+                  contentStyle={{ background: '#ffffff', borderRadius: '4px', border: '1px solid #e5e7eb' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="space-y-4">
+            {data.advertisingData.map((item, index) => (
+              <div key={index} className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                  <span className="text-sm">{item.name}</span>
+                </div>
+                <span className="font-medium">{item.value.toLocaleString()} ₽</span>
               </div>
-            </CardContent>
-          </Card>
-          
-          <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
-            <Card>
-              <CardHeader>
-                <CardTitle>Типы устройств</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-60 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={data.deviceStats}
-                      layout="vertical"
-                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                      <XAxis 
-                        type="number" 
-                        stroke="#6B7280"
-                        tickFormatter={(value) => `${value}%`}
-                      />
-                      <YAxis 
-                        dataKey="name" 
-                        type="category" 
-                        stroke="#6B7280"
-                      />
-                      <Tooltip 
-                        formatter={(value) => [`${value}%`, 'Процент посетителей']}
-                      />
-                      <Bar dataKey="value" name="Процент" fill="#8B5CF6" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Посещаемость по часам</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-60 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={data.hourlyTraffic}
-                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                      <XAxis 
-                        dataKey="hour" 
-                        stroke="#6B7280"
-                      />
-                      <YAxis 
-                        stroke="#6B7280"
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Bar dataKey="visitors" name="Посетители" fill="#10B981" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+            ))}
+            <div className="pt-4 border-t">
+              <div className="flex justify-between">
+                <span className="font-medium">Общая сумма:</span>
+                <span className="font-bold">
+                  {data.advertisingData.reduce((sum, item) => sum + item.value, 0).toLocaleString()} ₽
+                </span>
+              </div>
+            </div>
           </div>
         </div>
-      ) : (
-        <div className="text-center py-10">
-          <p className="text-muted-foreground">Нет доступных данных</p>
+      </Card>
+
+      {/* Advertising Efficiency */}
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold mb-4">Эффективность рекламы</h3>
+        <div className="h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data.advertisingEfficiency}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis dataKey="date" stroke="#9ca3af" />
+              <YAxis stroke="#9ca3af" />
+              <Tooltip
+                formatter={(value: any) => [`${value.toLocaleString()} ₽`, '']}
+                contentStyle={{ background: '#ffffff', borderRadius: '4px', border: '1px solid #e5e7eb' }}
+              />
+              <Legend />
+              <Bar dataKey="costs" name="Затраты" fill="#EC4899" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="revenue" name="Выручка" fill="#10B981" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
-      )}
+      </Card>
+
+      {/* Conversion Rate */}
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold mb-4">Конверсия</h3>
+        <div className="h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data.conversionRate}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis dataKey="date" stroke="#9ca3af" />
+              <YAxis 
+                stroke="#9ca3af"
+                tickFormatter={(value) => `${value}%`}
+              />
+              <Tooltip
+                formatter={(value: any) => [`${value}%`, 'Конверсия']}
+                contentStyle={{ background: '#ffffff', borderRadius: '4px', border: '1px solid #e5e7eb' }}
+              />
+              <Line
+                type="monotone"
+                dataKey="rate"
+                stroke="#8B5CF6"
+                strokeWidth={2}
+                dot={{ fill: '#8B5CF6', r: 5 }}
+                activeDot={{ r: 7 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+
+      {/* Category Performance */}
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold">Эффективность категорий</h3>
+          <div className="bg-blue-100 dark:bg-blue-900/60 p-2 rounded-md">
+            <Zap className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[600px]">
+            <thead>
+              <tr className="border-b dark:border-gray-700">
+                <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Категория</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Продажи</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Прибыль</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Средний чек</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Маржа</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.categoryPerformance.map((item, index) => (
+                <tr key={index} className="border-b dark:border-gray-700">
+                  <td className="px-4 py-3 text-sm font-medium">{item.name}</td>
+                  <td className="px-4 py-3 text-right text-sm">{item.sales.toLocaleString()} ₽</td>
+                  <td className="px-4 py-3 text-right text-sm">{item.profit.toLocaleString()} ₽</td>
+                  <td className="px-4 py-3 text-right text-sm">{item.aov.toLocaleString()} ₽</td>
+                  <td className="px-4 py-3 text-right text-sm">
+                    {((item.profit / item.sales) * 100).toFixed(1)}%
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="bg-muted/50">
+                <td className="px-4 py-3 font-medium">Итого</td>
+                <td className="px-4 py-3 text-right font-medium">
+                  {data.categoryPerformance.reduce((sum, item) => sum + item.sales, 0).toLocaleString()} ₽
+                </td>
+                <td className="px-4 py-3 text-right font-medium">
+                  {data.categoryPerformance.reduce((sum, item) => sum + item.profit, 0).toLocaleString()} ₽
+                </td>
+                <td className="px-4 py-3 text-right font-medium">
+                  {(data.categoryPerformance.reduce((sum, item) => sum + item.aov, 0) / data.categoryPerformance.length).toFixed(0)} ₽
+                </td>
+                <td className="px-4 py-3 text-right font-medium">
+                  {((data.categoryPerformance.reduce((sum, item) => sum + item.profit, 0) / 
+                    data.categoryPerformance.reduce((sum, item) => sum + item.sales, 0)) * 100).toFixed(1)}%
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </Card>
     </div>
   );
 };
