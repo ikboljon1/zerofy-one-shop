@@ -1,4 +1,5 @@
 
+// Добавляем импорт в начало файла, вместе с остальными импортами
 import { useState } from "react";
 import { 
   Home, 
@@ -257,7 +258,7 @@ const renderAnalytics = () => {
           <Card className="p-6 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background border-purple-200 dark:border-purple-800">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Продаж</p>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Общая сумма продаж</p>
                 <h3 className="text-2xl font-bold">{data.currentPeriod.sales.toLocaleString()} ₽</h3>
                 <div className="flex items-center mt-2 text-sm text-green-600 dark:text-green-400">
                   <ArrowUpRight className="h-4 w-4 mr-1" />
@@ -560,17 +561,18 @@ const renderAnalytics = () => {
               <div className="mt-4 pt-4 border-t border-red-200 dark:border-red-800/50">
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span>Брак и дефекты</span>
-                    <span className="font-medium">{(data.currentPeriod.expenses.penalties * 0.4).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                    <span>Брак и повреждения</span>
+                    <span className="font-medium">{(data.currentPeriod.expenses.penalties * 0.45).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Задержки и отмены</span>
-                    <span className="font-medium">{(data.currentPeriod.expenses.penalties * 0.6).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                    <span>Нарушение правил</span>
+                    <span className="font-medium">{(data.currentPeriod.expenses.penalties * 0.55).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
                   </div>
                 </div>
               </div>
             </div>
 
+            {/* Новый блок с рекламными расходами */}
             <div className="flex flex-col bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-background border border-amber-200 dark:border-amber-800 rounded-xl p-6">
               <div className="flex justify-between items-center mb-2">
                 <h4 className="text-base font-medium">Реклама</h4>
@@ -586,171 +588,428 @@ const renderAnalytics = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Поисковая реклама</span>
-                    <span className="font-medium">{(data.currentPeriod.expenses.advertising * 0.65).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                    <span className="font-medium">{(data.currentPeriod.expenses.advertising * 0.6).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Медийная реклама</span>
-                    <span className="font-medium">{(data.currentPeriod.expenses.advertising * 0.35).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                    <span>Баннерная реклама</span>
+                    <span className="font-medium">{(data.currentPeriod.expenses.advertising * 0.4).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </Card>
+
+        {/* Диаграмма распределения расходов на рекламу */}
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold">Структура расходов на рекламу</h3>
+            <div className="bg-amber-100 dark:bg-amber-900/60 p-2 rounded-md">
+              <Target className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={advertisingData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={80}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {advertisingData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: any) => [`${value.toLocaleString()} ₽`, '']}
+                    contentStyle={{ background: '#ffffff', borderRadius: '4px', border: '1px solid #e5e7eb' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="space-y-4">
+              {advertisingData.map((item, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                    <span className="text-sm">{item.name}</span>
+                  </div>
+                  <span className="font-medium">{item.value.toLocaleString()} ₽</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+
+        {/* Самые прибыльные и убыточные товары */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Самые прибыльные товары</h3>
+            <div className="space-y-4">
+              {data.topProfitableProducts?.map((product: any, index: number) => (
+                <div key={index} className="flex items-center p-3 rounded-lg border dark:border-muted">
+                  <div className="w-12 h-12 rounded overflow-hidden mr-4 bg-gray-100">
+                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium">{product.name}</h4>
+                    <p className="text-sm text-muted-foreground">{product.price}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-lg font-bold text-green-600 dark:text-green-400">{product.profit}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Самые убыточные товары</h3>
+            <div className="space-y-4">
+              {data.topUnprofitableProducts?.map((product: any, index: number) => (
+                <div key={index} className="flex items-center p-3 rounded-lg border dark:border-muted">
+                  <div className="w-12 h-12 rounded overflow-hidden mr-4 bg-gray-100">
+                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium">{product.name}</h4>
+                    <p className="text-sm text-muted-foreground">{product.price}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-lg font-bold text-red-600 dark:text-red-400">{product.profit}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
       </div>
     </div>
   );
 };
 
+const salesData = [
+  { name: "Jan", value: 300000 },
+  { name: "Feb", value: 320000 },
+  { name: "Mar", value: 310000 },
+  { name: "Apr", value: 325000 },
+  { name: "May", value: 330000 },
+  { name: "Jun", value: 348261 },
+];
+
+const returnsData = [
+  { name: "Jan", returns: 120 },
+  { name: "Feb", returns: 150 },
+  { name: "Mar", returns: 140 },
+  { name: "Apr", returns: 130 },
+  { name: "May", returns: 145 },
+  { name: "Jun", returns: 150 },
+];
+
+const profitData = [
+  { name: "Jan", profit: 50000 },
+  { name: "Feb", profit: 55000 },
+  { name: "Mar", profit: 53000 },
+  { name: "Apr", profit: 54000 },
+  { name: "May", profit: 56000 },
+  { name: "Jun", profit: 58000 },
+];
+
+const salesTableData = [
+  {
+    name: "Product 1",
+    sku: "SKU12345",
+    quantity: 100,
+    sales: 10000,
+    avgPrice: 100,
+    profit: 2000,
+    profitMargin: "20%",
+    orders: 120,
+    returns: 10,
+    returnRate: "8.33%",
+  },
+  {
+    name: "Product 2",
+    sku: "SKU67890",
+    quantity: 50,
+    sales: 5000,
+    avgPrice: 100,
+    profit: 1000,
+    profitMargin: "20%",
+    orders: 60,
+    returns: 5,
+    returnRate: "8.33%",
+  },
+];
+
+const returnsTableData = [
+  {
+    name: "Product 1",
+    sku: "SKU12345",
+    orders: 120,
+    returns: 10,
+    returnRate: "8.33%"
+  },
+  {
+    name: "Product 2",
+    sku: "SKU67890",
+    orders: 60,
+    returns: 5,
+    returnRate: "8.33%"
+  }
+];
+
 const Index = () => {
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("home");
+  const [showCalculator, setShowCalculator] = useState(false);
+  const isMobile = useIsMobile();
   const { toast } = useToast();
   const { theme, toggleTheme } = useTheme();
-  const isMobile = useIsMobile();
-  const [showCalculator, setShowCalculator] = useState(false);
+  const [selectedStore, setSelectedStore] = useState<{id: string; apiKey: string} | null>(null);
 
-  const tabs = [
-    {
-      name: "Дашбоард",
-      value: "dashboard",
-      icon: Home,
-    },
-    {
-      name: "Аналитика",
-      value: "analytics",
-      icon: BarChart2,
-    },
-    {
-      name: "Товары",
-      value: "products",
-      icon: Package,
-    },
-    {
-      name: "Заказы",
-      value: "orders",
-      icon: ShoppingBag,
-    },
-    {
-      name: "Отчеты",
-      value: "reports",
-      icon: FileText,
-    },
-    {
-      name: "Реклама",
-      value: "advertising",
-      icon: Megaphone,
-    },
-    {
-      name: "Склады",
-      value: "warehouses",
-      icon: WarehouseIcon,
-    },
-  ];
-  
-  // Логика обработки кнопки обновления
-  const handleRefresh = () => {
-    toast({
-      title: "Данные обновлены",
-      description: "Данные успешно обновлены.",
-    });
-  };
-
-  // Рендер контента в зависимости от активной вкладки
-  const renderContent = () => {
-    switch (activeTab) {
-      case "dashboard":
-        return (
-          <div className="space-y-6">
-            <Stats />
-            <Chart />
-            <ProductsComponent 
-              topProfitableProducts={mockTopProfitableProducts} 
-              topUnprofitableProducts={mockTopUnprofitableProducts} 
-            />
-            <Stores />
-          </div>
-        );
-      case "analytics":
-        return renderAnalytics();
-      case "products":
-        return <ProductsList />;
-      case "advertising":
-        return <Advertising />;
-      case "warehouses":
-        return <Warehouses />;
-      default:
-        return (
-          <div className="flex items-center justify-center h-[400px]">
-            <h2 className="text-xl">Страница в разработке</h2>
-          </div>
-        );
-    }
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
   };
 
   return (
-    <div className="container py-6 max-w-screen-2xl">
-      {/* Верхняя панель */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Панель управления</h1>
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={handleRefresh}>
-            <RefreshCw className="h-5 w-5" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={toggleTheme}>
-            {theme === "dark" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowCalculator(true)}>
-            <Calculator className="h-4 w-4 mr-2" />
-            Калькулятор
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <User className="h-5 w-5" />
+    <div className="min-h-screen bg-background pb-16">
+      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur">
+        {isMobile ? (
+          <div className="flex items-center justify-between p-4">
+            <div className="flex items-center space-x-2">
+              <Zap className="h-6 w-6 text-primary" />
+              <h1 className="text-xl font-bold">Zerofy</h1>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="icon" onClick={() => setShowCalculator(true)}>
+                <Calculator className="h-5 w-5" />
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {profileMenu.map((item) => (
-                <DropdownMenuItem key={item.value} className="cursor-pointer">
-                  <item.icon className="mr-2 h-4 w-4" />
-                  {item.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+              <Button variant="ghost" size="icon" onClick={toggleTheme}>
+                {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between p-4">
+            <div className="flex items-center space-x-8">
+              <div className="flex items-center space-x-2">
+                <Zap className="h-8 w-8 text-primary" />
+                <h1 className="text-2xl font-bold">Zerofy</h1>
+              </div>
+              <nav className="hidden md:flex space-x-6">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => handleTabChange("home")}
+                  className={activeTab === "home" ? "bg-accent" : ""}
+                >
+                  <Home className="mr-2 h-4 w-4" />
+                  Dashboard
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => handleTabChange("analytics")}
+                  className={activeTab === "analytics" ? "bg-accent" : ""}
+                >
+                  <BarChart2 className="mr-2 h-4 w-4" />
+                  Analytics
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => handleTabChange("products")}
+                  className={activeTab === "products" ? "bg-accent" : ""}
+                >
+                  <Package className="mr-2 h-4 w-4" />
+                  Товары
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => handleTabChange("stores")}
+                  className={activeTab === "stores" ? "bg-accent" : ""}
+                >
+                  <ShoppingBag className="mr-2 h-4 w-4" />
+                  Магазины
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => handleTabChange("warehouses")}
+                  className={activeTab === "warehouses" ? "bg-accent" : ""}
+                >
+                  <WarehouseIcon className="mr-2 h-4 w-4" />
+                  Склады
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => handleTabChange("advertising")}
+                  className={activeTab === "advertising" ? "bg-accent" : ""}
+                >
+                  <Megaphone className="mr-2 h-4 w-4" />
+                  Реклама
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => handleTabChange("profile")}
+                  className={activeTab === "profile" ? "bg-accent" : ""}
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  Профиль
+                </Button>
+              </nav>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Button variant="outline" onClick={() => setShowCalculator(true)}>
+                <Calculator className="mr-2 h-4 w-4" />
+                Calculator
+              </Button>
+              <Button variant="ghost" size="icon" onClick={toggleTheme}>
+                {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {profileMenu.map((item) => (
+                    <DropdownMenuItem key={item.value} onClick={() => handleTabChange(item.value)}>
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {item.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        )}
+      </header>
 
-      {/* Навигация */}
-      <div className="mb-6 border-b pb-2">
-        <div className="flex space-x-4 overflow-x-auto pb-2">
-          {tabs.map((tab) => (
+      <main className={`container px-4 py-6 ${isMobile ? 'space-y-4' : 'space-y-6'}`}>
+        {activeTab === "home" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className={isMobile ? 'space-y-4' : 'space-y-6'}
+          >
+            <Stats />
+            <Chart />
+            <ProductsComponent 
+              topProfitableProducts={mockTopProfitableProducts}
+              topUnprofitableProducts={mockTopUnprofitableProducts}
+            />
+          </motion.div>
+        )}
+        {activeTab === "analytics" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {renderAnalytics()}
+          </motion.div>
+        )}
+        {activeTab === "products" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <ProductsList selectedStore={selectedStore} />
+          </motion.div>
+        )}
+        {activeTab === "stores" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Stores onStoreSelect={setSelectedStore} />
+          </motion.div>
+        )}
+        {activeTab === "warehouses" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Warehouses />
+          </motion.div>
+        )}
+        {activeTab === "advertising" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Advertising selectedStore={selectedStore} />
+          </motion.div>
+        )}
+        {activeTab === "profile" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Profile />
+          </motion.div>
+        )}
+      </main>
+
+      {isMobile && (
+        <nav className="fixed bottom-0 left-0 right-0 border-t bg-background/80 backdrop-blur">
+          <div className="container flex items-center justify-around py-2">
             <button
-              key={tab.value}
-              onClick={() => setActiveTab(tab.value)}
-              className={`flex items-center px-3 py-2 text-sm font-medium rounded-md whitespace-nowrap ${
-                activeTab === tab.value
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted"
-              }`}
+              className={`flex flex-col items-center space-y-1 ${activeTab === "home" ? "text-primary" : "text-muted-foreground"}`}
+              onClick={() => handleTabChange("home")}
             >
-              <tab.icon className="mr-2 h-4 w-4" />
-              {tab.name}
+              <Home className="h-5 w-5" />
+              <span className="text-xs">Home</span>
             </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Основной контент */}
-      <main>{renderContent()}</main>
-
-      {/* Модальное окно калькулятора */}
-      {showCalculator && (
-        <CalculatorModal 
-          open={showCalculator} 
-          onClose={() => setShowCalculator(false)} 
-        />
+            <button
+              className={`flex flex-col items-center space-y-1 ${activeTab === "analytics" ? "text-primary" : "text-muted-foreground"}`}
+              onClick={() => handleTabChange("analytics")}
+            >
+              <BarChart2 className="h-5 w-5" />
+              <span className="text-xs">Analytics</span>
+            </button>
+            <button
+              className={`flex flex-col items-center space-y-1 ${activeTab === "products" ? "text-primary" : "text-muted-foreground"}`}
+              onClick={() => handleTabChange("products")}
+            >
+              <Package className="h-5 w-5" />
+              <span className="text-xs">Товары</span>
+            </button>
+            <button
+              className={`flex flex-col items-center space-y-1 ${activeTab === "warehouses" ? "text-primary" : "text-muted-foreground"}`}
+              onClick={() => handleTabChange("warehouses")}
+            >
+              <WarehouseIcon className="h-5 w-5" />
+              <span className="text-xs">Склады</span>
+            </button>
+            <button
+              className={`flex flex-col items-center space-y-1 ${activeTab === "stores" ? "text-primary" : "text-muted-foreground"}`}
+              onClick={() => handleTabChange("stores")}
+            >
+              <ShoppingBag className="h-5 w-5" />
+              <span className="text-xs">Магазины</span>
+            </button>
+            <button
+              className={`flex flex-col items-center space-y-1 ${activeTab === "advertising" ? "text-primary" : "text-muted-foreground"}`}
+              onClick={() => handleTabChange("advertising")}
+            >
+              <Megaphone className="h-5 w-5" />
+              <span className="text-xs">Реклама</span>
+            </button>
+          </div>
+        </nav>
       )}
+
+      <CalculatorModal open={showCalculator} onClose={() => setShowCalculator(false)} />
     </div>
   );
 };
