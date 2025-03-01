@@ -1,7 +1,6 @@
 
 import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY } from "@/types/store";
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
-import { format } from "date-fns";
 
 export const getLastWeekDateRange = () => {
   const now = new Date();
@@ -23,13 +22,6 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
   if (store.marketplace === "Wildberries") {
     try {
       const { from, to } = getLastWeekDateRange();
-      
-      // Format dates correctly for the API
-      const formattedDateFrom = format(from, 'yyyy-MM-dd');
-      const formattedDateTo = format(to, 'yyyy-MM-dd');
-      
-      console.log("Refreshing store stats with dates:", formattedDateFrom, formattedDateTo);
-      
       const stats = await fetchWildberriesStats(store.apiKey, from, to);
       if (stats) {
         const updatedStore = { 
