@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   Home, 
@@ -331,7 +330,6 @@ const returnsTableData = [
   }
 ];
 
-// Define profileMenu data that was missing
 const profileMenu = [
   { label: "Profile", value: "profile", icon: User },
   { label: "Billing", value: "billing", icon: CreditCard },
