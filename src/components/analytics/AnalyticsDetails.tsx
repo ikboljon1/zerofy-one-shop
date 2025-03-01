@@ -37,6 +37,7 @@ const AnalyticsDetails = () => {
 
   const fetchData = async () => {
     setIsLoading(true);
+    console.log("Fetching details for period:", dateFrom, "to", dateTo);
     
     try {
       // В будущем здесь будет запрос к API
@@ -104,7 +105,10 @@ const AnalyticsDetails = () => {
             <Calendar
               mode="single"
               selected={dateFrom}
-              onSelect={(date) => date && setDateFrom(date)}
+              onSelect={(date) => {
+                console.log("Selected details date from:", date);
+                if (date) setDateFrom(date);
+              }}
               initialFocus
             />
           </PopoverContent>
@@ -127,7 +131,10 @@ const AnalyticsDetails = () => {
             <Calendar
               mode="single"
               selected={dateTo}
-              onSelect={(date) => date && setDateTo(date)}
+              onSelect={(date) => {
+                console.log("Selected details date to:", date);
+                if (date) setDateTo(date);
+              }}
               initialFocus
             />
           </PopoverContent>

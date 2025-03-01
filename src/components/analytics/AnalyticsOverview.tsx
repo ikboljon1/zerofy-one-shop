@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format, subDays } from "date-fns";
 import { Card } from "@/components/ui/card";
@@ -61,6 +62,7 @@ const AnalyticsOverview = () => {
   
   const fetchData = async () => {
     setIsLoading(true);
+    console.log("Fetching data for period:", dateFrom, "to", dateTo);
     
     try {
       // В будущем здесь будет запрос к API
@@ -152,7 +154,10 @@ const AnalyticsOverview = () => {
             <Calendar
               mode="single"
               selected={dateFrom}
-              onSelect={(date) => date && setDateFrom(date)}
+              onSelect={(date) => {
+                console.log("Selected date from:", date);
+                if (date) setDateFrom(date);
+              }}
               initialFocus
             />
           </PopoverContent>
@@ -175,7 +180,10 @@ const AnalyticsOverview = () => {
             <Calendar
               mode="single"
               selected={dateTo}
-              onSelect={(date) => date && setDateTo(date)}
+              onSelect={(date) => {
+                console.log("Selected date to:", date);
+                if (date) setDateTo(date);
+              }}
               initialFocus
             />
           </PopoverContent>
