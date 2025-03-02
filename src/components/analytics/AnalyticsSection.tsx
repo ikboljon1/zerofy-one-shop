@@ -1,4 +1,4 @@
-<lov-code>
+
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -577,4 +577,36 @@ const AnalyticsSection = () => {
                     <p className="text-sm text-muted-foreground">{product.price}</p>
                   </div>
                   <div className="text-right">
-                    <span className="text-
+                    <span className="text-green-600 dark:text-green-400 font-semibold">{product.profit}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Самые убыточные товары</h3>
+            <div className="space-y-4">
+              {data.topUnprofitableProducts?.map((product: any, index: number) => (
+                <div key={index} className="flex items-center p-3 rounded-lg border dark:border-muted">
+                  <div className="w-12 h-12 rounded overflow-hidden mr-4 bg-gray-100">
+                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium">{product.name}</h4>
+                    <p className="text-sm text-muted-foreground">{product.price}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-red-600 dark:text-red-400 font-semibold">{product.profit}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AnalyticsSection;
