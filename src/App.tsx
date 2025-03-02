@@ -7,8 +7,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Analytics from "./pages/Analytics";
 import Products from "./pages/Products";
-import Advertising from "./components/Advertising";
 import Warehouses from "./pages/Warehouses";
+import Advertising from "./components/Advertising";
 
 const queryClient = new QueryClient();
 
@@ -22,8 +22,8 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/products" element={<Products />} />
-          <Route path="/advertising" element={<Advertising />} />
           <Route path="/warehouses" element={<Warehouses />} />
+          <Route path="/advertising" element={<Advertising />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
