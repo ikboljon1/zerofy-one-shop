@@ -55,7 +55,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
         fill="white" 
         textAnchor={x > cx ? 'start' : 'end'} 
         dominantBaseline="central"
-        className="text-[10px] font-medium"
+        className="text-xs font-semibold drop-shadow-md"
       >
         {`${(percent * 100).toFixed(0)}%`}
       </text>
@@ -135,6 +135,14 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
         <div className="h-[400px] w-full relative">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
+              <defs>
+                {COLORS.map((color, index) => (
+                  <linearGradient key={`gradient-${index}`} id={`colorGradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={color} stopOpacity={0.9}/>
+                    <stop offset="100%" stopColor={color} stopOpacity={0.7}/>
+                  </linearGradient>
+                ))}
+              </defs>
               <Pie
                 data={productSales}
                 cx="50%"
@@ -150,7 +158,12 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 animationDuration={1500}
               >
                 {productSales.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="rgba(255,255,255,0.3)" strokeWidth={2} />
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={`url(#colorGradient-${index % COLORS.length})`} 
+                    stroke="rgba(255,255,255,0.3)" 
+                    strokeWidth={2} 
+                  />
                 ))}
               </Pie>
               <Tooltip
@@ -165,8 +178,8 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
               <Legend formatter={customLegendFormatter} />
             </PieChart>
           </ResponsiveContainer>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center bg-white dark:bg-gray-800 rounded-full p-4 shadow-lg w-32 h-32 flex flex-col items-center justify-center">
-            <div className="text-2xl font-bold">{totalSales.toLocaleString()}</div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center bg-white dark:bg-gray-800 rounded-full p-4 shadow-lg w-32 h-32 flex flex-col items-center justify-center border-2 border-indigo-100 dark:border-indigo-900">
+            <div className="text-2xl font-bold bg-gradient-to-r from-indigo-500 to-purple-600 text-transparent bg-clip-text">{totalSales.toLocaleString()}</div>
             <div className="text-sm text-muted-foreground">Всего продано</div>
           </div>
         </div>
