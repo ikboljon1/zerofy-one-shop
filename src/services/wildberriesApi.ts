@@ -1,454 +1,228 @@
-export interface WildberriesResponse {
-  currentPeriod: {
-    sales: number;
-    transferred: number;
-    expenses: {
-      total: number;
-      logistics: number;
-      storage: number;
-      penalties: number;
-    };
-    netProfit: number;
-    acceptance: number;
-  };
-  dailySales: Array<{
-    date: string;
-    sales: number;
-    previousSales: number;
-  }>;
-  productSales: Array<{
-    subject_name: string;
-    quantity: number;
-  }>;
-  topProfitableProducts?: Array<{
-    name: string;
-    price: string;
-    profit: string;
-    image: string;
-  }>;
-  topUnprofitableProducts?: Array<{
-    name: string;
-    price: string;
-    profit: string;
-    image: string;
-  }>;
+import { Card } from "@/components/ui/card";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  PieChart,
+  Pie,
+  Cell
+} from "recharts";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Package, ShoppingCart } from "lucide-react";
+
+interface SalesByDay {
+  date: string;
+  currentValue: number;
+  previousValue: number;
 }
 
-interface WildberriesReportItem {
-  realizationreport_id: number;
-  date_from: string;
-  date_to: string;
-  nm_id: string;
-  doc_type_name: string;
+interface ProductSales {
+  name: string;
   quantity: number;
-  retail_amount: number;
-  ppvz_for_pay: number;
-  delivery_rub: number;
-  penalty: number;
-  storage_fee: number;
-  acceptance: number;
-  deduction: number;
-  sale_dt: string;
-  subject_name: string;
 }
 
-interface CachedData {
-  timestamp: number;
-  data: WildberriesReportItem[];
+interface ChartProps {
+  salesTrend?: SalesByDay[];
+  productSales?: ProductSales[];
 }
 
-const WB_REPORT_URL = 'https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod';
-const WB_CONTENT_URL = "https://suppliers-api.wildberries.ru/content/v2/get/cards/list";
+const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1'];
 
-const dataCache: { [key: string]: CachedData } = {};
-const requestTimestamps: { [key: string]: number } = {};
+const Chart = ({ salesTrend, productSales }: ChartProps) => {
+  const isMobile = useIsMobile();
 
-const RETRY_DELAY = 2000; // 2 seconds between retries
-const MAX_RETRIES = 3;
-const RATE_LIMIT_WINDOW = 1000; // 1 second window
-const MAX_REQUESTS_PER_WINDOW = 2;
-
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-const shouldThrottle = (key: string): boolean => {
-  const now = Date.now();
-  const windowStart = now - RATE_LIMIT_WINDOW;
-  
-  const requestsInWindow = Object.entries(requestTimestamps)
-    .filter(([, timestamp]) => timestamp > windowStart)
-    .length;
-    
-  return requestsInWindow >= MAX_REQUESTS_PER_WINDOW;
-};
-
-const updateRequestTimestamp = (key: string) => {
-  requestTimestamps[key] = Date.now();
-  
-  const windowStart = Date.now() - RATE_LIMIT_WINDOW;
-  Object.keys(requestTimestamps).forEach(key => {
-    if (requestTimestamps[key] < windowStart) {
-      delete requestTimestamps[key];
-    }
-  });
-};
-
-const fetchWithRetry = async (
-  url: string, 
-  headers: HeadersInit, 
-  params?: URLSearchParams, 
-  method: string = 'GET',
-  body?: any,
-  retryCount = 0
-): Promise<any> => {
-  const requestKey = `${url}${params ? params.toString() : ''}`;
-
-  if (shouldThrottle(requestKey)) {
-    await delay(RETRY_DELAY);
+  if (!salesTrend || !productSales) {
+    return null;
   }
 
-  try {
-    updateRequestTimestamp(requestKey);
-    
-    const requestOptions: RequestInit = {
-      method,
-      headers,
-      ...(body && { body: JSON.stringify(body) })
-    };
+  const totalSales = productSales.reduce((sum, item) => sum + item.quantity, 0);
 
-    const fullUrl = `${url}${params ? `?${params}` : ''}`;
-    const response = await fetch(fullUrl, requestOptions);
-    
-    if (response.status === 429) {
-      if (retryCount < MAX_RETRIES) {
-        await delay(RETRY_DELAY * (retryCount + 1));
-        return fetchWithRetry(url, headers, params, method, body, retryCount + 1);
-      }
-    }
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }: any) => {
+    const RADIAN = Math.PI / 180;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.6;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return response.json();
-  } catch (error) {
-    if (retryCount < MAX_RETRIES) {
-      await delay(RETRY_DELAY * (retryCount + 1));
-      return fetchWithRetry(url, headers, params, method, body, retryCount + 1);
-    }
-    throw error;
-  }
-};
-
-const fetchAndCacheData = async (
-  apiKey: string,
-  dateFrom: Date,
-  dateTo: Date
-): Promise<WildberriesReportItem[]> => {
-  const cacheKey = `${apiKey}_${dateFrom.toISOString()}_${dateTo.toISOString()}`;
-  const now = Date.now();
-  
-  if (dataCache[cacheKey] && (now - dataCache[cacheKey].timestamp) < 3600000) {
-    console.log('Using cached data');
-    return dataCache[cacheKey].data;
-  }
-
-  const params = new URLSearchParams({
-    dateFrom: dateFrom.toISOString().split('T')[0],
-    dateTo: dateTo.toISOString().split('T')[0],
-    limit: '100000'
-  });
-
-  const headers = {
-    'Authorization': apiKey,
-    'Content-Type': 'application/json'
-  };
-
-  try {
-    const data = await fetchWithRetry(WB_REPORT_URL, headers, params);
-    
-    dataCache[cacheKey] = {
-      timestamp: now,
-      data: data
-    };
-
-    return data;
-  } catch (error) {
-    console.error('Error fetching data:', error);
-    throw new Error('Failed to fetch Wildberries data');
-  }
-};
-
-const fetchProductNames = async (apiKey: string, nmIds: string[]): Promise<Map<string, { name: string, image: string }>> => {
-  const headers = {
-    'Authorization': apiKey,
-    'Content-Type': 'application/json'
-  };
-
-  const payload = {
-    settings: {
-      filter: {
-        withPhoto: -1,
-        nmID: nmIds
-      },
-      cursor: {
-        limit: 100
-      }
-    }
-  };
-
-  try {
-    const data = await fetchWithRetry(
-      WB_CONTENT_URL, 
-      headers, 
-      undefined, 
-      'POST', 
-      payload
+    return (
+      <text 
+        x={x} 
+        y={y} 
+        fill="white" 
+        textAnchor={x > cx ? 'start' : 'end'} 
+        dominantBaseline="central"
+        className="text-xs font-bold drop-shadow-md"
+        style={{ filter: 'drop-shadow(0px 1px 2px rgba(0,0,0,0.5))' }}
+      >
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
     );
-    
-    const productInfo = new Map<string, { name: string, image: string }>();
-
-    if (data.cards) {
-      data.cards.forEach((card: any) => {
-        const image = card.photos && card.photos.length > 0 ? card.photos[0].big : null;
-        productInfo.set(card.nmID.toString(), {
-          name: card.title || 'Неизвестный товар',
-          image: image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
-        });
-      });
-    }
-
-    return productInfo;
-  } catch (error) {
-    console.error('Error fetching product names:', error);
-    return new Map();
-  }
-};
-
-const calculateProductStats = (data: WildberriesReportItem[]) => {
-  const productStats = new Map<string, {
-    name: string,
-    profit: number,
-    price: number,
-    sales: number,
-    quantity: number,
-    returns: number,
-    logistics: number,
-    storage: number,
-    penalties: number,
-    deductions: number,
-    nmId: string
-  }>();
-
-  data.forEach(item => {
-    const currentStats = productStats.get(item.subject_name) || {
-      name: item.subject_name,
-      profit: 0,
-      price: 0,
-      sales: 0,
-      quantity: 0,
-      returns: 0,
-      logistics: 0,
-      storage: 0,
-      penalties: 0,
-      deductions: 0,
-      nmId: item.nm_id
-    };
-
-    if (item.doc_type_name === "Продажа") {
-      currentStats.sales += item.retail_amount || 0;
-      currentStats.quantity += item.quantity || 0;
-      currentStats.logistics += item.delivery_rub || 0;
-      currentStats.storage += item.storage_fee || 0;
-      currentStats.penalties += item.penalty || 0;
-      currentStats.deductions += item.deduction || 0;
-    } else if (item.doc_type_name === "Возврат") {
-      currentStats.returns += item.retail_amount || 0;
-    }
-
-    currentStats.profit = currentStats.sales - (
-      currentStats.logistics +
-      currentStats.storage +
-      currentStats.penalties +
-      currentStats.deductions +
-      currentStats.returns
-    );
-
-    currentStats.price = currentStats.sales / (currentStats.quantity || 1);
-
-    productStats.set(item.subject_name, currentStats);
-  });
-
-  return Array.from(productStats.values());
-};
-
-const getTopProducts = async (data: WildberriesReportItem[], apiKey: string) => {
-  const productProfits: { [key: string]: number } = {};
-  const nmIdsList: string[] = [];
-
-  data.forEach(item => {
-    const nmId = item.nm_id;
-    if (!nmId) return;
-
-    nmIdsList.push(nmId);
-    
-    const ppvzForPay = item.ppvz_for_pay || 0;
-    const deliveryRub = item.delivery_rub || 0;
-    const storageFee = item.storage_fee || 0;
-    const penalty = item.penalty || 0;
-    const deduction = item.deduction || 0;
-    const acceptance = item.acceptance || 0;
-    const retailAmount = item.retail_amount || 0;
-
-    const profit = ppvzForPay - deliveryRub - storageFee - penalty - deduction - acceptance - retailAmount;
-
-    if (!productProfits[nmId]) {
-      productProfits[nmId] = 0;
-    }
-    productProfits[nmId] += profit;
-  });
-
-  const productInfo = await fetchProductNames(apiKey, Array.from(new Set(nmIdsList)));
-
-  const sortedProducts = Object.entries(productProfits)
-    .sort(([, a], [, b]) => b - a);
-
-  const topProfitable = sortedProducts.slice(0, 3).map(([nmId, profit]) => {
-    const info = productInfo.get(nmId) || { 
-      name: 'Неизвестный товар',
-      image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
-    };
-    return {
-      name: info.name,
-      price: "0",
-      profit: `+${profit.toFixed(0)}`,
-      image: info.image
-    };
-  });
-
-  const topUnprofitable = sortedProducts.slice(-3).reverse().map(([nmId, profit]) => {
-    const info = productInfo.get(nmId) || {
-      name: 'Неизвестный товар',
-      image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg"
-    };
-    return {
-      name: info.name,
-      price: "0",
-      profit: profit.toFixed(0),
-      image: info.image
-    };
-  });
-
-  return { topProfitable, topUnprofitable };
-};
-
-const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Promise<WildberriesResponse> => {
-  const stats: WildberriesResponse = {
-    currentPeriod: {
-      sales: 0,
-      transferred: 0,
-      expenses: {
-        total: 0,
-        logistics: 0,
-        storage: 0,
-        penalties: 0
-      },
-      netProfit: 0,
-      acceptance: 0
-    },
-    dailySales: [],
-    productSales: []
   };
 
-  const dailySales = new Map<string, { sales: number; previousSales: number }>();
-  const productSales = new Map<string, number>();
+  const customLegendFormatter = (value: string, entry: any) => {
+    const item = productSales.find(p => p.name === value);
+    if (!item) return value;
+    const percentage = ((item.quantity / totalSales) * 100).toFixed(0);
+    return (
+      <span className="flex items-center gap-1 text-sm">
+        <span className="font-medium">{value}</span>
+        <span className="text-muted-foreground">({item.quantity} шт. • {percentage}%)</span>
+      </span>
+    );
+  };
 
-  data.forEach(item => {
-    const saleDate = item.sale_dt.split('T')[0];
-    const currentSales = dailySales.get(saleDate) || { sales: 0, previousSales: 0 };
-    
-    // Only add retail_amount for sales transactions
-    if (item.doc_type_name === "Продажа") {
-      currentSales.sales += item.retail_amount || 0;
-      
-      // Add to total sales (retail_amount)
-      stats.currentPeriod.sales += item.retail_amount || 0;
-      
-      // Track product sales for quantity
-      const currentQuantity = productSales.get(item.subject_name) || 0;
-      productSales.set(item.subject_name, currentQuantity + (item.quantity || 0));
-    }
-    
-    dailySales.set(saleDate, currentSales);
+  return (
+    <div className={`grid ${isMobile ? 'grid-cols-1 gap-6' : 'grid-cols-2 gap-4'}`}>
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Динамика продаж по дням</h3>
+        </div>
+        <div className="h-[400px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={salesTrend}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis 
+                dataKey="date" 
+                stroke="#6B7280" 
+                fontSize={12}
+                tickFormatter={(value) => {
+                  const date = new Date(value);
+                  return `${date.getDate()}.${date.getMonth() + 1}`;
+                }}
+              />
+              <YAxis 
+                stroke="#6B7280" 
+                fontSize={12}
+                tickFormatter={(value) => value.toLocaleString()}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#1F2937",
+                  border: "none",
+                  borderRadius: "8px",
+                }}
+                formatter={(value: number) => [value.toLocaleString(), '']}
+                labelFormatter={(label) => {
+                  const date = new Date(label);
+                  return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}`;
+                }}
+              />
+              <Legend />
+              <Line
+                type="monotone"
+                dataKey="currentValue"
+                name="Текущий период"
+                stroke="#8B5CF6"
+                strokeWidth={2}
+                dot={false}
+              />
+              <Line
+                type="monotone"
+                dataKey="previousValue"
+                name="Предыдущий период"
+                stroke="#EC4899"
+                strokeWidth={2}
+                dot={false}
+                strokeDasharray="5 5"
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
 
-    // Add ppvz_for_pay to transferred amount (this is what gets transferred to the seller)
-    stats.currentPeriod.transferred += item.ppvz_for_pay || 0;
-    
-    const logistics = item.delivery_rub || 0;
-    const storage = item.storage_fee || 0;
-    const penalties = item.penalty || 0;
-    const acceptance = item.acceptance || 0;
-    const deduction = item.deduction || 0;
-
-    stats.currentPeriod.expenses.logistics += logistics;
-    stats.currentPeriod.expenses.storage += storage;
-    stats.currentPeriod.expenses.penalties += penalties;
-    stats.currentPeriod.expenses.acceptance += acceptance;
-    
-    stats.currentPeriod.expenses.total += logistics + storage + penalties + acceptance + deduction;
-  });
-
-  stats.currentPeriod.netProfit = 
-    stats.currentPeriod.transferred - stats.currentPeriod.expenses.total;
-
-  const sortedDailySales = Array.from(dailySales.entries())
-    .map(([date, values]) => ({
-      date,
-      ...values
-    }))
-    .sort((a, b) => a.date.localeCompare(b.date));
-
-  const sortedProductSales = Array.from(productSales.entries())
-    .map(([name, quantity]) => ({
-      subject_name: name,
-      quantity
-    }))
-    .sort((a, b) => b.quantity - a.quantity)
-    .slice(0, 10);
-
-  stats.dailySales = sortedDailySales;
-  stats.productSales = sortedProductSales;
-
-  stats.topProfitableProducts = [
-    {
-      name: "Загрузка...",
-      price: "0",
-      profit: "+0",
-      image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
-    }
-  ];
-  
-  stats.topUnprofitableProducts = [
-    {
-      name: "Загрузка...",
-      price: "0",
-      profit: "0",
-      image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg"
-    }
-  ];
-
-  return stats;
+      <Card className="p-4 bg-gradient-to-br from-indigo-50/30 to-white/60 dark:from-indigo-950/40 dark:to-background/70">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <ShoppingCart className="text-indigo-500" size={20} />
+            Количество проданных товаров
+          </h3>
+        </div>
+        <div className="h-[400px] w-full relative">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <defs>
+                {COLORS.map((color, index) => (
+                  <linearGradient key={`colorGradient-${index}`} id={`colorGradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={color} stopOpacity={0.9}/>
+                    <stop offset="100%" stopColor={color} stopOpacity={0.7}/>
+                  </linearGradient>
+                ))}
+                <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#000" floodOpacity="0.3"/>
+                </filter>
+                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="2" result="blur" />
+                  <feFlood floodColor="#6366F1" floodOpacity="0.3" result="glow" />
+                  <feComposite in="glow" in2="blur" operator="in" result="coloredBlur" />
+                  <feComposite in="SourceGraphic" in2="coloredBlur" operator="over" />
+                </filter>
+              </defs>
+              <Pie
+                data={productSales}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={renderCustomizedLabel}
+                innerRadius={70}
+                outerRadius={120}
+                fill="#8884d8"
+                dataKey="quantity"
+                nameKey="name"
+                animationBegin={0}
+                animationDuration={1500}
+                paddingAngle={2}
+              >
+                {productSales.map((entry, index) => (
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={`url(#colorGradient-${index % COLORS.length})`} 
+                    stroke="rgba(255,255,255,0.4)" 
+                    strokeWidth={1.5} 
+                    style={{ filter: 'url(#shadow)' }}
+                  />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#1F2937",
+                  border: "none",
+                  borderRadius: "8px",
+                  boxShadow: "0 4px 12px -1px rgba(0, 0, 0, 0.2), 0 2px 6px -1px rgba(0, 0, 0, 0.1)"
+                }}
+                formatter={(value: number, name: string) => {
+                  return [`${value.toLocaleString()} шт.`, name];
+                }}
+                itemStyle={{ padding: "4px 0" }}
+              />
+              <Legend 
+                formatter={customLegendFormatter} 
+                layout="vertical"
+                align="right"
+                verticalAlign="middle"
+                wrapperStyle={{ paddingLeft: "20px", fontSize: "12px" }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+            <div className="relative w-36 h-36 rounded-full bg-white dark:bg-gray-800/70 flex flex-col items-center justify-center shadow-lg border border-indigo-100/60 dark:border-indigo-900/40 overflow-hidden backdrop-blur-sm">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 to-white/30 dark:from-indigo-900/30 dark:to-gray-800/10"></div>
+              <div className="relative z-10 flex flex-col items-center">
+                <Package className="text-indigo-500 mb-1" size={24} />
+                <div className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text" style={{ filter: 'url(#glow)' }}>
+                  {totalSales.toLocaleString()}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">Всего продано</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
 };
 
-export const fetchWildberriesStats = async (
-  apiKey: string,
-  dateFrom: Date,
-  dateTo: Date
-): Promise<WildberriesResponse> => {
-  try {
-    const data = await fetchAndCacheData(apiKey, dateFrom, dateTo);
-    return await calculateStats(data, apiKey);
-  } catch (error) {
-    console.error('Ошибка получения статистики Wildberries:', error);
-    throw new Error('Не удалось загрузить статистику Wildberries');
-  }
-};
+export default Chart;
