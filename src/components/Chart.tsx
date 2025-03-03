@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import {
   LineChart,
@@ -41,14 +42,22 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
 
   const totalSales = productSales.reduce((sum, item) => sum + item.quantity, 0);
 
-  const renderCustomizedLabel = ({ name }: any) => {
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }: any) => {
+    const RADIAN = Math.PI / 180;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
     return (
       <text 
-        fill="white"
-        textAnchor="middle"
+        x={x} 
+        y={y} 
+        fill="white" 
+        textAnchor={x > cx ? 'start' : 'end'} 
         dominantBaseline="central"
+        className="text-[10px] font-medium"
       >
-        {name}
+        {`${(percent * 100).toFixed(0)}%`}
       </text>
     );
   };
@@ -119,7 +128,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
         </div>
       </Card>
 
-      <Card className="p-4">
+      <Card className="p-4 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/20 dark:to-background">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Количество проданных товаров</h3>
         </div>
@@ -132,8 +141,8 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 cy="50%"
                 labelLine={false}
                 label={renderCustomizedLabel}
-                innerRadius={100}
-                outerRadius={130}
+                innerRadius={70}
+                outerRadius={120}
                 fill="#8884d8"
                 dataKey="quantity"
                 nameKey="name"
@@ -141,7 +150,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 animationDuration={1500}
               >
                 {productSales.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="rgba(255,255,255,0.3)" strokeWidth={2} />
                 ))}
               </Pie>
               <Tooltip
@@ -149,13 +158,14 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                   backgroundColor: "#1F2937",
                   border: "none",
                   borderRadius: "8px",
+                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
                 }}
                 formatter={(value: number) => [value.toLocaleString(), 'шт.']}
               />
               <Legend formatter={customLegendFormatter} />
             </PieChart>
           </ResponsiveContainer>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center bg-white dark:bg-gray-800 rounded-full p-4 shadow-lg w-32 h-32 flex flex-col items-center justify-center">
             <div className="text-2xl font-bold">{totalSales.toLocaleString()}</div>
             <div className="text-sm text-muted-foreground">Всего продано</div>
           </div>
