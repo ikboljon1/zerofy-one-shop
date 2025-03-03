@@ -1,4 +1,3 @@
-
 export interface WildberriesResponse {
   currentPeriod: {
     sales: number;
@@ -8,6 +7,7 @@ export interface WildberriesResponse {
       logistics: number;
       storage: number;
       penalties: number;
+      acceptance: number;
     };
     netProfit: number;
     acceptance: number;
@@ -55,6 +55,7 @@ interface WildberriesReportItem {
   acquiring_fee?: number;
   ppvz_vw?: number;
   rebill_logistic_cost?: number;
+  retail_price?: number;
 }
 
 interface CachedData {
@@ -296,7 +297,8 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
         total: 0,
         logistics: 0,
         storage: 0,
-        penalties: 0
+        penalties: 0,
+        acceptance: 0
       },
       netProfit: 0,        // transferred - expenses.total
       acceptance: 0
@@ -321,36 +323,41 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
       // Add to total sales (retail_amount)
       stats.currentPeriod.sales += item.retail_amount || 0;
       
+      // Update daily sales
       currentSales.sales += item.retail_amount || 0;
-      
-      // Update daily sales map
       dailySales.set(saleDate, currentSales);
       
       // Track product sales quantity
       const currentQuantity = productSales.get(item.subject_name) || 0;
       productSales.set(item.subject_name, currentQuantity + (item.quantity || 0));
+      
+      // Add ppvz_for_pay to transferred amount (what gets transferred to the seller)
+      stats.currentPeriod.transferred += item.ppvz_for_pay || 0;
     }
-
-    // Add ppvz_for_pay to transferred amount (what gets transferred to the seller)
-    stats.currentPeriod.transferred += item.ppvz_for_pay || 0;
     
-    // Calculate expenses
-    const logistics = item.rebill_logistic_cost || item.delivery_rub || 0;
-    const storage = item.storage_fee || 0;
-    const penalties = item.bonus_type_name ? 0 : (item.penalty || 0); // Don't count penalties if there's a bonus_type_name
-    const acceptance = item.acceptance || 0;
-    const acquiringFee = item.acquiring_fee || 0;
-    const ppvzVw = item.ppvz_vw || 0;
-    const deduction = item.deduction || 0;
+    // Calculate expenses based on the Python example logic
+    let logistics = item.rebill_logistic_cost || item.delivery_rub || 0;
+    let storage = item.storage_fee || 0;
+    let penalties = item.penalty || 0;
+    let acceptance = item.acceptance || 0;
+    
+    // If there is a bonus_type_name, don't count the penalty
+    if (item.bonus_type_name) {
+      penalties = 0;
+    }
     
     // Add to expense categories
     stats.currentPeriod.expenses.logistics += logistics;
     stats.currentPeriod.expenses.storage += storage;
     stats.currentPeriod.expenses.penalties += penalties;
-    stats.currentPeriod.acceptance += acceptance;
+    stats.currentPeriod.expenses.acceptance += acceptance;
     
     // Add to total expenses
-    stats.currentPeriod.expenses.total += logistics + storage + penalties + acceptance + acquiringFee + Math.abs(ppvzVw) + deduction;
+    const acquiringFee = item.acquiring_fee || 0;
+    const ppvzVw = Math.abs(item.ppvz_vw || 0);
+    const deduction = item.deduction || 0;
+    
+    stats.currentPeriod.expenses.total += logistics + storage + penalties + acceptance + acquiringFee + ppvzVw + deduction;
   });
 
   // Calculate net profit

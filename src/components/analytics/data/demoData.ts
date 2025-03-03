@@ -37,6 +37,7 @@ export const advertisingData = [
 export const demoData = {
   currentPeriod: {
     sales: 1250000,
+    transferred: 1125000, // К перечислению продавцу
     expenses: {
       total: 125000,
       logistics: 45000,
@@ -49,7 +50,8 @@ export const demoData = {
   },
   dailySales: Array.from({ length: 30 }, (_, i) => ({
     date: new Date(2024, 0, i + 1).toISOString(),
-    sales: Math.floor(Math.random() * 50000) + 20000
+    sales: Math.floor(Math.random() * 50000) + 20000,
+    previousSales: Math.floor(Math.random() * 40000) + 15000
   })),
   productSales: [
     { subject_name: "Футболки", quantity: 150 },
