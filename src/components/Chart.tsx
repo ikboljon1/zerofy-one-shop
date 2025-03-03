@@ -142,6 +142,9 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                     <stop offset="100%" stopColor={color} stopOpacity={0.7}/>
                   </linearGradient>
                 ))}
+                <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#000" floodOpacity="0.3"/>
+                </filter>
               </defs>
               <Pie
                 data={productSales}
@@ -178,9 +181,14 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
               <Legend formatter={customLegendFormatter} />
             </PieChart>
           </ResponsiveContainer>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center bg-white dark:bg-gray-800 rounded-full p-4 shadow-lg w-32 h-32 flex flex-col items-center justify-center border-2 border-indigo-100 dark:border-indigo-900">
-            <div className="text-2xl font-bold bg-gradient-to-r from-indigo-500 to-purple-600 text-transparent bg-clip-text">{totalSales.toLocaleString()}</div>
-            <div className="text-sm text-muted-foreground">Всего продано</div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+            <div className="relative w-36 h-36 rounded-full bg-white dark:bg-gray-800 flex flex-col items-center justify-center shadow-lg border-2 border-indigo-100 dark:border-indigo-900 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 to-white/30 dark:from-indigo-900/30 dark:to-gray-800/10"></div>
+              <div className="relative">
+                <div className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text">{totalSales.toLocaleString()}</div>
+                <div className="text-sm text-muted-foreground">Всего продано</div>
+              </div>
+            </div>
           </div>
         </div>
       </Card>

@@ -361,18 +361,26 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
 
   const dailySales = new Map<string, { sales: number; previousSales: number }>();
   const productSales = new Map<string, number>();
-  const salesByProduct = new Map<string, number>();
 
   data.forEach(item => {
     const saleDate = item.sale_dt.split('T')[0];
     const currentSales = dailySales.get(saleDate) || { sales: 0, previousSales: 0 };
-    currentSales.sales += item.retail_amount || 0;
+    
+    // Only add retail_amount for sales transactions
+    if (item.doc_type_name === "Продажа") {
+      currentSales.sales += item.retail_amount || 0;
+      
+      // Add to total sales (retail_amount)
+      stats.currentPeriod.sales += item.retail_amount || 0;
+      
+      // Track product sales for quantity
+      const currentQuantity = productSales.get(item.subject_name) || 0;
+      productSales.set(item.subject_name, currentQuantity + (item.quantity || 0));
+    }
+    
     dailySales.set(saleDate, currentSales);
 
-    const currentQuantity = productSales.get(item.subject_name) || 0;
-    productSales.set(item.subject_name, currentQuantity + (item.quantity || 0));
-
-    stats.currentPeriod.sales += item.retail_amount || 0;
+    // Add ppvz_for_pay to transferred amount (this is what gets transferred to the seller)
     stats.currentPeriod.transferred += item.ppvz_for_pay || 0;
     
     const logistics = item.delivery_rub || 0;
@@ -384,7 +392,7 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
     stats.currentPeriod.expenses.logistics += logistics;
     stats.currentPeriod.expenses.storage += storage;
     stats.currentPeriod.expenses.penalties += penalties;
-    stats.currentPeriod.acceptance += acceptance;
+    stats.currentPeriod.expenses.acceptance += acceptance;
     
     stats.currentPeriod.expenses.total += logistics + storage + penalties + acceptance + deduction;
   });
