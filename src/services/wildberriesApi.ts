@@ -1,3 +1,4 @@
+
 export interface WildberriesResponse {
   currentPeriod: {
     sales: number;
@@ -50,6 +51,10 @@ interface WildberriesReportItem {
   deduction: number;
   sale_dt: string;
   subject_name: string;
+  bonus_type_name?: string;
+  acquiring_fee?: number;
+  ppvz_vw?: number;
+  rebill_logistic_cost?: number;
 }
 
 interface CachedData {
@@ -281,78 +286,19 @@ const calculateProductStats = (data: WildberriesReportItem[]) => {
   return Array.from(productStats.values());
 };
 
-const getTopProducts = async (data: WildberriesReportItem[], apiKey: string) => {
-  const productProfits: { [key: string]: number } = {};
-  const nmIdsList: string[] = [];
-
-  data.forEach(item => {
-    const nmId = item.nm_id;
-    if (!nmId) return;
-
-    nmIdsList.push(nmId);
-    
-    const ppvzForPay = item.ppvz_for_pay || 0;
-    const deliveryRub = item.delivery_rub || 0;
-    const storageFee = item.storage_fee || 0;
-    const penalty = item.penalty || 0;
-    const deduction = item.deduction || 0;
-    const acceptance = item.acceptance || 0;
-    const retailAmount = item.retail_amount || 0;
-
-    const profit = ppvzForPay - deliveryRub - storageFee - penalty - deduction - acceptance - retailAmount;
-
-    if (!productProfits[nmId]) {
-      productProfits[nmId] = 0;
-    }
-    productProfits[nmId] += profit;
-  });
-
-  const productInfo = await fetchProductNames(apiKey, Array.from(new Set(nmIdsList)));
-
-  const sortedProducts = Object.entries(productProfits)
-    .sort(([, a], [, b]) => b - a);
-
-  const topProfitable = sortedProducts.slice(0, 3).map(([nmId, profit]) => {
-    const info = productInfo.get(nmId) || { 
-      name: 'Неизвестный товар',
-      image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
-    };
-    return {
-      name: info.name,
-      price: "0",
-      profit: `+${profit.toFixed(0)}`,
-      image: info.image
-    };
-  });
-
-  const topUnprofitable = sortedProducts.slice(-3).reverse().map(([nmId, profit]) => {
-    const info = productInfo.get(nmId) || {
-      name: 'Неизвестный товар',
-      image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg"
-    };
-    return {
-      name: info.name,
-      price: "0",
-      profit: profit.toFixed(0),
-      image: info.image
-    };
-  });
-
-  return { topProfitable, topUnprofitable };
-};
-
 const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Promise<WildberriesResponse> => {
+  // Initialize stats object
   const stats: WildberriesResponse = {
     currentPeriod: {
-      sales: 0,
-      transferred: 0,
+      sales: 0,            // Total retail_amount (Общая сумма продаж)
+      transferred: 0,      // Total ppvz_for_pay (К перечислению продавцу)
       expenses: {
         total: 0,
         logistics: 0,
         storage: 0,
         penalties: 0
       },
-      netProfit: 0,
+      netProfit: 0,        // transferred - expenses.total
       acceptance: 0
     },
     dailySales: [],
@@ -362,44 +308,55 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
   const dailySales = new Map<string, { sales: number; previousSales: number }>();
   const productSales = new Map<string, number>();
 
+  // Process each item from the API response
   data.forEach(item => {
+    // Format the sale date (take only the date part)
     const saleDate = item.sale_dt.split('T')[0];
+    
+    // Initialize sales data for this date if it doesn't exist
     const currentSales = dailySales.get(saleDate) || { sales: 0, previousSales: 0 };
     
-    // Only add retail_amount for sales transactions
+    // Track product sales (by quantity) for the pie chart
     if (item.doc_type_name === "Продажа") {
-      currentSales.sales += item.retail_amount || 0;
-      
       // Add to total sales (retail_amount)
       stats.currentPeriod.sales += item.retail_amount || 0;
       
-      // Track product sales for quantity
+      currentSales.sales += item.retail_amount || 0;
+      
+      // Update daily sales map
+      dailySales.set(saleDate, currentSales);
+      
+      // Track product sales quantity
       const currentQuantity = productSales.get(item.subject_name) || 0;
       productSales.set(item.subject_name, currentQuantity + (item.quantity || 0));
     }
-    
-    dailySales.set(saleDate, currentSales);
 
-    // Add ppvz_for_pay to transferred amount (this is what gets transferred to the seller)
+    // Add ppvz_for_pay to transferred amount (what gets transferred to the seller)
     stats.currentPeriod.transferred += item.ppvz_for_pay || 0;
     
-    const logistics = item.delivery_rub || 0;
+    // Calculate expenses
+    const logistics = item.rebill_logistic_cost || item.delivery_rub || 0;
     const storage = item.storage_fee || 0;
-    const penalties = item.penalty || 0;
+    const penalties = item.bonus_type_name ? 0 : (item.penalty || 0); // Don't count penalties if there's a bonus_type_name
     const acceptance = item.acceptance || 0;
+    const acquiringFee = item.acquiring_fee || 0;
+    const ppvzVw = item.ppvz_vw || 0;
     const deduction = item.deduction || 0;
-
+    
+    // Add to expense categories
     stats.currentPeriod.expenses.logistics += logistics;
     stats.currentPeriod.expenses.storage += storage;
     stats.currentPeriod.expenses.penalties += penalties;
-    stats.currentPeriod.expenses.acceptance += acceptance;
+    stats.currentPeriod.acceptance += acceptance;
     
-    stats.currentPeriod.expenses.total += logistics + storage + penalties + acceptance + deduction;
+    // Add to total expenses
+    stats.currentPeriod.expenses.total += logistics + storage + penalties + acceptance + acquiringFee + Math.abs(ppvzVw) + deduction;
   });
 
-  stats.currentPeriod.netProfit = 
-    stats.currentPeriod.transferred - stats.currentPeriod.expenses.total;
+  // Calculate net profit
+  stats.currentPeriod.netProfit = stats.currentPeriod.transferred - stats.currentPeriod.expenses.total;
 
+  // Sort daily sales by date
   const sortedDailySales = Array.from(dailySales.entries())
     .map(([date, values]) => ({
       date,
@@ -407,6 +364,7 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
+  // Sort product sales by quantity (descending) and limit to top 10
   const sortedProductSales = Array.from(productSales.entries())
     .map(([name, quantity]) => ({
       subject_name: name,
@@ -418,6 +376,7 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
   stats.dailySales = sortedDailySales;
   stats.productSales = sortedProductSales;
 
+  // Placeholder for top products data that could be fetched in a separate API call
   stats.topProfitableProducts = [
     {
       name: "Загрузка...",

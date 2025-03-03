@@ -117,22 +117,16 @@ const Stats = () => {
   const prepareSalesTrendData = (data: any) => {
     if (!data || !data.dailySales) return [];
     
-    return data.dailySales.map((item: any) => ({
-      date: item.date,
-      currentValue: item.sales,
-      previousValue: item.previousSales
-    }));
+    return data.dailySales;
   };
 
   const prepareProductSalesData = (data: any) => {
     if (!data || !data.productSales) return [];
     
-    return data.productSales.map((item: any) => ({
-      name: item.subject_name,
-      quantity: item.quantity
-    }));
+    return data.productSales;
   };
 
+  // Use the correct property names based on API response
   const stats = statsData ? [
     {
       title: "Продажа",
