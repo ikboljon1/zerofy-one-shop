@@ -213,8 +213,8 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
             </PieChart>
           </ResponsiveContainer>
           
-          {/* Enhanced central circle element */}
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+          {/* Centered circle with absolute positioning */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="relative w-36 h-36 rounded-full flex flex-col items-center justify-center overflow-hidden backdrop-blur-sm">
               {/* Decorative rings */}
               <div className="absolute inset-0 rounded-full bg-gradient-to-r from-indigo-500/20 to-purple-500/20 animate-pulse"></div>
