@@ -215,7 +215,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
             </PieChart>
           </ResponsiveContainer>
           
-          <div className="absolute inset-0 flex items-center justify-center" style={{ transform: 'translateX(-24%)' }}>
+          <div className="absolute inset-0 flex items-center justify-center" style={{ transform: 'translateX(-20%)' }}>
             <div className="w-[180px] h-[180px] rounded-full flex flex-col items-center justify-center bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-2 border-indigo-300/60 dark:border-indigo-600/40 shadow-lg">
               <div className="flex flex-col items-center justify-center gap-2">
                 <div className="bg-gradient-to-r from-indigo-500 to-purple-500 p-3 rounded-full">
