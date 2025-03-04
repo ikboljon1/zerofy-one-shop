@@ -1,4 +1,5 @@
 
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Card } from "@/components/ui/card";
 import { TrendingDown } from "../icons";
 import {
@@ -24,6 +25,8 @@ interface DeductionsChartProps {
 }
 
 const DeductionsChart = ({ data }: DeductionsChartProps) => {
+  const isMobile = useIsMobile();
+  
   // Calculate totals for each category
   const totals = data.reduce(
     (acc, item) => {
@@ -41,79 +44,100 @@ const DeductionsChart = ({ data }: DeductionsChartProps) => {
   const avgStorage = totals.storage / days;
   const avgPenalties = totals.penalties / days;
 
+  // Calculate totals for percentage calculations
+  const grandTotal = totals.logistic + totals.storage + totals.penalties;
+
   return (
-    <Card className="p-6 shadow-xl border-0 rounded-xl overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-blue-950/30">
-      <div className="flex items-center justify-between mb-6">
+    <Card className="p-4 sm:p-6 shadow-xl border-0 rounded-xl overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-blue-950/30">
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
         <div>
-          <h3 className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-700 dark:from-blue-400 dark:to-indigo-400">
+          <h3 className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-700 dark:from-blue-400 dark:to-indigo-400`}>
             Структура удержаний по дням
           </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Детализация удержаний за выбранный период
-          </p>
+          {!isMobile && (
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Детализация удержаний за выбранный период
+            </p>
+          )}
         </div>
-        <div className="bg-red-100 dark:bg-red-900/60 p-3 rounded-full shadow-inner">
-          <TrendingDown className="h-6 w-6 text-red-600 dark:text-red-400" />
+        <div className="bg-red-100 dark:bg-red-900/60 p-2 sm:p-3 rounded-full shadow-inner">
+          <TrendingDown className={`${isMobile ? 'h-4 w-4' : 'h-6 w-6'} text-red-600 dark:text-red-400`} />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
+      {/* Summary cards - stacked in mobile view, grid in desktop */}
+      <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-1 lg:grid-cols-3 gap-4'} mb-4 sm:mb-6`}>
+        <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm text-gray-500">Логистика</span>
-            <span className="text-md font-semibold text-violet-600 dark:text-violet-400">
+            <span className={`${isMobile ? 'text-sm' : 'text-md'} font-semibold text-violet-600 dark:text-violet-400`}>
               {totals.logistic.toLocaleString()} ₽
             </span>
           </div>
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
             <div 
               className="bg-violet-600 dark:bg-violet-500 h-2.5 rounded-full" 
-              style={{ width: `${(totals.logistic / (totals.logistic + totals.storage + totals.penalties)) * 100}%` }}
+              style={{ width: `${(totals.logistic / grandTotal) * 100}%` }}
             ></div>
           </div>
+          {isMobile && (
+            <div className="mt-1 text-xs text-gray-500">
+              {((totals.logistic / grandTotal) * 100).toFixed(1)}% от общей суммы
+            </div>
+          )}
         </div>
         
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm text-gray-500">Хранение</span>
-            <span className="text-md font-semibold text-emerald-600 dark:text-emerald-400">
+            <span className={`${isMobile ? 'text-sm' : 'text-md'} font-semibold text-emerald-600 dark:text-emerald-400`}>
               {totals.storage.toLocaleString()} ₽
             </span>
           </div>
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
             <div 
               className="bg-emerald-600 dark:bg-emerald-500 h-2.5 rounded-full" 
-              style={{ width: `${(totals.storage / (totals.logistic + totals.storage + totals.penalties)) * 100}%` }}
+              style={{ width: `${(totals.storage / grandTotal) * 100}%` }}
             ></div>
           </div>
+          {isMobile && (
+            <div className="mt-1 text-xs text-gray-500">
+              {((totals.storage / grandTotal) * 100).toFixed(1)}% от общей суммы
+            </div>
+          )}
         </div>
         
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm text-gray-500">Штрафы</span>
-            <span className="text-md font-semibold text-pink-600 dark:text-pink-400">
+            <span className={`${isMobile ? 'text-sm' : 'text-md'} font-semibold text-pink-600 dark:text-pink-400`}>
               {totals.penalties.toLocaleString()} ₽
             </span>
           </div>
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
             <div 
               className="bg-pink-600 dark:bg-pink-500 h-2.5 rounded-full" 
-              style={{ width: `${(totals.penalties / (totals.logistic + totals.storage + totals.penalties)) * 100}%` }}
+              style={{ width: `${(totals.penalties / grandTotal) * 100}%` }}
             ></div>
           </div>
+          {isMobile && (
+            <div className="mt-1 text-xs text-gray-500">
+              {((totals.penalties / grandTotal) * 100).toFixed(1)}% от общей суммы
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="h-[350px]">
+      <div className={`h-[${isMobile ? '250px' : '350px'}]`}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart 
             data={data} 
-            barSize={24}
-            barGap={2}
+            barSize={isMobile ? 16 : 24}
+            barGap={isMobile ? 0 : 2}
             margin={{
               top: 20,
-              right: 30,
-              left: 20,
+              right: isMobile ? 10 : 30,
+              left: isMobile ? 0 : 20,
               bottom: 30,
             }}
           >
@@ -124,14 +148,16 @@ const DeductionsChart = ({ data }: DeductionsChartProps) => {
               axisLine={false}
               tickLine={false}
               padding={{ left: 10, right: 10 }}
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: isMobile ? 10 : 12 }}
+              tickFormatter={isMobile ? (value) => value.split('.').pop() || value : undefined} // Only show day in mobile
             />
             <YAxis 
               stroke="#9ca3af" 
               tickFormatter={(value) => value >= 1000 ? `${value/1000}k` : value} 
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: isMobile ? 10 : 12 }}
+              width={isMobile ? 30 : 40}
             />
             <Tooltip
               formatter={(value: any) => [`${value.toLocaleString()} ₽`, '']}
@@ -140,23 +166,31 @@ const DeductionsChart = ({ data }: DeductionsChartProps) => {
                 borderRadius: '8px', 
                 border: '1px solid #e5e7eb',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                padding: '10px 14px'
+                padding: isMobile ? '8px 10px' : '10px 14px',
+                fontSize: isMobile ? '12px' : '14px'
               }}
               cursor={{ fill: 'rgba(224, 231, 255, 0.2)' }}
             />
-            <Legend 
-              iconType="circle" 
-              iconSize={8}
-              wrapperStyle={{
-                paddingTop: '20px'
-              }}
-            />
-            <ReferenceLine y={avgLogistic} stroke="#8B5CF6" strokeDasharray="3 3">
-              <Label value="Средняя логистика" position="insideTopRight" fill="#8B5CF6" fontSize={10} />
-            </ReferenceLine>
-            <ReferenceLine y={avgStorage} stroke="#10B981" strokeDasharray="3 3">
-              <Label value="Среднее хранение" position="insideTopLeft" fill="#10B981" fontSize={10} />
-            </ReferenceLine>
+            {!isMobile && (
+              <Legend 
+                iconType="circle" 
+                iconSize={8}
+                wrapperStyle={{
+                  paddingTop: '20px'
+                }}
+              />
+            )}
+            {/* Hide reference lines on mobile to avoid clutter */}
+            {!isMobile && (
+              <>
+                <ReferenceLine y={avgLogistic} stroke="#8B5CF6" strokeDasharray="3 3">
+                  <Label value="Средняя логистика" position="insideTopRight" fill="#8B5CF6" fontSize={10} />
+                </ReferenceLine>
+                <ReferenceLine y={avgStorage} stroke="#10B981" strokeDasharray="3 3">
+                  <Label value="Среднее хранение" position="insideTopLeft" fill="#10B981" fontSize={10} />
+                </ReferenceLine>
+              </>
+            )}
             <Bar 
               dataKey="logistic" 
               name="Логистика" 
@@ -186,6 +220,24 @@ const DeductionsChart = ({ data }: DeductionsChartProps) => {
           </BarChart>
         </ResponsiveContainer>
       </div>
+      
+      {/* Mobile-only legend */}
+      {isMobile && (
+        <div className="flex justify-center space-x-4 mt-3">
+          <div className="flex items-center">
+            <span className="h-3 w-3 rounded-full bg-violet-600 mr-1"></span>
+            <span className="text-xs">Логистика</span>
+          </div>
+          <div className="flex items-center">
+            <span className="h-3 w-3 rounded-full bg-emerald-600 mr-1"></span>
+            <span className="text-xs">Хранение</span>
+          </div>
+          <div className="flex items-center">
+            <span className="h-3 w-3 rounded-full bg-pink-600 mr-1"></span>
+            <span className="text-xs">Штрафы</span>
+          </div>
+        </div>
+      )}
     </Card>
   );
 };
