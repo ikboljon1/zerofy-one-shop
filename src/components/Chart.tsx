@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import {
   LineChart,
@@ -14,7 +13,7 @@ import {
   Cell
 } from "recharts";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Package, ShoppingCart, TrendingUp } from "lucide-react";
+import { Package, ShoppingCart, TrendingUp, ShoppingBag } from "lucide-react";
 
 interface SalesByDay {
   date: string;
@@ -141,10 +140,10 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
         </div>
       </Card>
 
-      <Card className="p-4 bg-gradient-to-br from-indigo-50/20 to-white/30 dark:from-indigo-950/30 dark:to-background/60 backdrop-blur-[1px] overflow-visible relative">
+      <Card className="p-4 bg-gradient-to-br from-indigo-50/30 to-white/40 dark:from-indigo-950/40 dark:to-background/70 backdrop-blur-[2px] overflow-visible relative border-indigo-200/50 dark:border-indigo-800/50">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
-            <ShoppingCart className="text-indigo-500" size={20} />
+            <ShoppingBag className="text-indigo-500" size={20} />
             Количество проданных товаров
           </h3>
         </div>
@@ -154,16 +153,16 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
               <defs>
                 {COLORS.map((color, index) => (
                   <linearGradient key={`colorGradient-${index}`} id={`colorGradient-${index}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={color} stopOpacity={0.9}/>
-                    <stop offset="100%" stopColor={color} stopOpacity={0.7}/>
+                    <stop offset="0%" stopColor={color} stopOpacity={0.95}/>
+                    <stop offset="100%" stopColor={color} stopOpacity={0.75}/>
                   </linearGradient>
                 ))}
                 <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
                   <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#000" floodOpacity="0.3"/>
                 </filter>
                 <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="2" result="blur" />
-                  <feFlood floodColor="#6366F1" floodOpacity="0.3" result="glow" />
+                  <feGaussianBlur stdDeviation="3" result="blur" />
+                  <feFlood floodColor="#6366F1" floodOpacity="0.4" result="glow" />
                   <feComposite in="glow" in2="blur" operator="in" result="coloredBlur" />
                   <feComposite in="SourceGraphic" in2="coloredBlur" operator="over" />
                 </filter>
@@ -174,8 +173,8 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 cy="50%"
                 labelLine={false}
                 label={renderCustomizedLabel}
-                innerRadius={85}
-                outerRadius={125}
+                innerRadius={90}
+                outerRadius={130}
                 fill="#8884d8"
                 dataKey="quantity"
                 nameKey="subject_name"
@@ -187,8 +186,8 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                   <Cell 
                     key={`cell-${index}`} 
                     fill={`url(#colorGradient-${index % COLORS.length})`} 
-                    stroke="rgba(255,255,255,0.4)" 
-                    strokeWidth={1.5} 
+                    stroke="rgba(255,255,255,0.5)" 
+                    strokeWidth={2} 
                     style={{ filter: 'url(#shadow)' }}
                   />
                 ))}
@@ -215,18 +214,17 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
             </PieChart>
           </ResponsiveContainer>
           
-          {/* Fixed central circle positioning */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-[160px] h-[160px] rounded-full flex flex-col items-center justify-center bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-2 border-indigo-200/80 dark:border-indigo-800/70 shadow-[0_0_25px_rgba(139,92,246,0.25)] transition-all">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-50/70 to-white/50 dark:from-indigo-900/50 dark:to-gray-800/30 opacity-90"></div>
+            <div className="w-[170px] h-[170px] rounded-full flex flex-col items-center justify-center bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg border-[3px] border-indigo-300/80 dark:border-indigo-700/70 shadow-[0_0_30px_rgba(139,92,246,0.35)] transition-all hover:shadow-[0_0_40px_rgba(139,92,246,0.4)] animate-pulse-slow">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-100/80 to-white/60 dark:from-indigo-800/60 dark:to-gray-800/40 opacity-95"></div>
               <div className="relative z-10 flex flex-col items-center justify-center h-full w-full p-4">
-                <div className="rounded-full bg-indigo-100/80 dark:bg-indigo-900/50 p-2 mb-2">
-                  <Package className="text-indigo-500 animate-pulse" size={28} />
+                <div className="rounded-full bg-indigo-100/90 dark:bg-indigo-900/60 p-2.5 mb-2 shadow-inner">
+                  <Package className="text-indigo-600 dark:text-indigo-400" size={32} />
                 </div>
-                <div className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent" style={{ filter: 'url(#glow)' }}>
+                <div className="text-3xl font-bold bg-gradient-to-r from-indigo-700 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent" style={{ filter: 'url(#glow)' }}>
                   {totalSales.toLocaleString()}
                 </div>
-                <div className="text-sm text-muted-foreground mt-1 text-center">Всего продано</div>
+                <div className="text-sm font-medium text-gray-600 dark:text-gray-300 mt-1 text-center">Всего продано</div>
               </div>
             </div>
           </div>
