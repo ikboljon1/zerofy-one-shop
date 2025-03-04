@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import {
   LineChart,
@@ -140,7 +141,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
         </div>
       </Card>
 
-      <Card className="p-4 bg-gradient-to-br from-indigo-50/20 to-white/30 dark:from-indigo-950/30 dark:to-background/60 backdrop-blur-[1px] relative">
+      <Card className="p-4 bg-gradient-to-br from-indigo-50/20 to-white/30 dark:from-indigo-950/30 dark:to-background/60 backdrop-blur-[1px] overflow-visible relative">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <ShoppingCart className="text-indigo-500" size={20} />
@@ -173,8 +174,8 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 cy="50%"
                 labelLine={false}
                 label={renderCustomizedLabel}
-                innerRadius={80}
-                outerRadius={120}
+                innerRadius={85}
+                outerRadius={125}
                 fill="#8884d8"
                 dataKey="quantity"
                 nameKey="subject_name"
@@ -214,15 +215,17 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
             </PieChart>
           </ResponsiveContainer>
           
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center z-10 pointer-events-none">
-            <div className="w-[140px] h-[140px] rounded-full flex flex-col items-center justify-center bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border border-indigo-100/70 dark:border-indigo-900/60 shadow-xl relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/60 to-white/40 dark:from-indigo-900/40 dark:to-gray-800/20 opacity-80"></div>
-              <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
-                <Package className="text-indigo-500 mb-1.5 animate-pulse" size={26} />
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
+            <div className="w-[160px] h-[160px] rounded-full flex flex-col items-center justify-center bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-2 border-indigo-200/80 dark:border-indigo-800/70 shadow-[0_0_25px_rgba(139,92,246,0.25)] transition-all">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-50/70 to-white/50 dark:from-indigo-900/50 dark:to-gray-800/30 opacity-90"></div>
+              <div className="relative z-10 flex flex-col items-center justify-center h-full w-full p-4">
+                <div className="rounded-full bg-indigo-100/80 dark:bg-indigo-900/50 p-2 mb-2">
+                  <Package className="text-indigo-500 animate-pulse" size={28} />
+                </div>
                 <div className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent" style={{ filter: 'url(#glow)' }}>
                   {totalSales.toLocaleString()}
                 </div>
-                <div className="text-sm text-muted-foreground mt-1.5">Всего продано</div>
+                <div className="text-sm text-muted-foreground mt-1 text-center">Всего продано</div>
               </div>
             </div>
           </div>
