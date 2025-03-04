@@ -14,7 +14,7 @@ import {
   Cell
 } from "recharts";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Package, ShoppingCart } from "lucide-react";
+import { Package, ShoppingCart, TrendingUp } from "lucide-react";
 
 interface SalesByDay {
   date: string;
@@ -32,7 +32,7 @@ interface ChartProps {
   productSales?: ProductSales[];
 }
 
-const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1'];
+const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1', '#EF4444', '#14B8A6', '#8B5CF6', '#D946EF'];
 
 const Chart = ({ salesTrend, productSales }: ChartProps) => {
   const isMobile = useIsMobile();
@@ -81,7 +81,10 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
     <div className={`grid ${isMobile ? 'grid-cols-1 gap-6' : 'grid-cols-2 gap-4'}`}>
       <Card className="p-4">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Динамика продаж по дням</h3>
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <TrendingUp className="text-indigo-500" size={20} />
+            Динамика продаж по дням
+          </h3>
         </div>
         <div className="h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -106,6 +109,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                   backgroundColor: "#1F2937",
                   border: "none",
                   borderRadius: "8px",
+                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
                 }}
                 formatter={(value: number) => [value.toLocaleString() + " ₽", '']}
                 labelFormatter={(label) => {
@@ -121,6 +125,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 stroke="#8B5CF6"
                 strokeWidth={2}
                 dot={false}
+                activeDot={{ r: 6, strokeWidth: 0, fill: "#8B5CF6" }}
               />
               <Line
                 type="monotone"
@@ -130,13 +135,14 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 strokeWidth={2}
                 dot={false}
                 strokeDasharray="5 5"
+                activeDot={{ r: 6, strokeWidth: 0, fill: "#EC4899" }}
               />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </Card>
 
-      <Card className="p-4 bg-gradient-to-br from-indigo-50/30 to-white/60 dark:from-indigo-950/40 dark:to-background/70">
+      <Card className="p-4 bg-gradient-to-br from-indigo-50/20 to-white/30 dark:from-indigo-950/30 dark:to-background/60 backdrop-blur-[1px]">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <ShoppingCart className="text-indigo-500" size={20} />
@@ -205,16 +211,18 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 layout="vertical"
                 align="right"
                 verticalAlign="middle"
-                wrapperStyle={{ paddingLeft: "20px", fontSize: "12px" }}
+                wrapperStyle={{ paddingLeft: "20px", fontSize: "12px", maxHeight: "300px", overflowY: "auto" }}
               />
             </PieChart>
           </ResponsiveContainer>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
-            <div className="relative w-36 h-36 rounded-full bg-white dark:bg-gray-800/70 flex flex-col items-center justify-center shadow-lg border border-indigo-100/60 dark:border-indigo-900/40 overflow-hidden backdrop-blur-sm">
+          
+          {/* Central circle with total count */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center z-10">
+            <div className="w-36 h-36 rounded-full flex flex-col items-center justify-center bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-indigo-100/60 dark:border-indigo-900/40 shadow-lg relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 to-white/30 dark:from-indigo-900/30 dark:to-gray-800/10"></div>
               <div className="relative z-10 flex flex-col items-center">
                 <Package className="text-indigo-500 mb-1" size={24} />
-                <div className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text" style={{ filter: 'url(#glow)' }}>
+                <div className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent" style={{ filter: 'url(#glow)' }}>
                   {totalSales.toLocaleString()}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">Всего продано</div>
