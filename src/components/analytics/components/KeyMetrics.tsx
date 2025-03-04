@@ -2,6 +2,7 @@
 import { Card } from "@/components/ui/card";
 import { DollarSign, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { ShoppingCart, TrendingDown, Percent } from "../icons";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface KeyMetricsProps {
   data: {
@@ -16,8 +17,10 @@ interface KeyMetricsProps {
 }
 
 const KeyMetrics = ({ data }: KeyMetricsProps) => {
+  const isMobile = useIsMobile();
+  
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className={`grid gap-4 ${isMobile ? 'grid-cols-2' : 'grid-cols-4'}`}>
       <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background border-purple-200 dark:border-purple-800">
         <div className="flex justify-between items-start">
           <div>

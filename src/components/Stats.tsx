@@ -82,7 +82,6 @@ const Stats = () => {
 
       const data = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
       
-      // Save new stats to localStorage
       const statsData = {
         storeId: selectedStore.id,
         dateFrom: dateFrom.toISOString(),
@@ -126,7 +125,6 @@ const Stats = () => {
     return data.productSales;
   };
 
-  // Use the correct property names based on API response
   const stats = statsData ? [
     {
       title: "Продажа",
@@ -238,9 +236,9 @@ const Stats = () => {
     </Popover>
   );
 
-  const renderStatsRow = (statsData: typeof stats, start: number, end: number) => (
+  const renderStatsRow = (statsArray: any[], startIndex: number, endIndex: number) => (
     <div className={`grid gap-4 ${isMobile ? 'grid-cols-2' : 'grid-cols-4'}`}>
-      {statsData.slice(start, end).map((stat, index) => (
+      {statsArray.slice(startIndex, endIndex).map((stat, index) => (
         <Card 
           key={index} 
           className={`stat-card bg-gradient-to-br ${stat.gradient} dark:from-gray-800 dark:to-gray-700 border-2 border-opacity-20 dark:border-gray-600`}
@@ -307,28 +305,18 @@ const Stats = () => {
       ) : statsData ? (
         <>
           <div className="grid gap-6">
-            {isMobile ? (
-              <>
-                {renderStatsRow(stats, 0, 2)}
-                {renderStatsRow(stats, 2, 4)}
-              </>
-            ) : (
-              renderStatsRow(stats, 0, 4)
-            )}
+            {renderStatsRow(stats, 0, 2)}
+            {renderStatsRow(stats, 2, 4)}
+            
             <Chart 
               salesTrend={prepareSalesTrendData(statsData)} 
               productSales={prepareProductSalesData(statsData)}
             />
+            
             <div className="mt-8">
               <h3 className="text-lg font-semibold mb-4">Дополнительная статистика</h3>
-              {isMobile ? (
-                <>
-                  {renderStatsRow(additionalStats, 0, 2)}
-                  {renderStatsRow(additionalStats, 2, 4)}
-                </>
-              ) : (
-                renderStatsRow(additionalStats, 0, 4)
-              )}
+              {renderStatsRow(additionalStats, 0, 2)}
+              {renderStatsRow(additionalStats, 2, 4)}
             </div>
           </div>
         </>

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Data
 import { 
@@ -26,6 +27,7 @@ const AnalyticsSection = () => {
   const data = demoData;
   const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
+  const isMobile = useIsMobile();
 
   return (
     <div className="space-y-8">
@@ -43,13 +45,13 @@ const AnalyticsSection = () => {
         <KeyMetrics data={data} />
 
         {/* Графики доходов и расходов */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className={`grid grid-cols-1 ${!isMobile && 'lg:grid-cols-2'} gap-6`}>
           <SalesChart data={data} />
           <DeductionsChart data={deductionsTimelineData} />
         </div>
 
         {/* Детальная разбивка удержаний и штрафов */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className={`grid grid-cols-1 ${!isMobile && 'lg:grid-cols-2'} gap-6`}>
           <PieChartCard 
             title="Детализация по штрафам"
             icon={<AlertCircle className="h-4 w-4 text-purple-600 dark:text-purple-400" />}
@@ -73,7 +75,7 @@ const AnalyticsSection = () => {
         />
 
         {/* Самые прибыльные и убыточные товары */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className={`grid grid-cols-1 ${!isMobile && 'lg:grid-cols-2'} gap-6`}>
           <ProductList 
             title="Самые прибыльные товары"
             products={data.topProfitableProducts}
