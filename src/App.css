@@ -1,16 +1,8 @@
-
 #root {
-  max-width: 100%;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 0;
+  padding: 2rem;
   text-align: center;
-}
-
-@media (min-width: 768px) {
-  #root {
-    max-width: 1280px;
-    padding: 1rem;
-  }
 }
 
 .logo {
@@ -47,75 +39,4 @@
 
 .read-the-docs {
   color: #888;
-}
-
-/* Mobile optimizations */
-@media (max-width: 768px) {
-  .container {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-  }
-  
-  /* Add extra padding at the bottom for mobile navigation */
-  main {
-    padding-bottom: 5rem !important;
-  }
-  
-  /* Increase card padding for mobile */
-  .stat-card {
-    padding: 0.75rem !important;
-  }
-  
-  /* Make form inputs more touch-friendly */
-  input, select, textarea, button {
-    font-size: 16px !important;
-  }
-}
-
-/* Improve touch targets for mobile */
-@media (max-width: 768px) {
-  button, 
-  .clickable, 
-  [role="button"] {
-    min-height: 44px;
-    min-width: 44px;
-  }
-}
-
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
-}
-
-/* Improved mobile animations */
-.mobile-fade-in {
-  animation: mobileFadeIn 0.3s ease-out;
-}
-
-@keyframes mobileFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Stat card styling */
-.stat-card {
-  transition: all 0.2s ease-in-out;
-}
-
-.stat-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-/* Mobile navigation improvements */
-@media (max-width: 768px) {
-  .nav-button-active {
-    transform: translateY(-2px);
-  }
 }

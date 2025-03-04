@@ -245,7 +245,7 @@ const Stats = () => {
           key={index} 
           className={`stat-card bg-gradient-to-br ${stat.gradient} dark:from-gray-800 dark:to-gray-700 border-2 border-opacity-20 dark:border-gray-600`}
         >
-          <div className="flex flex-col space-y-2 p-4">
+          <div className="flex flex-col space-y-2">
             <div className="flex items-center justify-between">
               <stat.icon className={`h-8 w-8 ${stat.iconColor}`} />
               <div className="flex items-center space-x-1">
@@ -309,34 +309,21 @@ const Stats = () => {
           <div className="grid gap-6">
             {isMobile ? (
               <>
-                {/* Row 1: Sales and Transferred */}
                 {renderStatsRow(stats, 0, 2)}
-                {/* Row 2: Expenses and Net Profit */}
                 {renderStatsRow(stats, 2, 4)}
-                {/* Sales trend chart on its own row for mobile */}
-                <div className="col-span-full">
-                  <Chart 
-                    salesTrend={prepareSalesTrendData(statsData)} 
-                    productSales={prepareProductSalesData(statsData)}
-                  />
-                </div>
               </>
             ) : (
-              <>
-                {renderStatsRow(stats, 0, 4)}
-                <Chart 
-                  salesTrend={prepareSalesTrendData(statsData)} 
-                  productSales={prepareProductSalesData(statsData)}
-                />
-              </>
+              renderStatsRow(stats, 0, 4)
             )}
-            <div className="mt-6">
+            <Chart 
+              salesTrend={prepareSalesTrendData(statsData)} 
+              productSales={prepareProductSalesData(statsData)}
+            />
+            <div className="mt-8">
               <h3 className="text-lg font-semibold mb-4">Дополнительная статистика</h3>
               {isMobile ? (
                 <>
-                  {/* Row 1: Logistics and Storage */}
                   {renderStatsRow(additionalStats, 0, 2)}
-                  {/* Row 2: Penalties and Acceptance */}
                   {renderStatsRow(additionalStats, 2, 4)}
                 </>
               ) : (

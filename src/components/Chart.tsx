@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import {
   LineChart,
@@ -56,7 +55,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
         fill="white" 
         textAnchor={x > cx ? 'start' : 'end'} 
         dominantBaseline="central"
-        className={`${isMobile ? 'text-[8px]' : 'text-xs'} font-bold drop-shadow-md`}
+        className="text-xs font-bold drop-shadow-md"
         style={{ filter: 'drop-shadow(0px 1px 2px rgba(0,0,0,0.5))' }}
       >
         {`${(percent * 100).toFixed(0)}%`}
@@ -77,34 +76,31 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
   };
 
   return (
-    <div className="grid grid-cols-1 gap-6">
+    <div className={`grid ${isMobile ? 'grid-cols-1 gap-6' : 'grid-cols-2 gap-4'}`}>
       <Card className="p-4">
         <div className="flex items-center justify-between mb-4">
-          <h3 className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold flex items-center gap-2`}>
-            <TrendingUp className="text-indigo-500" size={isMobile ? 16 : 20} />
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <TrendingUp className="text-indigo-500" size={20} />
             Динамика продаж по дням
           </h3>
         </div>
-        <div className={`${isMobile ? 'h-[300px]' : 'h-[400px]'} w-full`}>
+        <div className="h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={salesTrend} margin={{ top: 5, right: 5, left: isMobile ? -15 : 0, bottom: 5 }}>
+            <LineChart data={salesTrend}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
               <XAxis 
                 dataKey="date" 
                 stroke="#6B7280" 
-                fontSize={isMobile ? 10 : 12}
+                fontSize={12}
                 tickFormatter={(value) => {
                   const date = new Date(value);
                   return `${date.getDate()}.${date.getMonth() + 1}`;
                 }}
-                tick={{ dx: 0 }}
-                tickMargin={isMobile ? 5 : 10}
               />
               <YAxis 
                 stroke="#6B7280" 
-                fontSize={isMobile ? 10 : 12}
-                tickFormatter={(value) => isMobile ? `${(value/1000).toFixed(0)}k` : value.toLocaleString()}
-                width={isMobile ? 30 : 50}
+                fontSize={12}
+                tickFormatter={(value) => value.toLocaleString()}
               />
               <Tooltip
                 contentStyle={{
@@ -119,12 +115,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                   return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}`;
                 }}
               />
-              <Legend 
-                wrapperStyle={{ 
-                  fontSize: isMobile ? 10 : 12,
-                  paddingTop: isMobile ? 5 : 10
-                }} 
-              />
+              <Legend />
               <Line
                 type="monotone"
                 dataKey="sales"
@@ -132,7 +123,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 stroke="#8B5CF6"
                 strokeWidth={2}
                 dot={false}
-                activeDot={{ r: isMobile ? 4 : 6, strokeWidth: 0, fill: "#8B5CF6" }}
+                activeDot={{ r: 6, strokeWidth: 0, fill: "#8B5CF6" }}
               />
               <Line
                 type="monotone"
@@ -142,7 +133,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 strokeWidth={2}
                 dot={false}
                 strokeDasharray="5 5"
-                activeDot={{ r: isMobile ? 4 : 6, strokeWidth: 0, fill: "#EC4899" }}
+                activeDot={{ r: 6, strokeWidth: 0, fill: "#EC4899" }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -153,13 +144,13 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-200/20 via-transparent to-transparent dark:from-indigo-900/20 pointer-events-none"></div>
         
         <div className="flex items-center justify-between mb-4 relative z-10">
-          <h3 className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold flex items-center gap-2`}>
-            <ShoppingBag className="text-indigo-500" size={isMobile ? 16 : 20} />
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <ShoppingBag className="text-indigo-500" size={20} />
             Количество проданных товаров
           </h3>
         </div>
         
-        <div className={`${isMobile ? 'h-[300px]' : 'h-[400px]'} w-full relative flex items-center justify-center`}>
+        <div className="h-[400px] w-full relative flex items-center justify-center">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <defs>
@@ -180,8 +171,8 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 cy="50%"
                 labelLine={false}
                 label={renderCustomizedLabel}
-                innerRadius={isMobile ? 70 : 95}
-                outerRadius={isMobile ? 110 : 140}
+                innerRadius={95}
+                outerRadius={140}
                 fill="#8884d8"
                 dataKey="quantity"
                 nameKey="subject_name"
@@ -213,56 +204,33 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 itemStyle={{ padding: "4px 0" }}
               />
               
-              {!isMobile && (
-                <Legend 
-                  formatter={customLegendFormatter} 
-                  layout="vertical"
-                  align="right"
-                  verticalAlign="middle"
-                  wrapperStyle={{ paddingLeft: "20px", fontSize: "12px", maxHeight: "300px", overflowY: "auto" }}
-                />
-              )}
+              <Legend 
+                formatter={customLegendFormatter} 
+                layout="vertical"
+                align="right"
+                verticalAlign="middle"
+                wrapperStyle={{ paddingLeft: "20px", fontSize: "12px", maxHeight: "300px", overflowY: "auto" }}
+              />
             </PieChart>
           </ResponsiveContainer>
           
-          <div className="absolute inset-0 flex items-center justify-center" style={{ transform: `translateX(${isMobile ? '-22%' : '-21%'})` }}>
-            <div className={`${isMobile ? 'w-[140px] h-[140px]' : 'w-[180px] h-[180px]'} rounded-full flex flex-col items-center justify-center bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-2 border-indigo-300/60 dark:border-indigo-600/40 shadow-lg`}>
+          <div className="absolute inset-0 flex items-center justify-center" style={{ transform: 'translateX(-21%)' }}>
+            <div className="w-[180px] h-[180px] rounded-full flex flex-col items-center justify-center bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-2 border-indigo-300/60 dark:border-indigo-600/40 shadow-lg">
               <div className="flex flex-col items-center justify-center gap-2">
                 <div className="bg-gradient-to-r from-indigo-500 to-purple-500 p-3 rounded-full">
                   <Package className="text-white h-6 w-6" />
                 </div>
                 
-                <div className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold text-gray-800 dark:text-gray-200`}>
+                <div className="text-3xl font-bold text-gray-800 dark:text-gray-200">
                   {totalSales.toLocaleString()}
                 </div>
                 
-                <div className={`${isMobile ? 'text-xs' : 'text-sm'} font-medium text-gray-600 dark:text-gray-400`}>
+                <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
                   товаров продано
                 </div>
               </div>
             </div>
           </div>
-          
-          {isMobile && (
-            <div className="mt-4 w-full">
-              <div className="grid grid-cols-2 gap-2 text-xs px-2 mt-2">
-                {productSales.slice(0, 6).map((item, index) => (
-                  <div key={index} className="flex items-center gap-1">
-                    <div 
-                      className="w-3 h-3 rounded-full flex-shrink-0" 
-                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                    />
-                    <span className="truncate">{item.subject_name}</span>
-                  </div>
-                ))}
-                {productSales.length > 6 && (
-                  <div className="text-xs text-muted-foreground">
-                    и ещё {productSales.length - 6}...
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </Card>
     </div>
