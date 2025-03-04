@@ -2,10 +2,9 @@
 import { 
   Home, 
   BarChart2, 
-  Package, 
   ShoppingBag, 
-  WarehouseIcon,
-  Megaphone
+  Megaphone,
+  User
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -33,20 +32,6 @@ const MobileNavigation = ({ activeTab, onTabChange }: MobileNavigationProps) => 
         />
         
         <NavButton 
-          icon={<Package className="h-5 w-5" />} 
-          label="Товары" 
-          isActive={activeTab === "products"} 
-          onClick={() => onTabChange("products")} 
-        />
-        
-        <NavButton 
-          icon={<WarehouseIcon className="h-5 w-5" />} 
-          label="Склады" 
-          isActive={activeTab === "warehouses"} 
-          onClick={() => onTabChange("warehouses")} 
-        />
-        
-        <NavButton 
           icon={<ShoppingBag className="h-5 w-5" />} 
           label="Магазины" 
           isActive={activeTab === "stores"} 
@@ -58,6 +43,13 @@ const MobileNavigation = ({ activeTab, onTabChange }: MobileNavigationProps) => 
           label="Реклама" 
           isActive={activeTab === "advertising"} 
           onClick={() => onTabChange("advertising")} 
+        />
+        
+        <NavButton 
+          icon={<User className="h-5 w-5" />} 
+          label="Профиль" 
+          isActive={activeTab === "profile"} 
+          onClick={() => onTabChange("profile")} 
         />
       </div>
     </nav>

@@ -52,13 +52,23 @@
 /* Mobile optimizations */
 @media (max-width: 768px) {
   .container {
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
   
   /* Add extra padding at the bottom for mobile navigation */
   main {
     padding-bottom: 5rem !important;
+  }
+  
+  /* Increase card padding for mobile */
+  .stat-card {
+    padding: 0.75rem !important;
+  }
+  
+  /* Make form inputs more touch-friendly */
+  input, select, textarea, button {
+    font-size: 16px !important;
   }
 }
 
@@ -90,5 +100,22 @@ html {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Stat card styling */
+.stat-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Mobile navigation improvements */
+@media (max-width: 768px) {
+  .nav-button-active {
+    transform: translateY(-2px);
   }
 }
