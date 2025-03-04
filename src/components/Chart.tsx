@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import {
   LineChart,
@@ -65,7 +64,6 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
   };
 
   const customLegendFormatter = (value: string) => {
-    // Match by subject_name since that's what we use in the data
     const item = productSales.find(p => p.subject_name === value);
     if (!item) return value;
     const percentage = ((item.quantity / totalSales) * 100).toFixed(0);
@@ -142,7 +140,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
         </div>
       </Card>
 
-      <Card className="p-4 bg-gradient-to-br from-indigo-50/20 to-white/30 dark:from-indigo-950/30 dark:to-background/60 backdrop-blur-[1px]">
+      <Card className="p-4 bg-gradient-to-br from-indigo-50/20 to-white/30 dark:from-indigo-950/30 dark:to-background/60 backdrop-blur-[1px] relative">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <ShoppingCart className="text-indigo-500" size={20} />
@@ -175,7 +173,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 cy="50%"
                 labelLine={false}
                 label={renderCustomizedLabel}
-                innerRadius={70}
+                innerRadius={80}
                 outerRadius={120}
                 fill="#8884d8"
                 dataKey="quantity"
@@ -216,16 +214,15 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
             </PieChart>
           </ResponsiveContainer>
           
-          {/* Central circle with total count */}
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center z-10">
-            <div className="w-36 h-36 rounded-full flex flex-col items-center justify-center bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-indigo-100/60 dark:border-indigo-900/40 shadow-lg relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 to-white/30 dark:from-indigo-900/30 dark:to-gray-800/10"></div>
-              <div className="relative z-10 flex flex-col items-center">
-                <Package className="text-indigo-500 mb-1" size={24} />
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center z-10 pointer-events-none">
+            <div className="w-[140px] h-[140px] rounded-full flex flex-col items-center justify-center bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border border-indigo-100/70 dark:border-indigo-900/60 shadow-xl relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/60 to-white/40 dark:from-indigo-900/40 dark:to-gray-800/20 opacity-80"></div>
+              <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
+                <Package className="text-indigo-500 mb-1.5 animate-pulse" size={26} />
                 <div className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent" style={{ filter: 'url(#glow)' }}>
                   {totalSales.toLocaleString()}
                 </div>
-                <div className="text-sm text-muted-foreground mt-1">Всего продано</div>
+                <div className="text-sm text-muted-foreground mt-1.5">Всего продано</div>
               </div>
             </div>
           </div>
