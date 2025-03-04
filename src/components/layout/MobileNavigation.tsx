@@ -2,10 +2,9 @@
 import { 
   Home, 
   BarChart2, 
-  Package, 
   ShoppingBag, 
-  User,
-  Megaphone
+  Megaphone,
+  User
 } from "lucide-react";
 import { motion } from "framer-motion";
 

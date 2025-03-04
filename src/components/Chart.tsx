@@ -14,7 +14,7 @@ import {
   Cell
 } from "recharts";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Package, TrendingUp, ShoppingBag } from "lucide-react";
+import { Package, ShoppingCart, TrendingUp, ShoppingBag } from "lucide-react";
 
 interface SalesByDay {
   date: string;

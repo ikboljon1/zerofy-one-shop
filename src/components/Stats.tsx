@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -248,7 +247,7 @@ const Stats = () => {
         >
           <div className="flex flex-col space-y-2 p-4">
             <div className="flex items-center justify-between">
-              <stat.icon className={`h-6 w-6 ${stat.iconColor}`} />
+              <stat.icon className={`h-8 w-8 ${stat.iconColor}`} />
               <div className="flex items-center space-x-1">
                 <span
                   className={`text-sm ${
@@ -265,8 +264,8 @@ const Stats = () => {
               </div>
             </div>
             <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-            <p className="font-bold text-xl">{stat.value}</p>
-            <p className="text-xs text-muted-foreground">{stat.description}</p>
+            <p className={`font-bold ${isMobile ? 'text-xl' : 'text-2xl'}`}>{stat.value}</p>
+            <p className="text-sm text-muted-foreground">{stat.description}</p>
           </div>
         </Card>
       ))}
@@ -310,27 +309,35 @@ const Stats = () => {
           <div className="grid gap-6">
             {isMobile ? (
               <>
-                {renderStatsRow(stats, 0, 2)} {/* Продажа и Перечислено в одной строке */}
-                {renderStatsRow(stats, 2, 4)} {/* Расходы и Чистая прибыль в одной строке */}
+                {/* Row 1: Sales and Transferred */}
+                {renderStatsRow(stats, 0, 2)}
+                {/* Row 2: Expenses and Net Profit */}
+                {renderStatsRow(stats, 2, 4)}
+                {/* Sales trend chart on its own row for mobile */}
+                <div className="col-span-full">
+                  <Chart 
+                    salesTrend={prepareSalesTrendData(statsData)} 
+                    productSales={prepareProductSalesData(statsData)}
+                  />
+                </div>
               </>
             ) : (
-              renderStatsRow(stats, 0, 4)
+              <>
+                {renderStatsRow(stats, 0, 4)}
+                <Chart 
+                  salesTrend={prepareSalesTrendData(statsData)} 
+                  productSales={prepareProductSalesData(statsData)}
+                />
+              </>
             )}
-            
-            {/* Chart на отдельной строке */}
-            <div className="w-full">
-              <Chart 
-                salesTrend={prepareSalesTrendData(statsData)} 
-                productSales={prepareProductSalesData(statsData)}
-              />
-            </div>
-            
             <div className="mt-6">
               <h3 className="text-lg font-semibold mb-4">Дополнительная статистика</h3>
               {isMobile ? (
                 <>
-                  {renderStatsRow(additionalStats, 0, 2)} {/* Логистика и Хранение в одной строке */}
-                  {renderStatsRow(additionalStats, 2, 4)} {/* Штрафы и Приемка в одной строке */}
+                  {/* Row 1: Logistics and Storage */}
+                  {renderStatsRow(additionalStats, 0, 2)}
+                  {/* Row 2: Penalties and Acceptance */}
+                  {renderStatsRow(additionalStats, 2, 4)}
                 </>
               ) : (
                 renderStatsRow(additionalStats, 0, 4)
