@@ -14,7 +14,7 @@ import {
   Cell
 } from "recharts";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Package, ShoppingCart, TrendingUp } from "lucide-react";
+import { Package, ShoppingCart } from "lucide-react";
 
 interface SalesByDay {
   date: string;
@@ -81,10 +81,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
     <div className={`grid ${isMobile ? 'grid-cols-1 gap-6' : 'grid-cols-2 gap-4'}`}>
       <Card className="p-4">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <TrendingUp className="text-blue-500" size={20} />
-            Динамика продаж по дням
-          </h3>
+          <h3 className="text-lg font-semibold">Динамика продаж по дням</h3>
         </div>
         <div className="h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -139,7 +136,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
         </div>
       </Card>
 
-      <Card className="p-4 bg-gradient-to-br from-indigo-50/30 to-white/60 dark:from-indigo-950/40 dark:to-background/70 relative overflow-hidden">
+      <Card className="p-4 bg-gradient-to-br from-indigo-50/30 to-white/60 dark:from-indigo-950/40 dark:to-background/70">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <ShoppingCart className="text-indigo-500" size={20} />
@@ -172,7 +169,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 cy="50%"
                 labelLine={false}
                 label={renderCustomizedLabel}
-                innerRadius={60}
+                innerRadius={70}
                 outerRadius={120}
                 fill="#8884d8"
                 dataKey="quantity"
@@ -212,27 +209,15 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
               />
             </PieChart>
           </ResponsiveContainer>
-          
-          {/* Centered total sales circle */}
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-            <div className="relative w-36 h-36 rounded-full flex flex-col items-center justify-center overflow-hidden backdrop-blur-sm">
-              {/* Glass effect background */}
-              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-indigo-500/20 to-purple-500/20 animate-pulse"></div>
-              <div className="absolute inset-1 rounded-full bg-gradient-to-br from-white/90 to-indigo-50/80 dark:from-gray-800/90 dark:to-indigo-900/50 border border-indigo-200/60 dark:border-indigo-700/40"></div>
-              
-              {/* Outer ring glow */}
-              <div className="absolute inset-0 rounded-full border-4 border-indigo-500/40 dark:border-indigo-400/20 blur-[1px]"></div>
-              
-              {/* Light reflection effect */}
-              <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white/30 to-transparent dark:from-white/10 rounded-t-full"></div>
-              
-              {/* Content */}
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+            <div className="relative w-36 h-36 rounded-full bg-white dark:bg-gray-800/70 flex flex-col items-center justify-center shadow-lg border border-indigo-100/60 dark:border-indigo-900/40 overflow-hidden backdrop-blur-sm">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 to-white/30 dark:from-indigo-900/30 dark:to-gray-800/10"></div>
               <div className="relative z-10 flex flex-col items-center">
-                <Package className="text-indigo-600 dark:text-indigo-400 mb-1" size={28} />
-                <div className="text-3xl font-bold bg-gradient-to-br from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 text-transparent bg-clip-text" style={{ filter: 'url(#glow)' }}>
+                <Package className="text-indigo-500 mb-1" size={24} />
+                <div className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text" style={{ filter: 'url(#glow)' }}>
                   {totalSales.toLocaleString()}
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-300 mt-1 font-medium">Всего продано</div>
+                <div className="text-sm text-muted-foreground mt-1">Всего продано</div>
               </div>
             </div>
           </div>

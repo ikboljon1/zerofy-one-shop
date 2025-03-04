@@ -1,4 +1,3 @@
-
 export interface WildberriesResponse {
   currentPeriod: {
     sales: number;
@@ -59,15 +58,20 @@ interface WildberriesReportItem {
   retail_price?: number;
 }
 
+interface CachedData {
+  timestamp: number;
+  data: WildberriesReportItem[];
+}
+
 const WB_REPORT_URL = 'https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod';
 const WB_CONTENT_URL = "https://suppliers-api.wildberries.ru/content/v2/get/cards/list";
 
-// Управление частотой запросов
+const dataCache: { [key: string]: CachedData } = {};
 const requestTimestamps: { [key: string]: number } = {};
 
-const RETRY_DELAY = 2000; // 2 секунды между повторными попытками
+const RETRY_DELAY = 2000; // 2 seconds between retries
 const MAX_RETRIES = 3;
-const RATE_LIMIT_WINDOW = 1000; // 1 секундное окно
+const RATE_LIMIT_WINDOW = 1000; // 1 second window
 const MAX_REQUESTS_PER_WINDOW = 2;
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -118,12 +122,9 @@ const fetchWithRetry = async (
     };
 
     const fullUrl = `${url}${params ? `?${params}` : ''}`;
-    console.log(`Выполняется запрос к API: ${fullUrl}`);
-    
     const response = await fetch(fullUrl, requestOptions);
     
     if (response.status === 429) {
-      console.log('Получен статус 429 (слишком много запросов), ожидание перед повторной попыткой...');
       if (retryCount < MAX_RETRIES) {
         await delay(RETRY_DELAY * (retryCount + 1));
         return fetchWithRetry(url, headers, params, method, body, retryCount + 1);
@@ -134,13 +135,9 @@ const fetchWithRetry = async (
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data = await response.json();
-    console.log(`Получены данные от API, количество записей: ${Array.isArray(data) ? data.length : 'Неизвестно'}`);
-    return data;
+    return response.json();
   } catch (error) {
-    console.error('Ошибка при запросе к API:', error);
     if (retryCount < MAX_RETRIES) {
-      console.log(`Повторная попытка ${retryCount + 1} из ${MAX_RETRIES}...`);
       await delay(RETRY_DELAY * (retryCount + 1));
       return fetchWithRetry(url, headers, params, method, body, retryCount + 1);
     }
@@ -148,19 +145,23 @@ const fetchWithRetry = async (
   }
 };
 
-const fetchData = async (
+const fetchAndCacheData = async (
   apiKey: string,
   dateFrom: Date,
-  dateTo: Date,
-  rrdid = 0
+  dateTo: Date
 ): Promise<WildberriesReportItem[]> => {
-  console.log(`Запрос данных за период: ${dateFrom.toISOString()} - ${dateTo.toISOString()}, rrdid: ${rrdid}`);
+  const cacheKey = `${apiKey}_${dateFrom.toISOString()}_${dateTo.toISOString()}`;
+  const now = Date.now();
   
+  if (dataCache[cacheKey] && (now - dataCache[cacheKey].timestamp) < 3600000) {
+    console.log('Using cached data');
+    return dataCache[cacheKey].data;
+  }
+
   const params = new URLSearchParams({
     dateFrom: dateFrom.toISOString().split('T')[0],
     dateTo: dateTo.toISOString().split('T')[0],
-    limit: '100000',
-    rrdid: rrdid.toString()
+    limit: '100000'
   });
 
   const headers = {
@@ -171,28 +172,15 @@ const fetchData = async (
   try {
     const data = await fetchWithRetry(WB_REPORT_URL, headers, params);
     
-    if (!Array.isArray(data)) {
-      console.error('Неожиданный формат данных от API:', data);
-      return [];
-    }
-    
-    // Проверяем необходимость дополнительных запросов для пагинации
-    if (data.length > 0) {
-      const lastRecord = data[data.length - 1];
-      const nextRrdid = lastRecord.rrd_id;
-      
-      // Если есть значение rrd_id и оно отличается от текущего, получаем следующую страницу
-      if (nextRrdid && nextRrdid !== rrdid) {
-        console.log(`Обнаружена пагинация, следующий rrdid: ${nextRrdid}`);
-        const nextPageData = await fetchData(apiKey, dateFrom, dateTo, nextRrdid);
-        return [...data, ...nextPageData];
-      }
-    }
-    
+    dataCache[cacheKey] = {
+      timestamp: now,
+      data: data
+    };
+
     return data;
   } catch (error) {
-    console.error('Ошибка при получении данных:', error);
-    throw new Error('Не удалось получить данные от Wildberries API');
+    console.error('Error fetching data:', error);
+    throw new Error('Failed to fetch Wildberries data');
   }
 };
 
@@ -237,7 +225,7 @@ const fetchProductNames = async (apiKey: string, nmIds: string[]): Promise<Map<s
 
     return productInfo;
   } catch (error) {
-    console.error('Ошибка при получении информации о товарах:', error);
+    console.error('Error fetching product names:', error);
     return new Map();
   }
 };
@@ -423,17 +411,8 @@ export const fetchWildberriesStats = async (
   dateTo: Date
 ): Promise<WildberriesResponse> => {
   try {
-    console.log('Запуск получения статистики Wildberries...');
-    
-    // Всегда получаем свежие данные с API
-    const data = await fetchData(apiKey, dateFrom, dateTo);
-    console.log(`Получено ${data.length} записей от API`);
-    
-    // Рассчитываем статистику на основе полученных данных
-    const stats = await calculateStats(data, apiKey);
-    console.log('Статистика успешно рассчитана');
-    
-    return stats;
+    const data = await fetchAndCacheData(apiKey, dateFrom, dateTo);
+    return await calculateStats(data, apiKey);
   } catch (error) {
     console.error('Ошибка получения статистики Wildberries:', error);
     throw new Error('Не удалось загрузить статистику Wildberries');
