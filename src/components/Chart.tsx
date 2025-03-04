@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import {
   LineChart,
@@ -140,13 +141,16 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
         </div>
       </Card>
 
-      <Card className="p-4 bg-gradient-to-br from-indigo-50/30 to-white/40 dark:from-indigo-950/40 dark:to-background/70 backdrop-blur-[2px] overflow-visible relative border-indigo-200/50 dark:border-indigo-800/50">
-        <div className="flex items-center justify-between mb-4">
+      <Card className="p-4 overflow-hidden relative border-indigo-200/40 dark:border-indigo-800/40 bg-gradient-to-br from-white/80 to-indigo-50/50 dark:from-gray-900/90 dark:to-indigo-950/50 backdrop-blur-[1px]">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-200/20 via-transparent to-transparent dark:from-indigo-900/20 pointer-events-none"></div>
+        
+        <div className="flex items-center justify-between mb-4 relative z-10">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <ShoppingBag className="text-indigo-500" size={20} />
             Количество проданных товаров
           </h3>
         </div>
+        
         <div className="h-[400px] w-full relative">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -166,6 +170,16 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                   <feComposite in="glow" in2="blur" operator="in" result="coloredBlur" />
                   <feComposite in="SourceGraphic" in2="coloredBlur" operator="over" />
                 </filter>
+                
+                <linearGradient id="centerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#8B5CF6" stopOpacity="1" />
+                  <stop offset="100%" stopColor="#6366F1" stopOpacity="1" />
+                </linearGradient>
+                
+                <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#4F46E5" />
+                  <stop offset="100%" stopColor="#7C3AED" />
+                </linearGradient>
               </defs>
               <Pie
                 data={productSales}
@@ -173,20 +187,20 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 cy="50%"
                 labelLine={false}
                 label={renderCustomizedLabel}
-                innerRadius={90}
-                outerRadius={130}
+                innerRadius={95}
+                outerRadius={140}
                 fill="#8884d8"
                 dataKey="quantity"
                 nameKey="subject_name"
                 animationBegin={0}
                 animationDuration={1500}
-                paddingAngle={2}
+                paddingAngle={3}
               >
                 {productSales.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
                     fill={`url(#colorGradient-${index % COLORS.length})`} 
-                    stroke="rgba(255,255,255,0.5)" 
+                    stroke="rgba(255,255,255,0.6)" 
                     strokeWidth={2} 
                     style={{ filter: 'url(#shadow)' }}
                   />
@@ -215,16 +229,21 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
           </ResponsiveContainer>
           
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-[170px] h-[170px] rounded-full flex flex-col items-center justify-center bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg border-[3px] border-indigo-300/80 dark:border-indigo-700/70 shadow-[0_0_30px_rgba(139,92,246,0.35)] transition-all hover:shadow-[0_0_40px_rgba(139,92,246,0.4)] animate-pulse-slow">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-100/80 to-white/60 dark:from-indigo-800/60 dark:to-gray-800/40 opacity-95"></div>
+            <div className="w-[180px] h-[180px] rounded-full flex flex-col items-center justify-center bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border-[3px] border-indigo-300/80 dark:border-indigo-600/60 shadow-[0_0_25px_rgba(99,102,241,0.4)] hover:shadow-[0_0_35px_rgba(99,102,241,0.5)] transition-all duration-500 group animate-pulse-slow">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-100/90 to-white/70 dark:from-indigo-900/70 dark:to-gray-800/50 opacity-95"></div>
+              
               <div className="relative z-10 flex flex-col items-center justify-center h-full w-full p-4">
-                <div className="rounded-full bg-indigo-100/90 dark:bg-indigo-900/60 p-2.5 mb-2 shadow-inner">
-                  <Package className="text-indigo-600 dark:text-indigo-400" size={32} />
+                <div className="rounded-full bg-gradient-to-br from-indigo-100 to-white dark:from-indigo-800/80 dark:to-indigo-900/60 p-3 mb-2 shadow-inner group-hover:scale-110 transition-transform duration-300">
+                  <Package className="text-indigo-600 dark:text-indigo-400" size={30} />
                 </div>
-                <div className="text-3xl font-bold bg-gradient-to-r from-indigo-700 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent" style={{ filter: 'url(#glow)' }}>
+                
+                <div className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent group-hover:scale-105 transition-transform duration-300" style={{ filter: 'drop-shadow(0px 1px 1px rgba(0,0,0,0.15))' }}>
                   {totalSales.toLocaleString()}
                 </div>
-                <div className="text-sm font-medium text-gray-600 dark:text-gray-300 mt-1 text-center">Всего продано</div>
+                
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mt-1 text-center">
+                  Всего продано
+                </div>
               </div>
             </div>
           </div>
