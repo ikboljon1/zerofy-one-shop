@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import {
   LineChart,
@@ -150,7 +151,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
           </h3>
         </div>
         
-        <div className="h-[400px] w-full relative">
+        <div className="h-[400px] w-full relative flex items-center justify-center">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <defs>
@@ -214,7 +215,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
             </PieChart>
           </ResponsiveContainer>
           
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-[180px] h-[180px] rounded-full flex flex-col items-center justify-center bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-2 border-indigo-300/60 dark:border-indigo-600/40 shadow-lg">
               <div className="flex flex-col items-center justify-center gap-2">
                 <div className="bg-gradient-to-r from-indigo-500 to-purple-500 p-3 rounded-full">
