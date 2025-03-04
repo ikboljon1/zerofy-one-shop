@@ -1,7 +1,6 @@
 
 import { Card } from "@/components/ui/card";
 import { Truck, AlertCircle, WarehouseIcon, Target } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ExpenseBreakdownProps {
   data: {
@@ -18,12 +17,10 @@ interface ExpenseBreakdownProps {
 }
 
 const ExpenseBreakdown = ({ data }: ExpenseBreakdownProps) => {
-  const isMobile = useIsMobile();
-  
   return (
     <Card className="p-6">
       <h3 className="text-lg font-semibold mb-6">Структура расходов</h3>
-      <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-4'} gap-6`}>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="flex flex-col bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background border border-purple-200 dark:border-purple-800 rounded-xl p-6">
           <div className="flex justify-between items-center mb-2">
             <h4 className="text-base font-medium">Логистика</h4>
