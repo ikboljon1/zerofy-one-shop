@@ -215,7 +215,8 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
             </PieChart>
           </ResponsiveContainer>
           
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
+          {/* Fixed central circle positioning */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="w-[160px] h-[160px] rounded-full flex flex-col items-center justify-center bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-2 border-indigo-200/80 dark:border-indigo-800/70 shadow-[0_0_25px_rgba(139,92,246,0.25)] transition-all">
               <div className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-50/70 to-white/50 dark:from-indigo-900/50 dark:to-gray-800/30 opacity-90"></div>
               <div className="relative z-10 flex flex-col items-center justify-center h-full w-full p-4">
