@@ -28,15 +28,17 @@ const AnalyticsSection = () => {
   const [dateTo, setDateTo] = useState<Date>(new Date());
 
   return (
-    <div className="space-y-6">
-      <DateRangePicker 
-        dateFrom={dateFrom}
-        dateTo={dateTo}
-        setDateFrom={setDateFrom}
-        setDateTo={setDateTo}
-      />
+    <div className="space-y-8">
+      <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-100 dark:border-blue-800/30 shadow-lg">
+        <DateRangePicker 
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          setDateFrom={setDateFrom}
+          setDateTo={setDateTo}
+        />
+      </div>
 
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* Ключевые показатели */}
         <KeyMetrics data={data} />
 

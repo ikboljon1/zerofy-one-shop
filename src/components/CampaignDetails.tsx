@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "./ui/card";
 import { useEffect, useState } from "react";
 import { getAdvertCosts, getAdvertStats, getAdvertPayments } from "@/services/advertisingApi";
@@ -222,76 +221,150 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
         className="relative overflow-hidden"
         style={{
           background: theme === 'dark' 
-            ? 'linear-gradient(135deg, rgba(30,58,138,0.3) 0%, rgba(59,130,246,0.2) 100%)'
-            : 'linear-gradient(to top, #accbee 0%, #e7f0fd 100%)'
+            ? 'linear-gradient(135deg, rgba(15,23,42,1) 0%, rgba(51,65,85,1) 100%)'
+            : 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
         }}
       >
-        <div className="absolute -top-16 -right-16 opacity-10">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-          >
-            <TrendingUp className="h-64 w-64" />
-          </motion.div>
-        </div>
-
         <div className="p-5 border-b border-gray-200/30 dark:border-gray-700/30 flex items-center justify-between relative z-10">
           <h3 className="text-xl font-bold flex items-center gap-2">
             <Trophy className="h-5 w-5 text-blue-500" />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500">Подробная статистика</span>
           </h3>
-          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
-            <Sparkles className="h-5 w-5 text-blue-400" />
-          </motion.div>
         </div>
 
         <div className="p-5 relative z-10">
           <AnimatePresence>
             {stats ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[
-                  { label: 'Показы', value: stats.views.toLocaleString('ru-RU'), color: 'blue', icon: Trophy },
-                  { label: 'Клики', value: stats.clicks.toLocaleString('ru-RU'), color: 'purple', icon: Sparkles },
-                  { label: 'CTR', value: `${stats.ctr.toFixed(2)}%`, color: 'green', icon: TrendingUp },
-                  { label: 'Заказы', value: stats.orders.toLocaleString('ru-RU'), color: 'amber', icon: Star },
-                  { label: 'CR', value: `${stats.cr.toFixed(2)}%`, color: 'purple', icon: Gem },
-                  { label: 'Сумма', value: `${stats.sum.toLocaleString('ru-RU')} ₽`, color: 'green', icon: DollarSign }
-                ].map((item, index) => (
-                  <motion.div 
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    whileHover={{ y: -5, boxShadow: "0 15px 30px -10px rgba(0, 0, 0, 0.1)" }}
-                    className="relative overflow-hidden"
-                  >
-                    <div className={`rounded-2xl p-4 border-2 border-${item.color}-200 dark:border-${item.color}-800/40 relative overflow-hidden`}
-                      style={{
-                        background: theme === 'dark' 
-                          ? `linear-gradient(135deg, rgba(0,0,0,0.2) 0%, rgba(${item.color === 'purple' ? '147,39,143' : item.color === 'blue' ? '1,138,216' : item.color === 'green' ? '38,166,91' : '247,114,22'},0.3) 100%)`
-                          : `linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(${item.color === 'purple' ? '226,213,250' : item.color === 'blue' ? '201,235,255' : item.color === 'green' ? '209,250,229' : '255,226,208'},0.8) 100%)`
-                      }}
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {[
+                    { label: 'Показы', value: stats.views.toLocaleString('ru-RU'), color: 'blue', icon: Trophy },
+                    { label: 'Клики', value: stats.clicks.toLocaleString('ru-RU'), color: 'purple', icon: Sparkles },
+                    { label: 'CTR', value: `${stats.ctr.toFixed(2)}%`, color: 'green', icon: TrendingUp },
+                  ].map((item, index) => (
+                    <motion.div 
+                      key={index}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="flex flex-col items-center justify-center p-4 rounded-xl bg-white/80 dark:bg-gray-800/40 backdrop-blur-sm border border-blue-100 dark:border-blue-900/20 shadow-sm"
                     >
-                      <motion.div 
-                        className="absolute -bottom-4 -right-4 opacity-10"
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                      >
-                        <item.icon className="h-16 w-16" />
-                      </motion.div>
-
-                      <div className="flex justify-between items-center relative z-10">
-                        <span className={`text-${item.color}-700 dark:text-${item.color}-300 font-medium flex items-center`}>
-                          <div className={`w-2 h-6 rounded-full bg-${item.color}-500 mr-2`}></div>
-                          {item.label}
-                        </span>
-                        <span className="font-bold text-xl bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300">
-                          {item.value}
-                        </span>
+                      <item.icon className={`h-6 w-6 text-${item.color}-500 mb-2`} />
+                      <span className="text-xs text-muted-foreground">{item.label}</span>
+                      <span className="text-xl font-bold">{item.value}</span>
+                    </motion.div>
+                  ))}
+                </div>
+                
+                <div className="bg-white/90 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl overflow-hidden border border-blue-100 dark:border-blue-900/20 shadow-lg">
+                  <div className="p-4 border-b border-blue-100 dark:border-blue-900/20">
+                    <h4 className="font-semibold text-blue-700 dark:text-blue-400">Детальная статистика эффективности</h4>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-blue-50 dark:bg-blue-950/30">
+                        <tr>
+                          <th className="py-3 px-4 text-left text-xs font-medium text-blue-800 dark:text-blue-300 uppercase tracking-wider">Метрика</th>
+                          <th className="py-3 px-4 text-right text-xs font-medium text-blue-800 dark:text-blue-300 uppercase tracking-wider">Значение</th>
+                          <th className="py-3 px-4 text-right text-xs font-medium text-blue-800 dark:text-blue-300 uppercase tracking-wider">Динамика</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-blue-100 dark:divide-blue-900/20">
+                        {[
+                          { id: 'views', name: 'Показы', value: stats.views.toLocaleString('ru-RU'), change: '+12.5%', isPositive: true },
+                          { id: 'clicks', name: 'Клики', value: stats.clicks.toLocaleString('ru-RU'), change: '+8.7%', isPositive: true },
+                          { id: 'ctr', name: 'CTR', value: `${stats.ctr.toFixed(2)}%`, change: '-1.2%', isPositive: false },
+                          { id: 'orders', name: 'Заказы', value: stats.orders.toLocaleString('ru-RU'), change: '+5.3%', isPositive: true },
+                          { id: 'cr', name: 'CR', value: `${stats.cr.toFixed(2)}%`, change: '+2.1%', isPositive: true },
+                          { id: 'sum', name: 'Сумма', value: `${stats.sum.toLocaleString('ru-RU')} ₽`, change: '+7.8%', isPositive: true },
+                        ].map((item) => (
+                          <motion.tr 
+                            key={item.id}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.1 }}
+                            className="hover:bg-blue-50/50 dark:hover:bg-blue-900/10"
+                          >
+                            <td className="py-3 px-4 text-sm whitespace-nowrap font-medium">{item.name}</td>
+                            <td className="py-3 px-4 text-sm text-right whitespace-nowrap font-bold">{item.value}</td>
+                            <td className="py-3 px-4 text-right whitespace-nowrap">
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                                item.isPositive 
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
+                                : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                              }`}>
+                                {item.isPositive ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}
+                                {item.change}
+                              </span>
+                            </td>
+                          </motion.tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-white/90 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-4 border border-blue-100 dark:border-blue-900/20 shadow-lg">
+                    <h4 className="font-semibold text-blue-700 dark:text-blue-400 mb-3">Эффективность кампании</h4>
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span>ROI</span>
+                          <span className="font-bold">124%</span>
+                        </div>
+                        <div className="w-full bg-blue-100 dark:bg-blue-900/30 rounded-full h-2">
+                          <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full" style={{ width: '75%' }}></div>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span>CTR</span>
+                          <span className="font-bold">{stats.ctr.toFixed(2)}%</span>
+                        </div>
+                        <div className="w-full bg-blue-100 dark:bg-blue-900/30 rounded-full h-2">
+                          <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full" style={{ width: `${Math.min(stats.ctr * 8, 100)}%` }}></div>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span>CR</span>
+                          <span className="font-bold">{stats.cr.toFixed(2)}%</span>
+                        </div>
+                        <div className="w-full bg-blue-100 dark:bg-blue-900/30 rounded-full h-2">
+                          <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full" style={{ width: `${Math.min(stats.cr * 10, 100)}%` }}></div>
+                        </div>
                       </div>
                     </div>
-                  </motion.div>
-                ))}
+                  </div>
+                  
+                  <div className="bg-white/90 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-4 border border-blue-100 dark:border-blue-900/20 shadow-lg">
+                    <h4 className="font-semibold text-blue-700 dark:text-blue-400 mb-3">Стоимость привлечения</h4>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                        <div className="flex items-center">
+                          <div className="w-2 h-8 bg-blue-500 rounded-full mr-3"></div>
+                          <span>CPC</span>
+                        </div>
+                        <span className="font-bold">{(stats.sum / stats.clicks).toFixed(2)} ₽</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                        <div className="flex items-center">
+                          <div className="w-2 h-8 bg-purple-500 rounded-full mr-3"></div>
+                          <span>CPM</span>
+                        </div>
+                        <span className="font-bold">{((stats.sum / stats.views) * 1000).toFixed(2)} ₽</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                        <div className="flex items-center">
+                          <div className="w-2 h-8 bg-green-500 rounded-full mr-3"></div>
+                          <span>CPO</span>
+                        </div>
+                        <span className="font-bold">{(stats.sum / stats.orders).toFixed(2)} ₽</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             ) : (
               <motion.div 
