@@ -27,7 +27,8 @@ interface Product {
     acceptance: number;
     deductions?: number;
     ppvz_for_pay?: number;
-    retail_price?: number; // Изменено с retail_amount на retail_price
+    retail_price?: number;
+    retail_price_withdisc_rub?: number;
   };
 }
 
@@ -291,6 +292,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         console.log('Processing item:', {
           nmId,
           doc_type_name: item.doc_type_name,
+          retail_price_withdisc_rub: item.retail_price_withdisc_rub,
           retail_price: item.retail_price,
           quantity: item.quantity
         });
@@ -303,7 +305,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
             acceptance: 0,
             deductions: 0,
             ppvz_for_pay: 0,
-            retail_price: 0
+            retail_price: 0,
+            retail_price_withdisc_rub: 0
           });
         }
         
@@ -316,17 +319,19 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         expenses.ppvz_for_pay += item.ppvz_for_pay || 0;
 
         if (item.doc_type_name === "Продажа") {
+          expenses.retail_price_withdisc_rub += item.retail_price_withdisc_rub || 0;
           expenses.retail_price += item.retail_price || 0;
           console.log('Adding sale:', {
             nmId,
+            retail_price_withdisc_rub: item.retail_price_withdisc_rub,
             retail_price: item.retail_price,
-            current_total: expenses.retail_price
+            current_total: expenses.retail_price_withdisc_rub
           });
           
           if (!salesMap.has(nmId)) {
             salesMap.set(nmId, 0);
           }
-          salesMap.set(nmId, salesMap.get(nmId) + (item.retail_price || 0));
+          salesMap.set(nmId, salesMap.get(nmId) + (item.retail_price_withdisc_rub || item.retail_price || 0));
         }
       });
 
@@ -345,7 +350,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           acceptance: 0,
           deductions: 0,
           ppvz_for_pay: 0,
-          retail_price: 0
+          retail_price: 0,
+          retail_price_withdisc_rub: 0
         };
         
         console.log(`Processing product ${product.nmID}:`, {

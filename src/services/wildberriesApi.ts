@@ -1,4 +1,3 @@
-
 export interface WildberriesResponse {
   currentPeriod: {
     sales: number;
@@ -57,12 +56,12 @@ interface WildberriesReportItem {
   ppvz_vw?: number;
   rebill_logistic_cost?: number;
   retail_price?: number;
+  retail_price_withdisc_rub?: number;
 }
 
 const WB_REPORT_URL = 'https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod';
 const WB_CONTENT_URL = "https://suppliers-api.wildberries.ru/content/v2/get/cards/list";
 
-// Управление частотой запросов
 const requestTimestamps: { [key: string]: number } = {};
 
 const RETRY_DELAY = 2000; // 2 секунды между повторными попытками
@@ -176,12 +175,10 @@ const fetchData = async (
       return [];
     }
     
-    // Проверяем необходимость дополнительных запросов для пагинации
     if (data.length > 0) {
       const lastRecord = data[data.length - 1];
       const nextRrdid = lastRecord.rrd_id;
       
-      // Если есть значение rrd_id и оно отличается от текущего, получаем следующую страницу
       if (nextRrdid && nextRrdid !== rrdid) {
         console.log(`Обнаружена пагинация, следующий rrdid: ${nextRrdid}`);
         const nextPageData = await fetchData(apiKey, dateFrom, dateTo, nextRrdid);
@@ -300,11 +297,10 @@ const calculateProductStats = (data: WildberriesReportItem[]) => {
 };
 
 const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Promise<WildberriesResponse> => {
-  // Initialize stats object
   const stats: WildberriesResponse = {
     currentPeriod: {
-      sales: 0,            // Total retail_amount (Общая сумма продаж)
-      transferred: 0,      // Total ppvz_for_pay (К перечислению продавцу)
+      sales: 0,
+      transferred: 0,
       expenses: {
         total: 0,
         logistics: 0,
@@ -312,7 +308,7 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
         penalties: 0,
         acceptance: 0
       },
-      netProfit: 0,        // transferred - expenses.total
+      netProfit: 0,
       acceptance: 0
     },
     dailySales: [],
@@ -322,49 +318,36 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
   const dailySales = new Map<string, { sales: number; previousSales: number }>();
   const productSales = new Map<string, number>();
 
-  // Process each item from the API response
   data.forEach(item => {
-    // Format the sale date (take only the date part)
     const saleDate = item.sale_dt.split('T')[0];
     
-    // Initialize sales data for this date if it doesn't exist
     const currentSales = dailySales.get(saleDate) || { sales: 0, previousSales: 0 };
     
-    // Track product sales (by quantity) for the pie chart
     if (item.doc_type_name === "Продажа") {
-      // Add to total sales (retail_amount)
       stats.currentPeriod.sales += item.retail_amount || 0;
-      
-      // Update daily sales
       currentSales.sales += item.retail_amount || 0;
       dailySales.set(saleDate, currentSales);
       
-      // Track product sales quantity
       const currentQuantity = productSales.get(item.subject_name) || 0;
       productSales.set(item.subject_name, currentQuantity + (item.quantity || 0));
       
-      // Add ppvz_for_pay to transferred amount (what gets transferred to the seller)
       stats.currentPeriod.transferred += item.ppvz_for_pay || 0;
     }
     
-    // Calculate expenses based on the Python example logic
     let logistics = item.rebill_logistic_cost || item.delivery_rub || 0;
     let storage = item.storage_fee || 0;
     let penalties = item.penalty || 0;
     let acceptance = item.acceptance || 0;
     
-    // If there is a bonus_type_name, don't count the penalty
     if (item.bonus_type_name) {
       penalties = 0;
     }
     
-    // Add to expense categories
     stats.currentPeriod.expenses.logistics += logistics;
     stats.currentPeriod.expenses.storage += storage;
     stats.currentPeriod.expenses.penalties += penalties;
     stats.currentPeriod.expenses.acceptance += acceptance;
     
-    // Add to total expenses
     const acquiringFee = item.acquiring_fee || 0;
     const ppvzVw = Math.abs(item.ppvz_vw || 0);
     const deduction = item.deduction || 0;
@@ -372,10 +355,8 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
     stats.currentPeriod.expenses.total += logistics + storage + penalties + acceptance + acquiringFee + ppvzVw + deduction;
   });
 
-  // Calculate net profit
   stats.currentPeriod.netProfit = stats.currentPeriod.transferred - stats.currentPeriod.expenses.total;
 
-  // Sort daily sales by date
   const sortedDailySales = Array.from(dailySales.entries())
     .map(([date, values]) => ({
       date,
@@ -383,7 +364,6 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  // Sort product sales by quantity (descending) and limit to top 10
   const sortedProductSales = Array.from(productSales.entries())
     .map(([name, quantity]) => ({
       subject_name: name,
@@ -395,7 +375,6 @@ const calculateStats = async (data: WildberriesReportItem[], apiKey: string): Pr
   stats.dailySales = sortedDailySales;
   stats.productSales = sortedProductSales;
 
-  // Placeholder for top products data that could be fetched in a separate API call
   stats.topProfitableProducts = [
     {
       name: "Загрузка...",
@@ -425,11 +404,9 @@ export const fetchWildberriesStats = async (
   try {
     console.log('Запуск получения статистики Wildberries...');
     
-    // Всегда получаем свежие данные с API
     const data = await fetchData(apiKey, dateFrom, dateTo);
     console.log(`Получено ${data.length} записей от API`);
     
-    // Рассчитываем статистику на основе полученных данных
     const stats = await calculateStats(data, apiKey);
     console.log('Статистика успешно рассчитана');
     
