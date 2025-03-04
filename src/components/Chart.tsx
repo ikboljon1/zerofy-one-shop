@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import {
   LineChart,
@@ -151,7 +150,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
           </h3>
         </div>
         
-        <div className="h-[400px] w-full relative">
+        <div className="h-[400px] w-full relative flex items-center justify-center">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <defs>
@@ -164,23 +163,8 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
                   <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#000" floodOpacity="0.3"/>
                 </filter>
-                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="3" result="blur" />
-                  <feFlood floodColor="#6366F1" floodOpacity="0.4" result="glow" />
-                  <feComposite in="glow" in2="blur" operator="in" result="coloredBlur" />
-                  <feComposite in="SourceGraphic" in2="coloredBlur" operator="over" />
-                </filter>
-                
-                <linearGradient id="centerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#8B5CF6" stopOpacity="1" />
-                  <stop offset="100%" stopColor="#6366F1" stopOpacity="1" />
-                </linearGradient>
-                
-                <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#4F46E5" />
-                  <stop offset="100%" stopColor="#7C3AED" />
-                </linearGradient>
               </defs>
+              
               <Pie
                 data={productSales}
                 cx="50%"
@@ -206,6 +190,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                   />
                 ))}
               </Pie>
+              
               <Tooltip
                 contentStyle={{
                   backgroundColor: "#1F2937",
@@ -218,6 +203,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 }}
                 itemStyle={{ padding: "4px 0" }}
               />
+              
               <Legend 
                 formatter={customLegendFormatter} 
                 layout="vertical"
@@ -229,20 +215,18 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
           </ResponsiveContainer>
           
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-[180px] h-[180px] rounded-full flex flex-col items-center justify-center bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border-[3px] border-indigo-300/80 dark:border-indigo-600/60 shadow-[0_0_25px_rgba(99,102,241,0.4)] hover:shadow-[0_0_35px_rgba(99,102,241,0.5)] transition-all duration-500 group animate-pulse-slow">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-100/90 to-white/70 dark:from-indigo-900/70 dark:to-gray-800/50 opacity-95"></div>
-              
-              <div className="relative z-10 flex flex-col items-center justify-center h-full w-full p-4">
-                <div className="rounded-full bg-gradient-to-br from-indigo-100 to-white dark:from-indigo-800/80 dark:to-indigo-900/60 p-3 mb-2 shadow-inner group-hover:scale-110 transition-transform duration-300">
-                  <Package className="text-indigo-600 dark:text-indigo-400" size={30} />
+            <div className="w-[180px] h-[180px] rounded-full flex flex-col items-center justify-center bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-2 border-indigo-300/60 dark:border-indigo-600/40 shadow-lg">
+              <div className="flex flex-col items-center justify-center gap-2">
+                <div className="bg-gradient-to-r from-indigo-500 to-purple-500 p-3 rounded-full">
+                  <Package className="text-white h-6 w-6" />
                 </div>
                 
-                <div className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent group-hover:scale-105 transition-transform duration-300" style={{ filter: 'drop-shadow(0px 1px 1px rgba(0,0,0,0.15))' }}>
+                <div className="text-3xl font-bold text-gray-800 dark:text-gray-200">
                   {totalSales.toLocaleString()}
                 </div>
                 
-                <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mt-1 text-center">
-                  Всего продано
+                <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  товаров продано
                 </div>
               </div>
             </div>
