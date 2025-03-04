@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card } from "./ui/card";
 import { getAdvertCosts, getAdvertStats, getAdvertBalance } from "@/services/advertisingApi";
@@ -12,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { motion } from "framer-motion";
 
 interface AdvertisingProps {
   selectedStore?: { id: string; apiKey: string } | null;
@@ -168,16 +170,31 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
       : <Zap className="h-4 w-4" />;
   };
 
+  // Status color backgrounds
+  const getStatusColor = (status: Campaign['status']) => {
+    switch (status) {
+      case 'active': return 'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-900/30 border-green-200 dark:border-green-800';
+      case 'paused': return 'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-900/30 border-yellow-200 dark:border-yellow-800';
+      case 'archived': return 'bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/40 dark:to-gray-800/60 border-gray-200 dark:border-gray-700';
+      case 'ready': return 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/30 border-blue-200 dark:border-blue-800';
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-start">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-6"
+    >
+      <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
         <div>
           <h2 className="text-2xl font-bold">Рекламные кампании</h2>
-          <div className="flex gap-4 mt-4">
+          <div className="flex flex-col sm:flex-row gap-4 mt-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Типы кампаний</label>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -190,7 +207,7 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
             <div className="space-y-2">
               <label className="text-sm font-medium">Статусы</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -206,38 +223,69 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
           </div>
         </div>
         <div className="space-y-4">
-          <div className="flex items-center gap-2 bg-card p-3 rounded-lg border">
-            <Wallet className="h-5 w-5 text-primary" />
+          <motion.div 
+            className="flex items-center gap-2 bg-gradient-to-r from-[#9b87f5]/10 to-[#8B5CF6]/20 dark:from-[#9b87f5]/20 dark:to-[#8B5CF6]/30 p-4 rounded-lg border border-[#9b87f5]/20"
+            whileHover={{ y: -2 }}
+            transition={{ type: "spring", stiffness: 400, damping: 10 }}
+          >
+            <Wallet className="h-5 w-5 text-[#9b87f5]" />
             <div>
               <p className="text-sm text-muted-foreground">Баланс</p>
               <p className="font-semibold">{balance.toLocaleString('ru-RU')} ₽</p>
             </div>
-          </div>
-          <Button onClick={fetchData} disabled={loading} className="w-full">
+          </motion.div>
+          <Button 
+            onClick={fetchData} 
+            disabled={loading} 
+            className="w-full bg-[#9b87f5] hover:bg-[#7E69AB]"
+          >
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             {loading ? 'Обновление...' : 'Обновить'}
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {filteredCampaigns.map((campaign) => (
-          <Card
-            key={campaign.advertId}
-            className="p-4 hover:bg-accent cursor-pointer transition-colors"
-            onClick={() => setSelectedCampaign(campaign)}
-          >
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex items-center gap-2">
-                {getStatusIcon(campaign.status)}
-                {getTypeIcon(campaign.type)}
-              </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {filteredCampaigns.length > 0 ? (
+          filteredCampaigns.map((campaign) => (
+            <motion.div
+              key={campaign.advertId}
+              whileHover={{ y: -5 }}
+              transition={{ type: "spring", stiffness: 400, damping: 10 }}
+            >
+              <Card
+                className={`p-4 cursor-pointer transition-all duration-300 ${getStatusColor(campaign.status)}`}
+                onClick={() => setSelectedCampaign(campaign)}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    {getStatusIcon(campaign.status)}
+                    {getTypeIcon(campaign.type)}
+                  </div>
+                  <div className="text-xs px-2 py-1 rounded-full bg-white/50 dark:bg-black/20">
+                    {campaign.status === 'active' && 'Активна'}
+                    {campaign.status === 'paused' && 'Пауза'}
+                    {campaign.status === 'archived' && 'Архив'}
+                    {campaign.status === 'ready' && 'Готова'}
+                  </div>
+                </div>
+                <h3 className="font-medium line-clamp-2 leading-tight">{campaign.campName}</h3>
+              </Card>
+            </motion.div>
+          ))
+        ) : (
+          <div className="col-span-full text-center py-10">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+              <Target className="h-8 w-8 text-gray-400" />
             </div>
-            <h3 className="font-medium line-clamp-2">{campaign.campName}</h3>
-          </Card>
-        ))}
+            <h3 className="text-lg font-medium mb-2">Нет активных кампаний</h3>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              {loading ? 'Загрузка данных...' : 'Попробуйте изменить фильтры или обновить данные'}
+            </p>
+          </div>
+        )}
       </div>
-    </div>
+    </motion.div>
   );
 };
 
