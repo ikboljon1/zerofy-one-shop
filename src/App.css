@@ -56,9 +56,20 @@
     padding-right: 0.75rem;
   }
   
-  /* Add extra padding at the bottom for mobile navigation */
+  /* Extra bottom padding for mobile navigation */
   main {
     padding-bottom: 5rem !important;
+  }
+
+  /* Make cards more compact on mobile */
+  .stat-card {
+    padding: 0.75rem !important;
+  }
+  
+  /* Compact headings */
+  h3 {
+    font-size: 1.1rem !important;
+    margin-bottom: 0.5rem !important;
   }
 }
 
@@ -69,6 +80,11 @@
   [role="button"] {
     min-height: 44px;
     min-width: 44px;
+  }
+  
+  /* Add some spacing between stacked charts/elements */
+  .grid > * + * {
+    margin-top: 1rem;
   }
 }
 

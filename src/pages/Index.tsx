@@ -62,6 +62,14 @@ const Index = () => {
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
+    
+    // On mobile, scroll to top when changing tabs
+    if (isMobile) {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
   };
 
   const renderContent = () => {
@@ -75,7 +83,6 @@ const Index = () => {
             className={isMobile ? 'space-y-4' : 'space-y-6'}
           >
             <Stats />
-            <Chart />
             <ProductsComponent 
               topProfitableProducts={mockTopProfitableProducts}
               topUnprofitableProducts={mockTopUnprofitableProducts}

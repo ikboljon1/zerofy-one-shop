@@ -14,7 +14,7 @@ import {
   Cell
 } from "recharts";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Package, ShoppingCart, TrendingUp, ShoppingBag } from "lucide-react";
+import { Package, TrendingUp, ShoppingBag } from "lucide-react";
 
 interface SalesByDay {
   date: string;
@@ -77,7 +77,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
   };
 
   return (
-    <div className={`grid ${isMobile ? 'grid-cols-1 gap-6' : 'grid-cols-2 gap-4'}`}>
+    <div className="grid grid-cols-1 gap-6">
       <Card className="p-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold flex items-center gap-2`}>
