@@ -150,7 +150,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
           </h3>
         </div>
         
-        <div className="h-[400px] w-full relative flex items-center justify-center">
+        <div className="h-[400px] w-full relative">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <defs>
