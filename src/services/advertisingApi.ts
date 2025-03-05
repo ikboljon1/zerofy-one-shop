@@ -307,41 +307,6 @@ export const getCampaignFullStats = async (
   }
 };
 
-export const getKeywordStatistics = async (
-  apiKey: string,
-  campaignId: number, 
-  dateFrom: Date, 
-  dateTo: Date
-): Promise<KeywordStatistics> => {
-  try {
-    const diffTime = Math.abs(dateTo.getTime() - dateFrom.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays > 7) {
-      const limitedDateFrom = new Date(dateTo);
-      limitedDateFrom.setDate(limitedDateFrom.getDate() - 6);
-      dateFrom = limitedDateFrom;
-    }
-    
-    const api = createApiInstance(apiKey);
-    
-    const fromFormatted = dateFrom.toISOString().split('T')[0];
-    const toFormatted = dateTo.toISOString().split('T')[0];
-    
-    const params = {
-      advert_id: campaignId,
-      from: fromFormatted,
-      to: toFormatted
-    };
-    
-    const response = await api.get(`/v0/stats/keywords`, { params });
-    return response.data || { keywords: [] };
-  } catch (error) {
-    console.error('Error fetching keyword statistics:', error);
-    return { keywords: [] };
-  }
-};
-
 export const getSearchKeywordStatistics = async (
   apiKey: string,
   campaignId: number
@@ -349,21 +314,97 @@ export const getSearchKeywordStatistics = async (
   try {
     const api = createApiInstance(apiKey);
     
-    const params = {
-      id: campaignId
-    };
+    const response = await api.get(`/v0/stats/keywords`, { 
+      params: {
+        advert_id: campaignId
+      }
+    });
     
-    const response = await api.get(`/v1/stat/words`, { params });
-    return response.data || { words: { phrase: [], strong: [], excluded: [], pluse: [], keywords: [] }, stat: [] };
+    // If we receive data, return it
+    if (response.data) {
+      return response.data;
+    }
+    
+    // If we don't receive data, return a default empty response
+    return { 
+      words: { 
+        phrase: [], 
+        strong: [], 
+        excluded: [], 
+        pluse: [], 
+        keywords: [] 
+      }, 
+      stat: [] 
+    };
   } catch (error) {
-    console.error('Error fetching search keyword statistics:', error);
-    if (error instanceof AxiosError && error.response?.status === 401) {
-      throw new Error("Ошибка авторизации. Пожалуйста, проверьте API ключ");
+    console.error('Error fetching keyword statistics:', error);
+    
+    // Fall back to our previously working endpoint if the new one fails
+    try {
+      const api = createApiInstance(apiKey);
+      const params = {
+        advert_id: campaignId,
+        from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        to: new Date().toISOString().split('T')[0]
+      };
+      
+      const response = await api.get(`/v0/stats/keywords`, { params });
+      
+      // Convert the old format to the new format
+      const result: KeywordStatistics = response.data || { keywords: [] };
+      
+      // Transform to the expected format
+      return {
+        words: { 
+          phrase: [], 
+          strong: [], 
+          excluded: [], 
+          pluse: [], 
+          keywords: result.keywords?.flatMap(day => 
+            day.stats.map(stat => ({
+              keyword: stat.keyword,
+              count: stat.views,
+              fixed: false
+            }))
+          ) || []
+        },
+        stat: result.keywords?.flatMap(day => 
+          day.stats.map(stat => ({
+            advertId: campaignId,
+            keyword: stat.keyword,
+            advertName: "",
+            campaignName: "",
+            begin: "",
+            end: "",
+            views: stat.views,
+            clicks: stat.clicks,
+            frq: 1.0, // We don't have this in the old format
+            ctr: stat.ctr,
+            cpc: stat.sum / (stat.clicks || 1),
+            duration: 0,
+            sum: stat.sum
+          }))
+        ) || []
+      };
+    } catch (secondError) {
+      console.error('Error with fallback keyword statistics fetch:', secondError);
+      if (secondError instanceof AxiosError && secondError.response?.status === 401) {
+        throw new Error("Ошибка авторизации. Пожалуйста, проверьте API ключ");
+      }
+      if (secondError instanceof AxiosError && secondError.response?.status === 429) {
+        throw new Error("Превышен лимит запросов к API. Пожалуйста, повторите позже");
+      }
+      return { 
+        words: { 
+          phrase: [], 
+          strong: [], 
+          excluded: [], 
+          pluse: [], 
+          keywords: [] 
+        }, 
+        stat: [] 
+      };
     }
-    if (error instanceof AxiosError && error.response?.status === 429) {
-      throw new Error("Превышен лимит запросов к API. Пожалуйста, повторите позже");
-    }
-    return { words: { phrase: [], strong: [], excluded: [], pluse: [], keywords: [] }, stat: [] };
   }
 };
 

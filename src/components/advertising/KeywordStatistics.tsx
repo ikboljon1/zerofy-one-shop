@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -23,7 +22,6 @@ interface KeywordStatisticsProps {
   apiKey: string;
 }
 
-// Extended type to include exclusion and performance status
 interface ExtendedKeywordStat extends KeywordSearchStat {
   excluded: boolean;
   performance: 'profitable' | 'unprofitable' | 'neutral';
@@ -40,16 +38,13 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
   const [excludedKeywords, setExcludedKeywords] = useState<Set<string>>(new Set());
 
-  // Calculate performance metrics for all keywords
   const processedKeywords = useMemo(() => {
     if (!keywordStats || !keywordStats.stat) return [];
 
-    // Filter out the "Всего по кампании" summary entry
     const keywordEntries = keywordStats.stat.filter(stat => 
       stat.keyword !== "Всего по кампании"
     );
 
-    // Add performance metrics
     return keywordEntries.map(stat => ({
       ...stat,
       excluded: excludedKeywords.has(stat.keyword),
@@ -57,36 +52,25 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
     }));
   }, [keywordStats, excludedKeywords]);
 
-  // Enhanced function to determine if a keyword is profitable
   function calculatePerformance(stat: KeywordSearchStat): 'profitable' | 'unprofitable' | 'neutral' {
-    // High CTR with good number of clicks (very good)
     if (stat.ctr > 5 && stat.clicks > 20) {
       return 'profitable';
-    }
-    // Good CTR with decent clicks
-    else if (stat.ctr > 3 || (stat.clicks > 10 && stat.sum / stat.clicks < 15)) {
+    } else if (stat.ctr > 3 || (stat.clicks > 10 && stat.sum / stat.clicks < 15)) {
       return 'profitable';
-    }
-    // High views with very poor CTR (very bad)
-    else if (stat.views > 1000 && stat.ctr < 0.5) {
+    } else if (stat.views > 1000 && stat.ctr < 0.5) {
+      return 'unprofitable';
+    } else if ((stat.sum > 100 && stat.ctr < 1) || (stat.sum > 200 && stat.clicks < 10)) {
       return 'unprofitable';
     }
-    // High spending with very low CTR
-    else if ((stat.sum > 100 && stat.ctr < 1) || (stat.sum > 200 && stat.clicks < 10)) {
-      return 'unprofitable';
-    }
-    // Neutral cases
     return 'neutral';
   }
 
-  // Filter by search term
   const filteredKeywords = useMemo(() => {
     return processedKeywords.filter(
       stat => stat.keyword.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [processedKeywords, searchTerm]);
 
-  // Sort the filtered keywords
   const sortedKeywords = useMemo(() => {
     return [...filteredKeywords].sort((a, b) => {
       if (sortDirection === "asc") {
@@ -97,7 +81,6 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
     });
   }, [filteredKeywords, sortField, sortDirection]);
 
-  // Toggle keyword exclusion
   const toggleKeywordExclusion = (keyword: string) => {
     setExcludedKeywords(prev => {
       const newSet = new Set(prev);
@@ -110,12 +93,10 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
     });
   };
 
-  // Handle search input with debounce
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchInputValue(value);
     
-    // Apply the search term after a small delay to prevent re-renders on each keystroke
     const timeoutId = setTimeout(() => {
       setSearchTerm(value);
     }, 300);
@@ -124,7 +105,6 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
   };
 
   const fetchData = async () => {
-    // Check if already loading to prevent multiple fetches
     if (loading) return;
     
     setLoading(true);
@@ -142,7 +122,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
       } else {
         toast({
           title: "Нет данных",
-          description: "Для данной кампании нет статистики по ключевым словам",
+          description: "Для данной кампании нет статистики по ключевым словам или кампания не является поисковой",
           variant: "destructive",
         });
       }
@@ -189,7 +169,6 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
     );
   };
 
-  // Get CSS class for keyword performance 
   const getKeywordPerformanceClass = (performance: 'profitable' | 'unprofitable' | 'neutral') => {
     switch (performance) {
       case 'profitable':
@@ -201,7 +180,6 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
     }
   };
 
-  // Get icon for keyword performance
   const getKeywordPerformanceIcon = (performance: 'profitable' | 'unprofitable' | 'neutral') => {
     switch (performance) {
       case 'profitable':
@@ -221,17 +199,24 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
             <Tag className="w-10 h-10 text-gray-400 mb-2" />
             <h3 className="text-lg font-medium">Нет данных о ключевых словах</h3>
             <p className="text-gray-500 mt-1 text-sm">
-              Для этой кампании еще нет статистики по ключевым словам
+              Для этой кампании еще нет статистики по ключевым словам или кампания не является поисковой
             </p>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={fetchData}
+              disabled={loading}
+              className="mt-4"
+            >
+              {loading ? 'Загрузка...' : 'Попробовать еще раз'}
+            </Button>
           </div>
         </div>
       );
     }
 
-    // Find the campaign summary stats (has the keyword "Всего по кампании")
     const summaryStats = keywordStats.stat.find(stat => stat.keyword === "Всего по кампании");
     
-    // If no summary, use calculated totals
     const totalViews = summaryStats?.views || processedKeywords.reduce((sum, stat) => sum + stat.views, 0);
     const totalClicks = summaryStats?.clicks || processedKeywords.reduce((sum, stat) => sum + stat.clicks, 0);
     const totalSum = summaryStats?.sum || processedKeywords.reduce((sum, stat) => sum + stat.sum, 0);
@@ -242,7 +227,6 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-          {/* Metric 1: Total Keywords */}
           <div className="rounded-lg p-3 bg-white/80 dark:bg-gray-800/40 backdrop-blur-sm border border-purple-100 dark:border-purple-900/30 shadow-sm overflow-hidden relative">
             <div className="w-1 h-full absolute left-0 top-0 bg-gradient-to-b from-purple-400 to-purple-600 rounded-l-lg"></div>
             <div className="flex flex-col pl-2">
@@ -256,7 +240,6 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
             </div>
           </div>
 
-          {/* Metric 2: Total Views */}
           <div className="rounded-lg p-3 bg-white/80 dark:bg-gray-800/40 backdrop-blur-sm border border-blue-100 dark:border-blue-900/30 shadow-sm overflow-hidden relative">
             <div className="w-1 h-full absolute left-0 top-0 bg-gradient-to-b from-blue-400 to-blue-600 rounded-l-lg"></div>
             <div className="flex flex-col pl-2">
@@ -270,7 +253,6 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
             </div>
           </div>
 
-          {/* Metric 3: Total Clicks */}
           <div className="rounded-lg p-3 bg-white/80 dark:bg-gray-800/40 backdrop-blur-sm border border-green-100 dark:border-green-900/30 shadow-sm overflow-hidden relative">
             <div className="w-1 h-full absolute left-0 top-0 bg-gradient-to-b from-green-400 to-green-600 rounded-l-lg"></div>
             <div className="flex flex-col pl-2">
@@ -284,7 +266,6 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
             </div>
           </div>
 
-          {/* Metric 4: Average CTR */}
           <div className="rounded-lg p-3 bg-white/80 dark:bg-gray-800/40 backdrop-blur-sm border border-amber-100 dark:border-amber-900/30 shadow-sm overflow-hidden relative">
             <div className="w-1 h-full absolute left-0 top-0 bg-gradient-to-b from-amber-400 to-amber-600 rounded-l-lg"></div>
             <div className="flex flex-col pl-2">
@@ -298,7 +279,6 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
             </div>
           </div>
 
-          {/* Metric 5: Total Cost */}
           <div className="rounded-lg p-3 bg-white/80 dark:bg-gray-800/40 backdrop-blur-sm border border-red-100 dark:border-red-900/30 shadow-sm overflow-hidden relative">
             <div className="w-1 h-full absolute left-0 top-0 bg-gradient-to-b from-red-400 to-red-600 rounded-l-lg"></div>
             <div className="flex flex-col pl-2">
@@ -313,7 +293,6 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
           </div>
         </div>
 
-        {/* Fixed search phrases */}
         {keywordStats.words?.pluse && keywordStats.words.pluse.length > 0 && (
           <Card className="border-0 shadow-md rounded-lg overflow-hidden">
             <div className="p-3 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/40 dark:to-blue-950/40">
@@ -334,7 +313,6 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
           </Card>
         )}
 
-        {/* Top Keywords */}
         <Card className="border-0 shadow-md rounded-lg overflow-hidden">
           <div className="p-3 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/40 dark:to-blue-950/40">
             <h3 className="text-base font-semibold flex items-center gap-2">
@@ -345,7 +323,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
           <CardContent className="p-4">
             <div className="space-y-4">
               {processedKeywords
-                .filter(stat => !stat.excluded) // Show only non-excluded keywords
+                .filter(stat => !stat.excluded)
                 .sort((a, b) => b.views - a.views)
                 .slice(0, 5)
                 .map((stat, index) => (
