@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card } from "./ui/card";
 import { getAdvertCosts, getAdvertStats, getAdvertBalance } from "@/services/advertisingApi";
@@ -29,8 +30,9 @@ interface Campaign {
 const CAMPAIGNS_STORAGE_KEY = 'ad_campaigns';
 const BALANCE_STORAGE_KEY = 'ad_balance';
 const LAST_UPDATE_KEY = 'ad_last_update';
+const SELECTED_STORE_KEY = 'ad_selected_store';
 
-const Advertising = ({ selectedStore }: AdvertisingProps) => {
+const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
@@ -42,10 +44,30 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+  const [selectedStore, setSelectedStore] = useState(propSelectedStore);
 
+  // Загрузка выбранного магазина из localStorage
+  useEffect(() => {
+    const savedSelectedStore = localStorage.getItem(SELECTED_STORE_KEY);
+    
+    // Если есть selectedStore из пропсов, используем его и сохраняем
+    if (propSelectedStore) {
+      setSelectedStore(propSelectedStore);
+      localStorage.setItem(SELECTED_STORE_KEY, JSON.stringify(propSelectedStore));
+    } 
+    // Иначе пробуем загрузить из localStorage
+    else if (savedSelectedStore) {
+      setSelectedStore(JSON.parse(savedSelectedStore));
+    }
+  }, [propSelectedStore]);
+
+  // Загрузка кэшированных данных при изменении selectedStore
   useEffect(() => {
     if (selectedStore) {
       loadCachedData();
+      
+      // Сохраняем выбранный магазин для последующих визитов
+      localStorage.setItem(SELECTED_STORE_KEY, JSON.stringify(selectedStore));
     }
   }, [selectedStore]);
 
