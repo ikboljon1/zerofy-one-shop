@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "./ui/card";
 import { useEffect, useState } from "react";
 import { 
@@ -39,6 +38,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/hooks/use-theme";
 import { Progress } from "./ui/progress";
+import ProductStatsTable from "./advertising/ProductStatsTable";
+import { ProductStats } from "@/services/advertisingApi";
 
 interface CampaignDetailsProps {
   campaignId: number;
@@ -56,7 +57,6 @@ interface CampaignStats {
   sum: number;
 }
 
-// Ключи для сохранения данных в localStorage
 const CAMPAIGN_DETAILS_KEY = 'campaign_details';
 const CAMPAIGN_COSTS_KEY = 'campaign_costs';
 const CAMPAIGN_PAYMENTS_KEY = 'campaign_payments';
@@ -67,27 +67,27 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
   const [stats, setStats] = useState<CampaignStats | null>(null);
   const [payments, setPayments] = useState<any[]>([]);
   const [fullStats, setFullStats] = useState<CampaignFullStats | null>(null);
+  const [productStats, setProductStats] = useState<ProductStats[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("stats");
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { theme } = useTheme();
-  // Добавляем состояние для отслеживания последнего обновления
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
 
-  // Загрузка кэшированных данных
   const loadCachedData = () => {
     try {
-      // Ключи с ID кампании
       const detailsKey = `${CAMPAIGN_DETAILS_KEY}_${campaignId}`;
       const costsKey = `${CAMPAIGN_COSTS_KEY}_${campaignId}`;
       const paymentsKey = `${CAMPAIGN_PAYMENTS_KEY}_${campaignId}`;
       const lastUpdateKey = `${CAMPAIGN_LAST_UPDATE_KEY}_${campaignId}`;
+      const productsKey = `campaign_products_${campaignId}`;
 
       const savedDetails = localStorage.getItem(detailsKey);
       const savedCosts = localStorage.getItem(costsKey);
       const savedPayments = localStorage.getItem(paymentsKey);
       const savedLastUpdate = localStorage.getItem(lastUpdateKey);
+      const savedProducts = localStorage.getItem(productsKey);
 
       if (savedDetails) {
         const parsedDetails = JSON.parse(savedDetails);
@@ -106,8 +106,11 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
       if (savedLastUpdate) {
         setLastUpdate(savedLastUpdate);
       }
+      
+      if (savedProducts) {
+        setProductStats(JSON.parse(savedProducts));
+      }
 
-      // Проверяем, нужно ли обновить данные (если прошло больше 1 часа или данных нет)
       const shouldRefresh = !savedLastUpdate || 
         (new Date().getTime() - new Date(savedLastUpdate).getTime()) > 60 * 60 * 1000;
 
@@ -119,23 +122,22 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
     }
   };
 
-  // Сохранение данных в кэш
   const cacheData = (
     statsData: CampaignStats | null, 
     fullStatsData: CampaignFullStats | null,
     costsData: any[],
-    paymentsData: any[]
+    paymentsData: any[],
+    productsData: ProductStats[] = []
   ) => {
     try {
       const now = new Date().toISOString();
       
-      // Ключи с ID кампании
       const detailsKey = `${CAMPAIGN_DETAILS_KEY}_${campaignId}`;
       const costsKey = `${CAMPAIGN_COSTS_KEY}_${campaignId}`;
       const paymentsKey = `${CAMPAIGN_PAYMENTS_KEY}_${campaignId}`;
       const lastUpdateKey = `${CAMPAIGN_LAST_UPDATE_KEY}_${campaignId}`;
+      const productsKey = `campaign_products_${campaignId}`;
 
-      // Сохраняем данные
       localStorage.setItem(detailsKey, JSON.stringify({
         stats: statsData,
         fullStats: fullStatsData
@@ -143,8 +145,8 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
       localStorage.setItem(costsKey, JSON.stringify(costsData));
       localStorage.setItem(paymentsKey, JSON.stringify(paymentsData));
       localStorage.setItem(lastUpdateKey, now);
+      localStorage.setItem(productsKey, JSON.stringify(productsData));
       
-      // Обновляем состояние
       setLastUpdate(now);
     } catch (error) {
       console.error('Error caching campaign data:', error);
@@ -170,12 +172,48 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
       setStats(statsData[0]);
       setPayments(paymentsData);
       
+      let productsData: ProductStats[] = [];
+      
       if (fullStatsData && fullStatsData.length > 0) {
-        setFullStats(fullStatsData[0]);
+        const campaignData = fullStatsData[0];
+        setFullStats(campaignData);
+        
+        if (campaignData.days && campaignData.days.length > 0) {
+          const productsMap = new Map<number, ProductStats>();
+          
+          for (const day of campaignData.days) {
+            if (day.nm && day.nm.length > 0) {
+              for (const product of day.nm) {
+                if (productsMap.has(product.nmId)) {
+                  const existingProduct = productsMap.get(product.nmId)!;
+                  existingProduct.views += product.views;
+                  existingProduct.clicks += product.clicks;
+                  existingProduct.sum += product.sum;
+                  existingProduct.atbs += product.atbs;
+                  existingProduct.orders += product.orders;
+                  existingProduct.shks += product.shks;
+                  existingProduct.sum_price += product.sum_price;
+                  if (existingProduct.views > 0) {
+                    existingProduct.ctr = (existingProduct.clicks / existingProduct.views) * 100;
+                  }
+                  if (existingProduct.clicks > 0) {
+                    existingProduct.cpc = existingProduct.sum / existingProduct.clicks;
+                    existingProduct.cr = (existingProduct.orders / existingProduct.clicks) * 100;
+                  }
+                } else {
+                  productsMap.set(product.nmId, { ...product });
+                }
+              }
+            }
+          }
+          
+          productsData = Array.from(productsMap.values());
+        }
       }
+      
+      setProductStats(productsData);
 
-      // Кэшируем полученные данные
-      cacheData(statsData[0], fullStatsData?.[0] || null, campaignCosts, paymentsData);
+      cacheData(statsData[0], fullStatsData?.[0] || null, campaignCosts, paymentsData, productsData);
 
       toast({
         title: "Успех",
@@ -197,7 +235,6 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
     loadCachedData();
   }, [campaignId]);
 
-  // Форматирование даты последнего обновления
   const getFormattedLastUpdate = () => {
     if (!lastUpdate) return "Никогда";
     
@@ -574,7 +611,7 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
         style={{
           background: theme === 'dark' 
             ? 'linear-gradient(135deg, rgba(15,23,42,1) 0%, rgba(51,65,85,1) 100%)'
-            : 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
+            : 'linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%)'
         }}
       >
         <div className="p-5 border-b border-gray-200/30 dark:border-gray-700/30 flex items-center justify-between relative z-10">
@@ -784,7 +821,6 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
         </motion.div>
       )}
 
-      {/* Detailed Statistics in its own row */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -794,95 +830,67 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
         {renderDetailedStats()}
       </motion.div>
 
-      {isMobile ? (
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="space-y-6"
-        >
-          <Card className="border-0 shadow-xl overflow-hidden rounded-3xl">
-            <div 
-              className="p-1 rounded-2xl"
-              style={{
-                background: 'linear-gradient(90deg, #9b87f5, #7E69AB)'
-              }}
-            >
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="w-full grid grid-cols-2 bg-background/90 dark:bg-gray-900/70 backdrop-blur-sm rounded-xl p-1">
-                  <TabsTrigger value="costs" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-rose-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
-                    Затраты
-                  </TabsTrigger>
-                  <TabsTrigger value="payments" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
-                    Пополнения
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-            
-            <AnimatePresence mode="wait">
-              {activeTab === "costs" && (
-                <motion.div
-                  key="costs"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {renderCostHistory()}
-                </motion.div>
-              )}
-              
-              {activeTab === "payments" && (
-                <motion.div
-                  key="payments"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {renderPaymentHistory()}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </Card>
-        </motion.div>
-      ) : (
-        <motion.div 
-          variants={{
-            hidden: { opacity: 0 },
-            show: {
-              opacity: 1,
-              transition: {
-                staggerChildren: 0.15
-              }
-            }
-          }}
-          initial="hidden"
-          animate="show"
-          className="grid grid-cols-1 md:grid-cols-2 gap-6"
-        >
-          <motion.div
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              show: { opacity: 1, y: 0 }
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="space-y-6"
+      >
+        <Card className="border-0 shadow-xl overflow-hidden rounded-3xl">
+          <div 
+            className="p-1 rounded-2xl"
+            style={{
+              background: 'linear-gradient(90deg, #9b87f5, #7E69AB)'
             }}
-            className="h-full"
           >
-            {renderCostHistory()}
-          </motion.div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="w-full grid grid-cols-2 bg-background/90 dark:bg-gray-900/70 backdrop-blur-sm rounded-xl p-1">
+                <TabsTrigger value="costs" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-rose-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
+                  Затраты
+                </TabsTrigger>
+                <TabsTrigger value="payments" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
+                  Пополнения
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
           
-          <motion.div
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              show: { opacity: 1, y: 0 }
-            }}
-            className="h-full"
-          >
-            {renderPaymentHistory()}
-          </motion.div>
-        </motion.div>
-      )}
+          <AnimatePresence mode="wait">
+            {activeTab === "costs" && (
+              <motion.div
+                key="costs"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                {renderCostHistory()}
+              </motion.div>
+            )}
+            
+            {activeTab === "payments" && (
+              <motion.div
+                key="payments"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                {renderPaymentHistory()}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </Card>
+      </motion.div>
+
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="w-full"
+      >
+        <ProductStatsTable products={productStats} />
+      </motion.div>
     </motion.div>
   );
 };

@@ -1,3 +1,4 @@
+
 import { AxiosError } from 'axios';
 import axios from 'axios';
 
@@ -68,6 +69,7 @@ interface DayStats {
   shks: number;
   sum_price: number;
   apps: AppStats[];
+  nm?: ProductStats[]; // Добавляем информацию о товарах
 }
 
 interface AppStats {
@@ -82,6 +84,22 @@ interface AppStats {
   shks: number;
   sum_price: number;
   appType?: number;
+}
+
+// Новый интерфейс для статистики по товарам
+export interface ProductStats {
+  views: number;
+  clicks: number;
+  ctr: number;
+  cpc: number;
+  sum: number;
+  atbs: number;
+  orders: number;
+  cr: number;
+  shks: number;
+  sum_price: number;
+  name: string;
+  nmId: number;
 }
 
 interface BoosterStats {
