@@ -1,3 +1,4 @@
+
 // Demo data for analytics dashboard
 export const penaltiesData = [
   { name: "Брак товара", value: 5000 },
@@ -59,6 +60,7 @@ export const demoData = {
     { subject_name: "Обувь", quantity: 200 },
     { subject_name: "Аксессуары", quantity: 95 }
   ],
+  productReturns: returnsData,
   topProfitableProducts: [
     { name: "Платье летнее", price: "1,200 ₽", profit: "+25,000 ₽", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" },
     { name: "Кроссовки спортивные", price: "3,500 ₽", profit: "+18,000 ₽", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" },
