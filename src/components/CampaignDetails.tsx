@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from "./ui/card";
 import { useEffect, useState } from "react";
 import { 
@@ -618,8 +619,8 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
       >
         <div className="p-5 border-b border-gray-200/30 dark:border-gray-700/30 flex items-center justify-between relative z-10">
           <h3 className="text-xl font-bold flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-blue-500" />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500">Подробная статистика</span>
+            <Trophy className="h-5 w-5 text-green-500" />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-green-500 to-emerald-500">Подробная статистика</span>
           </h3>
           <div className="text-xs text-gray-500 flex items-center gap-1">
             <Clock className="h-3 w-3" />
@@ -752,17 +753,17 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
             <Button 
               variant="ghost" 
               onClick={onBack} 
-              className="mb-2 hover:bg-purple-100 dark:hover:bg-purple-900/20 group flex items-center"
+              className="mb-2 hover:bg-green-100 dark:hover:bg-green-900/20 group flex items-center"
             >
               <motion.div 
                 whileHover={{ x: -3 }} 
                 className="mr-1"
               >
-                <ChevronLeft className="h-4 w-4 group-hover:text-purple-500" />
+                <ChevronLeft className="h-4 w-4 group-hover:text-green-500" />
               </motion.div>
-              <span className="group-hover:text-purple-500">Назад к списку</span>
+              <span className="group-hover:text-green-500">Назад к списку</span>
             </Button>
-            <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600">
+            <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-600 via-emerald-500 to-green-600">
               {campaignName}
             </h2>
           </div>
@@ -774,7 +775,7 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
               <Button 
                 onClick={fetchData} 
                 disabled={loading} 
-                className="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 shadow-lg hover:shadow-xl transition-all duration-300 text-white font-medium"
+                className="bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600 shadow-lg hover:shadow-xl transition-all duration-300 text-white font-medium"
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Обновить
@@ -803,14 +804,14 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
             title="Показы"
             value={stats.views.toLocaleString('ru-RU')}
             icon={Trophy}
-            color="purple"
+            color="green"
           />
           <StatCard
             title="Клики"
             value={stats.clicks.toLocaleString('ru-RU')}
             icon={Sparkles}
             trend={stats.ctr}
-            color="blue"
+            color="emerald"
             isTrendPositive={true}
           />
           <StatCard
@@ -842,18 +843,18 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
           <div 
             className="p-1 rounded-2xl"
             style={{
-              background: 'linear-gradient(90deg, #9b87f5, #7E69AB)'
+              background: 'linear-gradient(90deg, #6EE7B7, #059669)'
             }}
           >
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="w-full grid grid-cols-3 bg-background/90 dark:bg-gray-900/70 backdrop-blur-sm rounded-xl p-1">
-                <TabsTrigger value="stats" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-rose-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
+                <TabsTrigger value="stats" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
                   Затраты
                 </TabsTrigger>
-                <TabsTrigger value="payments" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
+                <TabsTrigger value="payments" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
                   Пополнения
                 </TabsTrigger>
-                <TabsTrigger value="keywords" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
+                <TabsTrigger value="keywords" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
                   Ключевые слова
                 </TabsTrigger>
               </TabsList>
