@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag } from "lucide-react";
@@ -56,21 +57,21 @@ const AnalyticsSection = () => {
         
         setLoadingAdData(true);
         
-        // Get active campaign IDs directly from API
-        const activeCampaignIds = await getActiveCampaignIds(selectedStore.apiKey);
+        // Get all campaign IDs directly from API (including archived ones)
+        const allCampaignIds = await getActiveCampaignIds(selectedStore.apiKey);
         
-        if (activeCampaignIds.length === 0) {
-          console.log('No active campaigns found');
+        if (allCampaignIds.length === 0) {
+          console.log('No campaigns found');
           setLoadingAdData(false);
           return;
         }
         
-        console.log(`Found ${activeCampaignIds.length} active campaigns`);
+        console.log(`Found ${allCampaignIds.length} campaigns`);
         
         // Get real product advertising data
         const realData = await fetchProductAdvertisingData(
           selectedStore.apiKey,
-          activeCampaignIds,
+          allCampaignIds,
           dateFrom,
           dateTo
         );
