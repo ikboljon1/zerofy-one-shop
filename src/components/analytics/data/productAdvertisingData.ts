@@ -41,8 +41,11 @@ export const PRODUCT_COLORS = ['#8B5CF6', '#EC4899', '#F59E0B', '#3B82F6', '#10B
 // Function to fetch real product advertising data from API
 export const fetchProductAdvertisingData = async (apiKey: string, campaignIds: number[], dateFrom: Date, dateTo: Date) => {
   try {
+    console.log('Fetching product advertising data:', { campaignIds, dateFrom, dateTo });
+    
     // Get full stats from API
     const campaignStats = await getCampaignFullStats(apiKey, campaignIds, dateFrom, dateTo);
+    console.log('Received campaign stats:', campaignStats);
     
     // Extract product stats from all campaigns
     const allProductStats: ProductStats[] = [];
@@ -70,6 +73,8 @@ export const fetchProductAdvertisingData = async (apiKey: string, campaignIds: n
         }
       });
     });
+    
+    console.log('Processed product stats:', allProductStats);
     
     // Sort products by advertising spend (sum) from highest to lowest
     allProductStats.sort((a, b) => b.sum - a.sum);
@@ -100,6 +105,8 @@ export const fetchProductAdvertisingData = async (apiKey: string, campaignIds: n
         id: 0
       });
     }
+    
+    console.log('Formatted data for chart:', formattedData);
     
     return formattedData.length > 0 ? formattedData : productAdvertisingData;
   } catch (error) {
