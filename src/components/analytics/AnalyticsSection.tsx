@@ -3,7 +3,6 @@ import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-// Компоненты
 import DateRangePicker from "./components/DateRangePicker";
 import KeyMetrics from "./components/KeyMetrics";
 import SalesChart from "./components/SalesChart";
@@ -13,11 +12,9 @@ import ExpenseBreakdown from "./components/ExpenseBreakdown";
 import ProductList from "./components/ProductList";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-// API и утилиты
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
 import { getAdvertCosts, getAdvertBalance, getAdvertPayments } from "@/services/advertisingApi";
 
-// Используем для резервных данных, если API недоступен
 import { 
   demoData, 
   penaltiesData, 
@@ -26,10 +23,8 @@ import {
   advertisingData
 } from "./data/demoData";
 
-// Константы для хранения данных
 const ANALYTICS_STORAGE_KEY = 'marketplace_analytics';
 
-// Модифицированный интерфейс для демо данных, чтобы соответствовать используемым полям
 interface AnalyticsData {
   currentPeriod: {
     sales: number;
@@ -54,6 +49,10 @@ interface AnalyticsData {
     subject_name: string;
     quantity: number;
   }>;
+  productReturns: Array<{
+    name: string;
+    value: number;
+  }>;
   topProfitableProducts?: Array<{
     name: string;
     price: string;
@@ -68,12 +67,10 @@ interface AnalyticsData {
   }>;
 }
 
-// Структура для данных о рекламе
 interface AdvertisingBreakdown {
   search: number;
 }
 
-// Структура для хранения всех данных аналитики
 interface StoredAnalyticsData {
   storeId: string;
   dateFrom: string;
@@ -106,7 +103,6 @@ const AnalyticsSection = () => {
     return stores.find((store: any) => store.isSelected) || null;
   };
 
-  // Сохранение данных аналитики в localStorage
   const saveAnalyticsData = (storeId: string) => {
     const analyticsData: StoredAnalyticsData = {
       storeId,
@@ -124,7 +120,6 @@ const AnalyticsSection = () => {
     console.log('Analytics data saved to localStorage');
   };
 
-  // Загрузка данных аналитики из localStorage
   const loadStoredAnalyticsData = (storeId: string) => {
     const storedData = localStorage.getItem(`${ANALYTICS_STORAGE_KEY}_${storeId}`);
     if (storedData) {
@@ -134,15 +129,19 @@ const AnalyticsSection = () => {
         setDateTo(new Date(parsedData.dateTo));
         setData(parsedData.data);
         setPenalties(parsedData.penalties);
-        setReturns(parsedData.returns);
+        
+        if (parsedData.data.productReturns && parsedData.data.productReturns.length > 0) {
+          setReturns(parsedData.data.productReturns);
+        } else {
+          setReturns(returnsData);
+        }
+        
         setDeductionsTimeline(parsedData.deductionsTimeline);
         
-        // Важно: устанавливаем данные рекламы из хранилища, а не демо-данные
         if (parsedData.productAdvertisingData && parsedData.productAdvertisingData.length > 0) {
           setProductAdvertisingData(parsedData.productAdvertisingData);
         } else {
-          // Только если в хранилище нет данных, используем демо-данные
-          setProductAdvertisingData(advertisingData);
+          setProductAdvertisingData([]);
         }
         
         setAdvertisingBreakdown(parsedData.advertisingBreakdown);
@@ -167,28 +166,22 @@ const AnalyticsSection = () => {
           description: "Выберите основной магазин в разделе 'Магазины'",
           variant: "destructive"
         });
-        // Используем демо-данные, если магазин не выбран
         setIsLoading(false);
         return;
       }
 
-      // 1. Получаем данные статистики Wildberries
       const statsData = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
       
-      // 2. Получаем данные о расходах на рекламу
       const advertCosts = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
       
-      // Рассчитываем общую сумму расходов на рекламу
       let totalAdvertisingCost = 0;
       if (advertCosts && advertCosts.length > 0) {
         totalAdvertisingCost = advertCosts.reduce((sum, cost) => sum + cost.updSum, 0);
         
-        // Все расходы считаем как поисковую рекламу, так как баннерной у нас нет
         setAdvertisingBreakdown({
           search: totalAdvertisingCost
         });
         
-        // Группируем расходы по кампаниям
         const campaignCosts: Record<string, number> = {};
         
         advertCosts.forEach(cost => {
@@ -198,12 +191,10 @@ const AnalyticsSection = () => {
           campaignCosts[cost.campName] += cost.updSum;
         });
         
-        // Преобразуем в формат для графика
         const advertisingDataArray = Object.entries(campaignCosts)
           .map(([name, value]) => ({ name, value }))
           .sort((a, b) => b.value - a.value);
         
-        // Ограничиваем до топ-5 товаров, осталось объединяем в "Другие товары"
         let topProducts = advertisingDataArray.slice(0, 4);
         const otherProducts = advertisingDataArray.slice(4);
         
@@ -214,8 +205,6 @@ const AnalyticsSection = () => {
         
         setProductAdvertisingData(topProducts.length > 0 ? topProducts : []);
       } else {
-        // Если данные о рекламе отсутствуют, сохраняем текущие данные
-        // Не устанавливаем демо-данные, если уже есть данные из localStorage
         if (productAdvertisingData.length === 0) {
           setProductAdvertisingData(advertisingData);
         }
@@ -227,25 +216,22 @@ const AnalyticsSection = () => {
       }
       
       if (statsData) {
-        // Обеспечиваем, что свойство acceptance существует в объекте expenses
-        // и добавляем рекламу, которой нет в API
         const modifiedData: AnalyticsData = {
           currentPeriod: {
             ...statsData.currentPeriod,
             expenses: {
               ...statsData.currentPeriod.expenses,
-              // Используем реальные данные о рекламе
               advertising: totalAdvertisingCost,
               acceptance: statsData.currentPeriod.expenses.acceptance || 0
             }
           },
           dailySales: statsData.dailySales,
           productSales: statsData.productSales,
+          productReturns: statsData.productReturns || [],
           topProfitableProducts: statsData.topProfitableProducts,
           topUnprofitableProducts: statsData.topUnprofitableProducts
         };
         
-        // Обновляем общую сумму расходов с учетом рекламы
         modifiedData.currentPeriod.expenses.total =
           modifiedData.currentPeriod.expenses.logistics +
           modifiedData.currentPeriod.expenses.storage +
@@ -255,9 +241,11 @@ const AnalyticsSection = () => {
         
         setData(modifiedData);
         
-        // Создаем временные данные для графика удержаний из dailySales и expense данных
+        if (statsData.productReturns && statsData.productReturns.length > 0) {
+          setReturns(statsData.productReturns);
+        }
+        
         const newDeductionsTimeline = statsData.dailySales.map((day: any) => {
-          // Равномерно распределяем расходы на все дни
           const daysCount = statsData.dailySales.length;
           const logistic = modifiedData.currentPeriod.expenses.logistics / daysCount;
           const storage = modifiedData.currentPeriod.expenses.storage / daysCount;
@@ -273,7 +261,6 @@ const AnalyticsSection = () => {
         
         setDeductionsTimeline(newDeductionsTimeline);
         
-        // Сохраняем данные в localStorage
         saveAnalyticsData(selectedStore.id);
       }
     } catch (error) {
@@ -283,7 +270,6 @@ const AnalyticsSection = () => {
         description: "Не удалось загрузить аналитические данные",
         variant: "destructive"
       });
-      // Оставляем текущие данные в случае ошибки
     } finally {
       setIsLoading(false);
     }
@@ -292,25 +278,20 @@ const AnalyticsSection = () => {
   useEffect(() => {
     const selectedStore = getSelectedStore();
     if (selectedStore) {
-      // Пытаемся з��грузить данные из localStorage
       const hasStoredData = loadStoredAnalyticsData(selectedStore.id);
       
-      // Если данных нет в localStorage, делаем запрос к API
       if (!hasStoredData) {
-        // Инициализируем данные о рекламе пустым массивом вместо демо-данных
         setProductAdvertisingData([]);
         fetchData();
       } else {
         setIsLoading(false);
       }
     } else {
-      // Даже при отсутствии магазина, устанавливаем пустой массив для рекламных данных
       setProductAdvertisingData([]);
       setIsLoading(false);
     }
   }, []);
 
-  // Проверяем, есть ли данные о рекламе по товарам для отображения
   const hasAdvertisingData = productAdvertisingData && productAdvertisingData.length > 0;
 
   const handleDateChange = () => {
@@ -342,16 +323,13 @@ const AnalyticsSection = () => {
       </div>
 
       <div className="space-y-8">
-        {/* Ключевые показатели */}
         <KeyMetrics data={data} />
 
-        {/* Графики доходов и расходов */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <SalesChart data={data} />
           <DeductionsChart data={deductionsTimeline} />
         </div>
 
-        {/* Детальная разбивка удержаний и штрафов */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <PieChartCard 
             title="Детализация по штрафам"
@@ -365,10 +343,8 @@ const AnalyticsSection = () => {
           />
         </div>
 
-        {/* Детальный анализ расходов */}
         <ExpenseBreakdown data={data} advertisingBreakdown={advertisingBreakdown} />
 
-        {/* Диаграмма распределения расходов на рекламу по товарам */}
         {hasAdvertisingData && (
           <PieChartCard 
             title="Расходы на рекламу по товарам"
@@ -377,7 +353,6 @@ const AnalyticsSection = () => {
           />
         )}
 
-        {/* Самые прибыльные и убыточные товары */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <ProductList 
             title="Самые прибыльные товары"

@@ -9,11 +9,11 @@ export const penaltiesData = [
 ];
 
 export const returnsData = [
-  { name: "Не подошел размер", value: 12000 },
-  { name: "Не соответствует описанию", value: 8500 },
-  { name: "Брак", value: 6300 },
-  { name: "Передумал", value: 4200 },
-  { name: "Другие причины", value: 3000 }
+  { name: "Футболка Premium Collection", value: 12000 },
+  { name: "Джинсы Regular Fit", value: 8500 },
+  { name: "Куртка зимняя Arctic", value: 6300 },
+  { name: "Кроссовки SportRun", value: 4200 },
+  { name: "Рубашка Oxford", value: 3000 }
 ];
 
 export const deductionsTimelineData = [
@@ -60,6 +60,7 @@ export const demoData = {
     { subject_name: "Обувь", quantity: 200 },
     { subject_name: "Аксессуары", quantity: 95 }
   ],
+  productReturns: returnsData,
   topProfitableProducts: [
     { name: "Платье летнее", price: "1,200 ₽", profit: "+25,000 ₽", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" },
     { name: "Кроссовки спортивные", price: "3,500 ₽", profit: "+18,000 ₽", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" },
