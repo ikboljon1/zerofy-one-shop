@@ -619,7 +619,7 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
         <div className="p-5 border-b border-gray-200/30 dark:border-gray-700/30 flex items-center justify-between relative z-10">
           <h3 className="text-xl font-bold flex items-center gap-2">
             <Trophy className="h-5 w-5 text-blue-500" />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500">Подробная статис��ика</span>
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500">Подробная статистика</span>
           </h3>
           <div className="text-xs text-gray-500 flex items-center gap-1">
             <Clock className="h-3 w-3" />
@@ -762,7 +762,7 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
               </motion.div>
               <span className="group-hover:text-purple-500">Назад к списку</span>
             </Button>
-            <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-500">
+            <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600">
               {campaignName}
             </h2>
           </div>
@@ -897,6 +897,8 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
                   <KeywordStatisticsComponent 
                     campaignId={campaignId}
                     apiKey={apiKey}
+                    dateFrom={new Date(new Date().setDate(new Date().getDate() - 7))}
+                    dateTo={new Date()}
                   />
                 </div>
               </motion.div>

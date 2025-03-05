@@ -145,52 +145,6 @@ export interface KeywordStat {
   views: number;
 }
 
-export interface KeywordSearchStat {
-  advertId: number;
-  keyword: string;
-  advertName: string;
-  campaignName: string;
-  begin: string;
-  end: string;
-  views: number;
-  clicks: number;
-  frq: number;
-  ctr: number;
-  cpc: number;
-  duration: number;
-  sum: number;
-}
-
-export interface KeywordSearchResponse {
-  words: {
-    phrase: string[];
-    strong: string[];
-    excluded: string[];
-    pluse: string[];
-    keywords: Array<{
-      keyword: string;
-      count: number;
-      fixed?: boolean;
-    }>;
-    fixed?: boolean;
-  };
-  stat: Array<{
-    advertId: number;
-    keyword: string;
-    advertName: string;
-    campaignName: string;
-    begin: string;
-    end: string;
-    views: number;
-    clicks: number;
-    frq: number;
-    ctr: number;
-    cpc: number;
-    duration: number;
-    sum: number;
-  }>;
-}
-
 const createApiInstance = (apiKey: string) => {
   return axios.create({
     baseURL: BASE_URL,
@@ -321,75 +275,40 @@ export const getCampaignFullStats = async (
   }
 };
 
-export const getSearchKeywordStatistics = async (
+export const getKeywordStatistics = async (
   apiKey: string,
-  campaignId: number
-): Promise<KeywordSearchResponse> => {
+  campaignId: number, 
+  dateFrom: Date, 
+  dateTo: Date
+): Promise<KeywordStatistics> => {
   try {
+    const diffTime = Math.abs(dateTo.getTime() - dateFrom.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays > 7) {
+      const limitedDateFrom = new Date(dateTo);
+      limitedDateFrom.setDate(limitedDateFrom.getDate() - 6);
+      dateFrom = limitedDateFrom;
+    }
+    
     const api = createApiInstance(apiKey);
     
-    console.log(`Fetching keyword stats for campaign ID: ${campaignId}`);
+    const fromFormatted = dateFrom.toISOString().split('T')[0];
+    const toFormatted = dateTo.toISOString().split('T')[0];
     
-    const response = await api.get(`/v1/stat/words`, { 
-      params: {
-        id: campaignId
-      }
-    });
-    
-    console.log('Response data:', response.data);
-    
-    if (response.data) {
-      return response.data;
-    }
-    
-    return { 
-      words: { 
-        phrase: [], 
-        strong: [], 
-        excluded: [], 
-        pluse: [], 
-        keywords: [] 
-      }, 
-      stat: [] 
+    const params = {
+      advert_id: campaignId,
+      from: fromFormatted,
+      to: toFormatted
     };
+    
+    const response = await api.get(`/v0/stats/keywords`, { params });
+    return response.data || { keywords: [] };
   } catch (error) {
     console.error('Error fetching keyword statistics:', error);
-    
-    if (error instanceof AxiosError) {
-      if (error.response?.status === 401) {
-        throw new Error("Ошибка авторизации. Пожалуйста, проверьте API ключ");
-      }
-      if (error.response?.status === 429) {
-        throw new Error("Превышен лимит запросов к API. Пожалуйста, повторите позже");
-      }
-      
-      if (error.response?.data?.message) {
-        console.error('API error message:', error.response.data.message);
-      }
-    }
-    
-    return { 
-      words: { 
-        phrase: [], 
-        strong: [], 
-        excluded: [], 
-        pluse: [], 
-        keywords: [] 
-      }, 
-      stat: [] 
-    };
+    return { keywords: [] };
   }
 };
-
-export interface Campaign {
-  advertId: number;
-  campName: string;
-  status: 'active' | 'paused' | 'archived' | 'ready' | 'completed';
-  type: 'auction' | 'automatic';
-  numericStatus?: number;
-  numericType?: number;
-  changeTime?: string;
-}
 
 export const getAllCampaigns = async (apiKey: string): Promise<Campaign[]> => {
   try {
@@ -424,3 +343,13 @@ export const getAllCampaigns = async (apiKey: string): Promise<Campaign[]> => {
     return handleApiError(error);
   }
 };
+
+export interface Campaign {
+  advertId: number;
+  campName: string;
+  status: 'active' | 'paused' | 'archived' | 'ready' | 'completed';
+  type: 'auction' | 'automatic';
+  numericStatus?: number;
+  numericType?: number;
+  changeTime?: string;
+}
