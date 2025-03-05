@@ -261,7 +261,7 @@ export const getCampaignFullStats = async (
   }
 };
 
-// Updated function to get all campaign IDs without filtering out archived ones
+// New function to get active campaign IDs
 export const getActiveCampaignIds = async (apiKey: string): Promise<number[]> => {
   try {
     const api = createApiInstance(apiKey);
@@ -269,21 +269,24 @@ export const getActiveCampaignIds = async (apiKey: string): Promise<number[]> =>
     
     console.log('Campaign list response:', response.data);
     
-    // Extract all campaign IDs without filtering by status
+    // Extract all campaign IDs - filter out archived campaigns (status 9)
     const campaignIds: number[] = [];
     
     if (response.data.adverts) {
       response.data.adverts.forEach(advertGroup => {
-        advertGroup.advert_list.forEach(advert => {
-          campaignIds.push(advert.advertId);
-        });
+        // Skip archived campaigns (status 9)
+        if (advertGroup.status !== 9) {
+          advertGroup.advert_list.forEach(advert => {
+            campaignIds.push(advert.advertId);
+          });
+        }
       });
     }
     
-    console.log('All campaign IDs:', campaignIds);
+    console.log('Active campaign IDs:', campaignIds);
     return campaignIds;
   } catch (error) {
-    console.error('Error fetching campaign IDs:', error);
+    console.error('Error fetching active campaign IDs:', error);
     return [];
   }
 };

@@ -137,7 +137,7 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
       if (campaignIds.length === 0) {
         toast({
           title: "Информация",
-          description: "Нет рекламных кампаний",
+          description: "Нет активных рекламных кампаний",
         });
         setCampaigns([]);
         cacheData([], balance);
@@ -444,7 +444,7 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
             <Target className="h-8 w-8 text-gray-400" />
           </div>
-          <h3 className="text-lg font-medium mb-2">Нет рекламных кампаний</h3>
+          <h3 className="text-lg font-medium mb-2">Нет активных кампаний</h3>
           <p className="text-muted-foreground max-w-md mx-auto">
             {loading ? 'Загрузка данных...' : 'Попробуйте изменить фильтры или обновить данные'}
           </p>
