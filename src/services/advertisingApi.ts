@@ -1,4 +1,3 @@
-
 import { AxiosError } from 'axios';
 import axios from 'axios';
 
@@ -112,6 +111,20 @@ interface BoosterStats {
 export interface CampaignStatsRequest {
   id: number;
   dates: string[];
+}
+
+// New interface for campaign list
+export interface CampaignListResponse {
+  adverts: Array<{
+    type: number;
+    status: number;
+    count: number;
+    advert_list: Array<{
+      advertId: number;
+      changeTime: string;
+    }>;
+  }> | null;
+  all: number;
 }
 
 const createApiInstance = (apiKey: string) => {
@@ -245,5 +258,35 @@ export const getCampaignFullStats = async (
     return response.data || [];
   } catch (error) {
     return handleApiError(error);
+  }
+};
+
+// New function to get active campaign IDs
+export const getActiveCampaignIds = async (apiKey: string): Promise<number[]> => {
+  try {
+    const api = createApiInstance(apiKey);
+    const response = await api.get<CampaignListResponse>(`/v1/promotion/count`);
+    
+    console.log('Campaign list response:', response.data);
+    
+    // Extract all campaign IDs - filter out archived campaigns (status 9)
+    const campaignIds: number[] = [];
+    
+    if (response.data.adverts) {
+      response.data.adverts.forEach(advertGroup => {
+        // Skip archived campaigns (status 9)
+        if (advertGroup.status !== 9) {
+          advertGroup.advert_list.forEach(advert => {
+            campaignIds.push(advert.advertId);
+          });
+        }
+      });
+    }
+    
+    console.log('Active campaign IDs:', campaignIds);
+    return campaignIds;
+  } catch (error) {
+    console.error('Error fetching active campaign IDs:', error);
+    return [];
   }
 };

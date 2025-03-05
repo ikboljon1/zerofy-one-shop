@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag } from "lucide-react";
@@ -11,6 +10,9 @@ import {
   deductionsTimelineData
 } from "./data/demoData";
 import { productAdvertisingData, fetchProductAdvertisingData } from "./data/productAdvertisingData";
+
+// API
+import { getActiveCampaignIds } from "@/services/advertisingApi";
 
 // Components
 import DateRangePicker from "./components/DateRangePicker";
@@ -54,27 +56,21 @@ const AnalyticsSection = () => {
         
         setLoadingAdData(true);
         
-        // Get campaign IDs from localStorage
-        const campaignsKey = `ad_campaigns_${selectedStore.id}`;
-        const savedCampaigns = localStorage.getItem(campaignsKey);
+        // Get active campaign IDs directly from API
+        const activeCampaignIds = await getActiveCampaignIds(selectedStore.apiKey);
         
-        if (!savedCampaigns) {
+        if (activeCampaignIds.length === 0) {
+          console.log('No active campaigns found');
           setLoadingAdData(false);
           return;
         }
         
-        const campaigns = JSON.parse(savedCampaigns);
-        const campaignIds = campaigns.map((campaign: any) => campaign.advertId);
-        
-        if (campaignIds.length === 0) {
-          setLoadingAdData(false);
-          return;
-        }
+        console.log(`Found ${activeCampaignIds.length} active campaigns`);
         
         // Get real product advertising data
         const realData = await fetchProductAdvertisingData(
           selectedStore.apiKey,
-          campaignIds,
+          activeCampaignIds,
           dateFrom,
           dateTo
         );
