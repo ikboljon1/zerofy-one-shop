@@ -13,6 +13,7 @@ interface DateRangePickerProps {
   setDateFrom: (date: Date) => void;
   setDateTo: (date: Date) => void;
   onApplyDateRange?: () => void;
+  onUpdate?: () => void; // Added this prop to fix the error
 }
 
 const DateRangePicker = ({ 
@@ -20,7 +21,8 @@ const DateRangePicker = ({
   dateTo, 
   setDateFrom, 
   setDateTo,
-  onApplyDateRange
+  onApplyDateRange,
+  onUpdate
 }: DateRangePickerProps) => {
   const [fromOpen, setFromOpen] = useState(false);
   const [toOpen, setToOpen] = useState(false);
@@ -28,6 +30,9 @@ const DateRangePicker = ({
   const handleApply = () => {
     if (onApplyDateRange) {
       onApplyDateRange();
+    }
+    if (onUpdate) {
+      onUpdate();
     }
   };
 

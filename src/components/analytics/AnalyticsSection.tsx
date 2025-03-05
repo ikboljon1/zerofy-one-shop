@@ -26,11 +26,50 @@ import {
 } from "./data/demoData";
 import { productAdvertisingData } from "./data/productAdvertisingData";
 
+// Модифицированный интерфейс для демо данных, чтобы соответствовать используемым полям
+interface AnalyticsData {
+  currentPeriod: {
+    sales: number;
+    transferred: number;
+    expenses: {
+      total: number;
+      logistics: number;
+      storage: number;
+      penalties: number;
+      advertising: number; // Это поле требуется согласно ошибкам типизации
+      acceptance: number;
+    };
+    netProfit: number;
+    acceptance: number;
+  };
+  dailySales: Array<{
+    date: string;
+    sales: number;
+    previousSales: number;
+  }>;
+  productSales: Array<{
+    subject_name: string;
+    quantity: number;
+  }>;
+  topProfitableProducts?: Array<{
+    name: string;
+    price: string;
+    profit: string;
+    image: string;
+  }>;
+  topUnprofitableProducts?: Array<{
+    name: string;
+    price: string;
+    profit: string;
+    image: string;
+  }>;
+}
+
 const AnalyticsSection = () => {
   const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState(true);
-  const [data, setData] = useState(demoData);
+  const [data, setData] = useState<AnalyticsData>(demoData);
   const [penalties, setPenalties] = useState(penaltiesData);
   const [returns, setReturns] = useState(returnsData);
   const [deductionsTimeline, setDeductionsTimeline] = useState(deductionsTimelineData);
@@ -61,38 +100,41 @@ const AnalyticsSection = () => {
       const statsData = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
       
       if (statsData) {
-        setData(statsData);
+        // Модифицируем данные, чтобы они соответствовали ожидаемому формату AnalyticsData
+        const modifiedData: AnalyticsData = {
+          ...statsData,
+          currentPeriod: {
+            ...statsData.currentPeriod,
+            expenses: {
+              ...statsData.currentPeriod.expenses,
+              advertising: 0, // Добавляем отсутствующее поле
+            }
+          }
+        };
+        
+        setData(modifiedData);
         
         // Преобразуем данные для графиков
-        if (statsData.penalties) {
-          setPenalties(statsData.penalties);
-        }
+        // Используем демо данные для penalties и returns, так как они отсутствуют в API
+        // В будущем их можно будет получать из API
         
-        if (statsData.returns) {
-          setReturns(statsData.returns);
-        }
-        
-        if (statsData.deductionsTimeline) {
-          setDeductionsTimeline(statsData.deductionsTimeline);
-        } else {
-          // Создаем временные данные для графика удержаний
-          // из dailySales и expense данных
-          const newDeductionsTimeline = statsData.dailySales.map((day: any) => {
-            const totalExpenses = statsData.currentPeriod.expenses.total / statsData.dailySales.length;
-            const logistic = statsData.currentPeriod.expenses.logistics / statsData.dailySales.length;
-            const storage = statsData.currentPeriod.expenses.storage / statsData.dailySales.length;
-            const penalties = statsData.currentPeriod.expenses.penalties / statsData.dailySales.length;
-            
-            return {
-              date: day.date.split('T')[0],
-              logistic,
-              storage,
-              penalties
-            };
-          });
+        // Создаем временные данные для графика удержаний
+        // из dailySales и expense данных
+        const newDeductionsTimeline = statsData.dailySales.map((day: any) => {
+          const totalExpenses = statsData.currentPeriod.expenses.total / statsData.dailySales.length;
+          const logistic = statsData.currentPeriod.expenses.logistics / statsData.dailySales.length;
+          const storage = statsData.currentPeriod.expenses.storage / statsData.dailySales.length;
+          const penalties = statsData.currentPeriod.expenses.penalties / statsData.dailySales.length;
           
-          setDeductionsTimeline(newDeductionsTimeline);
-        }
+          return {
+            date: day.date.split('T')[0],
+            logistic,
+            storage,
+            penalties
+          };
+        });
+        
+        setDeductionsTimeline(newDeductionsTimeline);
       }
     } catch (error) {
       console.error('Error fetching analytics data:', error);
