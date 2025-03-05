@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag } from "lucide-react";
 
@@ -10,7 +10,7 @@ import {
   returnsData, 
   deductionsTimelineData
 } from "./data/demoData";
-import { productAdvertisingData } from "./data/productAdvertisingData";
+import { productAdvertisingData, fetchProductAdvertisingData } from "./data/productAdvertisingData";
 
 // Components
 import DateRangePicker from "./components/DateRangePicker";
@@ -21,6 +21,7 @@ import PieChartCard from "./components/PieChartCard";
 import ExpenseBreakdown from "./components/ExpenseBreakdown";
 import ProductList from "./components/ProductList";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useToast } from "@/hooks/use-toast";
 
 const AnalyticsSection = () => {
   // Используем демонстрационные данные
@@ -28,6 +29,71 @@ const AnalyticsSection = () => {
   const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const isMobile = useIsMobile();
+  const { toast } = useToast();
+  
+  // State for real product advertising data
+  const [productAdData, setProductAdData] = useState(productAdvertisingData);
+  const [loadingAdData, setLoadingAdData] = useState(false);
+
+  // Get selected store from localStorage
+  useEffect(() => {
+    const loadProductAdvertisingData = async () => {
+      const selectedStoreJson = localStorage.getItem('ad_selected_store');
+      
+      if (!selectedStoreJson) {
+        // No store selected, use default data
+        return;
+      }
+      
+      try {
+        const selectedStore = JSON.parse(selectedStoreJson);
+        
+        if (!selectedStore || !selectedStore.apiKey) {
+          return;
+        }
+        
+        setLoadingAdData(true);
+        
+        // Get campaign IDs from localStorage
+        const campaignsKey = `ad_campaigns_${selectedStore.id}`;
+        const savedCampaigns = localStorage.getItem(campaignsKey);
+        
+        if (!savedCampaigns) {
+          setLoadingAdData(false);
+          return;
+        }
+        
+        const campaigns = JSON.parse(savedCampaigns);
+        const campaignIds = campaigns.map((campaign: any) => campaign.advertId);
+        
+        if (campaignIds.length === 0) {
+          setLoadingAdData(false);
+          return;
+        }
+        
+        // Get real product advertising data
+        const realData = await fetchProductAdvertisingData(
+          selectedStore.apiKey,
+          campaignIds,
+          dateFrom,
+          dateTo
+        );
+        
+        setProductAdData(realData);
+      } catch (error) {
+        console.error('Error loading product advertising data:', error);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось загрузить данные о рекламе товаров",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingAdData(false);
+      }
+    };
+    
+    loadProductAdvertisingData();
+  }, [dateFrom, dateTo, toast]);
 
   return (
     <div className="space-y-8">
@@ -71,7 +137,8 @@ const AnalyticsSection = () => {
         <PieChartCard 
           title="Расходы на рекламу по товарам"
           icon={<Tag className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
-          data={productAdvertisingData}
+          data={productAdData}
+          loading={loadingAdData}
         />
 
         {/* Самые прибыльные и убыточные товары */}
