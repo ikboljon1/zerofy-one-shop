@@ -5,7 +5,8 @@ import {
   getAdvertStats, 
   getAdvertPayments, 
   getCampaignFullStats,
-  CampaignFullStats 
+  CampaignFullStats,
+  ProductStats
 } from "@/services/advertisingApi";
 import { Button } from "./ui/button";
 import { 
@@ -29,7 +30,9 @@ import {
   Package,
   BarChart3,
   CreditCard,
-  Clock
+  Clock,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -39,7 +42,12 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/hooks/use-theme";
 import { Progress } from "./ui/progress";
 import ProductStatsTable from "./advertising/ProductStatsTable";
-import { ProductStats } from "@/services/advertisingApi";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface CampaignDetailsProps {
   campaignId: number;
@@ -70,6 +78,7 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
   const [productStats, setProductStats] = useState<ProductStats[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("stats");
+  const [expandedDays, setExpandedDays] = useState<{ [key: string]: boolean }>({});
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { theme } = useTheme();
@@ -570,31 +579,112 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
                     <th className="py-3 px-4 text-right text-xs font-medium text-blue-800 dark:text-blue-300 uppercase tracking-wider">CTR</th>
                     <th className="py-3 px-4 text-right text-xs font-medium text-blue-800 dark:text-blue-300 uppercase tracking-wider">Затраты</th>
                     <th className="py-3 px-4 text-right text-xs font-medium text-blue-800 dark:text-blue-300 uppercase tracking-wider">Заказы</th>
+                    <th className="py-3 px-4 text-center text-xs font-medium text-blue-800 dark:text-blue-300 uppercase tracking-wider">Товары</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-blue-100 dark:divide-blue-900/20">
-                  {fullStats.days.map((day, index) => (
-                    <tr key={index} className="hover:bg-blue-50/50 dark:hover:bg-blue-900/10">
-                      <td className="py-3 px-4 text-sm whitespace-nowrap font-medium">
-                        {format(new Date(day.date), 'dd.MM.yyyy')}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-right whitespace-nowrap">
-                        {day.views.toLocaleString('ru-RU')}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-right whitespace-nowrap">
-                        {day.clicks.toLocaleString('ru-RU')}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-right whitespace-nowrap">
-                        {day.ctr.toFixed(2)}%
-                      </td>
-                      <td className="py-3 px-4 text-sm text-right whitespace-nowrap">
-                        {day.sum.toLocaleString('ru-RU')} ₽
-                      </td>
-                      <td className="py-3 px-4 text-sm text-right whitespace-nowrap">
-                        {day.orders.toLocaleString('ru-RU')}
-                      </td>
-                    </tr>
-                  ))}
+                  {fullStats.days.map((day, index) => {
+                    const dayProducts = getProductStatsForDay(day);
+                    const isExpanded = expandedDays[day.date] || false;
+                    
+                    return (
+                      <React.Fragment key={index}>
+                        <tr className={`
+                          hover:bg-blue-50/50 dark:hover:bg-blue-900/10 
+                          ${isExpanded ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}
+                        `}>
+                          <td className="py-3 px-4 text-sm whitespace-nowrap font-medium">
+                            {format(new Date(day.date), 'dd.MM.yyyy')}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-right whitespace-nowrap">
+                            {day.views.toLocaleString('ru-RU')}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-right whitespace-nowrap">
+                            {day.clicks.toLocaleString('ru-RU')}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-right whitespace-nowrap">
+                            {day.ctr.toFixed(2)}%
+                          </td>
+                          <td className="py-3 px-4 text-sm text-right whitespace-nowrap">
+                            {day.sum.toLocaleString('ru-RU')} ₽
+                          </td>
+                          <td className="py-3 px-4 text-sm text-right whitespace-nowrap">
+                            {day.orders.toLocaleString('ru-RU')}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-center whitespace-nowrap">
+                            {dayProducts && dayProducts.length > 0 ? (
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/20"
+                                onClick={() => toggleDayExpanded(day.date)}
+                              >
+                                {dayProducts.length} товар(ов)
+                                {isExpanded ? 
+                                  <ChevronUp className="ml-1 h-4 w-4" /> : 
+                                  <ChevronDown className="ml-1 h-4 w-4" />
+                                }
+                              </Button>
+                            ) : (
+                              <span className="text-gray-500">Нет данных</span>
+                            )}
+                          </td>
+                        </tr>
+                        {isExpanded && dayProducts && dayProducts.length > 0 && (
+                          <tr className="bg-indigo-50/50 dark:bg-indigo-950/20">
+                            <td colSpan={7} className="py-3 px-4">
+                              <AnimatePresence>
+                                <motion.div
+                                  initial={{ opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: "auto" }}
+                                  exit={{ opacity: 0, height: 0 }}
+                                  transition={{ duration: 0.3 }}
+                                >
+                                  <div className="rounded-xl overflow-hidden border border-indigo-200 dark:border-indigo-800">
+                                    <table className="w-full">
+                                      <thead className="bg-indigo-100 dark:bg-indigo-900/50">
+                                        <tr>
+                                          <th className="py-2 px-3 text-left text-xs font-medium text-indigo-800 dark:text-indigo-300">Название товара</th>
+                                          <th className="py-2 px-3 text-right text-xs font-medium text-indigo-800 dark:text-indigo-300">Показы</th>
+                                          <th className="py-2 px-3 text-right text-xs font-medium text-indigo-800 dark:text-indigo-300">Клики</th>
+                                          <th className="py-2 px-3 text-right text-xs font-medium text-indigo-800 dark:text-indigo-300">CTR</th>
+                                          <th className="py-2 px-3 text-right text-xs font-medium text-indigo-800 dark:text-indigo-300">CPC</th>
+                                          <th className="py-2 px-3 text-right text-xs font-medium text-indigo-800 dark:text-indigo-300">Корзина</th>
+                                          <th className="py-2 px-3 text-right text-xs font-medium text-indigo-800 dark:text-indigo-300">Заказы</th>
+                                          <th className="py-2 px-3 text-right text-xs font-medium text-indigo-800 dark:text-indigo-300">Затраты</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-indigo-100 dark:divide-indigo-900/20">
+                                        {dayProducts.map((product: ProductStats, productIndex: number) => (
+                                          <tr key={productIndex} className="hover:bg-indigo-100/30 dark:hover:bg-indigo-900/10">
+                                            <td className="py-2 px-3 text-sm">
+                                              <div className="flex items-center">
+                                                <span className="text-xs bg-indigo-100 text-indigo-800 dark:bg-indigo-800/30 dark:text-indigo-300 px-2 py-1 rounded mr-2">
+                                                  {product.nmId}
+                                                </span>
+                                                <span className="font-medium">{product.name}</span>
+                                              </div>
+                                            </td>
+                                            <td className="py-2 px-3 text-sm text-right">{product.views.toLocaleString('ru-RU')}</td>
+                                            <td className="py-2 px-3 text-sm text-right">{product.clicks.toLocaleString('ru-RU')}</td>
+                                            <td className="py-2 px-3 text-sm text-right">{product.ctr.toFixed(2)}%</td>
+                                            <td className="py-2 px-3 text-sm text-right">{product.cpc.toFixed(2)} ₽</td>
+                                            <td className="py-2 px-3 text-sm text-right">{product.atbs.toLocaleString('ru-RU')}</td>
+                                            <td className="py-2 px-3 text-sm text-right">{product.orders.toLocaleString('ru-RU')}</td>
+                                            <td className="py-2 px-3 text-sm text-right">{product.sum.toLocaleString('ru-RU')} ₽</td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </motion.div>
+                              </AnimatePresence>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -731,6 +821,20 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
       </div>
     </Card>
   );
+
+  const toggleDayExpanded = (date: string) => {
+    setExpandedDays(prev => ({
+      ...prev,
+      [date]: !prev[date]
+    }));
+  };
+
+  const getProductStatsForDay = (day: any) => {
+    if (!day.nm || day.nm.length === 0) {
+      return null;
+    }
+    return day.nm;
+  };
 
   return (
     <motion.div 
