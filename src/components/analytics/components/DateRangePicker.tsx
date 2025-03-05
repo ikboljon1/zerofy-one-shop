@@ -13,7 +13,7 @@ interface DateRangePickerProps {
   setDateFrom: (date: Date) => void;
   setDateTo: (date: Date) => void;
   onApplyDateRange?: () => void;
-  onUpdate?: () => void; // Added this prop to fix the error
+  onUpdate?: () => void;
 }
 
 const DateRangePicker = ({ 

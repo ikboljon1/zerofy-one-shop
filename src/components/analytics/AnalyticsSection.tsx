@@ -16,6 +16,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 // API и утилиты
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
+import { getAdvertCosts } from "@/services/advertisingApi";
 
 // Используем для резервных данных, если API недоступен
 import { 
@@ -24,7 +25,6 @@ import {
   returnsData, 
   deductionsTimelineData
 } from "./data/demoData";
-import { productAdvertisingData } from "./data/productAdvertisingData";
 
 // Модифицированный интерфейс для демо данных, чтобы соответствовать используемым полям
 interface AnalyticsData {
@@ -36,7 +36,7 @@ interface AnalyticsData {
       logistics: number;
       storage: number;
       penalties: number;
-      advertising: number; // Это поле требуется согласно ошибкам типизации
+      advertising: number;
       acceptance: number;
     };
     netProfit: number;
@@ -73,6 +73,7 @@ const AnalyticsSection = () => {
   const [penalties, setPenalties] = useState(penaltiesData);
   const [returns, setReturns] = useState(returnsData);
   const [deductionsTimeline, setDeductionsTimeline] = useState(deductionsTimelineData);
+  const [productAdvertisingData, setProductAdvertisingData] = useState<Array<{name: string, value: number}>>([]);
   const isMobile = useIsMobile();
   const { toast } = useToast();
 
@@ -97,29 +98,28 @@ const AnalyticsSection = () => {
         return;
       }
 
+      // 1. Получаем данные статистики Wildberries
       const statsData = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
       
       if (statsData) {
         // Модифицируем данные, чтобы они соответствовали ожидаемому формату AnalyticsData
         const modifiedData: AnalyticsData = {
-          ...statsData,
+          ...demoData, // Используем демо-данные как основу
           currentPeriod: {
             ...statsData.currentPeriod,
             expenses: {
               ...statsData.currentPeriod.expenses,
               advertising: 0, // Добавляем отсутствующее поле
+              acceptance: statsData.currentPeriod.expenses.acceptance || 0
             }
-          }
+          },
+          dailySales: statsData.dailySales,
+          productSales: statsData.productSales
         };
         
         setData(modifiedData);
         
-        // Преобразуем данные для графиков
-        // Используем демо данные для penalties и returns, так как они отсутствуют в API
-        // В будущем их можно будет получать из API
-        
-        // Создаем временные данные для графика удержаний
-        // из dailySales и expense данных
+        // Создаем временные данные для графика удержаний из dailySales и expense данных
         const newDeductionsTimeline = statsData.dailySales.map((day: any) => {
           const totalExpenses = statsData.currentPeriod.expenses.total / statsData.dailySales.length;
           const logistic = statsData.currentPeriod.expenses.logistics / statsData.dailySales.length;
@@ -135,6 +135,43 @@ const AnalyticsSection = () => {
         });
         
         setDeductionsTimeline(newDeductionsTimeline);
+      }
+
+      // 2. Получаем данные о расходах на рекламу
+      const advertCosts = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
+      
+      if (advertCosts && advertCosts.length > 0) {
+        // Группируем расходы по кампаниям
+        const campaignCosts: Record<string, number> = {};
+        
+        advertCosts.forEach(cost => {
+          if (!campaignCosts[cost.campName]) {
+            campaignCosts[cost.campName] = 0;
+          }
+          campaignCosts[cost.campName] += cost.updSum;
+        });
+        
+        // Преобразуем в формат для графика
+        const advertisingDataArray = Object.entries(campaignCosts)
+          .map(([name, value]) => ({ name, value }))
+          .sort((a, b) => b.value - a.value);
+        
+        // Ограничиваем до топ-5 товаров, остальное объединяем в "Другие товары"
+        let topProducts = advertisingDataArray.slice(0, 4);
+        const otherProducts = advertisingDataArray.slice(4);
+        
+        if (otherProducts.length > 0) {
+          const otherSum = otherProducts.reduce((sum, item) => sum + item.value, 0);
+          topProducts.push({ name: "Другие товары", value: otherSum });
+        }
+        
+        setProductAdvertisingData(topProducts);
+      } else {
+        // Если данные о рекламе отсутствуют, используем демо-данные
+        const demoAdvertisingData = [
+          { name: "Нет данных о рекламе", value: 100 }
+        ];
+        setProductAdvertisingData(demoAdvertisingData);
       }
     } catch (error) {
       console.error('Error fetching analytics data:', error);
@@ -177,6 +214,7 @@ const AnalyticsSection = () => {
           setDateFrom={setDateFrom}
           setDateTo={setDateTo}
           onApplyDateRange={handleDateChange}
+          onUpdate={handleDateChange}
         />
       </div>
 
