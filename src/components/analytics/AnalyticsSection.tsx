@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag, Loader2 } from "lucide-react";
@@ -204,7 +203,7 @@ const AnalyticsSection = () => {
           .map(([name, value]) => ({ name, value }))
           .sort((a, b) => b.value - a.value);
         
-        // Ограничиваем до топ-5 товаров, остальное объединяем в "Другие товары"
+        // Ограничиваем до топ-5 товаров, осталось объединяем в "Другие товары"
         let topProducts = advertisingDataArray.slice(0, 4);
         const otherProducts = advertisingDataArray.slice(4);
         
@@ -293,7 +292,7 @@ const AnalyticsSection = () => {
   useEffect(() => {
     const selectedStore = getSelectedStore();
     if (selectedStore) {
-      // Пытаемся загрузить данные из localStorage
+      // Пытаемся з��грузить данные из localStorage
       const hasStoredData = loadStoredAnalyticsData(selectedStore.id);
       
       // Если данных нет в localStorage, делаем запрос к API

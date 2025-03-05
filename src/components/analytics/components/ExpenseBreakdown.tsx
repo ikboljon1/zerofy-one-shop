@@ -16,7 +16,6 @@ interface ExpenseBreakdownProps {
   };
   advertisingBreakdown?: {
     search: number;
-    banner: number;
   };
 }
 
