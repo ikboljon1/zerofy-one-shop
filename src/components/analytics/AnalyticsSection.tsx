@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag } from "lucide-react";
 
@@ -9,10 +10,7 @@ import {
   returnsData, 
   deductionsTimelineData
 } from "./data/demoData";
-import { productAdvertisingData, fetchProductAdvertisingData } from "./data/productAdvertisingData";
-
-// API
-import { getActiveCampaignIds } from "@/services/advertisingApi";
+import { productAdvertisingData } from "./data/productAdvertisingData";
 
 // Components
 import DateRangePicker from "./components/DateRangePicker";
@@ -23,7 +21,6 @@ import PieChartCard from "./components/PieChartCard";
 import ExpenseBreakdown from "./components/ExpenseBreakdown";
 import ProductList from "./components/ProductList";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useToast } from "@/hooks/use-toast";
 
 const AnalyticsSection = () => {
   // Используем демонстрационные данные
@@ -31,65 +28,6 @@ const AnalyticsSection = () => {
   const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const isMobile = useIsMobile();
-  const { toast } = useToast();
-  
-  // State for real product advertising data
-  const [productAdData, setProductAdData] = useState(productAdvertisingData);
-  const [loadingAdData, setLoadingAdData] = useState(false);
-
-  // Get selected store from localStorage
-  useEffect(() => {
-    const loadProductAdvertisingData = async () => {
-      const selectedStoreJson = localStorage.getItem('ad_selected_store');
-      
-      if (!selectedStoreJson) {
-        // No store selected, use default data
-        return;
-      }
-      
-      try {
-        const selectedStore = JSON.parse(selectedStoreJson);
-        
-        if (!selectedStore || !selectedStore.apiKey) {
-          return;
-        }
-        
-        setLoadingAdData(true);
-        
-        // Get active campaign IDs directly from API
-        const activeCampaignIds = await getActiveCampaignIds(selectedStore.apiKey);
-        
-        if (activeCampaignIds.length === 0) {
-          console.log('No active campaigns found');
-          setLoadingAdData(false);
-          return;
-        }
-        
-        console.log(`Found ${activeCampaignIds.length} active campaigns`);
-        
-        // Get real product advertising data
-        const realData = await fetchProductAdvertisingData(
-          selectedStore.apiKey,
-          activeCampaignIds,
-          dateFrom,
-          dateTo
-        );
-        
-        setProductAdData(realData);
-      } catch (error) {
-        console.error('Error loading product advertising data:', error);
-        toast({
-          title: "Ошибка",
-          description: "Не удалось загрузить данные о рекламе товаров",
-          variant: "destructive",
-        });
-      } finally {
-        setLoadingAdData(false);
-      }
-    };
-    
-    loadProductAdvertisingData();
-  }, [dateFrom, dateTo, toast]);
 
   return (
     <div className="space-y-8">
@@ -133,8 +71,7 @@ const AnalyticsSection = () => {
         <PieChartCard 
           title="Расходы на рекламу по товарам"
           icon={<Tag className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
-          data={productAdData}
-          loading={loadingAdData}
+          data={productAdvertisingData}
         />
 
         {/* Самые прибыльные и убыточные товары */}

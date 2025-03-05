@@ -1,6 +1,7 @@
+
 import { useEffect, useState } from "react";
 import { Card } from "./ui/card";
-import { getAdvertCosts, getAdvertStats, getAdvertBalance, getActiveCampaignIds } from "@/services/advertisingApi";
+import { getAdvertCosts, getAdvertStats, getAdvertBalance } from "@/services/advertisingApi";
 import { Button } from "./ui/button";
 import { RefreshCw, CheckCircle, PauseCircle, Archive, Target, Zap, Wallet, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -45,22 +46,27 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
   const [selectedStore, setSelectedStore] = useState(propSelectedStore);
 
+  // Загрузка выбранного магазина из localStorage
   useEffect(() => {
     const savedSelectedStore = localStorage.getItem(SELECTED_STORE_KEY);
     
+    // Если есть selectedStore из пропсов, используем его и сохраняем
     if (propSelectedStore) {
       setSelectedStore(propSelectedStore);
       localStorage.setItem(SELECTED_STORE_KEY, JSON.stringify(propSelectedStore));
     } 
+    // Иначе пробуем загрузить из localStorage
     else if (savedSelectedStore) {
       setSelectedStore(JSON.parse(savedSelectedStore));
     }
   }, [propSelectedStore]);
 
+  // Загрузка кэшированных данных при изменении selectedStore
   useEffect(() => {
     if (selectedStore) {
       loadCachedData();
       
+      // Сохраняем выбранный магазин для последующих визитов
       localStorage.setItem(SELECTED_STORE_KEY, JSON.stringify(selectedStore));
     }
   }, [selectedStore]);
@@ -132,30 +138,38 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
 
     setLoading(true);
     try {
-      const campaignIds = await getActiveCampaignIds(selectedStore.apiKey);
+      const dateTo = new Date();
+      const dateFrom = new Date();
+      dateFrom.setDate(dateFrom.getDate() - 30);
+
+      const costsData = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
       
-      if (campaignIds.length === 0) {
+      if (costsData.length === 0) {
         toast({
           title: "Информация",
-          description: "Нет активных рекламных кампаний",
+          description: "Нет данных о рекламных кампаниях за выбранный период",
         });
         setCampaigns([]);
         cacheData([], balance);
         return;
       }
-      
-      const dateTo = new Date();
-      const dateFrom = new Date();
-      dateFrom.setDate(dateFrom.getDate() - 30);
-      
+
+      const campaignIds = costsData.map(cost => cost.advertId);
       const statsData = await getAdvertStats(dateFrom, dateTo, campaignIds, selectedStore.apiKey);
-      
-      const uniqueCampaigns = statsData.map(stat => ({
-        advertId: stat.advertId,
-        campName: `Кампания ${stat.advertId}`,
-        status: stat.status,
-        type: stat.type
-      }));
+
+      const uniqueCampaigns = Array.from(
+        new Map(
+          costsData.map((cost) => [
+            cost.advertId,
+            {
+              advertId: cost.advertId,
+              campName: cost.campName,
+              status: statsData.find(stat => stat.advertId === cost.advertId)?.status || 'active',
+              type: statsData.find(stat => stat.advertId === cost.advertId)?.type || 'auction'
+            }
+          ])
+        ).values()
+      );
 
       setCampaigns(uniqueCampaigns);
       
