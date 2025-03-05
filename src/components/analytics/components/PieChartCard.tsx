@@ -16,10 +16,9 @@ interface PieChartCardProps {
     name: string;
     value: number;
   }>;
-  valueLabel?: string;
 }
 
-const PieChartCard = ({ title, icon, data, valueLabel = "₽" }: PieChartCardProps) => {
+const PieChartCard = ({ title, icon, data }: PieChartCardProps) => {
   // Проверяем, что данные не пустые и содержат значения больше нуля
   const hasData = data && data.length > 0 && data.some(item => item.value > 0);
 
@@ -50,7 +49,7 @@ const PieChartCard = ({ title, icon, data, valueLabel = "₽" }: PieChartCardPro
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: any) => [`${value.toLocaleString()} ${valueLabel}`, '']}
+                  formatter={(value: any) => [`${value.toLocaleString()} ₽`, '']}
                   contentStyle={{ background: '#ffffff', borderRadius: '4px', border: '1px solid #e5e7eb' }}
                 />
               </PieChart>
@@ -66,7 +65,7 @@ const PieChartCard = ({ title, icon, data, valueLabel = "₽" }: PieChartCardPro
                   ></div>
                   <span className="text-sm">{item.name}</span>
                 </div>
-                <span className="font-medium">{item.value.toLocaleString()} {valueLabel}</span>
+                <span className="font-medium">{item.value.toLocaleString()} ₽</span>
               </div>
             ))}
           </div>
