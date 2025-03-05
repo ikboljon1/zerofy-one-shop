@@ -282,6 +282,15 @@ export const getKeywordStatistics = async (
   dateTo: Date
 ): Promise<KeywordStatistics> => {
   try {
+    const diffTime = Math.abs(dateTo.getTime() - dateFrom.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays > 7) {
+      const limitedDateFrom = new Date(dateTo);
+      limitedDateFrom.setDate(limitedDateFrom.getDate() - 6);
+      dateFrom = limitedDateFrom;
+    }
+    
     const api = createApiInstance(apiKey);
     
     const fromFormatted = dateFrom.toISOString().split('T')[0];

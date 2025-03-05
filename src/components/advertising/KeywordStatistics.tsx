@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -6,8 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { KeywordStatistics, KeywordStat, getKeywordStatistics } from "@/services/advertisingApi";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
-import { Search, Tag, TrendingUp, Eye, MousePointerClick, DollarSign, PercentIcon, Filter } from "lucide-react";
+import { format, differenceInDays } from "date-fns";
+import { Search, Tag, TrendingUp, Eye, MousePointerClick, DollarSign, PercentIcon, Filter, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -30,6 +29,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom, dateTo }: Ke
   const { toast } = useToast();
   const { theme } = useTheme();
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+  const [dateWarning, setDateWarning] = useState<string | null>(null);
 
   // Combine and flatten all keyword stats across days
   const allKeywords = keywordStats?.keywords.flatMap(day => 
@@ -54,15 +54,36 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom, dateTo }: Ke
   });
 
   const fetchData = async () => {
+    // Check if already loading to prevent multiple fetches
+    if (loading) return;
+    
     setLoading(true);
+    
+    // Check date range
+    const diffDays = differenceInDays(dateTo, dateFrom);
+    if (diffDays > 7) {
+      setDateWarning("API ограничивает период до 7 дней. Будут показаны данные за последние 7 дней.");
+    } else {
+      setDateWarning(null);
+    }
+    
     try {
       const data = await getKeywordStatistics(apiKey, campaignId, dateFrom, dateTo);
       setKeywordStats(data);
       setLastUpdate(new Date().toISOString());
-      toast({
-        title: "Данные обновлены",
-        description: "Статистика по ключевым словам успешно загружена",
-      });
+      
+      if (data.keywords && data.keywords.length > 0 && data.keywords.some(day => day.stats.length > 0)) {
+        toast({
+          title: "Данные обновлены",
+          description: "Статистика по ключевым словам успешно загружена",
+        });
+      } else {
+        toast({
+          title: "Нет данных",
+          description: "За указанный период нет статистики по ключевым словам",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error("Error fetching keyword statistics:", error);
       toast({
@@ -76,8 +97,10 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom, dateTo }: Ke
   };
 
   useEffect(() => {
-    fetchData();
-  }, [campaignId, dateFrom, dateTo]);
+    if (campaignId && apiKey) {
+      fetchData();
+    }
+  }, [campaignId, apiKey]); // Removed dateFrom and dateTo from dependencies
 
   const handleSort = (field: keyof KeywordStat) => {
     if (sortField === field) {
@@ -360,6 +383,13 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom, dateTo }: Ke
           Обновлено: {getFormattedLastUpdate()}
         </div>
       </div>
+
+      {dateWarning && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-amber-700 dark:text-amber-300">{dateWarning}</p>
+        </div>
+      )}
 
       <Card className="border-0 shadow-xl overflow-hidden rounded-3xl">
         <div 
