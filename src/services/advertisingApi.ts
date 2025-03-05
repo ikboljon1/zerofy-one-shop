@@ -171,6 +171,21 @@ const handleApiError = (error: unknown) => {
   throw error;
 };
 
+const aggregateAdvertCosts = (costs: AdvertCost[]) => {
+  const campaignCosts: Record<string, number> = {};
+  
+  costs.forEach(cost => {
+    if (!campaignCosts[cost.campName]) {
+      campaignCosts[cost.campName] = 0;
+    }
+    campaignCosts[cost.campName] += cost.updSum;
+  });
+  
+  return Object.entries(campaignCosts)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
+};
+
 export const getAdvertCosts = async (dateFrom: Date, dateTo: Date, apiKey: string): Promise<AdvertCost[]> => {
   try {
     const api = createApiInstance(apiKey);
@@ -179,9 +194,25 @@ export const getAdvertCosts = async (dateFrom: Date, dateTo: Date, apiKey: strin
       to: dateTo.toISOString().split('T')[0]
     };
     
+    console.log(`Fetching advertising costs from ${params.from} to ${params.to}`);
+    
     const response = await api.get(`/v1/upd`, { params });
-    return response.data || [];
+    
+    let costs = response.data || [];
+    
+    const fromTime = new Date(params.from).getTime();
+    const toTime = new Date(params.to).getTime() + 86400000;
+    
+    costs = costs.filter((cost: AdvertCost) => {
+      const costTime = new Date(cost.updTime.split('T')[0]).getTime();
+      return costTime >= fromTime && costTime <= toTime;
+    });
+    
+    console.log(`Received ${costs.length} advertising costs records`);
+    
+    return costs;
   } catch (error) {
+    console.error('Error fetching advertising costs:', error);
     return handleApiError(error);
   }
 };
