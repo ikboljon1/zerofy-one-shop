@@ -30,10 +30,6 @@ export interface DemoData {
     subject_name: string;
     quantity: number;
   }>;
-  productReturns: Array<{
-    name: string;
-    value: number;
-  }>;
   topProfitableProducts: Array<{
     name: string;
     price: string;

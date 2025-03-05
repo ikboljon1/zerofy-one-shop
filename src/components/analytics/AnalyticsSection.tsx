@@ -49,10 +49,6 @@ interface AnalyticsData {
     subject_name: string;
     quantity: number;
   }>;
-  productReturns: Array<{
-    name: string;
-    value: number;
-  }>;
   topProfitableProducts?: Array<{
     name: string;
     price: string;
@@ -227,7 +223,6 @@ const AnalyticsSection = () => {
           },
           dailySales: statsData.dailySales,
           productSales: statsData.productSales,
-          productReturns: statsData.productReturns || [],
           topProfitableProducts: statsData.topProfitableProducts,
           topUnprofitableProducts: statsData.topUnprofitableProducts
         };
@@ -240,10 +235,6 @@ const AnalyticsSection = () => {
           (modifiedData.currentPeriod.expenses.acceptance || 0);
         
         setData(modifiedData);
-        
-        if (statsData.productReturns && statsData.productReturns.length > 0) {
-          setReturns(statsData.productReturns);
-        }
         
         const newDeductionsTimeline = statsData.dailySales.map((day: any) => {
           const daysCount = statsData.dailySales.length;
