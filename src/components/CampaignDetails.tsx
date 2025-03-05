@@ -143,9 +143,9 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
   );
 
   const renderCostHistory = () => (
-    <Card className="overflow-hidden border-0 shadow-xl rounded-3xl">
+    <Card className="overflow-hidden border-0 shadow-xl rounded-3xl h-full">
       <div 
-        className="relative overflow-hidden"
+        className="relative overflow-hidden h-full flex flex-col"
         style={{
           background: theme === 'dark' 
             ? 'linear-gradient(135deg, rgba(30,41,59,1) 0%, rgba(45,55,72,1) 100%)'
@@ -171,7 +171,7 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
           </motion.div>
         </div>
 
-        <div className="p-5 relative z-10 max-h-[400px] overflow-y-auto scrollbar-hide">
+        <div className="p-5 relative z-10 overflow-y-auto scrollbar-hide flex-1">
           <AnimatePresence>
             {costs.length > 0 ? (
               <div className="space-y-4">
@@ -465,7 +465,7 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
   };
 
   const renderDetailedStats = () => (
-    <Card className="overflow-hidden border-0 shadow-xl rounded-3xl">
+    <Card className="overflow-hidden border-0 shadow-xl rounded-3xl w-full">
       <div 
         className="relative overflow-hidden"
         style={{
@@ -489,9 +489,9 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
   );
 
   const renderPaymentHistory = () => (
-    <Card className="overflow-hidden border-0 shadow-xl rounded-3xl">
+    <Card className="overflow-hidden border-0 shadow-xl rounded-3xl h-full">
       <div 
-        className="relative overflow-hidden"
+        className="relative overflow-hidden h-full flex flex-col"
         style={{
           background: theme === 'dark' 
             ? 'linear-gradient(135deg, rgba(124,58,237,0.2) 0%, rgba(236,72,153,0.2) 100%)'
@@ -517,7 +517,7 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
           </motion.div>
         </div>
 
-        <div className="p-5 relative z-10 max-h-[400px] overflow-y-auto scrollbar-hide">
+        <div className="p-5 relative z-10 overflow-y-auto scrollbar-hide flex-1">
           <AnimatePresence>
             {payments.length > 0 ? (
               <div className="space-y-4">
@@ -666,6 +666,16 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
         </motion.div>
       )}
 
+      {/* Detailed Statistics in its own row */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="w-full"
+      >
+        {renderDetailedStats()}
+      </motion.div>
+
       {isMobile ? (
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -681,14 +691,11 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
               }}
             >
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="w-full grid grid-cols-3 bg-background/90 dark:bg-gray-900/70 backdrop-blur-sm rounded-xl p-1">
-                  <TabsTrigger value="stats" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
-                    Статистика
-                  </TabsTrigger>
-                  <TabsTrigger value="costs" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
+                <TabsList className="w-full grid grid-cols-2 bg-background/90 dark:bg-gray-900/70 backdrop-blur-sm rounded-xl p-1">
+                  <TabsTrigger value="costs" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-rose-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
                     Затраты
                   </TabsTrigger>
-                  <TabsTrigger value="payments" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
+                  <TabsTrigger value="payments" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
                     Пополнения
                   </TabsTrigger>
                 </TabsList>
@@ -696,18 +703,6 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
             </div>
             
             <AnimatePresence mode="wait">
-              {activeTab === "stats" && (
-                <motion.div
-                  key="stats"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {renderDetailedStats()}
-                </motion.div>
-              )}
-              
               {activeTab === "costs" && (
                 <motion.div
                   key="costs"
@@ -747,13 +742,14 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
           }}
           initial="hidden"
           animate="show"
-          className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+          className="grid grid-cols-1 md:grid-cols-2 gap-6"
         >
           <motion.div
             variants={{
               hidden: { opacity: 0, y: 20 },
               show: { opacity: 1, y: 0 }
             }}
+            className="h-full"
           >
             {renderCostHistory()}
           </motion.div>
@@ -763,17 +759,7 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
               hidden: { opacity: 0, y: 20 },
               show: { opacity: 1, y: 0 }
             }}
-            className="lg:col-span-2"
-          >
-            {renderDetailedStats()}
-          </motion.div>
-          
-          <motion.div
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              show: { opacity: 1, y: 0 }
-            }}
-            className="lg:col-span-3"
+            className="h-full"
           >
             {renderPaymentHistory()}
           </motion.div>
