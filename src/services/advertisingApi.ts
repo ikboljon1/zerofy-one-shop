@@ -1,6 +1,7 @@
 
 import { AxiosError } from 'axios';
 import axios from 'axios';
+import { getStatusString, getTypeString } from '@/components/analytics/data/productAdvertisingData';
 
 const BASE_URL = "https://advert-api.wildberries.ru/adv";
 
@@ -17,7 +18,7 @@ interface AdvertCost {
 
 interface AdvertStats {
   advertId: number;
-  status: 'active' | 'paused' | 'archived' | 'ready';
+  status: 'active' | 'paused' | 'archived' | 'ready' | 'completed';
   type: 'auction' | 'automatic';
   views: number;
   clicks: number;
@@ -36,6 +37,24 @@ interface AdvertPayment {
   date: string;
   sum: number;
   type: string;
+}
+
+// Campaign Count API Response
+interface CampaignCountResponse {
+  adverts: CampaignGroup[];
+  all: number;
+}
+
+interface CampaignGroup {
+  type: number;
+  status: number;
+  count: number;
+  advert_list: CampaignInfo[];
+}
+
+interface CampaignInfo {
+  advertId: number;
+  changeTime: string;
 }
 
 // New interfaces for the fullstats API
@@ -247,3 +266,52 @@ export const getCampaignFullStats = async (
     return handleApiError(error);
   }
 };
+
+// Fetch all campaigns with their statuses and types
+export const getAllCampaigns = async (apiKey: string): Promise<Campaign[]> => {
+  try {
+    const api = createApiInstance(apiKey);
+    const response = await api.get<CampaignCountResponse>(`/v1/promotion/count`);
+    
+    // If no data, return empty array
+    if (!response.data?.adverts) {
+      return [];
+    }
+    
+    // Flatten the groups and map to our Campaign interface
+    const campaigns: Campaign[] = [];
+    
+    response.data.adverts.forEach(group => {
+      group.advert_list.forEach(campaign => {
+        campaigns.push({
+          advertId: campaign.advertId,
+          campName: `Кампания ${campaign.advertId}`, // Default name, will be updated later
+          status: getStatusString(group.status),
+          type: getTypeString(group.type),
+          numericStatus: group.status,
+          numericType: group.type,
+          changeTime: campaign.changeTime
+        });
+      });
+    });
+    
+    // Sort by change time (newest first)
+    return campaigns.sort((a, b) => 
+      new Date(b.changeTime).getTime() - new Date(a.changeTime).getTime()
+    );
+  } catch (error) {
+    console.error('Error fetching campaigns:', error);
+    return handleApiError(error);
+  }
+};
+
+// Campaign interface used throughout the application
+export interface Campaign {
+  advertId: number;
+  campName: string;
+  status: 'active' | 'paused' | 'archived' | 'ready' | 'completed';
+  type: 'auction' | 'automatic';
+  numericStatus?: number; // Original numeric status from API
+  numericType?: number;   // Original numeric type from API
+  changeTime?: string;    // Last change time
+}

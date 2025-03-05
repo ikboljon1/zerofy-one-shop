@@ -1,9 +1,9 @@
 
 import { useEffect, useState } from "react";
 import { Card } from "./ui/card";
-import { getAdvertCosts, getAdvertStats, getAdvertBalance } from "@/services/advertisingApi";
+import { getAdvertCosts, getAdvertBalance, getAllCampaigns, Campaign } from "@/services/advertisingApi";
 import { Button } from "./ui/button";
-import { RefreshCw, CheckCircle, PauseCircle, Archive, Target, Zap, Wallet, ChevronLeft, ChevronRight } from "lucide-react";
+import { RefreshCw, CheckCircle, PauseCircle, Archive, Target, Zap, Wallet, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CampaignDetails from "./CampaignDetails";
 import {
@@ -15,16 +15,10 @@ import {
 } from "@/components/ui/select";
 import { motion } from "framer-motion";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination";
+import { campaignStatusMap, campaignTypeMap } from "./analytics/data/productAdvertisingData";
 
 interface AdvertisingProps {
   selectedStore?: { id: string; apiKey: string } | null;
-}
-
-interface Campaign {
-  advertId: number;
-  campName: string;
-  status: 'active' | 'paused' | 'archived' | 'ready';
-  type: 'auction' | 'automatic';
 }
 
 const CAMPAIGNS_STORAGE_KEY = 'ad_campaigns';
@@ -138,45 +132,49 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
 
     setLoading(true);
     try {
-      const dateTo = new Date();
-      const dateFrom = new Date();
-      dateFrom.setDate(dateFrom.getDate() - 30);
-
-      const costsData = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
+      // Get all campaigns using the new API endpoint
+      const allCampaigns = await getAllCampaigns(selectedStore.apiKey);
       
-      if (costsData.length === 0) {
+      if (allCampaigns.length === 0) {
         toast({
           title: "Информация",
-          description: "Нет данных о рекламных кампаниях за выбранный период",
+          description: "Нет данных о рекламных кампаниях",
         });
         setCampaigns([]);
         cacheData([], balance);
         return;
       }
 
-      const campaignIds = costsData.map(cost => cost.advertId);
-      const statsData = await getAdvertStats(dateFrom, dateTo, campaignIds, selectedStore.apiKey);
+      // Get campaign details if we have IDs
+      if (allCampaigns.length > 0) {
+        const dateTo = new Date();
+        const dateFrom = new Date();
+        dateFrom.setDate(dateFrom.getDate() - 30);
+        
+        // Get costs data to fetch campaign names
+        const costsData = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
+        
+        // Update campaign names from costs data where available
+        const updatedCampaigns = allCampaigns.map(campaign => {
+          const costInfo = costsData.find(cost => cost.advertId === campaign.advertId);
+          if (costInfo) {
+            return {
+              ...campaign,
+              campName: costInfo.campName
+            };
+          }
+          return campaign;
+        });
 
-      const uniqueCampaigns = Array.from(
-        new Map(
-          costsData.map((cost) => [
-            cost.advertId,
-            {
-              advertId: cost.advertId,
-              campName: cost.campName,
-              status: statsData.find(stat => stat.advertId === cost.advertId)?.status || 'active',
-              type: statsData.find(stat => stat.advertId === cost.advertId)?.type || 'auction'
-            }
-          ])
-        ).values()
-      );
-
-      setCampaigns(uniqueCampaigns);
+        setCampaigns(updatedCampaigns);
+      }
       
+      // Get account balance
       const balanceData = await getAdvertBalance(selectedStore.apiKey);
       setBalance(balanceData.balance);
 
-      cacheData(uniqueCampaigns, balanceData.balance);
+      // Cache the data
+      cacheData(allCampaigns, balanceData.balance);
 
       toast({
         title: "Успех",
@@ -198,7 +196,7 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
 
   const filteredCampaigns = campaigns.filter(campaign => {
     const matchesStatus = statusFilter === "all-active" 
-      ? campaign.status !== "archived"
+      ? campaign.status !== "archived" && campaign.status !== "completed"
       : statusFilter === "all" 
         ? true 
         : campaign.status === statusFilter;
@@ -251,6 +249,8 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
         return <Archive className="h-4 w-4 text-gray-500" />;
       case 'ready':
         return <CheckCircle className="h-4 w-4 text-blue-500" />;
+      case 'completed':
+        return <Clock className="h-4 w-4 text-purple-500" />;
     }
   };
 
@@ -266,6 +266,7 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
       case 'paused': return 'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-900/30 border-yellow-200 dark:border-yellow-800';
       case 'archived': return 'bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/40 dark:to-gray-800/60 border-gray-200 dark:border-gray-700';
       case 'ready': return 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/30 border-blue-200 dark:border-blue-800';
+      case 'completed': return 'bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-900/30 border-purple-200 dark:border-purple-800';
     }
   };
 
@@ -275,6 +276,7 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
       case 'paused': return 'Пауза';
       case 'archived': return 'Архив';
       case 'ready': return 'Готова';
+      case 'completed': return 'Завершена';
     }
   };
 
@@ -283,6 +285,18 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
     
     const updateDate = new Date(lastUpdate);
     return `${updateDate.toLocaleDateString('ru-RU')} ${updateDate.toLocaleTimeString('ru-RU')}`;
+  };
+
+  // Get original status value for display in debug
+  const getOriginalStatusValueLabel = (campaign: Campaign) => {
+    if (campaign.numericStatus === undefined) return '';
+    return `${campaign.numericStatus} - ${campaignStatusMap[campaign.numericStatus.toString()] || 'Unknown'}`;
+  };
+  
+  // Get original type value for display in debug
+  const getOriginalTypeValueLabel = (campaign: Campaign) => {
+    if (campaign.numericType === undefined) return '';
+    return `${campaign.numericType} - ${campaignTypeMap[campaign.numericType.toString()] || 'Unknown'}`;
   };
 
   return (
@@ -316,10 +330,11 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all-active">Все, кроме архивных</SelectItem>
+                  <SelectItem value="all-active">Активные и на паузе</SelectItem>
                   <SelectItem value="ready">Готовые к запуску</SelectItem>
                   <SelectItem value="active">Активные</SelectItem>
                   <SelectItem value="paused">Приостановленные</SelectItem>
+                  <SelectItem value="completed">Завершенные</SelectItem>
                   <SelectItem value="archived">Архивные</SelectItem>
                   <SelectItem value="all">Все</SelectItem>
                 </SelectContent>
@@ -374,6 +389,7 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
                       campaign.status === 'active' ? 'bg-green-500/10 text-green-700 dark:text-green-400' :
                       campaign.status === 'paused' ? 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400' :
                       campaign.status === 'archived' ? 'bg-gray-500/10 text-gray-700 dark:text-gray-400' :
+                      campaign.status === 'completed' ? 'bg-purple-500/10 text-purple-700 dark:text-purple-400' :
                       'bg-blue-500/10 text-blue-700 dark:text-blue-400'
                     } text-xs font-medium flex justify-between items-center`}>
                       <div className="flex items-center gap-1.5">
@@ -388,20 +404,39 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
                     
                     <div className="p-4 flex-1 flex flex-col">
                       <h3 className="font-medium text-base line-clamp-2 leading-tight mb-2">{campaign.campName}</h3>
-                      <div className="mt-auto pt-2 flex justify-end">
+                      <div className="mt-auto pt-2 flex justify-between items-center">
+                        {campaign.changeTime && (
+                          <div className="text-xs text-muted-foreground">
+                            Изменено: {new Date(campaign.changeTime).toLocaleDateString('ru-RU')}
+                          </div>
+                        )}
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          className={`text-xs ${
+                          className={`text-xs ml-auto ${
                             campaign.status === 'active' ? 'text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20' :
                             campaign.status === 'paused' ? 'text-yellow-600 border-yellow-300 hover:bg-yellow-50 dark:hover:bg-yellow-900/20' :
                             campaign.status === 'archived' ? 'text-gray-600 border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/20' :
+                            campaign.status === 'completed' ? 'text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20' :
                             'text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                           }`}
                         >
                           Просмотреть
                         </Button>
                       </div>
+                      {/* Debug info if available - can be commented out in production */}
+                      {(campaign.numericStatus !== undefined || campaign.numericType !== undefined) && (
+                        <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                          <div className="text-xs text-muted-foreground">
+                            {campaign.numericStatus !== undefined && (
+                              <div>Статус: {getOriginalStatusValueLabel(campaign)}</div>
+                            )}
+                            {campaign.numericType !== undefined && (
+                              <div>Тип: {getOriginalTypeValueLabel(campaign)}</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </Card>
