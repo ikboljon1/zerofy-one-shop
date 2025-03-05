@@ -9,11 +9,11 @@ export const penaltiesData = [
 ];
 
 export const returnsData = [
-  { name: "Футболка Premium Collection", value: 12000 },
-  { name: "Джинсы Regular Fit", value: 8500 },
-  { name: "Куртка зимняя Arctic", value: 6300 },
-  { name: "Кроссовки SportRun", value: 4200 },
-  { name: "Рубашка Oxford", value: 3000 }
+  { name: "Костюм женский спортивный", value: 12000 },
+  { name: "Платье летнее", value: 8500 },
+  { name: "Футболка мужская", value: 6300 },
+  { name: "Джинсы классические", value: 4200 },
+  { name: "Куртка зимняя", value: 3000 }
 ];
 
 export const deductionsTimelineData = [

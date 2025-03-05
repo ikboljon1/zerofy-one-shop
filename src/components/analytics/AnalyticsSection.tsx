@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag, Loader2 } from "lucide-react";
@@ -241,6 +242,7 @@ const AnalyticsSection = () => {
         
         setData(modifiedData);
         
+        // Обновляем данные о возвратах из API
         if (statsData.productReturns && statsData.productReturns.length > 0) {
           setReturns(statsData.productReturns);
         }

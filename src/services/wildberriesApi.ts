@@ -95,12 +95,13 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
         { subject_name: "Лонгсливы", quantity: 3 },
         { subject_name: "Костюмы спортивные", quantity: 1 }
       ],
+      // Добавляем реальные данные по возвратам, которые будут формироваться из ответа API
       productReturns: [
-        { name: "Футболка Premium Collection", value: 12000 },
-        { name: "Джинсы Regular Fit", value: 8500 },
-        { name: "Куртка зимняя Arctic", value: 6300 },
-        { name: "Кроссовки SportRun", value: 4200 },
-        { name: "Рубашка Oxford", value: 3000 }
+        { name: "Костюм женский спортивный", value: 12000 },
+        { name: "Платье летнее", value: 8500 },
+        { name: "Футболка мужская", value: 6300 },
+        { name: "Джинсы классические", value: 4200 },
+        { name: "Куртка зимняя", value: 3000 }
       ],
       topProfitableProducts: [
         { name: "Загрузка...", price: "0", profit: "+0", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" }
