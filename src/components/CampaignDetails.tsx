@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from "./ui/card";
 import { useEffect, useState } from "react";
 import { 
@@ -28,7 +29,8 @@ import {
   PercentIcon,
   Package,
   BarChart3,
-  CreditCard
+  CreditCard,
+  Clock
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -54,6 +56,12 @@ interface CampaignStats {
   sum: number;
 }
 
+// Ключи для сохранения данных в localStorage
+const CAMPAIGN_DETAILS_KEY = 'campaign_details';
+const CAMPAIGN_COSTS_KEY = 'campaign_costs';
+const CAMPAIGN_PAYMENTS_KEY = 'campaign_payments';
+const CAMPAIGN_LAST_UPDATE_KEY = 'campaign_last_update';
+
 const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignDetailsProps) => {
   const [costs, setCosts] = useState<any[]>([]);
   const [stats, setStats] = useState<CampaignStats | null>(null);
@@ -64,6 +72,84 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { theme } = useTheme();
+  // Добавляем состояние для отслеживания последнего обновления
+  const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+
+  // Загрузка кэшированных данных
+  const loadCachedData = () => {
+    try {
+      // Ключи с ID кампании
+      const detailsKey = `${CAMPAIGN_DETAILS_KEY}_${campaignId}`;
+      const costsKey = `${CAMPAIGN_COSTS_KEY}_${campaignId}`;
+      const paymentsKey = `${CAMPAIGN_PAYMENTS_KEY}_${campaignId}`;
+      const lastUpdateKey = `${CAMPAIGN_LAST_UPDATE_KEY}_${campaignId}`;
+
+      const savedDetails = localStorage.getItem(detailsKey);
+      const savedCosts = localStorage.getItem(costsKey);
+      const savedPayments = localStorage.getItem(paymentsKey);
+      const savedLastUpdate = localStorage.getItem(lastUpdateKey);
+
+      if (savedDetails) {
+        const parsedDetails = JSON.parse(savedDetails);
+        setStats(parsedDetails.stats);
+        setFullStats(parsedDetails.fullStats);
+      }
+
+      if (savedCosts) {
+        setCosts(JSON.parse(savedCosts));
+      }
+
+      if (savedPayments) {
+        setPayments(JSON.parse(savedPayments));
+      }
+
+      if (savedLastUpdate) {
+        setLastUpdate(savedLastUpdate);
+      }
+
+      // Проверяем, нужно ли обновить данные (если прошло больше 1 часа или данных нет)
+      const shouldRefresh = !savedLastUpdate || 
+        (new Date().getTime() - new Date(savedLastUpdate).getTime()) > 60 * 60 * 1000;
+
+      if (shouldRefresh || !savedDetails) {
+        fetchData();
+      }
+    } catch (error) {
+      console.error('Error loading cached campaign data:', error);
+    }
+  };
+
+  // Сохранение данных в кэш
+  const cacheData = (
+    statsData: CampaignStats | null, 
+    fullStatsData: CampaignFullStats | null,
+    costsData: any[],
+    paymentsData: any[]
+  ) => {
+    try {
+      const now = new Date().toISOString();
+      
+      // Ключи с ID кампании
+      const detailsKey = `${CAMPAIGN_DETAILS_KEY}_${campaignId}`;
+      const costsKey = `${CAMPAIGN_COSTS_KEY}_${campaignId}`;
+      const paymentsKey = `${CAMPAIGN_PAYMENTS_KEY}_${campaignId}`;
+      const lastUpdateKey = `${CAMPAIGN_LAST_UPDATE_KEY}_${campaignId}`;
+
+      // Сохраняем данные
+      localStorage.setItem(detailsKey, JSON.stringify({
+        stats: statsData,
+        fullStats: fullStatsData
+      }));
+      localStorage.setItem(costsKey, JSON.stringify(costsData));
+      localStorage.setItem(paymentsKey, JSON.stringify(paymentsData));
+      localStorage.setItem(lastUpdateKey, now);
+      
+      // Обновляем состояние
+      setLastUpdate(now);
+    } catch (error) {
+      console.error('Error caching campaign data:', error);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -88,6 +174,9 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
         setFullStats(fullStatsData[0]);
       }
 
+      // Кэшируем полученные данные
+      cacheData(statsData[0], fullStatsData?.[0] || null, campaignCosts, paymentsData);
+
       toast({
         title: "Успех",
         description: "Данные успешно обновлены",
@@ -105,8 +194,16 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
   };
 
   useEffect(() => {
-    fetchData();
+    loadCachedData();
   }, [campaignId]);
+
+  // Форматирование даты последнего обновления
+  const getFormattedLastUpdate = () => {
+    if (!lastUpdate) return "Никогда";
+    
+    const updateDate = new Date(lastUpdate);
+    return `${updateDate.toLocaleDateString('ru-RU')} ${updateDate.toLocaleTimeString('ru-RU')}`;
+  };
 
   const StatCard = ({ title, value, icon: Icon, trend, color, isTrendPositive, caption }: { 
     title: string; 
@@ -166,9 +263,15 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
             <DollarSign className="h-5 w-5 text-amber-500" />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-500 to-pink-500">История затрат</span>
           </h3>
-          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
-            <Star className="h-5 w-5 text-amber-400" />
-          </motion.div>
+          <div className="flex items-center gap-2">
+            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+              <Star className="h-5 w-5 text-amber-400" />
+            </motion.div>
+            <div className="text-xs text-gray-500 flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              <span>{getFormattedLastUpdate()}</span>
+            </div>
+          </div>
         </div>
 
         <div className="p-5 relative z-10 overflow-y-auto scrollbar-hide flex-1">
@@ -479,6 +582,10 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
             <Trophy className="h-5 w-5 text-blue-500" />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500">Подробная статистика</span>
           </h3>
+          <div className="text-xs text-gray-500 flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            <span>{getFormattedLastUpdate()}</span>
+          </div>
         </div>
 
         <div className="p-5 relative z-10">
@@ -512,9 +619,15 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
             <Gem className="h-5 w-5 text-purple-500" />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-pink-500">История пополнений</span>
           </h3>
-          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
-            <Trophy className="h-5 w-5 text-purple-400" />
-          </motion.div>
+          <div className="flex items-center gap-2">
+            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+              <Trophy className="h-5 w-5 text-purple-400" />
+            </motion.div>
+            <div className="text-xs text-gray-500 flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              <span>{getFormattedLastUpdate()}</span>
+            </div>
+          </div>
         </div>
 
         <div className="p-5 relative z-10 overflow-y-auto scrollbar-hide flex-1">
@@ -614,16 +727,21 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
               {campaignName}
             </h2>
           </div>
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
-            <Button 
-              onClick={fetchData} 
-              disabled={loading} 
-              className="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 shadow-lg hover:shadow-xl transition-all duration-300 text-white font-medium"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Обновить
-            </Button>
-          </motion.div>
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:block text-sm text-muted-foreground">
+              Обновлено: {getFormattedLastUpdate()}
+            </div>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
+              <Button 
+                onClick={fetchData} 
+                disabled={loading} 
+                className="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 shadow-lg hover:shadow-xl transition-all duration-300 text-white font-medium"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Обновить
+              </Button>
+            </motion.div>
+          </div>
         </div>
       </motion.div>
 

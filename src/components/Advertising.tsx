@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card } from "./ui/card";
 import { getAdvertCosts, getAdvertStats, getAdvertBalance } from "@/services/advertisingApi";
@@ -27,6 +26,10 @@ interface Campaign {
   type: 'auction' | 'automatic';
 }
 
+const CAMPAIGNS_STORAGE_KEY = 'ad_campaigns';
+const BALANCE_STORAGE_KEY = 'ad_balance';
+const LAST_UPDATE_KEY = 'ad_last_update';
+
 const Advertising = ({ selectedStore }: AdvertisingProps) => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(false);
@@ -36,9 +39,70 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
   const [balance, setBalance] = useState<number>(0);
   const { toast } = useToast();
   
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
+  const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (selectedStore) {
+      loadCachedData();
+    }
+  }, [selectedStore]);
+
+  const loadCachedData = () => {
+    if (!selectedStore) return;
+
+    try {
+      const campaignsKey = `${CAMPAIGNS_STORAGE_KEY}_${selectedStore.id}`;
+      const balanceKey = `${BALANCE_STORAGE_KEY}_${selectedStore.id}`;
+      const lastUpdateKey = `${LAST_UPDATE_KEY}_${selectedStore.id}`;
+
+      const savedCampaigns = localStorage.getItem(campaignsKey);
+      const savedBalance = localStorage.getItem(balanceKey);
+      const savedLastUpdate = localStorage.getItem(lastUpdateKey);
+
+      if (savedCampaigns) {
+        setCampaigns(JSON.parse(savedCampaigns));
+      }
+
+      if (savedBalance) {
+        setBalance(JSON.parse(savedBalance));
+      }
+
+      if (savedLastUpdate) {
+        setLastUpdate(savedLastUpdate);
+      }
+
+      const shouldRefresh = !savedLastUpdate || 
+        (new Date().getTime() - new Date(savedLastUpdate).getTime()) > 60 * 60 * 1000;
+
+      if (shouldRefresh || !savedCampaigns) {
+        fetchData();
+      }
+    } catch (error) {
+      console.error('Error loading cached data:', error);
+    }
+  };
+
+  const cacheData = (newCampaigns: Campaign[], newBalance: number) => {
+    if (!selectedStore) return;
+
+    try {
+      const now = new Date().toISOString();
+      
+      const campaignsKey = `${CAMPAIGNS_STORAGE_KEY}_${selectedStore.id}`;
+      const balanceKey = `${BALANCE_STORAGE_KEY}_${selectedStore.id}`;
+      const lastUpdateKey = `${LAST_UPDATE_KEY}_${selectedStore.id}`;
+
+      localStorage.setItem(campaignsKey, JSON.stringify(newCampaigns));
+      localStorage.setItem(balanceKey, JSON.stringify(newBalance));
+      localStorage.setItem(lastUpdateKey, now);
+      
+      setLastUpdate(now);
+    } catch (error) {
+      console.error('Error caching data:', error);
+    }
+  };
 
   const fetchData = async () => {
     if (!selectedStore) {
@@ -56,7 +120,6 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
       const dateFrom = new Date();
       dateFrom.setDate(dateFrom.getDate() - 30);
 
-      // Fetch costs data
       const costsData = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
       
       if (costsData.length === 0) {
@@ -64,14 +127,14 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
           title: "Информация",
           description: "Нет данных о рекламных кампаниях за выбранный период",
         });
+        setCampaigns([]);
+        cacheData([], balance);
         return;
       }
 
-      // Fetch stats for each campaign
       const campaignIds = costsData.map(cost => cost.advertId);
       const statsData = await getAdvertStats(dateFrom, dateTo, campaignIds, selectedStore.apiKey);
 
-      // Combine costs and stats data
       const uniqueCampaigns = Array.from(
         new Map(
           costsData.map((cost) => [
@@ -88,18 +151,16 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
 
       setCampaigns(uniqueCampaigns);
       
-      // Fetch and set real balance
       const balanceData = await getAdvertBalance(selectedStore.apiKey);
       setBalance(balanceData.balance);
 
-      localStorage.setItem(`campaigns_${selectedStore.id}`, JSON.stringify(uniqueCampaigns));
+      cacheData(uniqueCampaigns, balanceData.balance);
 
       toast({
         title: "Успех",
         description: "Данные успешно загружены",
       });
       
-      // Reset to first page when new data is loaded
       setCurrentPage(1);
     } catch (error) {
       console.error('Error fetching advertising data:', error);
@@ -108,22 +169,10 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
         description: error instanceof Error ? error.message : "Не удалось загрузить данные",
         variant: "destructive",
       });
-      setCampaigns([]);
-      setBalance(0);
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (selectedStore) {
-      const savedCampaigns = localStorage.getItem(`campaigns_${selectedStore.id}`);
-      if (savedCampaigns) {
-        setCampaigns(JSON.parse(savedCampaigns));
-      }
-      fetchData();
-    }
-  }, [selectedStore]);
 
   const filteredCampaigns = campaigns.filter(campaign => {
     const matchesStatus = statusFilter === "all-active" 
@@ -139,13 +188,11 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
     return matchesStatus && matchesType;
   });
 
-  // Calculate pagination values
   const totalPages = Math.ceil(filteredCampaigns.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredCampaigns.slice(indexOfFirstItem, indexOfLastItem);
 
-  // Handle page change
   const paginate = (pageNumber: number) => {
     if (pageNumber > 0 && pageNumber <= totalPages) {
       setCurrentPage(pageNumber);
@@ -191,7 +238,6 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
       : <Zap className="h-4 w-4" />;
   };
 
-  // Status color backgrounds
   const getStatusColor = (status: Campaign['status']) => {
     switch (status) {
       case 'active': return 'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-900/30 border-green-200 dark:border-green-800';
@@ -201,7 +247,6 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
     }
   };
 
-  // Get status label
   const getStatusLabel = (status: Campaign['status']) => {
     switch (status) {
       case 'active': return 'Активна';
@@ -209,6 +254,13 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
       case 'archived': return 'Архив';
       case 'ready': return 'Готова';
     }
+  };
+
+  const getFormattedLastUpdate = () => {
+    if (!lastUpdate) return "Никогда";
+    
+    const updateDate = new Date(lastUpdate);
+    return `${updateDate.toLocaleDateString('ru-RU')} ${updateDate.toLocaleTimeString('ru-RU')}`;
   };
 
   return (
@@ -255,14 +307,19 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
         </div>
         <div className="space-y-4">
           <motion.div 
-            className="flex items-center gap-2 bg-gradient-to-r from-[#9b87f5]/10 to-[#8B5CF6]/20 dark:from-[#9b87f5]/20 dark:to-[#8B5CF6]/30 p-4 rounded-lg border border-[#9b87f5]/20"
+            className="flex flex-col gap-2 bg-gradient-to-r from-[#9b87f5]/10 to-[#8B5CF6]/20 dark:from-[#9b87f5]/20 dark:to-[#8B5CF6]/30 p-4 rounded-lg border border-[#9b87f5]/20"
             whileHover={{ y: -2 }}
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
           >
-            <Wallet className="h-5 w-5 text-[#9b87f5]" />
-            <div>
-              <p className="text-sm text-muted-foreground">Баланс</p>
-              <p className="font-semibold">{balance.toLocaleString('ru-RU')} ₽</p>
+            <div className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-[#9b87f5]" />
+              <div>
+                <p className="text-sm text-muted-foreground">Баланс</p>
+                <p className="font-semibold">{balance.toLocaleString('ru-RU')} ₽</p>
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              Обновлено: {getFormattedLastUpdate()}
             </div>
           </motion.div>
           <Button 
@@ -276,7 +333,6 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
         </div>
       </div>
 
-      {/* Campaign Cards */}
       {filteredCampaigns.length > 0 ? (
         <>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -292,7 +348,6 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
                   onClick={() => setSelectedCampaign(campaign)}
                 >
                   <div className="flex flex-col h-full">
-                    {/* Status banner */}
                     <div className={`w-full py-1.5 px-3 ${
                       campaign.status === 'active' ? 'bg-green-500/10 text-green-700 dark:text-green-400' :
                       campaign.status === 'paused' ? 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400' :
@@ -309,7 +364,6 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
                       </div>
                     </div>
                     
-                    {/* Campaign content */}
                     <div className="p-4 flex-1 flex flex-col">
                       <h3 className="font-medium text-base line-clamp-2 leading-tight mb-2">{campaign.campName}</h3>
                       <div className="mt-auto pt-2 flex justify-end">
@@ -333,7 +387,6 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
             ))}
           </div>
           
-          {/* Pagination */}
           {totalPages > 1 && (
             <Pagination className="mt-6">
               <PaginationContent>
@@ -345,7 +398,6 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
                 </PaginationItem>
                 
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  // Logic to show pagination numbers around current page
                   let pageNum;
                   if (totalPages <= 5) {
                     pageNum = i + 1;
