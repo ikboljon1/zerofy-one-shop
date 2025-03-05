@@ -19,7 +19,7 @@ interface PieChartCardProps {
 }
 
 const PieChartCard = ({ title, icon, data }: PieChartCardProps) => {
-  // Проверяем, что данные не пустые
+  // Проверяем, что данные не пустые и содержат значения больше нуля
   const hasData = data && data.length > 0 && data.some(item => item.value > 0);
 
   return (

@@ -23,7 +23,8 @@ import {
   demoData, 
   penaltiesData, 
   returnsData, 
-  deductionsTimelineData
+  deductionsTimelineData,
+  advertisingData
 } from "./data/demoData";
 
 // Модифицированный интерфейс для демо данных, чтобы соответствовать используемым полям
@@ -73,7 +74,7 @@ const AnalyticsSection = () => {
   const [penalties, setPenalties] = useState(penaltiesData);
   const [returns, setReturns] = useState(returnsData);
   const [deductionsTimeline, setDeductionsTimeline] = useState(deductionsTimelineData);
-  const [productAdvertisingData, setProductAdvertisingData] = useState<Array<{name: string, value: number}>>([]);
+  const [productAdvertisingData, setProductAdvertisingData] = useState<Array<{name: string, value: number}>>(advertisingData);
   const isMobile = useIsMobile();
   const { toast } = useToast();
 
@@ -102,19 +103,20 @@ const AnalyticsSection = () => {
       const statsData = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
       
       if (statsData) {
-        // Модифицируем данные, чтобы они соответствовали ожидаемому формату AnalyticsData
+        // Обеспечиваем, что свойство acceptance существует в объекте expenses
         const modifiedData: AnalyticsData = {
-          ...demoData, // Используем демо-данные как основу
           currentPeriod: {
             ...statsData.currentPeriod,
             expenses: {
               ...statsData.currentPeriod.expenses,
-              advertising: 0, // Добавляем отсутствующее поле
+              advertising: statsData.currentPeriod.expenses.advertising || 0,
               acceptance: statsData.currentPeriod.expenses.acceptance || 0
             }
           },
           dailySales: statsData.dailySales,
-          productSales: statsData.productSales
+          productSales: statsData.productSales,
+          topProfitableProducts: statsData.topProfitableProducts,
+          topUnprofitableProducts: statsData.topUnprofitableProducts
         };
         
         setData(modifiedData);
@@ -165,13 +167,10 @@ const AnalyticsSection = () => {
           topProducts.push({ name: "Другие товары", value: otherSum });
         }
         
-        setProductAdvertisingData(topProducts);
+        setProductAdvertisingData(topProducts.length > 0 ? topProducts : advertisingData);
       } else {
         // Если данные о рекламе отсутствуют, используем демо-данные
-        const demoAdvertisingData = [
-          { name: "Нет данных о рекламе", value: 100 }
-        ];
-        setProductAdvertisingData(demoAdvertisingData);
+        setProductAdvertisingData(advertisingData);
       }
     } catch (error) {
       console.error('Error fetching analytics data:', error);

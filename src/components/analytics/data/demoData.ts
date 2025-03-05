@@ -43,7 +43,8 @@ export const demoData = {
       logistics: 45000,
       storage: 35000,
       penalties: 15000,
-      advertising: 30000
+      advertising: 30000,
+      acceptance: 30000  // Добавлено поле acceptance
     },
     netProfit: 875000,
     acceptance: 30000
