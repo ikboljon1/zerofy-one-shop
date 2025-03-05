@@ -314,18 +314,19 @@ export const getSearchKeywordStatistics = async (
   try {
     const api = createApiInstance(apiKey);
     
-    const response = await api.get(`/v0/stats/keywords`, { 
+    console.log(`Fetching keyword stats for campaign ID: ${campaignId}`);
+    const response = await api.get(`/v1/stat/words`, { 
       params: {
-        advert_id: campaignId
+        id: campaignId
       }
     });
     
-    // If we receive data, return it
+    console.log('Response data:', response.data);
+    
     if (response.data) {
       return response.data;
     }
     
-    // If we don't receive data, return a default empty response
     return { 
       words: { 
         phrase: [], 
@@ -339,52 +340,31 @@ export const getSearchKeywordStatistics = async (
   } catch (error) {
     console.error('Error fetching keyword statistics:', error);
     
-    // Fall back to our previously working endpoint if the new one fails
     try {
       const api = createApiInstance(apiKey);
-      const params = {
-        advert_id: campaignId,
-        from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        to: new Date().toISOString().split('T')[0]
-      };
+      console.log('Trying fallback endpoint for keywords');
       
-      const response = await api.get(`/v0/stats/keywords`, { params });
+      const response = await api.get(`/v0/stats/keywords`, { 
+        params: {
+          advert_id: campaignId
+        }
+      });
       
-      // Convert the old format to the new format
-      const result: KeywordStatistics = response.data || { keywords: [] };
+      console.log('Fallback response:', response.data);
       
-      // Transform to the expected format
-      return {
+      if (response.data) {
+        return response.data;
+      }
+      
+      return { 
         words: { 
           phrase: [], 
           strong: [], 
           excluded: [], 
           pluse: [], 
-          keywords: result.keywords?.flatMap(day => 
-            day.stats.map(stat => ({
-              keyword: stat.keyword,
-              count: stat.views,
-              fixed: false
-            }))
-          ) || []
-        },
-        stat: result.keywords?.flatMap(day => 
-          day.stats.map(stat => ({
-            advertId: campaignId,
-            keyword: stat.keyword,
-            advertName: "",
-            campaignName: "",
-            begin: "",
-            end: "",
-            views: stat.views,
-            clicks: stat.clicks,
-            frq: 1.0, // We don't have this in the old format
-            ctr: stat.ctr,
-            cpc: stat.sum / (stat.clicks || 1),
-            duration: 0,
-            sum: stat.sum
-          }))
-        ) || []
+          keywords: [] 
+        }, 
+        stat: [] 
       };
     } catch (secondError) {
       console.error('Error with fallback keyword statistics fetch:', secondError);

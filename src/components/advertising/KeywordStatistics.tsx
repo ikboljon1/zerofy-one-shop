@@ -110,7 +110,10 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
     setLoading(true);
     
     try {
+      console.log(`Fetching keyword statistics for campaign ID: ${campaignId}`);
       const data = await getSearchKeywordStatistics(apiKey, campaignId);
+      console.log('Received keyword data:', data);
+      
       setKeywordStats(data);
       setLastUpdate(new Date().toISOString());
       
