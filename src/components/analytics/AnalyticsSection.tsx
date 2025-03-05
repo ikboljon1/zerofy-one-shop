@@ -16,7 +16,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 // API и утилиты
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
-import { getAdvertCosts } from "@/services/advertisingApi";
+import { getAdvertCosts, getAdvertBalance, getAdvertPayments } from "@/services/advertisingApi";
 
 // Используем для резервных данных, если API недоступен
 import { 
@@ -66,6 +66,12 @@ interface AnalyticsData {
   }>;
 }
 
+// Структура для данных о рекламе
+interface AdvertisingBreakdown {
+  search: number;
+  banner: number;
+}
+
 const AnalyticsSection = () => {
   const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
@@ -75,6 +81,10 @@ const AnalyticsSection = () => {
   const [returns, setReturns] = useState(returnsData);
   const [deductionsTimeline, setDeductionsTimeline] = useState(deductionsTimelineData);
   const [productAdvertisingData, setProductAdvertisingData] = useState<Array<{name: string, value: number}>>(advertisingData);
+  const [advertisingBreakdown, setAdvertisingBreakdown] = useState<AdvertisingBreakdown>({
+    search: 0,
+    banner: 0
+  });
   const isMobile = useIsMobile();
   const { toast } = useToast();
 
@@ -102,49 +112,27 @@ const AnalyticsSection = () => {
       // 1. Получаем данные статистики Wildberries
       const statsData = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
       
-      if (statsData) {
-        // Обеспечиваем, что свойство acceptance существует в объекте expenses
-        // и добавляем рекламу, которой нет в API
-        const modifiedData: AnalyticsData = {
-          currentPeriod: {
-            ...statsData.currentPeriod,
-            expenses: {
-              ...statsData.currentPeriod.expenses,
-              // Добавляем поле advertising, которое отсутствует в API
-              advertising: 30000, // Используем фиксированное значение или из demoData
-              acceptance: statsData.currentPeriod.expenses.acceptance || 0
-            }
-          },
-          dailySales: statsData.dailySales,
-          productSales: statsData.productSales,
-          topProfitableProducts: statsData.topProfitableProducts,
-          topUnprofitableProducts: statsData.topUnprofitableProducts
-        };
-        
-        setData(modifiedData);
-        
-        // Создаем временные данные для графика удержаний из dailySales и expense данных
-        const newDeductionsTimeline = statsData.dailySales.map((day: any) => {
-          const totalExpenses = statsData.currentPeriod.expenses.total / statsData.dailySales.length;
-          const logistic = statsData.currentPeriod.expenses.logistics / statsData.dailySales.length;
-          const storage = statsData.currentPeriod.expenses.storage / statsData.dailySales.length;
-          const penalties = statsData.currentPeriod.expenses.penalties / statsData.dailySales.length;
-          
-          return {
-            date: day.date.split('T')[0],
-            logistic,
-            storage,
-            penalties
-          };
-        });
-        
-        setDeductionsTimeline(newDeductionsTimeline);
-      }
-
       // 2. Получаем данные о расходах на рекламу
       const advertCosts = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
       
+      // Рассчитываем общую сумму расходов на рекламу
+      let totalAdvertisingCost = 0;
       if (advertCosts && advertCosts.length > 0) {
+        totalAdvertisingCost = advertCosts.reduce((sum, cost) => sum + cost.updSum, 0);
+        
+        // Группируем расходы по типу рекламы (упрощенно: поисковая и баннерная)
+        // Предполагаем, что все advertType = 6 - это поисковая реклама, остальное - баннерная
+        const searchAdsTotal = advertCosts
+          .filter(cost => cost.advertType === "6")
+          .reduce((sum, cost) => sum + cost.updSum, 0);
+        
+        const bannerAdsTotal = totalAdvertisingCost - searchAdsTotal;
+        
+        setAdvertisingBreakdown({
+          search: searchAdsTotal,
+          banner: bannerAdsTotal
+        });
+        
         // Группируем расходы по кампаниям
         const campaignCosts: Record<string, number> = {};
         
@@ -173,6 +161,59 @@ const AnalyticsSection = () => {
       } else {
         // Если данные о рекламе отсутствуют, используем демо-данные
         setProductAdvertisingData(advertisingData);
+        setAdvertisingBreakdown({
+          search: demoData.currentPeriod.expenses.advertising * 0.6,
+          banner: demoData.currentPeriod.expenses.advertising * 0.4
+        });
+        totalAdvertisingCost = demoData.currentPeriod.expenses.advertising;
+      }
+      
+      if (statsData) {
+        // Обеспечиваем, что свойство acceptance существует в объекте expenses
+        // и добавляем рекламу, которой нет в API
+        const modifiedData: AnalyticsData = {
+          currentPeriod: {
+            ...statsData.currentPeriod,
+            expenses: {
+              ...statsData.currentPeriod.expenses,
+              // Используем реальные данные о рекламе
+              advertising: totalAdvertisingCost,
+              acceptance: statsData.currentPeriod.expenses.acceptance || 0
+            }
+          },
+          dailySales: statsData.dailySales,
+          productSales: statsData.productSales,
+          topProfitableProducts: statsData.topProfitableProducts,
+          topUnprofitableProducts: statsData.topUnprofitableProducts
+        };
+        
+        // Обновляем общую сумму расходов с учетом рекламы
+        modifiedData.currentPeriod.expenses.total =
+          modifiedData.currentPeriod.expenses.logistics +
+          modifiedData.currentPeriod.expenses.storage +
+          modifiedData.currentPeriod.expenses.penalties +
+          modifiedData.currentPeriod.expenses.advertising +
+          (modifiedData.currentPeriod.expenses.acceptance || 0);
+        
+        setData(modifiedData);
+        
+        // Создаем временные данные для графика удержаний из dailySales и expense данных
+        const newDeductionsTimeline = statsData.dailySales.map((day: any) => {
+          // Равномерно распределяем расходы на все дни
+          const daysCount = statsData.dailySales.length;
+          const logistic = modifiedData.currentPeriod.expenses.logistics / daysCount;
+          const storage = modifiedData.currentPeriod.expenses.storage / daysCount;
+          const penalties = modifiedData.currentPeriod.expenses.penalties / daysCount;
+          
+          return {
+            date: day.date.split('T')[0],
+            logistic,
+            storage,
+            penalties
+          };
+        });
+        
+        setDeductionsTimeline(newDeductionsTimeline);
       }
     } catch (error) {
       console.error('Error fetching analytics data:', error);
@@ -244,7 +285,7 @@ const AnalyticsSection = () => {
         </div>
 
         {/* Детальный анализ расходов */}
-        <ExpenseBreakdown data={data} />
+        <ExpenseBreakdown data={data} advertisingBreakdown={advertisingBreakdown} />
 
         {/* Диаграмма распределения расходов на рекламу по товарам */}
         <PieChartCard 

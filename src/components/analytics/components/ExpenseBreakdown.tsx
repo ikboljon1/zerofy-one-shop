@@ -14,9 +14,17 @@ interface ExpenseBreakdownProps {
       };
     };
   };
+  advertisingBreakdown?: {
+    search: number;
+    banner: number;
+  };
 }
 
-const ExpenseBreakdown = ({ data }: ExpenseBreakdownProps) => {
+const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps) => {
+  // Используем переданные данные о разбивке рекламы или рассчитываем по умолчанию
+  const searchAdsAmount = advertisingBreakdown?.search || data.currentPeriod.expenses.advertising * 0.6;
+  const bannerAdsAmount = advertisingBreakdown?.banner || data.currentPeriod.expenses.advertising * 0.4;
+
   return (
     <Card className="p-6">
       <h3 className="text-lg font-semibold mb-6">Структура расходов</h3>
@@ -111,11 +119,11 @@ const ExpenseBreakdown = ({ data }: ExpenseBreakdownProps) => {
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Поисковая реклама</span>
-                <span className="font-medium">{(data.currentPeriod.expenses.advertising * 0.6).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                <span className="font-medium">{searchAdsAmount.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Баннерная реклама</span>
-                <span className="font-medium">{(data.currentPeriod.expenses.advertising * 0.4).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                <span className="font-medium">{bannerAdsAmount.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
               </div>
             </div>
           </div>
