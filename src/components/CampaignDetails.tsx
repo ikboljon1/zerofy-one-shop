@@ -793,7 +793,7 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
 
         <TabsContent value="products" className="mt-0">
           <ProductStatsTable 
-            data={productStats} 
+            products={productStats} 
             isLoading={loading && productStats.length === 0} 
           />
         </TabsContent>
@@ -802,7 +802,9 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
           <div className="space-y-6">
             <KeywordStatisticsComponent 
               campaignId={campaignId} 
-              apiKey={apiKey} 
+              apiKey={apiKey}
+              dateFrom={new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)} 
+              dateTo={new Date()}
             />
             <SearchKeywordStatistics 
               campaignId={campaignId} 
