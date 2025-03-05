@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Card } from "./ui/card";
 import { getAdvertCosts, getAdvertStats, getAdvertBalance } from "@/services/advertisingApi";
 import { Button } from "./ui/button";
-import { RefreshCw, CheckCircle, PauseCircle, Archive, Target, Zap, Wallet } from "lucide-react";
+import { RefreshCw, CheckCircle, PauseCircle, Archive, Target, Zap, Wallet, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CampaignDetails from "./CampaignDetails";
 import {
@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { motion } from "framer-motion";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination";
 
 interface AdvertisingProps {
   selectedStore?: { id: string; apiKey: string } | null;
@@ -34,6 +35,10 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [balance, setBalance] = useState<number>(0);
   const { toast } = useToast();
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
   const fetchData = async () => {
     if (!selectedStore) {
@@ -93,6 +98,9 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
         title: "Успех",
         description: "Данные успешно загружены",
       });
+      
+      // Reset to first page when new data is loaded
+      setCurrentPage(1);
     } catch (error) {
       console.error('Error fetching advertising data:', error);
       toast({
@@ -130,6 +138,19 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
 
     return matchesStatus && matchesType;
   });
+
+  // Calculate pagination values
+  const totalPages = Math.ceil(filteredCampaigns.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredCampaigns.slice(indexOfFirstItem, indexOfLastItem);
+
+  // Handle page change
+  const paginate = (pageNumber: number) => {
+    if (pageNumber > 0 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
+  };
 
   if (!selectedStore) {
     return (
@@ -177,6 +198,16 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
       case 'paused': return 'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-900/30 border-yellow-200 dark:border-yellow-800';
       case 'archived': return 'bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/40 dark:to-gray-800/60 border-gray-200 dark:border-gray-700';
       case 'ready': return 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/30 border-blue-200 dark:border-blue-800';
+    }
+  };
+
+  // Get status label
+  const getStatusLabel = (status: Campaign['status']) => {
+    switch (status) {
+      case 'active': return 'Активна';
+      case 'paused': return 'Пауза';
+      case 'archived': return 'Архив';
+      case 'ready': return 'Готова';
     }
   };
 
@@ -245,46 +276,120 @@ const Advertising = ({ selectedStore }: AdvertisingProps) => {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {filteredCampaigns.length > 0 ? (
-          filteredCampaigns.map((campaign) => (
-            <motion.div
-              key={campaign.advertId}
-              whileHover={{ y: -5 }}
-              transition={{ type: "spring", stiffness: 400, damping: 10 }}
-            >
-              <Card
-                className={`p-4 cursor-pointer transition-all duration-300 ${getStatusColor(campaign.status)}`}
-                onClick={() => setSelectedCampaign(campaign)}
+      {/* Campaign Cards */}
+      {filteredCampaigns.length > 0 ? (
+        <>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {currentItems.map((campaign) => (
+              <motion.div
+                key={campaign.advertId}
+                whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                className="h-full"
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(campaign.status)}
-                    {getTypeIcon(campaign.type)}
+                <Card
+                  className={`h-full overflow-hidden cursor-pointer transition-all duration-300 ${getStatusColor(campaign.status)} border-[1.5px] hover:border-primary/50`}
+                  onClick={() => setSelectedCampaign(campaign)}
+                >
+                  <div className="flex flex-col h-full">
+                    {/* Status banner */}
+                    <div className={`w-full py-1.5 px-3 ${
+                      campaign.status === 'active' ? 'bg-green-500/10 text-green-700 dark:text-green-400' :
+                      campaign.status === 'paused' ? 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400' :
+                      campaign.status === 'archived' ? 'bg-gray-500/10 text-gray-700 dark:text-gray-400' :
+                      'bg-blue-500/10 text-blue-700 dark:text-blue-400'
+                    } text-xs font-medium flex justify-between items-center`}>
+                      <div className="flex items-center gap-1.5">
+                        {getStatusIcon(campaign.status)}
+                        <span>{getStatusLabel(campaign.status)}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {getTypeIcon(campaign.type)}
+                        <span className="hidden sm:inline">{campaign.type === 'auction' ? 'Аукцион' : 'Авто'}</span>
+                      </div>
+                    </div>
+                    
+                    {/* Campaign content */}
+                    <div className="p-4 flex-1 flex flex-col">
+                      <h3 className="font-medium text-base line-clamp-2 leading-tight mb-2">{campaign.campName}</h3>
+                      <div className="mt-auto pt-2 flex justify-end">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className={`text-xs ${
+                            campaign.status === 'active' ? 'text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20' :
+                            campaign.status === 'paused' ? 'text-yellow-600 border-yellow-300 hover:bg-yellow-50 dark:hover:bg-yellow-900/20' :
+                            campaign.status === 'archived' ? 'text-gray-600 border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/20' :
+                            'text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                          }`}
+                        >
+                          Просмотреть
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-xs px-2 py-1 rounded-full bg-white/50 dark:bg-black/20">
-                    {campaign.status === 'active' && 'Активна'}
-                    {campaign.status === 'paused' && 'Пауза'}
-                    {campaign.status === 'archived' && 'Архив'}
-                    {campaign.status === 'ready' && 'Готова'}
-                  </div>
-                </div>
-                <h3 className="font-medium line-clamp-2 leading-tight">{campaign.campName}</h3>
-              </Card>
-            </motion.div>
-          ))
-        ) : (
-          <div className="col-span-full text-center py-10">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-              <Target className="h-8 w-8 text-gray-400" />
-            </div>
-            <h3 className="text-lg font-medium mb-2">Нет активных кампаний</h3>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              {loading ? 'Загрузка данных...' : 'Попробуйте изменить фильтры или обновить данные'}
-            </p>
+                </Card>
+              </motion.div>
+            ))}
           </div>
-        )}
-      </div>
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <Pagination className="mt-6">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={() => paginate(currentPage - 1)}
+                    className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+                
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  // Logic to show pagination numbers around current page
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <PaginationItem key={pageNum}>
+                      <PaginationLink 
+                        onClick={() => paginate(pageNum)}
+                        isActive={currentPage === pageNum}
+                      >
+                        {pageNum}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    onClick={() => paginate(currentPage + 1)}
+                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
+        </>
+      ) : (
+        <div className="col-span-full text-center py-10">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+            <Target className="h-8 w-8 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-medium mb-2">Нет активных кампаний</h3>
+          <p className="text-muted-foreground max-w-md mx-auto">
+            {loading ? 'Загрузка данных...' : 'Попробуйте изменить фильтры или обновить данные'}
+          </p>
+        </div>
+      )}
     </motion.div>
   );
 };
