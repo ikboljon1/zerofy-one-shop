@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -5,13 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { KeywordStatistics, KeywordStat, getKeywordStatistics } from "@/services/advertisingApi";
 import { useToast } from "@/hooks/use-toast";
-import { format, differenceInDays } from "date-fns";
-import { Search, Tag, TrendingUp, Eye, MousePointerClick, DollarSign, PercentIcon, Filter, AlertCircle } from "lucide-react";
+import { format, differenceInDays, subDays } from "date-fns";
+import { Search, Tag, TrendingUp, Eye, MousePointerClick, DollarSign, PercentIcon, Filter, AlertCircle, Calendar as CalendarIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/hooks/use-theme";
+import DateRangePicker from "@/components/analytics/components/DateRangePicker";
 
 interface KeywordStatisticsProps {
   campaignId: number;
@@ -20,7 +22,10 @@ interface KeywordStatisticsProps {
   dateTo: Date;
 }
 
-const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom, dateTo }: KeywordStatisticsProps) => {
+const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateFrom, dateTo: initialDateTo }: KeywordStatisticsProps) => {
+  // Initialize with last 7 days
+  const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 6));
+  const [dateTo, setDateTo] = useState<Date>(new Date());
   const [keywordStats, setKeywordStats] = useState<KeywordStatistics | null>(null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -94,6 +99,10 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom, dateTo }: Ke
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDateChange = () => {
+    fetchData();
   };
 
   useEffect(() => {
@@ -382,6 +391,16 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom, dateTo }: Ke
         <div className="text-sm text-gray-500">
           Обновлено: {getFormattedLastUpdate()}
         </div>
+      </div>
+
+      <div className="mb-4">
+        <DateRangePicker 
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          setDateFrom={setDateFrom}
+          setDateTo={setDateTo}
+          onUpdate={handleDateChange}
+        />
       </div>
 
       {dateWarning && (

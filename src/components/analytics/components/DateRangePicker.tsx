@@ -11,9 +11,10 @@ interface DateRangePickerProps {
   dateTo: Date;
   setDateFrom: (date: Date) => void;
   setDateTo: (date: Date) => void;
+  onUpdate?: () => void;
 }
 
-const DateRangePicker = ({ dateFrom, dateTo, setDateFrom, setDateTo }: DateRangePickerProps) => {
+const DateRangePicker = ({ dateFrom, dateTo, setDateFrom, setDateTo, onUpdate }: DateRangePickerProps) => {
   const renderDatePicker = (date: Date, onChange: (date: Date) => void, label: string) => (
     <Popover>
       <PopoverTrigger asChild>
@@ -34,16 +35,17 @@ const DateRangePicker = ({ dateFrom, dateTo, setDateFrom, setDateTo }: DateRange
           selected={date}
           onSelect={(date) => date && onChange(date)}
           initialFocus
+          className="pointer-events-auto"
         />
       </PopoverContent>
     </Popover>
   );
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4 mb-6">
+    <div className="flex flex-col sm:flex-row gap-4">
       {renderDatePicker(dateFrom, setDateFrom, "Выберите начальную дату")}
       {renderDatePicker(dateTo, setDateTo, "Выберите конечную дату")}
-      <Button>
+      <Button onClick={onUpdate}>
         Обновить
       </Button>
     </div>
