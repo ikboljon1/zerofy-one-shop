@@ -4,61 +4,65 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { 
-  KeywordSearchResponse, 
-  KeywordSearchStat, 
-  getSearchKeywordStatistics 
-} from "@/services/advertisingApi";
+import { KeywordStatistics, KeywordStat, getKeywordStatistics } from "@/services/advertisingApi";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, differenceInDays, subDays } from "date-fns";
 import { Search, Tag, TrendingUp, Eye, MousePointerClick, DollarSign, PercentIcon, Filter, AlertCircle, PlusCircle, MinusCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import DateRangePicker from "@/components/analytics/components/DateRangePicker";
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface KeywordStatisticsProps {
   campaignId: number;
   apiKey: string;
+  dateFrom: Date;
+  dateTo: Date;
 }
 
 // Extended type to include exclusion and performance status
-interface ExtendedKeywordStat extends KeywordSearchStat {
+interface ExtendedKeywordStat extends KeywordStat {
+  date: string;
   excluded: boolean;
   performance: 'profitable' | 'unprofitable' | 'neutral';
 }
 
-const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsProps) => {
-  const [keywordStats, setKeywordStats] = useState<KeywordSearchResponse | null>(null);
+const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateFrom, dateTo: initialDateTo }: KeywordStatisticsProps) => {
+  // Initialize with last 7 days
+  const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 6));
+  const [dateTo, setDateTo] = useState<Date>(new Date());
+  const [keywordStats, setKeywordStats] = useState<KeywordStatistics | null>(null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchInputValue, setSearchInputValue] = useState("");
-  const [sortField, setSortField] = useState<keyof KeywordSearchStat>("views");
+  const [sortField, setSortField] = useState<keyof KeywordStat>("views");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const { toast } = useToast();
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+  const [dateWarning, setDateWarning] = useState<string | null>(null);
   const [excludedKeywords, setExcludedKeywords] = useState<Set<string>>(new Set());
 
   // Calculate performance metrics for all keywords
   const processedKeywords = useMemo(() => {
-    if (!keywordStats || !keywordStats.stat) return [];
+    if (!keywordStats) return [];
 
-    // Filter out the "Всего по кампании" summary entry
-    const keywordEntries = keywordStats.stat.filter(stat => 
-      stat.keyword !== "Всего по кампании"
+    // Combine and flatten all keyword stats across days
+    const allKeywords = keywordStats.keywords.flatMap(day => 
+      day.stats.map(stat => ({
+        ...stat,
+        date: day.date,
+        excluded: excludedKeywords.has(stat.keyword),
+        performance: calculatePerformance(stat)
+      }))
     );
 
-    // Add performance metrics
-    return keywordEntries.map(stat => ({
-      ...stat,
-      excluded: excludedKeywords.has(stat.keyword),
-      performance: calculatePerformance(stat)
-    }));
+    return allKeywords;
   }, [keywordStats, excludedKeywords]);
 
   // Enhanced function to determine if a keyword is profitable
-  function calculatePerformance(stat: KeywordSearchStat): 'profitable' | 'unprofitable' | 'neutral' {
+  function calculatePerformance(stat: KeywordStat): 'profitable' | 'unprofitable' | 'neutral' {
     // High CTR with good number of clicks (very good)
     if (stat.ctr > 5 && stat.clicks > 20) {
       return 'profitable';
@@ -129,12 +133,20 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
     
     setLoading(true);
     
+    // Check date range
+    const diffDays = differenceInDays(dateTo, dateFrom);
+    if (diffDays > 7) {
+      setDateWarning("API ограничивает период до 7 дней. Будут показаны данные за последние 7 дней.");
+    } else {
+      setDateWarning(null);
+    }
+    
     try {
-      const data = await getSearchKeywordStatistics(apiKey, campaignId);
+      const data = await getKeywordStatistics(apiKey, campaignId, dateFrom, dateTo);
       setKeywordStats(data);
       setLastUpdate(new Date().toISOString());
       
-      if (data.stat && data.stat.length > 0) {
+      if (data.keywords && data.keywords.length > 0 && data.keywords.some(day => day.stats.length > 0)) {
         toast({
           title: "Данные обновлены",
           description: "Статистика по ключевым словам успешно загружена",
@@ -142,7 +154,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
       } else {
         toast({
           title: "Нет данных",
-          description: "Для данной кампании нет статистики по ключевым словам",
+          description: "За указанный период нет статистики по ключевым словам",
           variant: "destructive",
         });
       }
@@ -151,11 +163,15 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
       toast({
         variant: "destructive",
         title: "Ошибка",
-        description: error instanceof Error ? error.message : "Не удалось загрузить статистику по ключевым словам",
+        description: "Не удалось загрузить статистику по ключевым словам",
       });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDateChange = () => {
+    fetchData();
   };
 
   useEffect(() => {
@@ -164,7 +180,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
     }
   }, [campaignId, apiKey]);
 
-  const handleSort = (field: keyof KeywordSearchStat) => {
+  const handleSort = (field: keyof KeywordStat) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
@@ -180,7 +196,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
     return `${updateDate.toLocaleDateString('ru-RU')} ${updateDate.toLocaleTimeString('ru-RU')}`;
   };
 
-  const renderSortIcon = (field: keyof KeywordSearchStat) => {
+  const renderSortIcon = (field: keyof KeywordStat) => {
     if (sortField !== field) return null;
     return (
       <span className="ml-1 inline-block">
@@ -214,30 +230,26 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
   };
 
   const KeywordMetricsCard = () => {
-    if (!keywordStats || !keywordStats.stat || keywordStats.stat.length === 0) {
+    if (!keywordStats || keywordStats.keywords.length === 0) {
       return (
         <div className="p-4 text-center">
           <div className="flex flex-col items-center justify-center">
             <Tag className="w-10 h-10 text-gray-400 mb-2" />
             <h3 className="text-lg font-medium">Нет данных о ключевых словах</h3>
             <p className="text-gray-500 mt-1 text-sm">
-              Для этой кампании еще нет статистики по ключевым словам
+              Для этой кампании еще нет статистики по ключевым словам или указанному периоду
             </p>
           </div>
         </div>
       );
     }
 
-    // Find the campaign summary stats (has the keyword "Всего по кампании")
-    const summaryStats = keywordStats.stat.find(stat => stat.keyword === "Всего по кампании");
-    
-    // If no summary, use calculated totals
-    const totalViews = summaryStats?.views || processedKeywords.reduce((sum, stat) => sum + stat.views, 0);
-    const totalClicks = summaryStats?.clicks || processedKeywords.reduce((sum, stat) => sum + stat.clicks, 0);
-    const totalSum = summaryStats?.sum || processedKeywords.reduce((sum, stat) => sum + stat.sum, 0);
-    const avgCtr = summaryStats?.ctr || (totalViews > 0 ? (totalClicks / totalViews) * 100 : 0);
-    const uniqueKeywords = keywordStats.words?.keywords?.length || 
-                          new Set(processedKeywords.map(k => k.keyword)).size;
+    // Calculate totals
+    const totalViews = processedKeywords.reduce((sum, stat) => sum + stat.views, 0);
+    const totalClicks = processedKeywords.reduce((sum, stat) => sum + stat.clicks, 0);
+    const totalSum = processedKeywords.reduce((sum, stat) => sum + stat.sum, 0);
+    const avgCtr = totalViews > 0 ? (totalClicks / totalViews) * 100 : 0;
+    const uniqueKeywords = new Set(processedKeywords.map(k => k.keyword)).size;
 
     return (
       <div className="space-y-4">
@@ -252,7 +264,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
                 </div>
               </div>
               <p className="text-xs font-medium text-purple-600 dark:text-purple-400 mb-0.5">Ключевых слов</p>
-              <p className="text-base font-bold">{uniqueKeywords || 0}</p>
+              <p className="text-base font-bold">{uniqueKeywords}</p>
             </div>
           </div>
 
@@ -312,27 +324,6 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
             </div>
           </div>
         </div>
-
-        {/* Fixed search phrases */}
-        {keywordStats.words?.pluse && keywordStats.words.pluse.length > 0 && (
-          <Card className="border-0 shadow-md rounded-lg overflow-hidden">
-            <div className="p-3 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/40 dark:to-blue-950/40">
-              <h3 className="text-base font-semibold flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-purple-500" />
-                <span>Фиксированные фразы</span>
-              </h3>
-            </div>
-            <CardContent className="p-4">
-              <div className="flex flex-wrap gap-2">
-                {keywordStats.words.pluse.map((phrase, index) => (
-                  <Badge key={index} className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 px-2 py-1">
-                    {phrase}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Top Keywords */}
         <Card className="border-0 shadow-md rounded-lg overflow-hidden">
@@ -453,11 +444,8 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
                   >
                     Затраты {renderSortIcon("sum")}
                   </TableHead>
-                  <TableHead 
-                    className="text-right cursor-pointer py-2 px-2 text-xs w-16"
-                    onClick={() => handleSort("frq")}
-                  >
-                    Частота {renderSortIcon("frq")}
+                  <TableHead className="text-right py-2 px-2 text-xs w-20">
+                    Дата
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -488,7 +476,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
                       <TableCell className="py-1.5 px-2 text-right text-sm">{stat.clicks.toLocaleString('ru-RU')}</TableCell>
                       <TableCell className="py-1.5 px-2 text-right text-sm">{stat.ctr.toFixed(2)}%</TableCell>
                       <TableCell className="py-1.5 px-2 text-right text-sm">{stat.sum.toLocaleString('ru-RU')}</TableCell>
-                      <TableCell className="py-1.5 px-2 text-right text-sm">{stat.frq.toFixed(1)}</TableCell>
+                      <TableCell className="py-1.5 px-2 text-right text-xs text-gray-500">{format(new Date(stat.date), 'dd.MM')}</TableCell>
                     </TableRow>
                   ))
                 ) : (
@@ -533,6 +521,23 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
           Обновлено: {getFormattedLastUpdate()}
         </div>
       </div>
+
+      <div className="mb-3">
+        <DateRangePicker 
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          setDateFrom={setDateFrom}
+          setDateTo={setDateTo}
+          onUpdate={handleDateChange}
+        />
+      </div>
+
+      {dateWarning && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-2 flex items-start gap-2">
+          <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-700 dark:text-amber-300">{dateWarning}</p>
+        </div>
+      )}
 
       <Card className="border-0 shadow-lg overflow-hidden rounded-xl">
         <div 
