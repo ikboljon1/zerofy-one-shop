@@ -29,7 +29,8 @@ import {
   Package,
   BarChart3,
   CreditCard,
-  Clock
+  Clock,
+  Search
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -40,6 +41,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { Progress } from "./ui/progress";
 import ProductStatsTable from "./advertising/ProductStatsTable";
 import { ProductStats } from "@/services/advertisingApi";
+import KeywordStatisticsComponent from "./advertising/KeywordStatistics";
 
 interface CampaignDetailsProps {
   campaignId: number;
@@ -557,7 +559,7 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
             <div className="bg-white/90 dark:bg-gray-800/60 backdrop-blur-sm p-4 border-b border-gray-200 dark:border-gray-700">
               <h4 className="text-lg font-semibold text-blue-700 dark:text-blue-400 flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
-                Статистика по дням
+                Статис��ика по дням
               </h4>
             </div>
             <div className="overflow-x-auto">
@@ -844,19 +846,22 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
             }}
           >
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="w-full grid grid-cols-2 bg-background/90 dark:bg-gray-900/70 backdrop-blur-sm rounded-xl p-1">
-                <TabsTrigger value="costs" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-rose-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
+              <TabsList className="w-full grid grid-cols-3 bg-background/90 dark:bg-gray-900/70 backdrop-blur-sm rounded-xl p-1">
+                <TabsTrigger value="stats" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-rose-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
                   Затраты
                 </TabsTrigger>
                 <TabsTrigger value="payments" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
                   Пополнения
+                </TabsTrigger>
+                <TabsTrigger value="keywords" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
+                  Ключевые слова
                 </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
           
           <AnimatePresence mode="wait">
-            {activeTab === "costs" && (
+            {activeTab === "stats" && (
               <motion.div
                 key="costs"
                 initial={{ opacity: 0, y: 20 }}
@@ -877,6 +882,25 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
                 transition={{ duration: 0.3 }}
               >
                 {renderPaymentHistory()}
+              </motion.div>
+            )}
+
+            {activeTab === "keywords" && (
+              <motion.div
+                key="keywords"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="p-4">
+                  <KeywordStatisticsComponent 
+                    campaignId={campaignId}
+                    apiKey={apiKey}
+                    dateFrom={new Date(new Date().setDate(new Date().getDate() - 7))}
+                    dateTo={new Date()}
+                  />
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

@@ -1,4 +1,3 @@
-
 import { AxiosError } from 'axios';
 import axios from 'axios';
 import { getStatusString, getTypeString } from '@/components/analytics/data/productAdvertisingData';
@@ -39,7 +38,6 @@ interface AdvertPayment {
   type: string;
 }
 
-// Campaign Count API Response
 interface CampaignCountResponse {
   adverts: CampaignGroup[];
   all: number;
@@ -57,7 +55,6 @@ interface CampaignInfo {
   changeTime: string;
 }
 
-// New interfaces for the fullstats API
 export interface CampaignFullStats {
   views: number;
   clicks: number;
@@ -88,7 +85,7 @@ interface DayStats {
   shks: number;
   sum_price: number;
   apps: AppStats[];
-  nm?: ProductStats[]; // Добавляем информацию о товарах
+  nm?: ProductStats[];
 }
 
 interface AppStats {
@@ -105,7 +102,6 @@ interface AppStats {
   appType?: number;
 }
 
-// Новый интерфейс для статистики по товарам
 export interface ProductStats {
   views: number;
   clicks: number;
@@ -127,10 +123,26 @@ interface BoosterStats {
   avg_position: number;
 }
 
-// Campaign statistics request
 export interface CampaignStatsRequest {
   id: number;
   dates: string[];
+}
+
+export interface KeywordStatistics {
+  keywords: KeywordStatisticsDay[];
+}
+
+export interface KeywordStatisticsDay {
+  date: string;
+  stats: KeywordStat[];
+}
+
+export interface KeywordStat {
+  clicks: number;
+  ctr: number;
+  keyword: string;
+  sum: number;
+  views: number;
 }
 
 const createApiInstance = (apiKey: string) => {
@@ -149,7 +161,6 @@ const handleApiError = (error: unknown) => {
       throw new Error("Ошибка авторизации. Пожалуйста, проверьте API ключ");
     }
     if (error.response?.status === 404) {
-      // Возвращаем пустой массив вместо ошибки, если данные не найдены
       return [];
     }
     if (error.response?.status === 429) {
@@ -226,7 +237,6 @@ export const getAdvertPayments = async (dateFrom: Date, dateTo: Date, apiKey: st
   }
 };
 
-// New function to get full campaign statistics
 export const getCampaignFullStats = async (
   apiKey: string,
   campaignIds: number[], 
@@ -236,14 +246,12 @@ export const getCampaignFullStats = async (
   try {
     const api = createApiInstance(apiKey);
     
-    // Prepare request payload
     const payload: CampaignStatsRequest[] = campaignIds.map(id => {
       const request: CampaignStatsRequest = {
         id,
         dates: []
       };
       
-      // Add date range if provided
       if (dateFrom && dateTo) {
         const dates: string[] = [];
         const currentDate = new Date(dateFrom);
@@ -267,25 +275,48 @@ export const getCampaignFullStats = async (
   }
 };
 
-// Fetch all campaigns with their statuses and types
+export const getKeywordStatistics = async (
+  apiKey: string,
+  campaignId: number, 
+  dateFrom: Date, 
+  dateTo: Date
+): Promise<KeywordStatistics> => {
+  try {
+    const api = createApiInstance(apiKey);
+    
+    const fromFormatted = dateFrom.toISOString().split('T')[0];
+    const toFormatted = dateTo.toISOString().split('T')[0];
+    
+    const params = {
+      advert_id: campaignId,
+      from: fromFormatted,
+      to: toFormatted
+    };
+    
+    const response = await api.get(`/v0/stats/keywords`, { params });
+    return response.data || { keywords: [] };
+  } catch (error) {
+    console.error('Error fetching keyword statistics:', error);
+    return { keywords: [] };
+  }
+};
+
 export const getAllCampaigns = async (apiKey: string): Promise<Campaign[]> => {
   try {
     const api = createApiInstance(apiKey);
     const response = await api.get<CampaignCountResponse>(`/v1/promotion/count`);
     
-    // If no data, return empty array
     if (!response.data?.adverts) {
       return [];
     }
     
-    // Flatten the groups and map to our Campaign interface
     const campaigns: Campaign[] = [];
     
     response.data.adverts.forEach(group => {
       group.advert_list.forEach(campaign => {
         campaigns.push({
           advertId: campaign.advertId,
-          campName: `Кампания ${campaign.advertId}`, // Default name, will be updated later
+          campName: `Кампания ${campaign.advertId}`,
           status: getStatusString(group.status),
           type: getTypeString(group.type),
           numericStatus: group.status,
@@ -295,7 +326,6 @@ export const getAllCampaigns = async (apiKey: string): Promise<Campaign[]> => {
       });
     });
     
-    // Sort by change time (newest first)
     return campaigns.sort((a, b) => 
       new Date(b.changeTime).getTime() - new Date(a.changeTime).getTime()
     );
@@ -305,13 +335,12 @@ export const getAllCampaigns = async (apiKey: string): Promise<Campaign[]> => {
   }
 };
 
-// Campaign interface used throughout the application
 export interface Campaign {
   advertId: number;
   campName: string;
   status: 'active' | 'paused' | 'archived' | 'ready' | 'completed';
   type: 'auction' | 'automatic';
-  numericStatus?: number; // Original numeric status from API
-  numericType?: number;   // Original numeric type from API
-  changeTime?: string;    // Last change time
+  numericStatus?: number;
+  numericType?: number;
+  changeTime?: string;
 }
