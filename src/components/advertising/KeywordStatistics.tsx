@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -22,7 +21,6 @@ interface KeywordStatisticsProps {
   dateTo: Date;
 }
 
-// Extended type to include exclusion and performance status
 interface ExtendedKeywordStat extends KeywordStat {
   date: string;
   excluded: boolean;
@@ -30,7 +28,6 @@ interface ExtendedKeywordStat extends KeywordStat {
 }
 
 const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateFrom, dateTo: initialDateTo }: KeywordStatisticsProps) => {
-  // Initialize with last 7 days
   const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 6));
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const [keywordStats, setKeywordStats] = useState<KeywordStatistics | null>(null);
@@ -44,11 +41,9 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
   const [dateWarning, setDateWarning] = useState<string | null>(null);
   const [excludedKeywords, setExcludedKeywords] = useState<Set<string>>(new Set());
 
-  // Calculate performance metrics for all keywords
   const processedKeywords = useMemo(() => {
     if (!keywordStats) return [];
 
-    // Combine and flatten all keyword stats across days
     const allKeywords = keywordStats.keywords.flatMap(day => 
       day.stats.map(stat => ({
         ...stat,
@@ -61,36 +56,28 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
     return allKeywords;
   }, [keywordStats, excludedKeywords]);
 
-  // Enhanced function to determine if a keyword is profitable
   function calculatePerformance(stat: KeywordStat): 'profitable' | 'unprofitable' | 'neutral' {
-    // High CTR with good number of clicks (very good)
     if (stat.ctr > 5 && stat.clicks > 20) {
       return 'profitable';
     }
-    // Good CTR with decent clicks
     else if (stat.ctr > 3 || (stat.clicks > 10 && stat.sum / stat.clicks < 15)) {
       return 'profitable';
     }
-    // High views with very poor CTR (very bad)
     else if (stat.views > 1000 && stat.ctr < 0.5) {
       return 'unprofitable';
     }
-    // High spending with very low CTR
     else if ((stat.sum > 100 && stat.ctr < 1) || (stat.sum > 200 && stat.clicks < 10)) {
       return 'unprofitable';
     }
-    // Neutral cases
     return 'neutral';
   }
 
-  // Filter by search term
   const filteredKeywords = useMemo(() => {
     return processedKeywords.filter(
       stat => stat.keyword.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [processedKeywords, searchTerm]);
 
-  // Sort the filtered keywords
   const sortedKeywords = useMemo(() => {
     return [...filteredKeywords].sort((a, b) => {
       if (sortDirection === "asc") {
@@ -101,7 +88,6 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
     });
   }, [filteredKeywords, sortField, sortDirection]);
 
-  // Toggle keyword exclusion
   const toggleKeywordExclusion = (keyword: string) => {
     setExcludedKeywords(prev => {
       const newSet = new Set(prev);
@@ -114,12 +100,10 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
     });
   };
 
-  // Handle search input with debounce
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchInputValue(value);
     
-    // Apply the search term after a small delay to prevent re-renders on each keystroke
     const timeoutId = setTimeout(() => {
       setSearchTerm(value);
     }, 300);
@@ -128,12 +112,10 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
   };
 
   const fetchData = async () => {
-    // Check if already loading to prevent multiple fetches
     if (loading) return;
     
     setLoading(true);
     
-    // Check date range
     const diffDays = differenceInDays(dateTo, dateFrom);
     if (diffDays > 7) {
       setDateWarning("API ограничивает период до 7 дней. Будут показаны данные за последние 7 дней.");
@@ -205,11 +187,10 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
     );
   };
 
-  // Get CSS class for keyword performance 
   const getKeywordPerformanceClass = (performance: 'profitable' | 'unprofitable' | 'neutral') => {
     switch (performance) {
       case 'profitable':
-        return "text-blue-600 dark:text-blue-400 font-medium";
+        return "text-green-600 dark:text-green-400 font-medium";
       case 'unprofitable':
         return "text-red-600 dark:text-red-400 font-medium";
       default:
@@ -217,11 +198,10 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
     }
   };
 
-  // Get icon for keyword performance
   const getKeywordPerformanceIcon = (performance: 'profitable' | 'unprofitable' | 'neutral') => {
     switch (performance) {
       case 'profitable':
-        return <PlusCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />;
+        return <PlusCircle className="h-4 w-4 text-green-600 dark:text-green-400" />;
       case 'unprofitable':
         return <MinusCircle className="h-4 w-4 text-red-600 dark:text-red-400" />;
       default:
@@ -244,7 +224,6 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
       );
     }
 
-    // Calculate totals
     const totalViews = processedKeywords.reduce((sum, stat) => sum + stat.views, 0);
     const totalClicks = processedKeywords.reduce((sum, stat) => sum + stat.clicks, 0);
     const totalSum = processedKeywords.reduce((sum, stat) => sum + stat.sum, 0);
@@ -254,7 +233,6 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-          {/* Metric 1: Total Keywords */}
           <div className="rounded-lg p-3 bg-white/80 dark:bg-gray-800/40 backdrop-blur-sm border border-purple-100 dark:border-purple-900/30 shadow-sm overflow-hidden relative">
             <div className="w-1 h-full absolute left-0 top-0 bg-gradient-to-b from-purple-400 to-purple-600 rounded-l-lg"></div>
             <div className="flex flex-col pl-2">
@@ -268,7 +246,6 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
             </div>
           </div>
 
-          {/* Metric 2: Total Views */}
           <div className="rounded-lg p-3 bg-white/80 dark:bg-gray-800/40 backdrop-blur-sm border border-blue-100 dark:border-blue-900/30 shadow-sm overflow-hidden relative">
             <div className="w-1 h-full absolute left-0 top-0 bg-gradient-to-b from-blue-400 to-blue-600 rounded-l-lg"></div>
             <div className="flex flex-col pl-2">
@@ -282,7 +259,6 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
             </div>
           </div>
 
-          {/* Metric 3: Total Clicks */}
           <div className="rounded-lg p-3 bg-white/80 dark:bg-gray-800/40 backdrop-blur-sm border border-green-100 dark:border-green-900/30 shadow-sm overflow-hidden relative">
             <div className="w-1 h-full absolute left-0 top-0 bg-gradient-to-b from-green-400 to-green-600 rounded-l-lg"></div>
             <div className="flex flex-col pl-2">
@@ -296,7 +272,6 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
             </div>
           </div>
 
-          {/* Metric 4: Average CTR */}
           <div className="rounded-lg p-3 bg-white/80 dark:bg-gray-800/40 backdrop-blur-sm border border-amber-100 dark:border-amber-900/30 shadow-sm overflow-hidden relative">
             <div className="w-1 h-full absolute left-0 top-0 bg-gradient-to-b from-amber-400 to-amber-600 rounded-l-lg"></div>
             <div className="flex flex-col pl-2">
@@ -310,7 +285,6 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
             </div>
           </div>
 
-          {/* Metric 5: Total Cost */}
           <div className="rounded-lg p-3 bg-white/80 dark:bg-gray-800/40 backdrop-blur-sm border border-red-100 dark:border-red-900/30 shadow-sm overflow-hidden relative">
             <div className="w-1 h-full absolute left-0 top-0 bg-gradient-to-b from-red-400 to-red-600 rounded-l-lg"></div>
             <div className="flex flex-col pl-2">
@@ -325,7 +299,6 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
           </div>
         </div>
 
-        {/* Top Keywords */}
         <Card className="border-0 shadow-md rounded-lg overflow-hidden">
           <div className="p-3 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/40 dark:to-blue-950/40">
             <h3 className="text-base font-semibold flex items-center gap-2">
@@ -336,7 +309,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
           <CardContent className="p-4">
             <div className="space-y-4">
               {processedKeywords
-                .filter(stat => !stat.excluded) // Show only non-excluded keywords
+                .filter(stat => !stat.excluded)
                 .sort((a, b) => b.views - a.views)
                 .slice(0, 5)
                 .map((stat, index) => (
@@ -361,7 +334,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
                       value={(stat.views / (processedKeywords[0]?.views || 1)) * 100} 
                       className={`h-1.5 ${
                         stat.performance === 'profitable' 
-                          ? 'bg-blue-100 dark:bg-blue-900/30' 
+                          ? 'bg-green-100 dark:bg-green-900/30' 
                           : stat.performance === 'unprofitable' 
                             ? 'bg-red-100 dark:bg-red-900/30' 
                             : 'bg-purple-100 dark:bg-purple-900/30'
