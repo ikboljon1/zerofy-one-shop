@@ -1,3 +1,4 @@
+
 import { AxiosError } from 'axios';
 import axios from 'axios';
 
@@ -37,6 +38,65 @@ interface AdvertPayment {
   type: string;
 }
 
+// New interfaces for the fullstats API
+export interface CampaignFullStats {
+  views: number;
+  clicks: number;
+  ctr: number;
+  cpc: number;
+  sum: number;
+  atbs: number;
+  orders: number;
+  cr: number;
+  shks: number;
+  sum_price: number;
+  dates: string[];
+  days: DayStats[];
+  boosterStats?: BoosterStats[];
+  advertId: number;
+}
+
+interface DayStats {
+  date: string;
+  views: number;
+  clicks: number;
+  ctr: number;
+  cpc: number;
+  sum: number;
+  atbs: number;
+  orders: number;
+  cr: number;
+  shks: number;
+  sum_price: number;
+  apps: AppStats[];
+}
+
+interface AppStats {
+  views: number;
+  clicks: number;
+  ctr: number;
+  cpc: number;
+  sum: number;
+  atbs: number;
+  orders: number;
+  cr: number;
+  shks: number;
+  sum_price: number;
+  appType?: number;
+}
+
+interface BoosterStats {
+  date: string;
+  nm: number;
+  avg_position: number;
+}
+
+// Campaign statistics request
+export interface CampaignStatsRequest {
+  id: number;
+  dates: string[];
+}
+
 const createApiInstance = (apiKey: string) => {
   return axios.create({
     baseURL: BASE_URL,
@@ -55,6 +115,9 @@ const handleApiError = (error: unknown) => {
     if (error.response?.status === 404) {
       // Возвращаем пустой массив вместо ошибки, если данные не найдены
       return [];
+    }
+    if (error.response?.status === 429) {
+      throw new Error("Превышен лимит запросов к API. Пожалуйста, повторите позже");
     }
     throw new Error(error.response?.data?.message || "Произошла ошибка при запросе к API");
   }
@@ -121,6 +184,47 @@ export const getAdvertPayments = async (dateFrom: Date, dateTo: Date, apiKey: st
     };
     
     const response = await api.get(`/v1/payments`, { params });
+    return response.data || [];
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+// New function to get full campaign statistics
+export const getCampaignFullStats = async (
+  campaignIds: number[], 
+  dateFrom?: Date, 
+  dateTo?: Date, 
+  apiKey: string
+): Promise<CampaignFullStats[]> => {
+  try {
+    const api = createApiInstance(apiKey);
+    
+    // Prepare request payload
+    const payload: CampaignStatsRequest[] = campaignIds.map(id => {
+      const request: CampaignStatsRequest = {
+        id,
+        dates: []
+      };
+      
+      // Add date range if provided
+      if (dateFrom && dateTo) {
+        const dates: string[] = [];
+        const currentDate = new Date(dateFrom);
+        const endDate = new Date(dateTo);
+        
+        while (currentDate <= endDate) {
+          dates.push(currentDate.toISOString().split('T')[0]);
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+        
+        request.dates = dates;
+      }
+      
+      return request;
+    });
+    
+    const response = await api.post(`/v2/fullstats`, payload);
     return response.data || [];
   } catch (error) {
     return handleApiError(error);

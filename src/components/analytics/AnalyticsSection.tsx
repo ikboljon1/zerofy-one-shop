@@ -20,12 +20,14 @@ import DeductionsChart from "./components/DeductionsChart";
 import PieChartCard from "./components/PieChartCard";
 import ExpenseBreakdown from "./components/ExpenseBreakdown";
 import ProductList from "./components/ProductList";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const AnalyticsSection = () => {
   // Используем демонстрационные данные
   const data = demoData;
   const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
+  const isMobile = useIsMobile();
 
   return (
     <div className="space-y-8">
