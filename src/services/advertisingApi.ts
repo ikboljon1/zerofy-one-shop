@@ -1,4 +1,3 @@
-
 import { AxiosError } from 'axios';
 import axios from 'axios';
 
@@ -192,10 +191,10 @@ export const getAdvertPayments = async (dateFrom: Date, dateTo: Date, apiKey: st
 
 // New function to get full campaign statistics
 export const getCampaignFullStats = async (
+  apiKey: string,
   campaignIds: number[], 
   dateFrom?: Date, 
-  dateTo?: Date, 
-  apiKey: string
+  dateTo?: Date
 ): Promise<CampaignFullStats[]> => {
   try {
     const api = createApiInstance(apiKey);
