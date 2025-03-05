@@ -33,6 +33,7 @@ interface ExtendedKeywordStat {
   frq: number;
   ctr: number;
   cpc: number;
+  duration: number;
   sum: number;
   excluded: boolean;
   performance: 'profitable' | 'unprofitable' | 'neutral';
@@ -54,7 +55,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
   const processedKeywords = useMemo(() => {
     if (!keywordStats || !keywordStats.stat) return [];
 
-    // Combine data from both stat array and keywords array
+    // Remove the summary item "Всего по кампании"
     const statKeywords = keywordStats.stat.filter(stat => 
       stat.keyword !== "Всего по кампании"
     );
@@ -65,6 +66,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
       keywordsMap.set(k.keyword, { count: k.count, fixed: k.fixed });
     });
 
+    // Combine data from both stat array and keywords array
     return statKeywords.map(stat => {
       const keywordInfo = keywordsMap.get(stat.keyword);
       
@@ -81,7 +83,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
   function calculatePerformance(stat: any): 'profitable' | 'unprofitable' | 'neutral' {
     if (stat.ctr > 5 && stat.clicks > 20) {
       return 'profitable';
-    } else if (stat.ctr > 3 || (stat.clicks > 10 && stat.sum / stat.clicks < 15)) {
+    } else if (stat.ctr > 3 || (stat.clicks > 10 && stat.cpc < 15)) {
       return 'profitable';
     } else if (stat.views > 1000 && stat.ctr < 0.5) {
       return 'unprofitable';
@@ -227,6 +229,17 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
     }
   };
 
+  const formatDuration = (seconds: number) => {
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    
+    if (days > 0) {
+      return `${days} д ${hours} ч`;
+    }
+    
+    return `${hours} ч ${Math.floor((seconds % 3600) / 60)} м`;
+  };
+
   const KeywordMetricsCard = () => {
     if (!keywordStats || !keywordStats.stat || keywordStats.stat.length === 0) {
       return (
@@ -259,6 +272,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
     const avgCtr = summaryStats?.ctr || (totalViews > 0 ? (totalClicks / totalViews) * 100 : 0);
     const uniqueKeywords = keywordStats.words?.keywords?.length || 
                           new Set(processedKeywords.map(k => k.keyword)).size;
+    const avgCpc = summaryStats?.cpc || (totalClicks > 0 ? totalSum / totalClicks : 0);
 
     return (
       <div className="space-y-4">
@@ -329,6 +343,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
           </div>
         </div>
 
+        {/* Fixed phrases section */}
         {keywordStats.words?.pluse && keywordStats.words.pluse.length > 0 && (
           <Card className="border-0 shadow-md rounded-lg overflow-hidden">
             <div className="p-3 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/40 dark:to-blue-950/40">
@@ -349,6 +364,49 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
           </Card>
         )}
 
+        {/* Phrase match section */}
+        {keywordStats.words?.phrase && keywordStats.words.phrase.length > 0 && (
+          <Card className="border-0 shadow-md rounded-lg overflow-hidden">
+            <div className="p-3 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-950/40 dark:to-green-950/40">
+              <h3 className="text-base font-semibold flex items-center gap-2">
+                <Filter className="h-4 w-4 text-blue-500" />
+                <span>Фразовое соответствие</span>
+              </h3>
+            </div>
+            <CardContent className="p-4">
+              <div className="flex flex-wrap gap-2">
+                {keywordStats.words.phrase.map((phrase, index) => (
+                  <Badge key={index} variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-1">
+                    {phrase}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Excluded keywords section */}
+        {keywordStats.words?.excluded && keywordStats.words.excluded.length > 0 && (
+          <Card className="border-0 shadow-md rounded-lg overflow-hidden">
+            <div className="p-3 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-950/40 dark:to-orange-950/40">
+              <h3 className="text-base font-semibold flex items-center gap-2">
+                <MinusCircle className="h-4 w-4 text-red-500" />
+                <span>Исключенные фразы</span>
+              </h3>
+            </div>
+            <CardContent className="p-4">
+              <div className="flex flex-wrap gap-2">
+                {keywordStats.words.excluded.map((phrase, index) => (
+                  <Badge key={index} variant="outline" className="bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 px-2 py-1">
+                    {phrase}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Top keywords section */}
         <Card className="border-0 shadow-md rounded-lg overflow-hidden">
           <div className="p-3 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/40 dark:to-blue-950/40">
             <h3 className="text-base font-semibold flex items-center gap-2">
@@ -393,6 +451,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
                     <div className="flex justify-between text-xs text-gray-500">
                       <span>{stat.clicks.toLocaleString('ru-RU')} кл.</span>
                       <span>{stat.ctr.toFixed(2)}%</span>
+                      <span>{stat.cpc.toFixed(2)} ₽</span>
                       <span>{stat.sum.toLocaleString('ru-RU')} ₽</span>
                     </div>
                   </div>
@@ -480,6 +539,12 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
                     Частота {renderSortIcon("frq")}
                   </TableHead>
                   <TableHead 
+                    className="text-right cursor-pointer py-2 px-2 text-xs w-24"
+                    onClick={() => handleSort("duration")}
+                  >
+                    Длит. {renderSortIcon("duration")}
+                  </TableHead>
+                  <TableHead 
                     className="text-center py-2 px-2 text-xs w-16"
                   >
                     Фикс.
@@ -512,9 +577,10 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
                       <TableCell className="py-1.5 px-2 text-right text-sm">{stat.views.toLocaleString('ru-RU')}</TableCell>
                       <TableCell className="py-1.5 px-2 text-right text-sm">{stat.clicks.toLocaleString('ru-RU')}</TableCell>
                       <TableCell className="py-1.5 px-2 text-right text-sm">{stat.ctr.toFixed(2)}%</TableCell>
-                      <TableCell className="py-1.5 px-2 text-right text-sm">{stat.cpc ? stat.cpc.toFixed(2) : '0.00'} ₽</TableCell>
+                      <TableCell className="py-1.5 px-2 text-right text-sm">{stat.cpc.toFixed(2)} ₽</TableCell>
                       <TableCell className="py-1.5 px-2 text-right text-sm">{stat.sum.toLocaleString('ru-RU')} ₽</TableCell>
                       <TableCell className="py-1.5 px-2 text-right text-sm">{stat.frq.toFixed(1)}</TableCell>
+                      <TableCell className="py-1.5 px-2 text-right text-sm">{formatDuration(stat.duration)}</TableCell>
                       <TableCell className="py-1.5 px-2 text-center text-sm">
                         {stat.fixed && (
                           <Badge variant="outline" className="bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 text-xs px-1 py-0">
@@ -526,7 +592,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-20 text-center">
+                    <TableCell colSpan={10} className="h-20 text-center">
                       {loading ? (
                         <div className="flex justify-center items-center">
                           <div className="w-6 h-6 border-2 border-t-blue-500 border-blue-200 rounded-full animate-spin"></div>
