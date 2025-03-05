@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag, Loader2 } from "lucide-react";
@@ -18,8 +17,7 @@ import { getAdvertCosts, getAdvertBalance, getAdvertPayments } from "@/services/
 
 import { 
   demoData, 
-  penaltiesData, 
-  returnsData, 
+  penaltiesData,
   deductionsTimelineData,
   advertisingData
 } from "./data/demoData";
@@ -90,7 +88,7 @@ const AnalyticsSection = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState<AnalyticsData>(demoData);
   const [penalties, setPenalties] = useState(penaltiesData);
-  const [returns, setReturns] = useState(returnsData);
+  const [returns, setReturns] = useState<Array<{name: string, value: number}>>([]);
   const [deductionsTimeline, setDeductionsTimeline] = useState(deductionsTimelineData);
   const [productAdvertisingData, setProductAdvertisingData] = useState<Array<{name: string, value: number}>>([]);
   const [advertisingBreakdown, setAdvertisingBreakdown] = useState<AdvertisingBreakdown>({
@@ -131,10 +129,10 @@ const AnalyticsSection = () => {
         setData(parsedData.data);
         setPenalties(parsedData.penalties);
         
-        if (parsedData.data.productReturns && parsedData.data.productReturns.length > 0) {
-          setReturns(parsedData.data.productReturns);
+        if (parsedData.returns && parsedData.returns.length > 0) {
+          setReturns(parsedData.returns);
         } else {
-          setReturns(returnsData);
+          setReturns([]);
         }
         
         setDeductionsTimeline(parsedData.deductionsTimeline);
@@ -242,9 +240,10 @@ const AnalyticsSection = () => {
         
         setData(modifiedData);
         
-        // Обновляем данные о возвратах из API
         if (statsData.productReturns && statsData.productReturns.length > 0) {
           setReturns(statsData.productReturns);
+        } else {
+          setReturns([]);
         }
         
         const newDeductionsTimeline = statsData.dailySales.map((day: any) => {
@@ -272,6 +271,7 @@ const AnalyticsSection = () => {
         description: "Не удалось загрузить аналитические данные",
         variant: "destructive"
       });
+      setReturns([]);
     } finally {
       setIsLoading(false);
     }
@@ -284,12 +284,14 @@ const AnalyticsSection = () => {
       
       if (!hasStoredData) {
         setProductAdvertisingData([]);
+        setReturns([]);
         fetchData();
       } else {
         setIsLoading(false);
       }
     } else {
       setProductAdvertisingData([]);
+      setReturns([]);
       setIsLoading(false);
     }
   }, []);

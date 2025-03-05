@@ -95,7 +95,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
         { subject_name: "Лонгсливы", quantity: 3 },
         { subject_name: "Костюмы спортивные", quantity: 1 }
       ],
-      // Добавляем реальные данные по возвратам, которые будут формироваться из ответа API
+      // Real return data from API - this will be populated with actual data
       productReturns: [
         { name: "Костюм женский спортивный", value: 12000 },
         { name: "Платье летнее", value: 8500 },
