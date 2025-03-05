@@ -1,4 +1,3 @@
-
 import { format, formatISO } from "date-fns";
 
 // Типы данных
@@ -28,6 +27,7 @@ export interface ProductStats {
   cr: number;
   cpc: number;
   sum_price: number;
+  name?: string; // Add optional name property
 }
 
 export interface KeywordStats {
