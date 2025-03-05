@@ -1,3 +1,4 @@
+<lov-code>
 import { Card, CardContent } from "./ui/card";
 import { useEffect, useState } from "react";
 import { 
@@ -690,4 +691,4 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
                           <span className="font-bold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-500">
                             {payment.sum.toLocaleString('ru-RU')} ₽
                           </span>
-                        </div>
+                        
