@@ -27,6 +27,9 @@ import {
   advertisingData
 } from "./data/demoData";
 
+// Константы для хранения данных
+const ANALYTICS_STORAGE_KEY = 'marketplace_analytics';
+
 // Модифицированный интерфейс для демо данных, чтобы соответствовать используемым полям
 interface AnalyticsData {
   currentPeriod: {
@@ -72,6 +75,19 @@ interface AdvertisingBreakdown {
   banner: number;
 }
 
+// Структура для хранения всех данных аналитики
+interface StoredAnalyticsData {
+  storeId: string;
+  dateFrom: string;
+  dateTo: string;
+  data: AnalyticsData;
+  penalties: Array<{name: string, value: number}>;
+  returns: Array<{name: string, value: number}>;
+  deductionsTimeline: Array<{date: string, logistic: number, storage: number, penalties: number}>;
+  productAdvertisingData: Array<{name: string, value: number}>;
+  advertisingBreakdown: AdvertisingBreakdown;
+}
+
 const AnalyticsSection = () => {
   const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
@@ -91,6 +107,48 @@ const AnalyticsSection = () => {
   const getSelectedStore = () => {
     const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
     return stores.find((store: any) => store.isSelected) || null;
+  };
+
+  // Сохранение данных аналитики в localStorage
+  const saveAnalyticsData = (storeId: string) => {
+    const analyticsData: StoredAnalyticsData = {
+      storeId,
+      dateFrom: dateFrom.toISOString(),
+      dateTo: dateTo.toISOString(),
+      data,
+      penalties,
+      returns,
+      deductionsTimeline,
+      productAdvertisingData,
+      advertisingBreakdown
+    };
+    
+    localStorage.setItem(`${ANALYTICS_STORAGE_KEY}_${storeId}`, JSON.stringify(analyticsData));
+    console.log('Analytics data saved to localStorage');
+  };
+
+  // Загрузка данных аналитики из localStorage
+  const loadStoredAnalyticsData = (storeId: string) => {
+    const storedData = localStorage.getItem(`${ANALYTICS_STORAGE_KEY}_${storeId}`);
+    if (storedData) {
+      try {
+        const parsedData: StoredAnalyticsData = JSON.parse(storedData);
+        setDateFrom(new Date(parsedData.dateFrom));
+        setDateTo(new Date(parsedData.dateTo));
+        setData(parsedData.data);
+        setPenalties(parsedData.penalties);
+        setReturns(parsedData.returns);
+        setDeductionsTimeline(parsedData.deductionsTimeline);
+        setProductAdvertisingData(parsedData.productAdvertisingData);
+        setAdvertisingBreakdown(parsedData.advertisingBreakdown);
+        console.log('Analytics data loaded from localStorage');
+        return true;
+      } catch (error) {
+        console.error('Error parsing stored analytics data:', error);
+        return false;
+      }
+    }
+    return false;
   };
 
   const fetchData = async () => {
@@ -214,6 +272,9 @@ const AnalyticsSection = () => {
         });
         
         setDeductionsTimeline(newDeductionsTimeline);
+        
+        // Сохраняем данные в localStorage
+        saveAnalyticsData(selectedStore.id);
       }
     } catch (error) {
       console.error('Error fetching analytics data:', error);
@@ -229,7 +290,20 @@ const AnalyticsSection = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    const selectedStore = getSelectedStore();
+    if (selectedStore) {
+      // Пытаемся загрузить данные из localStorage
+      const hasStoredData = loadStoredAnalyticsData(selectedStore.id);
+      
+      // Если данных нет в localStorage, делаем запрос к API
+      if (!hasStoredData) {
+        fetchData();
+      } else {
+        setIsLoading(false);
+      }
+    } else {
+      setIsLoading(false);
+    }
   }, []);
 
   const handleDateChange = () => {
