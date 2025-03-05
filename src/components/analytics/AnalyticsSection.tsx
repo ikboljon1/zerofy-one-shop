@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag, Loader2 } from "lucide-react";
@@ -94,7 +95,7 @@ const AnalyticsSection = () => {
   const [penalties, setPenalties] = useState(penaltiesData);
   const [returns, setReturns] = useState(returnsData);
   const [deductionsTimeline, setDeductionsTimeline] = useState(deductionsTimelineData);
-  const [productAdvertisingData, setProductAdvertisingData] = useState<Array<{name: string, value: number}>>(advertisingData);
+  const [productAdvertisingData, setProductAdvertisingData] = useState<Array<{name: string, value: number}>>([]);
   const [advertisingBreakdown, setAdvertisingBreakdown] = useState<AdvertisingBreakdown>({
     search: 0
   });
@@ -136,7 +137,15 @@ const AnalyticsSection = () => {
         setPenalties(parsedData.penalties);
         setReturns(parsedData.returns);
         setDeductionsTimeline(parsedData.deductionsTimeline);
-        setProductAdvertisingData(parsedData.productAdvertisingData);
+        
+        // Важно: устанавливаем данные рекламы из хранилища, а не демо-данные
+        if (parsedData.productAdvertisingData && parsedData.productAdvertisingData.length > 0) {
+          setProductAdvertisingData(parsedData.productAdvertisingData);
+        } else {
+          // Только если в хранилище нет данных, используем демо-данные
+          setProductAdvertisingData(advertisingData);
+        }
+        
         setAdvertisingBreakdown(parsedData.advertisingBreakdown);
         console.log('Analytics data loaded from localStorage');
         return true;
@@ -204,10 +213,14 @@ const AnalyticsSection = () => {
           topProducts.push({ name: "Другие товары", value: otherSum });
         }
         
-        setProductAdvertisingData(topProducts.length > 0 ? topProducts : advertisingData);
+        setProductAdvertisingData(topProducts.length > 0 ? topProducts : []);
       } else {
-        // Если данные о рекламе отсу��ствуют, используем демо-данные
-        setProductAdvertisingData(advertisingData);
+        // Если данные о рекламе отсутствуют, сохраняем текущие данные
+        // Не устанавливаем демо-данные, если уже есть данные из localStorage
+        if (productAdvertisingData.length === 0) {
+          setProductAdvertisingData(advertisingData);
+        }
+        
         setAdvertisingBreakdown({
           search: demoData.currentPeriod.expenses.advertising
         });
@@ -271,7 +284,7 @@ const AnalyticsSection = () => {
         description: "Не удалось загрузить аналитические данные",
         variant: "destructive"
       });
-      // Оставляем демо-данные в случае ошибки
+      // Оставляем текущие данные в случае ошибки
     } finally {
       setIsLoading(false);
     }
@@ -285,14 +298,21 @@ const AnalyticsSection = () => {
       
       // Если данных нет в localStorage, делаем запрос к API
       if (!hasStoredData) {
+        // Инициализируем данные о рекламе пустым массивом вместо демо-данных
+        setProductAdvertisingData([]);
         fetchData();
       } else {
         setIsLoading(false);
       }
     } else {
+      // Даже при отсутствии магазина, устанавливаем пустой массив для рекламных данных
+      setProductAdvertisingData([]);
       setIsLoading(false);
     }
   }, []);
+
+  // Проверяем, есть ли данные о рекламе по товарам для отображения
+  const hasAdvertisingData = productAdvertisingData && productAdvertisingData.length > 0;
 
   const handleDateChange = () => {
     fetchData();
@@ -350,11 +370,13 @@ const AnalyticsSection = () => {
         <ExpenseBreakdown data={data} advertisingBreakdown={advertisingBreakdown} />
 
         {/* Диаграмма распределения расходов на рекламу по товарам */}
-        <PieChartCard 
-          title="Расходы на рекламу по товарам"
-          icon={<Tag className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
-          data={productAdvertisingData}
-        />
+        {hasAdvertisingData && (
+          <PieChartCard 
+            title="Расходы на рекламу по товарам"
+            icon={<Tag className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
+            data={productAdvertisingData}
+          />
+        )}
 
         {/* Самые прибыльные и убыточные товары */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

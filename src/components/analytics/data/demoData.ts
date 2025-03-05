@@ -28,7 +28,6 @@ export const deductionsTimelineData = [
 
 export const advertisingData = [
   { name: "Реклама в поиске", value: 12500 },
-  { name: "Баннерная реклама", value: 8700 },
   { name: "Реклама в карточках", value: 7300 },
   { name: "Автоматическая реклама", value: 5200 },
   { name: "Другие форматы", value: 4100 }
