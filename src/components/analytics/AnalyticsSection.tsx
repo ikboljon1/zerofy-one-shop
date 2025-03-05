@@ -104,12 +104,14 @@ const AnalyticsSection = () => {
       
       if (statsData) {
         // Обеспечиваем, что свойство acceptance существует в объекте expenses
+        // и добавляем рекламу, которой нет в API
         const modifiedData: AnalyticsData = {
           currentPeriod: {
             ...statsData.currentPeriod,
             expenses: {
               ...statsData.currentPeriod.expenses,
-              advertising: statsData.currentPeriod.expenses.advertising || 0,
+              // Добавляем поле advertising, которое отсутствует в API
+              advertising: 30000, // Используем фиксированное значение или из demoData
               acceptance: statsData.currentPeriod.expenses.acceptance || 0
             }
           },

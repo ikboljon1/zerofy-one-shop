@@ -1,3 +1,4 @@
+
 export interface WildberriesResponse {
   currentPeriod: {
     sales: number;
@@ -8,6 +9,7 @@ export interface WildberriesResponse {
       storage: number;
       penalties: number;
       acceptance: number;
+      // Note: 'advertising' property is not defined in the API response
     };
     netProfit: number;
     acceptance: number;
