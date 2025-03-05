@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from "./ui/card";
 import { useEffect, useState } from "react";
 import { 
@@ -691,3 +692,127 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
                           <span className="font-bold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-500">
                             {payment.sum.toLocaleString('ru-RU')} ₽
                           </span>
+                        </div>
+                        <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 px-3 py-1.5 rounded-full font-medium">
+                          {format(new Date(payment.payTime), 'dd.MM.yyyy HH:mm')}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-500">
+                        Способ оплаты: {payment.payType}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="py-10 flex flex-col items-center justify-center"
+              >
+                <motion.div 
+                  whileHover={{ rotate: 10 }}
+                  className="w-20 h-20 mb-4 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center"
+                >
+                  <DollarSign className="h-10 w-10 text-purple-400" />
+                </motion.div>
+                <h4 className="text-lg font-semibold text-purple-700 dark:text-purple-300 mb-1">
+                  Нет данных о платежах
+                </h4>
+                <p className="text-center text-gray-500 max-w-xs">
+                  История пополнений появится здесь после внесения средств
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </Card>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div className="flex gap-2 items-center">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onBack}
+            className="h-9 w-9"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <h2 className="text-xl font-bold">{campaignName}</h2>
+        </div>
+        <div className="flex gap-2">
+          <div className="text-xs text-gray-500 flex items-center mr-2">
+            <Clock className="h-3 w-3 mr-1" />
+            <span>Обновлено: {getFormattedLastUpdate()}</span>
+          </div>
+          <Button
+            onClick={fetchData}
+            disabled={loading}
+            className="flex items-center"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+            Обновить
+          </Button>
+        </div>
+      </div>
+
+      <Tabs defaultValue="stats" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-4">
+          <TabsTrigger value="stats" className="flex items-center gap-1">
+            <BarChart3 className="h-4 w-4" />
+            <span>Статистика</span>
+          </TabsTrigger>
+          <TabsTrigger value="costs" className="flex items-center gap-1">
+            <DollarSign className="h-4 w-4" />
+            <span>Затраты</span>
+          </TabsTrigger>
+          <TabsTrigger value="products" className="flex items-center gap-1">
+            <Package className="h-4 w-4" />
+            <span>Товары</span>
+          </TabsTrigger>
+          <TabsTrigger value="keywords" className="flex items-center gap-1">
+            <Search className="h-4 w-4" />
+            <span>Ключевые слова</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="stats" className="mt-0">
+          {renderDetailedStats()}
+        </TabsContent>
+
+        <TabsContent value="costs" className="mt-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {renderCostHistory()}
+            {renderPaymentHistory()}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="products" className="mt-0">
+          <ProductStatsTable 
+            data={productStats} 
+            isLoading={loading && productStats.length === 0} 
+          />
+        </TabsContent>
+
+        <TabsContent value="keywords" className="mt-0">
+          <div className="space-y-6">
+            <KeywordStatisticsComponent 
+              campaignId={campaignId} 
+              apiKey={apiKey} 
+            />
+            <SearchKeywordStatistics 
+              campaignId={campaignId} 
+              apiKey={apiKey} 
+            />
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+export default CampaignDetails;
