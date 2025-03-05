@@ -36,7 +36,7 @@ const ProductStatsTable = ({ products }: ProductStatsTableProps) => {
     <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-indigo-100 dark:border-indigo-900/30">
       <div className="flex items-center gap-2 mb-3">
         <Tag className="h-5 w-5 text-indigo-500" />
-        <h4 className="text-lg font-semibold">{product.name || `Артикул ${product.nmId}`}</h4>
+        <h4 className="text-lg font-semibold">{product.name}</h4>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -161,7 +161,7 @@ const ProductStatsTable = ({ products }: ProductStatsTableProps) => {
                     <span className="text-xs bg-indigo-100 text-indigo-800 dark:bg-indigo-800/30 dark:text-indigo-300 px-2 py-1 rounded">
                       {product.nmId}
                     </span>
-                    <span className="line-clamp-1">{product.name || `Артикул ${product.nmId}`}</span>
+                    <span className="line-clamp-1">{product.name}</span>
                   </div>
                 </TableCell>
                 <TableCell className="text-right">{product.views.toLocaleString('ru-RU')}</TableCell>

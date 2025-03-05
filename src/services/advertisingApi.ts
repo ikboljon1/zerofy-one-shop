@@ -1,3 +1,4 @@
+
 import { format, formatISO } from "date-fns";
 
 // Типы данных
@@ -27,7 +28,6 @@ export interface ProductStats {
   cr: number;
   cpc: number;
   sum_price: number;
-  name?: string; // Add optional name property
 }
 
 export interface KeywordStats {
@@ -80,15 +80,13 @@ export const getAllCampaigns = async (apiKey: string): Promise<Campaign[]> => {
         ...campaign,
         type: 'auction' as 'auction',
         numericType: 8,
-        numericStatus: typeof campaign.numericStatus === 'string' ? 
-          parseInt(campaign.numericStatus) || 7 : campaign.numericStatus
+        numericStatus: campaign.status
       })),
       ...autoCampaigns.map(campaign => ({
         ...campaign,
         type: 'automatic' as 'automatic',
         numericType: 9,
-        numericStatus: typeof campaign.numericStatus === 'string' ? 
-          parseInt(campaign.numericStatus) || 7 : campaign.numericStatus
+        numericStatus: campaign.status
       }))
     ];
     
