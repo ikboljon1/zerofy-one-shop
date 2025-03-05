@@ -145,6 +145,38 @@ export interface KeywordStat {
   views: number;
 }
 
+export interface KeywordSearchStat {
+  advertId: number;
+  keyword: string;
+  advertName: string;
+  campaignName: string;
+  begin: string;
+  end: string;
+  views: number;
+  clicks: number;
+  frq: number;
+  ctr: number;
+  cpc: number;
+  duration: number;
+  sum: number;
+}
+
+export interface KeywordSearchResponse {
+  words: {
+    phrase: string[];
+    strong: string[];
+    excluded: string[];
+    pluse: string[];
+    keywords: Array<{
+      keyword: string;
+      count: number;
+      fixed?: boolean;
+    }>;
+    fixed?: boolean;
+  };
+  stat: KeywordSearchStat[];
+}
+
 const createApiInstance = (apiKey: string) => {
   return axios.create({
     baseURL: BASE_URL,
@@ -310,6 +342,41 @@ export const getKeywordStatistics = async (
   }
 };
 
+export const getSearchKeywordStatistics = async (
+  apiKey: string,
+  campaignId: number
+): Promise<KeywordSearchResponse> => {
+  try {
+    const api = createApiInstance(apiKey);
+    
+    const params = {
+      id: campaignId
+    };
+    
+    const response = await api.get(`/v1/stat/words`, { params });
+    return response.data || { words: { phrase: [], strong: [], excluded: [], pluse: [], keywords: [] }, stat: [] };
+  } catch (error) {
+    console.error('Error fetching search keyword statistics:', error);
+    if (error instanceof AxiosError && error.response?.status === 401) {
+      throw new Error("Ошибка авторизации. Пожалуйста, проверьте API ключ");
+    }
+    if (error instanceof AxiosError && error.response?.status === 429) {
+      throw new Error("Превышен лимит запросов к API. Пожалуйста, повторите позже");
+    }
+    return { words: { phrase: [], strong: [], excluded: [], pluse: [], keywords: [] }, stat: [] };
+  }
+};
+
+export interface Campaign {
+  advertId: number;
+  campName: string;
+  status: 'active' | 'paused' | 'archived' | 'ready' | 'completed';
+  type: 'auction' | 'automatic';
+  numericStatus?: number;
+  numericType?: number;
+  changeTime?: string;
+}
+
 export const getAllCampaigns = async (apiKey: string): Promise<Campaign[]> => {
   try {
     const api = createApiInstance(apiKey);
@@ -343,13 +410,3 @@ export const getAllCampaigns = async (apiKey: string): Promise<Campaign[]> => {
     return handleApiError(error);
   }
 };
-
-export interface Campaign {
-  advertId: number;
-  campName: string;
-  status: 'active' | 'paused' | 'archived' | 'ready' | 'completed';
-  type: 'auction' | 'automatic';
-  numericStatus?: number;
-  numericType?: number;
-  changeTime?: string;
-}
