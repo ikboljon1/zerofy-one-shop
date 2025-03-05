@@ -1,16 +1,16 @@
 
 import { useState } from "react";
 import { subDays } from "date-fns";
-import { AlertCircle, Target, PackageX } from "lucide-react";
+import { AlertCircle, Target, PackageX, Tag } from "lucide-react";
 
 // Data
 import { 
   demoData, 
   penaltiesData, 
   returnsData, 
-  deductionsTimelineData, 
-  advertisingData 
+  deductionsTimelineData
 } from "./data/demoData";
+import { productAdvertisingData } from "./data/productAdvertisingData";
 
 // Components
 import DateRangePicker from "./components/DateRangePicker";
@@ -67,11 +67,11 @@ const AnalyticsSection = () => {
         {/* Детальный анализ расходов */}
         <ExpenseBreakdown data={data} />
 
-        {/* Диаграмма распределения расходов на рекламу */}
+        {/* Диаграмма распределения расходов на рекламу по товарам */}
         <PieChartCard 
-          title="Структура расходов на рекламу"
-          icon={<Target className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
-          data={advertisingData}
+          title="Расходы на рекламу по товарам"
+          icon={<Tag className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
+          data={productAdvertisingData}
         />
 
         {/* Самые прибыльные и убыточные товары */}

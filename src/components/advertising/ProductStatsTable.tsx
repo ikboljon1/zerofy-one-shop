@@ -3,7 +3,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ProductStats } from "@/services/advertisingApi";
 import { Card } from "../ui/card";
 import { Package, TrendingUp, Eye, MousePointerClick, ShoppingCart, ExternalLink, Info, Tag } from "lucide-react";
-import { useState } from "react";
 import { 
   Dialog,
   DialogContent,
@@ -19,8 +18,6 @@ interface ProductStatsTableProps {
 }
 
 const ProductStatsTable = ({ products }: ProductStatsTableProps) => {
-  const [selectedProduct, setSelectedProduct] = useState<ProductStats | null>(null);
-
   if (!products || products.length === 0) {
     return (
       <Card className="p-6">
@@ -34,10 +31,6 @@ const ProductStatsTable = ({ products }: ProductStatsTableProps) => {
       </Card>
     );
   }
-
-  const openProductDetails = (product: ProductStats) => {
-    setSelectedProduct(product);
-  };
 
   const ProductInfoCard = ({ product }: { product: ProductStats }) => (
     <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-indigo-100 dark:border-indigo-900/30">
