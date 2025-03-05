@@ -20,13 +20,14 @@ const DateRangePicker = ({ dateFrom, dateTo, setDateFrom, setDateTo, onUpdate }:
       <PopoverTrigger asChild>
         <Button
           variant="outline"
+          size="sm"
           className={cn(
             "justify-start text-left font-normal",
             !date && "text-muted-foreground"
           )}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? format(date, "PPP") : <span>{label}</span>}
+          <CalendarIcon className="mr-2 h-3 w-3" />
+          {date ? format(date, "dd.MM.yyyy") : <span>{label}</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">
@@ -42,10 +43,10 @@ const DateRangePicker = ({ dateFrom, dateTo, setDateFrom, setDateTo, onUpdate }:
   );
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4">
-      {renderDatePicker(dateFrom, setDateFrom, "Выберите начальную дату")}
-      {renderDatePicker(dateTo, setDateTo, "Выберите конечную дату")}
-      <Button onClick={onUpdate}>
+    <div className="flex flex-col sm:flex-row gap-2">
+      {renderDatePicker(dateFrom, setDateFrom, "Начальная дата")}
+      {renderDatePicker(dateTo, setDateTo, "Конечная дата")}
+      <Button size="sm" onClick={onUpdate}>
         Обновить
       </Button>
     </div>
