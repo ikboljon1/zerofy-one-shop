@@ -69,10 +69,6 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
                 <span>Хранение на складах</span>
                 <span className="font-medium">{(data.currentPeriod.expenses.storage * 0.8).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span>Обработка товаров</span>
-                <span className="font-medium">{(data.currentPeriod.expenses.storage * 0.2).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
-              </div>
             </div>
           </div>
         </div>

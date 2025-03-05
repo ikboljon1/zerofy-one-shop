@@ -359,7 +359,7 @@ const AnalyticsSection = () => {
             data={penalties}
           />
           <PieChartCard 
-            title="Причины возвратов"
+            title="Возврат товаров"
             icon={<PackageX className="h-4 w-4 text-red-600 dark:text-red-400" />}
             data={returns}
           />
