@@ -80,13 +80,15 @@ export const getAllCampaigns = async (apiKey: string): Promise<Campaign[]> => {
         ...campaign,
         type: 'auction' as 'auction',
         numericType: 8,
-        numericStatus: campaign.status
+        numericStatus: typeof campaign.numericStatus === 'string' ? 
+          parseInt(campaign.numericStatus) || 7 : campaign.numericStatus
       })),
       ...autoCampaigns.map(campaign => ({
         ...campaign,
         type: 'automatic' as 'automatic',
         numericType: 9,
-        numericStatus: campaign.status
+        numericStatus: typeof campaign.numericStatus === 'string' ? 
+          parseInt(campaign.numericStatus) || 7 : campaign.numericStatus
       }))
     ];
     
