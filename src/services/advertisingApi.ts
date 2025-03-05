@@ -174,7 +174,21 @@ export interface KeywordSearchResponse {
     }>;
     fixed?: boolean;
   };
-  stat: KeywordSearchStat[];
+  stat: Array<{
+    advertId: number;
+    keyword: string;
+    advertName: string;
+    campaignName: string;
+    begin: string;
+    end: string;
+    views: number;
+    clicks: number;
+    frq: number;
+    ctr: number;
+    cpc: number;
+    duration: number;
+    sum: number;
+  }>;
 }
 
 const createApiInstance = (apiKey: string) => {
@@ -315,6 +329,7 @@ export const getSearchKeywordStatistics = async (
     const api = createApiInstance(apiKey);
     
     console.log(`Fetching keyword stats for campaign ID: ${campaignId}`);
+    
     const response = await api.get(`/v1/stat/words`, { 
       params: {
         id: campaignId
@@ -340,51 +355,29 @@ export const getSearchKeywordStatistics = async (
   } catch (error) {
     console.error('Error fetching keyword statistics:', error);
     
-    try {
-      const api = createApiInstance(apiKey);
-      console.log('Trying fallback endpoint for keywords');
-      
-      const response = await api.get(`/v0/stats/keywords`, { 
-        params: {
-          advert_id: campaignId
-        }
-      });
-      
-      console.log('Fallback response:', response.data);
-      
-      if (response.data) {
-        return response.data;
-      }
-      
-      return { 
-        words: { 
-          phrase: [], 
-          strong: [], 
-          excluded: [], 
-          pluse: [], 
-          keywords: [] 
-        }, 
-        stat: [] 
-      };
-    } catch (secondError) {
-      console.error('Error with fallback keyword statistics fetch:', secondError);
-      if (secondError instanceof AxiosError && secondError.response?.status === 401) {
+    if (error instanceof AxiosError) {
+      if (error.response?.status === 401) {
         throw new Error("Ошибка авторизации. Пожалуйста, проверьте API ключ");
       }
-      if (secondError instanceof AxiosError && secondError.response?.status === 429) {
+      if (error.response?.status === 429) {
         throw new Error("Превышен лимит запросов к API. Пожалуйста, повторите позже");
       }
-      return { 
-        words: { 
-          phrase: [], 
-          strong: [], 
-          excluded: [], 
-          pluse: [], 
-          keywords: [] 
-        }, 
-        stat: [] 
-      };
+      
+      if (error.response?.data?.message) {
+        console.error('API error message:', error.response.data.message);
+      }
     }
+    
+    return { 
+      words: { 
+        phrase: [], 
+        strong: [], 
+        excluded: [], 
+        pluse: [], 
+        keywords: [] 
+      }, 
+      stat: [] 
+    };
   }
 };
 

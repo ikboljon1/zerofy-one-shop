@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -5,12 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { 
   KeywordSearchResponse, 
-  KeywordSearchStat, 
   getSearchKeywordStatistics 
 } from "@/services/advertisingApi";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
-import { Search, Tag, TrendingUp, Eye, MousePointerClick, DollarSign, PercentIcon, Filter, AlertCircle, PlusCircle, MinusCircle } from "lucide-react";
+import { 
+  Search, Tag, TrendingUp, Eye, MousePointerClick, 
+  DollarSign, PercentIcon, Filter, 
+  PlusCircle, MinusCircle, RefreshCw
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -22,9 +25,19 @@ interface KeywordStatisticsProps {
   apiKey: string;
 }
 
-interface ExtendedKeywordStat extends KeywordSearchStat {
+interface ExtendedKeywordStat {
+  keyword: string;
+  campaignName: string;
+  views: number;
+  clicks: number;
+  frq: number;
+  ctr: number;
+  cpc: number;
+  sum: number;
   excluded: boolean;
   performance: 'profitable' | 'unprofitable' | 'neutral';
+  count?: number;
+  fixed?: boolean;
 }
 
 const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsProps) => {
@@ -32,7 +45,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchInputValue, setSearchInputValue] = useState("");
-  const [sortField, setSortField] = useState<keyof KeywordSearchStat>("views");
+  const [sortField, setSortField] = useState<keyof ExtendedKeywordStat>("views");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const { toast } = useToast();
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
@@ -41,18 +54,31 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
   const processedKeywords = useMemo(() => {
     if (!keywordStats || !keywordStats.stat) return [];
 
-    const keywordEntries = keywordStats.stat.filter(stat => 
+    // Combine data from both stat array and keywords array
+    const statKeywords = keywordStats.stat.filter(stat => 
       stat.keyword !== "Всего по кампании"
     );
 
-    return keywordEntries.map(stat => ({
-      ...stat,
-      excluded: excludedKeywords.has(stat.keyword),
-      performance: calculatePerformance(stat)
-    }));
+    // Create a map of keywords from the keywords array for quick lookup
+    const keywordsMap = new Map();
+    keywordStats.words?.keywords?.forEach(k => {
+      keywordsMap.set(k.keyword, { count: k.count, fixed: k.fixed });
+    });
+
+    return statKeywords.map(stat => {
+      const keywordInfo = keywordsMap.get(stat.keyword);
+      
+      return {
+        ...stat,
+        count: keywordInfo?.count || 0,
+        fixed: keywordInfo?.fixed || false,
+        excluded: excludedKeywords.has(stat.keyword),
+        performance: calculatePerformance(stat)
+      };
+    });
   }, [keywordStats, excludedKeywords]);
 
-  function calculatePerformance(stat: KeywordSearchStat): 'profitable' | 'unprofitable' | 'neutral' {
+  function calculatePerformance(stat: any): 'profitable' | 'unprofitable' | 'neutral' {
     if (stat.ctr > 5 && stat.clicks > 20) {
       return 'profitable';
     } else if (stat.ctr > 3 || (stat.clicks > 10 && stat.sum / stat.clicks < 15)) {
@@ -73,10 +99,17 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
 
   const sortedKeywords = useMemo(() => {
     return [...filteredKeywords].sort((a, b) => {
+      let aValue = a[sortField] as any;
+      let bValue = b[sortField] as any;
+      
+      // Handle undefined values
+      if (aValue === undefined) aValue = 0;
+      if (bValue === undefined) bValue = 0;
+      
       if (sortDirection === "asc") {
-        return a[sortField] > b[sortField] ? 1 : -1;
+        return aValue > bValue ? 1 : -1;
       } else {
-        return a[sortField] < b[sortField] ? 1 : -1;
+        return aValue < bValue ? 1 : -1;
       }
     });
   }, [filteredKeywords, sortField, sortDirection]);
@@ -147,7 +180,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
     }
   }, [campaignId, apiKey]);
 
-  const handleSort = (field: keyof KeywordSearchStat) => {
+  const handleSort = (field: keyof ExtendedKeywordStat) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
@@ -163,7 +196,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
     return `${updateDate.toLocaleDateString('ru-RU')} ${updateDate.toLocaleTimeString('ru-RU')}`;
   };
 
-  const renderSortIcon = (field: keyof KeywordSearchStat) => {
+  const renderSortIcon = (field: keyof ExtendedKeywordStat) => {
     if (sortField !== field) return null;
     return (
       <span className="ml-1 inline-block">
@@ -391,7 +424,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
             disabled={loading}
             className="h-8 px-2 text-xs"
           >
-            <Filter className="h-3.5 w-3.5 mr-1" />
+            <RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />
             Обновить
           </Button>
         </div>
@@ -429,6 +462,12 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
                     CTR {renderSortIcon("ctr")}
                   </TableHead>
                   <TableHead 
+                    className="text-right cursor-pointer py-2 px-2 text-xs w-16"
+                    onClick={() => handleSort("cpc")}
+                  >
+                    CPC {renderSortIcon("cpc")}
+                  </TableHead>
+                  <TableHead 
                     className="text-right cursor-pointer py-2 px-2 text-xs w-20"
                     onClick={() => handleSort("sum")}
                   >
@@ -439,6 +478,11 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
                     onClick={() => handleSort("frq")}
                   >
                     Частота {renderSortIcon("frq")}
+                  </TableHead>
+                  <TableHead 
+                    className="text-center py-2 px-2 text-xs w-16"
+                  >
+                    Фикс.
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -468,13 +512,21 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
                       <TableCell className="py-1.5 px-2 text-right text-sm">{stat.views.toLocaleString('ru-RU')}</TableCell>
                       <TableCell className="py-1.5 px-2 text-right text-sm">{stat.clicks.toLocaleString('ru-RU')}</TableCell>
                       <TableCell className="py-1.5 px-2 text-right text-sm">{stat.ctr.toFixed(2)}%</TableCell>
-                      <TableCell className="py-1.5 px-2 text-right text-sm">{stat.sum.toLocaleString('ru-RU')}</TableCell>
+                      <TableCell className="py-1.5 px-2 text-right text-sm">{stat.cpc ? stat.cpc.toFixed(2) : '0.00'} ₽</TableCell>
+                      <TableCell className="py-1.5 px-2 text-right text-sm">{stat.sum.toLocaleString('ru-RU')} ₽</TableCell>
                       <TableCell className="py-1.5 px-2 text-right text-sm">{stat.frq.toFixed(1)}</TableCell>
+                      <TableCell className="py-1.5 px-2 text-center text-sm">
+                        {stat.fixed && (
+                          <Badge variant="outline" className="bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 text-xs px-1 py-0">
+                            Да
+                          </Badge>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-20 text-center">
+                    <TableCell colSpan={9} className="h-20 text-center">
                       {loading ? (
                         <div className="flex justify-center items-center">
                           <div className="w-6 h-6 border-2 border-t-blue-500 border-blue-200 rounded-full animate-spin"></div>
@@ -488,6 +540,16 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
                         <div className="flex flex-col items-center justify-center">
                           <Tag className="h-6 w-6 text-gray-400 mb-1" />
                           <p className="text-xs text-gray-500">Нет данных о ключевых словах</p>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={fetchData}
+                            disabled={loading}
+                            className="mt-2"
+                          >
+                            <RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />
+                            Попробовать снова
+                          </Button>
                         </div>
                       )}
                     </TableCell>
@@ -497,6 +559,12 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey }: KeywordStatisticsPro
             </Table>
           </div>
         </div>
+        
+        {keywordStats?.stat && keywordStats.stat.length > 0 && (
+          <div className="text-xs text-gray-500 text-right">
+            Показано {sortedKeywords.length} из {keywordStats.stat.length - 1} ключевых слов
+          </div>
+        )}
       </div>
     );
   };
