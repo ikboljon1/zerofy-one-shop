@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -7,19 +7,27 @@ import { Button } from "@/components/ui/button";
 import { KeywordStatistics, KeywordStat, getKeywordStatistics } from "@/services/advertisingApi";
 import { useToast } from "@/hooks/use-toast";
 import { format, differenceInDays, subDays } from "date-fns";
-import { Search, Tag, TrendingUp, Eye, MousePointerClick, DollarSign, PercentIcon, Filter, AlertCircle, Calendar as CalendarIcon } from "lucide-react";
+import { Search, Tag, TrendingUp, Eye, MousePointerClick, DollarSign, PercentIcon, Filter, AlertCircle, CalendarIcon, PlusCircle, MinusCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/hooks/use-theme";
 import DateRangePicker from "@/components/analytics/components/DateRangePicker";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface KeywordStatisticsProps {
   campaignId: number;
   apiKey: string;
   dateFrom: Date;
   dateTo: Date;
+}
+
+// Extended type to include exclusion and performance status
+interface ExtendedKeywordStat extends KeywordStat {
+  date: string;
+  excluded: boolean;
+  performance: 'profitable' | 'unprofitable' | 'neutral';
 }
 
 const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateFrom, dateTo: initialDateTo }: KeywordStatisticsProps) => {
@@ -29,34 +37,88 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
   const [keywordStats, setKeywordStats] = useState<KeywordStatistics | null>(null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchInputValue, setSearchInputValue] = useState("");
   const [sortField, setSortField] = useState<keyof KeywordStat>("views");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const { toast } = useToast();
   const { theme } = useTheme();
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
   const [dateWarning, setDateWarning] = useState<string | null>(null);
+  const [excludedKeywords, setExcludedKeywords] = useState<Set<string>>(new Set());
 
-  // Combine and flatten all keyword stats across days
-  const allKeywords = keywordStats?.keywords.flatMap(day => 
-    day.stats.map(stat => ({
-      ...stat,
-      date: day.date
-    }))
-  ) || [];
+  // Calculate performance metrics for all keywords
+  const processedKeywords = useMemo(() => {
+    if (!keywordStats) return [];
 
-  // Filter by search term
-  const filteredKeywords = allKeywords.filter(
-    stat => stat.keyword.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    // Combine and flatten all keyword stats across days
+    const allKeywords = keywordStats.keywords.flatMap(day => 
+      day.stats.map(stat => ({
+        ...stat,
+        date: day.date,
+        excluded: excludedKeywords.has(stat.keyword),
+        performance: calculatePerformance(stat)
+      }))
+    );
+
+    return allKeywords;
+  }, [keywordStats, excludedKeywords]);
+
+  // Function to determine if a keyword is profitable
+  function calculatePerformance(stat: KeywordStat): 'profitable' | 'unprofitable' | 'neutral' {
+    // Consider a keyword profitable if CTR is above 3% or clicks are high relative to spending
+    if (stat.ctr > 3 || (stat.clicks > 10 && stat.sum / stat.clicks < 10)) {
+      return 'profitable';
+    }
+    // Consider a keyword unprofitable if spending is high with low CTR or low clicks
+    else if ((stat.sum > 100 && stat.ctr < 1) || (stat.sum > 200 && stat.clicks < 5)) {
+      return 'unprofitable';
+    }
+    return 'neutral';
+  }
+
+  // Filter by search term and exclude excluded keywords if needed
+  const filteredKeywords = useMemo(() => {
+    return processedKeywords.filter(
+      stat => stat.keyword.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [processedKeywords, searchTerm]);
 
   // Sort the filtered keywords
-  const sortedKeywords = [...filteredKeywords].sort((a, b) => {
-    if (sortDirection === "asc") {
-      return a[sortField] > b[sortField] ? 1 : -1;
-    } else {
-      return a[sortField] < b[sortField] ? 1 : -1;
-    }
-  });
+  const sortedKeywords = useMemo(() => {
+    return [...filteredKeywords].sort((a, b) => {
+      if (sortDirection === "asc") {
+        return a[sortField] > b[sortField] ? 1 : -1;
+      } else {
+        return a[sortField] < b[sortField] ? 1 : -1;
+      }
+    });
+  }, [filteredKeywords, sortField, sortDirection]);
+
+  // Toggle keyword exclusion
+  const toggleKeywordExclusion = (keyword: string) => {
+    setExcludedKeywords(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(keyword)) {
+        newSet.delete(keyword);
+      } else {
+        newSet.add(keyword);
+      }
+      return newSet;
+    });
+  };
+
+  // Handle search input with debounce
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchInputValue(value);
+    
+    // Apply the search term after a small delay to prevent re-renders on each keystroke
+    const timeoutId = setTimeout(() => {
+      setSearchTerm(value);
+    }, 300);
+    
+    return () => clearTimeout(timeoutId);
+  };
 
   const fetchData = async () => {
     // Check if already loading to prevent multiple fetches
@@ -136,6 +198,30 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
     );
   };
 
+  // Get CSS class for keyword performance 
+  const getKeywordPerformanceClass = (performance: 'profitable' | 'unprofitable' | 'neutral') => {
+    switch (performance) {
+      case 'profitable':
+        return "text-blue-600 dark:text-blue-400 font-medium";
+      case 'unprofitable':
+        return "text-red-600 dark:text-red-400 font-medium";
+      default:
+        return "";
+    }
+  };
+
+  // Get icon for keyword performance
+  const getKeywordPerformanceIcon = (performance: 'profitable' | 'unprofitable' | 'neutral') => {
+    switch (performance) {
+      case 'profitable':
+        return <PlusCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />;
+      case 'unprofitable':
+        return <MinusCircle className="h-4 w-4 text-red-600 dark:text-red-400" />;
+      default:
+        return null;
+    }
+  };
+
   const KeywordMetricsCard = () => {
     if (!keywordStats || keywordStats.keywords.length === 0) {
       return (
@@ -152,11 +238,11 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
     }
 
     // Calculate totals
-    const totalViews = allKeywords.reduce((sum, stat) => sum + stat.views, 0);
-    const totalClicks = allKeywords.reduce((sum, stat) => sum + stat.clicks, 0);
-    const totalSum = allKeywords.reduce((sum, stat) => sum + stat.sum, 0);
+    const totalViews = processedKeywords.reduce((sum, stat) => sum + stat.views, 0);
+    const totalClicks = processedKeywords.reduce((sum, stat) => sum + stat.clicks, 0);
+    const totalSum = processedKeywords.reduce((sum, stat) => sum + stat.sum, 0);
     const avgCtr = totalViews > 0 ? (totalClicks / totalViews) * 100 : 0;
-    const uniqueKeywords = new Set(allKeywords.map(k => k.keyword)).size;
+    const uniqueKeywords = new Set(processedKeywords.map(k => k.keyword)).size;
 
     return (
       <div className="space-y-6">
@@ -242,7 +328,8 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
           </div>
           <CardContent className="p-6">
             <div className="space-y-6">
-              {allKeywords
+              {processedKeywords
+                .filter(stat => !stat.excluded) // Show only non-excluded keywords
                 .sort((a, b) => b.views - a.views)
                 .slice(0, 5)
                 .map((stat, index) => (
@@ -252,13 +339,26 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
                         <Badge variant="outline" className="bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800">
                           {index + 1}
                         </Badge>
-                        <span className="font-medium">{stat.keyword}</span>
+                        <span className={`font-medium ${getKeywordPerformanceClass(stat.performance)}`}>
+                          {stat.keyword}
+                          {getKeywordPerformanceIcon(stat.performance) && 
+                            <span className="ml-2 inline-flex items-center">
+                              {getKeywordPerformanceIcon(stat.performance)}
+                            </span>
+                          }
+                        </span>
                       </div>
                       <span className="text-sm text-gray-500">{stat.views.toLocaleString('ru-RU')} показов</span>
                     </div>
                     <Progress 
-                      value={(stat.views / (allKeywords[0]?.views || 1)) * 100} 
-                      className="h-2 bg-purple-100 dark:bg-purple-900/30" 
+                      value={(stat.views / (processedKeywords[0]?.views || 1)) * 100} 
+                      className={`h-2 ${
+                        stat.performance === 'profitable' 
+                          ? 'bg-blue-100 dark:bg-blue-900/30' 
+                          : stat.performance === 'unprofitable' 
+                            ? 'bg-red-100 dark:bg-red-900/30' 
+                            : 'bg-purple-100 dark:bg-purple-900/30'
+                      }`} 
                     />
                     <div className="flex justify-between text-xs text-gray-500">
                       <span>{stat.clicks.toLocaleString('ru-RU')} кликов</span>
@@ -282,8 +382,8 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Поиск по ключевым словам..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={searchInputValue}
+              onChange={handleSearchChange}
               className="pl-10 pr-4"
             />
           </div>
@@ -303,6 +403,9 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50 dark:bg-gray-900/50">
+                  <TableHead className="w-10">
+                    <span className="sr-only">Исключить</span>
+                  </TableHead>
                   <TableHead 
                     className="cursor-pointer"
                     onClick={() => handleSort("keyword")}
@@ -341,8 +444,25 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
               <TableBody>
                 {sortedKeywords.length > 0 ? (
                   sortedKeywords.map((stat, index) => (
-                    <TableRow key={index} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
-                      <TableCell className="font-medium">{stat.keyword}</TableCell>
+                    <TableRow 
+                      key={index} 
+                      className={`hover:bg-gray-50 dark:hover:bg-gray-900/20 ${
+                        stat.excluded ? 'opacity-60 bg-gray-50 dark:bg-gray-900/10' : ''
+                      }`}
+                    >
+                      <TableCell className="pr-0 w-10">
+                        <Checkbox 
+                          checked={stat.excluded}
+                          onCheckedChange={() => toggleKeywordExclusion(stat.keyword)}
+                          aria-label={`Исключить ${stat.keyword}`}
+                        />
+                      </TableCell>
+                      <TableCell className={`font-medium ${getKeywordPerformanceClass(stat.performance)}`}>
+                        <div className="flex items-center gap-2">
+                          {stat.keyword}
+                          {getKeywordPerformanceIcon(stat.performance)}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-right">{stat.views.toLocaleString('ru-RU')}</TableCell>
                       <TableCell className="text-right">{stat.clicks.toLocaleString('ru-RU')}</TableCell>
                       <TableCell className="text-right">{stat.ctr.toFixed(2)}%</TableCell>
@@ -352,7 +472,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                       {loading ? (
                         <div className="flex justify-center items-center">
                           <div className="w-8 h-8 border-4 border-t-blue-500 border-blue-200 rounded-full animate-spin"></div>
