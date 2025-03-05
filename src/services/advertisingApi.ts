@@ -1,482 +1,317 @@
 
-import { format, formatISO } from "date-fns";
+import { AxiosError } from 'axios';
+import axios from 'axios';
+import { getStatusString, getTypeString } from '@/components/analytics/data/productAdvertisingData';
 
-// Типы данных
-export interface Campaign {
+const BASE_URL = "https://advert-api.wildberries.ru/adv";
+
+interface AdvertCost {
+  updNum: string;
+  updTime: string;
+  updSum: number;
   advertId: number;
-  nmID?: number;
-  type: 'auction' | 'automatic';
+  campName: string;
+  advertType: string;
+  paymentType: string;
+  advertStatus: string;
+}
+
+interface AdvertStats {
+  advertId: number;
   status: 'active' | 'paused' | 'archived' | 'ready' | 'completed';
-  nmId?: number;
-  autoParams?: any;
-  description?: string;
-  changeTime?: string;
-  campName?: string;
-  numericStatus?: number;
-  numericType?: number;
-}
-
-export interface ProductStats {
-  nmId: number;
+  type: 'auction' | 'automatic';
   views: number;
   clicks: number;
   ctr: number;
-  sum: number;
-  atbs: number;
   orders: number;
-  shks: number;
   cr: number;
-  cpc: number;
-  sum_price: number;
-}
-
-export interface KeywordStats {
-  clicks: number;
-  ctr: number;
-  keyword: string;
   sum: number;
-  views: number;
 }
 
-export interface DailyKeywordStats {
+interface AdvertBalance {
+  balance: number;
+}
+
+interface AdvertPayment {
+  id: number;
   date: string;
-  stats: KeywordStats[];
+  sum: number;
+  type: string;
 }
 
-export interface KeywordStatsResponse {
-  keywords: DailyKeywordStats[];
+// Campaign Count API Response
+interface CampaignCountResponse {
+  adverts: CampaignGroup[];
+  all: number;
 }
 
+interface CampaignGroup {
+  type: number;
+  status: number;
+  count: number;
+  advert_list: CampaignInfo[];
+}
+
+interface CampaignInfo {
+  advertId: number;
+  changeTime: string;
+}
+
+// New interfaces for the fullstats API
 export interface CampaignFullStats {
+  views: number;
   clicks: number;
   ctr: number;
+  cpc: number;
   sum: number;
-  views: number;
   atbs: number;
   orders: number;
-  shks: number;
   cr: number;
-  cpc: number;
+  shks: number;
   sum_price: number;
-  days?: any[];
+  dates: string[];
+  days: DayStats[];
+  boosterStats?: BoosterStats[];
+  advertId: number;
 }
 
-// Список кампаний
+interface DayStats {
+  date: string;
+  views: number;
+  clicks: number;
+  ctr: number;
+  cpc: number;
+  sum: number;
+  atbs: number;
+  orders: number;
+  cr: number;
+  shks: number;
+  sum_price: number;
+  apps: AppStats[];
+  nm?: ProductStats[]; // Добавляем информацию о товарах
+}
+
+interface AppStats {
+  views: number;
+  clicks: number;
+  ctr: number;
+  cpc: number;
+  sum: number;
+  atbs: number;
+  orders: number;
+  cr: number;
+  shks: number;
+  sum_price: number;
+  appType?: number;
+}
+
+// Новый интерфейс для статистики по товарам
+export interface ProductStats {
+  views: number;
+  clicks: number;
+  ctr: number;
+  cpc: number;
+  sum: number;
+  atbs: number;
+  orders: number;
+  cr: number;
+  shks: number;
+  sum_price: number;
+  name: string;
+  nmId: number;
+}
+
+interface BoosterStats {
+  date: string;
+  nm: number;
+  avg_position: number;
+}
+
+// Campaign statistics request
+export interface CampaignStatsRequest {
+  id: number;
+  dates: string[];
+}
+
+const createApiInstance = (apiKey: string) => {
+  return axios.create({
+    baseURL: BASE_URL,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': apiKey
+    }
+  });
+};
+
+const handleApiError = (error: unknown) => {
+  if (error instanceof AxiosError) {
+    if (error.response?.status === 401) {
+      throw new Error("Ошибка авторизации. Пожалуйста, проверьте API ключ");
+    }
+    if (error.response?.status === 404) {
+      // Возвращаем пустой массив вместо ошибки, если данные не найдены
+      return [];
+    }
+    if (error.response?.status === 429) {
+      throw new Error("Превышен лимит запросов к API. Пожалуйста, повторите позже");
+    }
+    throw new Error(error.response?.data?.message || "Произошла ошибка при запросе к API");
+  }
+  throw error;
+};
+
+export const getAdvertCosts = async (dateFrom: Date, dateTo: Date, apiKey: string): Promise<AdvertCost[]> => {
+  try {
+    const api = createApiInstance(apiKey);
+    const params = {
+      from: dateFrom.toISOString().split('T')[0],
+      to: dateTo.toISOString().split('T')[0]
+    };
+    
+    const response = await api.get(`/v1/upd`, { params });
+    return response.data || [];
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const getAdvertStats = async (
+  dateFrom: Date,
+  dateTo: Date,
+  campaignIds: number[],
+  apiKey: string
+): Promise<AdvertStats[]> => {
+  try {
+    if (!campaignIds.length) {
+      return [];
+    }
+
+    const api = createApiInstance(apiKey);
+    const params = {
+      from: dateFrom.toISOString().split('T')[0],
+      to: dateTo.toISOString().split('T')[0],
+      campaignIds: campaignIds.join(',')
+    };
+    
+    const response = await api.get(`/v1/stats`, { params });
+    return response.data || [];
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const getAdvertBalance = async (apiKey: string): Promise<AdvertBalance> => {
+  try {
+    const api = createApiInstance(apiKey);
+    const response = await api.get(`/v1/balance`);
+    return response.data || { balance: 0 };
+  } catch (error) {
+    console.error('Error fetching balance:', error);
+    return { balance: 0 };
+  }
+};
+
+export const getAdvertPayments = async (dateFrom: Date, dateTo: Date, apiKey: string): Promise<AdvertPayment[]> => {
+  try {
+    const api = createApiInstance(apiKey);
+    const params = {
+      from: dateFrom.toISOString().split('T')[0],
+      to: dateTo.toISOString().split('T')[0]
+    };
+    
+    const response = await api.get(`/v1/payments`, { params });
+    return response.data || [];
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+// New function to get full campaign statistics
+export const getCampaignFullStats = async (
+  apiKey: string,
+  campaignIds: number[], 
+  dateFrom?: Date, 
+  dateTo?: Date
+): Promise<CampaignFullStats[]> => {
+  try {
+    const api = createApiInstance(apiKey);
+    
+    // Prepare request payload
+    const payload: CampaignStatsRequest[] = campaignIds.map(id => {
+      const request: CampaignStatsRequest = {
+        id,
+        dates: []
+      };
+      
+      // Add date range if provided
+      if (dateFrom && dateTo) {
+        const dates: string[] = [];
+        const currentDate = new Date(dateFrom);
+        const endDate = new Date(dateTo);
+        
+        while (currentDate <= endDate) {
+          dates.push(currentDate.toISOString().split('T')[0]);
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+        
+        request.dates = dates;
+      }
+      
+      return request;
+    });
+    
+    const response = await api.post(`/v2/fullstats`, payload);
+    return response.data || [];
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+// Fetch all campaigns with their statuses and types
 export const getAllCampaigns = async (apiKey: string): Promise<Campaign[]> => {
   try {
-    console.log("Fetching all campaigns...");
+    const api = createApiInstance(apiKey);
+    const response = await api.get<CampaignCountResponse>(`/v1/promotion/count`);
     
-    const [auctionCampaigns, autoCampaigns] = await Promise.all([
-      getAuctionCampaigns(apiKey),
-      getAutoCampaigns(apiKey)
-    ]);
+    // If no data, return empty array
+    if (!response.data?.adverts) {
+      return [];
+    }
     
-    console.log("Auction campaigns:", auctionCampaigns);
-    console.log("Auto campaigns:", autoCampaigns);
+    // Flatten the groups and map to our Campaign interface
+    const campaigns: Campaign[] = [];
     
-    // Объединить оба типа кампаний в один массив
-    const allCampaigns = [
-      ...auctionCampaigns.map(campaign => ({
-        ...campaign,
-        type: 'auction' as 'auction',
-        numericType: 8,
-        numericStatus: campaign.status
-      })),
-      ...autoCampaigns.map(campaign => ({
-        ...campaign,
-        type: 'automatic' as 'automatic',
-        numericType: 9,
-        numericStatus: campaign.status
-      }))
-    ];
+    response.data.adverts.forEach(group => {
+      group.advert_list.forEach(campaign => {
+        campaigns.push({
+          advertId: campaign.advertId,
+          campName: `Кампания ${campaign.advertId}`, // Default name, will be updated later
+          status: getStatusString(group.status),
+          type: getTypeString(group.type),
+          numericStatus: group.status,
+          numericType: group.type,
+          changeTime: campaign.changeTime
+        });
+      });
+    });
     
-    return allCampaigns;
+    // Sort by change time (newest first)
+    return campaigns.sort((a, b) => 
+      new Date(b.changeTime).getTime() - new Date(a.changeTime).getTime()
+    );
   } catch (error) {
-    console.error("Error in getAllCampaigns:", error);
-    throw error;
+    console.error('Error fetching campaigns:', error);
+    return handleApiError(error);
   }
 };
 
-// Получение кампаний аукционного типа
-const getAuctionCampaigns = async (apiKey: string): Promise<Campaign[]> => {
-  const url = 'https://advert-api.wildberries.ru/adv/v2/search/list';
-  
-  try {
-    const response = await fetch(url, {
-      headers: {
-        "Authorization": apiKey
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch auction campaigns: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    
-    // Преобразование полученных данных в нужный формат
-    const campaigns: Campaign[] = data.adverts.map((adv: any) => {
-      // Преобразование статуса из числа в строку
-      let status: Campaign['status'] = 'active';
-      
-      switch (adv.status) {
-        case 7:
-          status = 'active';
-          break;
-        case 9:
-          status = 'paused';
-          break;
-        case 11:
-          status = 'archived';
-          break;
-        default:
-          status = 'active';
-      }
-      
-      return {
-        advertId: adv.advertId,
-        status,
-        type: 'auction',
-        nmID: adv.nms?.[0] || null,
-        campName: adv.name || `Аукционная кампания ${adv.advertId}`,
-        changeTime: adv.changeTime,
-        numericStatus: adv.status
-      };
-    });
-    
-    return campaigns;
-  } catch (error) {
-    console.error('Error fetching auction campaigns:', error);
-    throw error;
-  }
-};
-
-// Получение автоматических кампаний
-const getAutoCampaigns = async (apiKey: string): Promise<Campaign[]> => {
-  const url = 'https://advert-api.wildberries.ru/adv/v1/auto/list';
-  
-  try {
-    const response = await fetch(url, {
-      headers: {
-        "Authorization": apiKey
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch auto campaigns: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    
-    // Преобразование полученных данных в нужный формат
-    const campaigns: Campaign[] = data.adverts.map((adv: any) => {
-      // Преобразование статуса из числа в строку
-      let status: Campaign['status'] = 'active';
-      
-      switch (adv.status) {
-        case 7:
-          status = 'active';
-          break;
-        case 9:
-          status = 'paused';
-          break;
-        case 11:
-          status = 'archived';
-          break;
-        case 4:
-          status = 'ready';
-          break;  
-        case 5:
-          status = 'completed';
-          break;
-        default:
-          status = 'active';
-      }
-      
-      return {
-        advertId: adv.advertId,
-        status,
-        type: 'automatic',
-        nmID: adv.nms?.[0]?.nmId || null,
-        autoParams: adv.autoParams,
-        description: adv.description,
-        campName: adv.name || `Автоматическая кампания ${adv.advertId}`,
-        changeTime: adv.changeTime,
-        numericStatus: adv.status
-      };
-    });
-    
-    return campaigns;
-  } catch (error) {
-    console.error('Error fetching auto campaigns:', error);
-    throw error;
-  }
-};
-
-// Получение расходов
-export const getAdvertCosts = async (dateFrom: Date, dateTo: Date, apiKey: string) => {
-  const url = new URL('https://advert-api.wildberries.ru/adv/v2/upd');
-  
-  const params = {
-    from: format(dateFrom, 'yyyy-MM-dd'),
-    to: format(dateTo, 'yyyy-MM-dd')
-  };
-  
-  Object.entries(params).forEach(([key, value]) => {
-    url.searchParams.append(key, String(value));
-  });
-  
-  try {
-    const response = await fetch(url.toString(), {
-      headers: {
-        "Authorization": apiKey
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch advert costs: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    return data.costs || [];
-  } catch (error) {
-    console.error('Error fetching advert costs:', error);
-    throw error;
-  }
-};
-
-// Получение статистики
-export const getAdvertStats = async (dateFrom: Date, dateTo: Date, advertIds: number[], apiKey: string) => {
-  const url = new URL('https://advert-api.wildberries.ru/adv/v2/fullstats');
-  
-  const params = {
-    from: format(dateFrom, 'yyyy-MM-dd'),
-    to: format(dateTo, 'yyyy-MM-dd'),
-    id: advertIds.join(',')
-  };
-  
-  Object.entries(params).forEach(([key, value]) => {
-    url.searchParams.append(key, String(value));
-  });
-  
-  try {
-    const response = await fetch(url.toString(), {
-      headers: {
-        "Authorization": apiKey
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch advert stats: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error fetching advert stats:', error);
-    throw error;
-  }
-};
-
-// Получение данных о пополнениях
-export const getAdvertPayments = async (dateFrom: Date, dateTo: Date, apiKey: string) => {
-  const url = new URL('https://advert-api.wildberries.ru/adv/v1/payment/history');
-  
-  const params = {
-    from: format(dateFrom, 'yyyy-MM-dd'),
-    to: format(dateTo, 'yyyy-MM-dd')
-  };
-  
-  Object.entries(params).forEach(([key, value]) => {
-    url.searchParams.append(key, String(value));
-  });
-  
-  try {
-    const response = await fetch(url.toString(), {
-      headers: {
-        "Authorization": apiKey
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch advert payments: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    return data.payments || [];
-  } catch (error) {
-    console.error('Error fetching advert payments:', error);
-    throw error;
-  }
-};
-
-// Получение баланса по рекламе
-export const getAdvertBalance = async (apiKey: string) => {
-  const url = 'https://advert-api.wildberries.ru/adv/v1/balance';
-  
-  try {
-    const response = await fetch(url, {
-      headers: {
-        "Authorization": apiKey
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch advert balance: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error fetching advert balance:', error);
-    throw error;
-  }
-};
-
-// Подробная статистика по кампании
-export const getCampaignFullStats = async (apiKey: string, campaignIds: number[], dateFrom: Date, dateTo: Date): Promise<CampaignFullStats[]> => {
-  const url = new URL('https://advert-api.wildberries.ru/adv/v1/fullstat');
-  
-  const params = {
-    id: campaignIds.join(','),
-    from: format(dateFrom, 'yyyy-MM-dd'),
-    to: format(dateTo, 'yyyy-MM-dd')
-  };
-  
-  Object.entries(params).forEach(([key, value]) => {
-    url.searchParams.append(key, String(value));
-  });
-  
-  try {
-    const response = await fetch(url.toString(), {
-      headers: {
-        "Authorization": apiKey,
-        "Content-Type": "application/json"
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch campaign full stats: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error fetching campaign full stats:', error);
-    throw error;
-  }
-};
-
-// Получение статистики по ключевым фразам
-export const getKeywordStats = async (apiKey: string, advertId: number, dateFrom: Date, dateTo: Date): Promise<KeywordStatsResponse> => {
-  const url = new URL('https://advert-api.wildberries.ru/adv/v0/stats/keywords');
-  
-  const params = {
-    advert_id: advertId.toString(),
-    from: format(dateFrom, 'yyyy-MM-dd'),
-    to: format(dateTo, 'yyyy-MM-dd')
-  };
-  
-  Object.entries(params).forEach(([key, value]) => {
-    url.searchParams.append(key, String(value));
-  });
-  
-  try {
-    const response = await fetch(url.toString(), {
-      headers: {
-        "Authorization": apiKey
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch keyword stats: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error fetching keyword stats:', error);
-    throw error;
-  }
-};
-
-// Установка/удаление минус-фраз в поиске для аукционных кампаний
-export const setSearchExcludedKeywords = async (apiKey: string, campaignId: number, excludedKeywords: string[]) => {
-  const url = new URL(`https://advert-api.wildberries.ru/adv/v1/search/set-excluded?id=${campaignId}`);
-  
-  try {
-    const response = await fetch(url.toString(), {
-      method: 'POST',
-      headers: {
-        "Authorization": apiKey,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        excluded: excludedKeywords
-      })
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to set excluded keywords for search: ${response.status} ${response.statusText} - ${errorText}`);
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error setting excluded keywords for search:', error);
-    throw error;
-  }
-};
-
-// Установка/удаление минус-фраз для автоматических кампаний
-export const setAutoExcludedKeywords = async (apiKey: string, campaignId: number, excludedKeywords: string[]) => {
-  const url = new URL(`https://advert-api.wildberries.ru/adv/v1/auto/set-excluded?id=${campaignId}`);
-  
-  try {
-    const response = await fetch(url.toString(), {
-      method: 'POST',
-      headers: {
-        "Authorization": apiKey,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        excluded: excludedKeywords
-      })
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to set excluded keywords for auto campaign: ${response.status} ${response.statusText} - ${errorText}`);
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error setting excluded keywords for auto campaign:', error);
-    throw error;
-  }
-};
-
-// Получение минус-фраз для кампании
-export const getExcludedKeywords = async (apiKey: string, campaignId: number, campaignType: 'auction' | 'automatic'): Promise<string[]> => {
-  const endpoint = campaignType === 'auction' 
-    ? `https://advert-api.wildberries.ru/adv/v1/search/excluded?id=${campaignId}` 
-    : `https://advert-api.wildberries.ru/adv/v1/auto/excluded?id=${campaignId}`;
-  
-  try {
-    const response = await fetch(endpoint, {
-      headers: {
-        "Authorization": apiKey
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch excluded keywords: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    return data.excluded || [];
-  } catch (error) {
-    console.error('Error fetching excluded keywords:', error);
-    throw error;
-  }
-};
+// Campaign interface used throughout the application
+export interface Campaign {
+  advertId: number;
+  campName: string;
+  status: 'active' | 'paused' | 'archived' | 'ready' | 'completed';
+  type: 'auction' | 'automatic';
+  numericStatus?: number; // Original numeric status from API
+  numericType?: number;   // Original numeric type from API
+  changeTime?: string;    // Last change time
+}
