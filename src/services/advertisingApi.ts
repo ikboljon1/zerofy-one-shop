@@ -1,4 +1,3 @@
-
 import { AxiosError } from 'axios';
 import axios from 'axios';
 
@@ -50,7 +49,7 @@ export interface CampaignFullStats {
   cr: number;
   shks: number;
   sum_price: number;
-  dates: string[];
+  dates: string[]; // This is important for our date filtering
   days: DayStats[];
   boosterStats?: BoosterStats[];
   advertId: number;
@@ -86,7 +85,7 @@ interface AppStats {
   appType?: number;
 }
 
-// Новый интерфейс для статистики по товарам
+// Интерфейс для статистики по товарам
 export interface ProductStats {
   views: number;
   clicks: number;
@@ -207,7 +206,7 @@ export const getAdvertPayments = async (dateFrom: Date, dateTo: Date, apiKey: st
   }
 };
 
-// New function to get full campaign statistics
+// Function to get full campaign statistics
 export const getCampaignFullStats = async (
   apiKey: string,
   campaignIds: number[], 

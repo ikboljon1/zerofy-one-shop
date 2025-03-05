@@ -889,7 +889,10 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
         transition={{ delay: 0.2 }}
         className="w-full"
       >
-        <ProductStatsTable products={productStats} />
+        <ProductStatsTable 
+          products={productStats} 
+          dates={fullStats?.dates}
+        />
       </motion.div>
     </motion.div>
   );
