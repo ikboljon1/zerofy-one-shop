@@ -145,40 +145,6 @@ export interface KeywordStat {
   views: number;
 }
 
-export interface SearchKeywordResponse {
-  words: {
-    phrase: string[];
-    strong: string[];
-    excluded: string[];
-    pluse: string[];
-    keywords: SearchKeyword[];
-    fixed?: boolean;
-  };
-  stat: SearchKeywordStat[];
-}
-
-export interface SearchKeyword {
-  keyword: string;
-  count: number;
-  fixed?: boolean;
-}
-
-export interface SearchKeywordStat {
-  advertId: number;
-  keyword: string;
-  advertName: string;
-  campaignName: string;
-  begin: string;
-  end: string;
-  views: number;
-  clicks: number;
-  frq: number;
-  ctr: number;
-  cpc: number;
-  duration: number;
-  sum: number;
-}
-
 const createApiInstance = (apiKey: string) => {
   return axios.create({
     baseURL: BASE_URL,
@@ -341,26 +307,6 @@ export const getKeywordStatistics = async (
   } catch (error) {
     console.error('Error fetching keyword statistics:', error);
     return { keywords: [] };
-  }
-};
-
-export const getSearchKeywordStatistics = async (
-  apiKey: string,
-  campaignId: number
-): Promise<SearchKeywordResponse> => {
-  try {
-    const api = createApiInstance(apiKey);
-    
-    const params = {
-      id: campaignId
-    };
-    
-    const response = await api.get(`/v1/stat/words`, { params });
-    console.log('Search keyword statistics response:', response.data);
-    return response.data || { words: { phrase: [], strong: [], excluded: [], pluse: [], keywords: [] }, stat: [] };
-  } catch (error) {
-    console.error('Error fetching search keyword statistics:', error);
-    return { words: { phrase: [], strong: [], excluded: [], pluse: [], keywords: [] }, stat: [] };
   }
 };
 
