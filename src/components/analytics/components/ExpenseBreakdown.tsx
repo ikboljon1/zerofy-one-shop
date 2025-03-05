@@ -21,9 +21,8 @@ interface ExpenseBreakdownProps {
 }
 
 const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps) => {
-  // Используем переданные данные о разбивке рекламы или рассчитываем по умолчанию
-  const searchAdsAmount = advertisingBreakdown?.search || data.currentPeriod.expenses.advertising * 0.6;
-  const bannerAdsAmount = advertisingBreakdown?.banner || data.currentPeriod.expenses.advertising * 0.4;
+  // Используем общую сумму расходов на рекламу без разбивки
+  const advertisingAmount = data.currentPeriod.expenses.advertising;
 
   return (
     <Card className="p-6">
@@ -118,12 +117,8 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           <div className="mt-4 pt-4 border-t border-amber-200 dark:border-amber-800/50">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Поисковая реклама</span>
-                <span className="font-medium">{searchAdsAmount.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Баннерная реклама</span>
-                <span className="font-medium">{bannerAdsAmount.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                <span>Расходы на продвижение</span>
+                <span className="font-medium">{advertisingAmount.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
               </div>
             </div>
           </div>

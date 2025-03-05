@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag, Loader2 } from "lucide-react";
@@ -72,7 +71,6 @@ interface AnalyticsData {
 // Структура для данных о рекламе
 interface AdvertisingBreakdown {
   search: number;
-  banner: number;
 }
 
 // Структура для хранения всех данных аналитики
@@ -98,8 +96,7 @@ const AnalyticsSection = () => {
   const [deductionsTimeline, setDeductionsTimeline] = useState(deductionsTimelineData);
   const [productAdvertisingData, setProductAdvertisingData] = useState<Array<{name: string, value: number}>>(advertisingData);
   const [advertisingBreakdown, setAdvertisingBreakdown] = useState<AdvertisingBreakdown>({
-    search: 0,
-    banner: 0
+    search: 0
   });
   const isMobile = useIsMobile();
   const { toast } = useToast();
@@ -178,17 +175,9 @@ const AnalyticsSection = () => {
       if (advertCosts && advertCosts.length > 0) {
         totalAdvertisingCost = advertCosts.reduce((sum, cost) => sum + cost.updSum, 0);
         
-        // Группируем расходы по типу рекламы (упрощенно: поисковая и баннерная)
-        // Предполагаем, что все advertType = 6 - это поисковая реклама, остальное - баннерная
-        const searchAdsTotal = advertCosts
-          .filter(cost => cost.advertType === "6")
-          .reduce((sum, cost) => sum + cost.updSum, 0);
-        
-        const bannerAdsTotal = totalAdvertisingCost - searchAdsTotal;
-        
+        // Все расходы считаем как поисковую рекламу, так как баннерной у нас нет
         setAdvertisingBreakdown({
-          search: searchAdsTotal,
-          banner: bannerAdsTotal
+          search: totalAdvertisingCost
         });
         
         // Группируем расходы по кампаниям
@@ -217,11 +206,10 @@ const AnalyticsSection = () => {
         
         setProductAdvertisingData(topProducts.length > 0 ? topProducts : advertisingData);
       } else {
-        // Если данные о рекламе отсутствуют, используем демо-данные
+        // Если данные о рекламе отсу��ствуют, используем демо-данные
         setProductAdvertisingData(advertisingData);
         setAdvertisingBreakdown({
-          search: demoData.currentPeriod.expenses.advertising * 0.6,
-          banner: demoData.currentPeriod.expenses.advertising * 0.4
+          search: demoData.currentPeriod.expenses.advertising
         });
         totalAdvertisingCost = demoData.currentPeriod.expenses.advertising;
       }
