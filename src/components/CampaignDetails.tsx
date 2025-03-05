@@ -76,7 +76,7 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
         getAdvertCosts(dateFrom, dateTo, apiKey),
         getAdvertStats(dateFrom, dateTo, [campaignId], apiKey),
         getAdvertPayments(dateFrom, dateTo, apiKey),
-        getCampaignFullStats([campaignId], dateFrom, dateTo, apiKey)
+        getCampaignFullStats(apiKey, [campaignId], dateFrom, dateTo)
       ]);
 
       const campaignCosts = costsData.filter(cost => cost.advertId === campaignId);
