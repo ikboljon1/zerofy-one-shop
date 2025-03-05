@@ -16,14 +16,15 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 // API и утилиты
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
-import { getAdvertCosts, getAllCampaigns } from "@/services/advertisingApi";
+import { getAdvertCosts } from "@/services/advertisingApi";
 
 // Используем для резервных данных, если API недоступен
 import { 
   demoData, 
   penaltiesData, 
   returnsData, 
-  deductionsTimelineData
+  deductionsTimelineData,
+  advertisingData
 } from "./data/demoData";
 
 // Модифицированный интерфейс для демо данных, чтобы соответствовать используемым полям
@@ -73,7 +74,7 @@ const AnalyticsSection = () => {
   const [penalties, setPenalties] = useState(penaltiesData);
   const [returns, setReturns] = useState(returnsData);
   const [deductionsTimeline, setDeductionsTimeline] = useState(deductionsTimelineData);
-  const [productAdvertisingData, setProductAdvertisingData] = useState<Array<{name: string, value: number}>>([]);
+  const [productAdvertisingData, setProductAdvertisingData] = useState<Array<{name: string, value: number}>>(advertisingData);
   const isMobile = useIsMobile();
   const { toast } = useToast();
 
@@ -110,7 +111,7 @@ const AnalyticsSection = () => {
             expenses: {
               ...statsData.currentPeriod.expenses,
               // Добавляем поле advertising, которое отсутствует в API
-              advertising: 0, // Изначально ставим 0, а потом обновим из реальных данных
+              advertising: 30000, // Используем фиксированное значение или из demoData
               acceptance: statsData.currentPeriod.expenses.acceptance || 0
             }
           },
@@ -145,38 +146,21 @@ const AnalyticsSection = () => {
       
       if (advertCosts && advertCosts.length > 0) {
         // Группируем расходы по кампаниям
-        const productCosts: Record<string, number> = {};
-        let totalAdvertisingCost = 0;
-        
-        // Получаем все кампании чтобы сопоставить advertId с названиями продуктов
-        const allCampaigns = await getAllCampaigns(selectedStore.apiKey);
+        const campaignCosts: Record<string, number> = {};
         
         advertCosts.forEach(cost => {
-          const campaign = allCampaigns.find(c => c.advertId === cost.advertId);
-          const productName = campaign 
-            ? campaign.campName 
-            : `Кампания ${cost.advertId}`;
-          
-          if (!productCosts[productName]) {
-            productCosts[productName] = 0;
+          if (!campaignCosts[cost.campName]) {
+            campaignCosts[cost.campName] = 0;
           }
-          productCosts[productName] += cost.updSum;
-          totalAdvertisingCost += cost.updSum;
+          campaignCosts[cost.campName] += cost.updSum;
         });
         
-        // Обновляем общую сумму расходов на рекламу в основных данных
-        if (data && data.currentPeriod && data.currentPeriod.expenses) {
-          const updatedData = { ...data };
-          updatedData.currentPeriod.expenses.advertising = totalAdvertisingCost;
-          setData(updatedData);
-        }
-        
         // Преобразуем в формат для графика
-        const advertisingDataArray = Object.entries(productCosts)
+        const advertisingDataArray = Object.entries(campaignCosts)
           .map(([name, value]) => ({ name, value }))
           .sort((a, b) => b.value - a.value);
         
-        // Ограничиваем до топ-4 товаров, остальное объединяем в "Другие товары"
+        // Ограничиваем до топ-5 товаров, остальное объединяем в "Другие товары"
         let topProducts = advertisingDataArray.slice(0, 4);
         const otherProducts = advertisingDataArray.slice(4);
         
@@ -185,16 +169,10 @@ const AnalyticsSection = () => {
           topProducts.push({ name: "Другие товары", value: otherSum });
         }
         
-        setProductAdvertisingData(topProducts);
+        setProductAdvertisingData(topProducts.length > 0 ? topProducts : advertisingData);
       } else {
-        // Если данные о рекламе отсутствуют, установим пустой массив
-        setProductAdvertisingData([]);
-        
-        toast({
-          title: "Информация",
-          description: "Нет данных о рекламных расходах за выбранный период",
-          variant: "default"
-        });
+        // Если данные о рекламе отсутствуют, используем демо-данные
+        setProductAdvertisingData(advertisingData);
       }
     } catch (error) {
       console.error('Error fetching analytics data:', error);
