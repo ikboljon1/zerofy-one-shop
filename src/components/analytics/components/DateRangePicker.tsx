@@ -1,15 +1,25 @@
 
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import { Dispatch, SetStateAction } from 'react';
 
 interface DateRangePickerProps {
   isLoading?: boolean;
   onUpdate?: () => void;
+  // Optional date-related props for components that need date filtering
+  dateFrom?: Date;
+  dateTo?: Date;
+  setDateFrom?: Dispatch<SetStateAction<Date>>;
+  setDateTo?: Dispatch<SetStateAction<Date>>;
 }
 
 const DateRangePicker = ({ 
   isLoading,
-  onUpdate
+  onUpdate,
+  dateFrom,
+  dateTo,
+  setDateFrom,
+  setDateTo
 }: DateRangePickerProps) => {
   return (
     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">

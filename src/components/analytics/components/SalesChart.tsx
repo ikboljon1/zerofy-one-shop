@@ -14,9 +14,10 @@ import {
 
 interface SalesChartProps {
   data: {
-    dailySales: Array<{
+    dailySales?: Array<{
       date: string;
       sales: number;
+      previousSales?: number;
     }>;
   };
 }
