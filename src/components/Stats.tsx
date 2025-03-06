@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -104,7 +103,6 @@ const Stats = () => {
 
       const data = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
       
-      // Save new stats to localStorage
       const statsData = {
         storeId: selectedStore.id,
         dateFrom: dateFrom.toISOString(),
@@ -146,12 +144,11 @@ const Stats = () => {
     return data.productSales;
   };
 
-  // Use the correct property names based on API response
   const stats = statsData ? [
     {
       title: "Продажи",
       value: statsData.currentPeriod.sales.toLocaleString(),
-      change: calculatePercentageChange(statsData.currentPeriod.sales, 0), // In a real app, use previous period
+      change: calculatePercentageChange(statsData.currentPeriod.sales, 0),
       isPositive: true,
       description: "За выбранный период",
       icon: DollarSign,
@@ -162,7 +159,7 @@ const Stats = () => {
     {
       title: "Заказы",
       value: statsData.currentPeriod.orders.toLocaleString(),
-      change: calculatePercentageChange(statsData.currentPeriod.orders, 0), // In a real app, use previous period
+      change: calculatePercentageChange(statsData.currentPeriod.orders, 0),
       isPositive: true,
       description: "За выбранный период",
       icon: ShoppingBag,
@@ -173,7 +170,7 @@ const Stats = () => {
     {
       title: "Перечислено",
       value: statsData.currentPeriod.transferred.toLocaleString(),
-      change: calculatePercentageChange(statsData.currentPeriod.transferred, 0), // In a real app, use previous period
+      change: calculatePercentageChange(statsData.currentPeriod.transferred, 0),
       isPositive: true,
       description: "За выбранный период",
       icon: CreditCard,
@@ -184,7 +181,7 @@ const Stats = () => {
     {
       title: "Чистая прибыль",
       value: statsData.currentPeriod.netProfit.toLocaleString(),
-      change: calculatePercentageChange(statsData.currentPeriod.netProfit, 0), // In a real app, use previous period
+      change: calculatePercentageChange(statsData.currentPeriod.netProfit, 0),
       isPositive: true,
       description: "За выбранный период",
       icon: PieChart,
@@ -198,7 +195,7 @@ const Stats = () => {
     {
       title: "Расходы",
       value: statsData.currentPeriod.expenses.total.toLocaleString(),
-      change: calculatePercentageChange(statsData.currentPeriod.expenses.total, 0), // In a real app, use previous period
+      change: calculatePercentageChange(statsData.currentPeriod.expenses.total, 0),
       isPositive: false,
       description: "За выбранный период",
       icon: Wallet,
@@ -209,7 +206,7 @@ const Stats = () => {
     {
       title: "Логистика",
       value: statsData.currentPeriod.expenses.logistics.toLocaleString(),
-      change: calculatePercentageChange(statsData.currentPeriod.expenses.logistics, 0), // In a real app, use previous period
+      change: calculatePercentageChange(statsData.currentPeriod.expenses.logistics, 0),
       isPositive: false,
       description: "За выбранный период",
       icon: Truck,
@@ -220,7 +217,7 @@ const Stats = () => {
     {
       title: "Хранение",
       value: statsData.currentPeriod.expenses.storage.toLocaleString(),
-      change: calculatePercentageChange(statsData.currentPeriod.expenses.storage, 0), // In a real app, use previous period
+      change: calculatePercentageChange(statsData.currentPeriod.expenses.storage, 0),
       isPositive: false,
       description: "За выбранный период",
       icon: PackageCheck,
@@ -231,7 +228,7 @@ const Stats = () => {
     {
       title: "Возвраты",
       value: statsData.currentPeriod.returns.toLocaleString(),
-      change: calculatePercentageChange(statsData.currentPeriod.returns, 0), // In a real app, use previous period
+      change: calculatePercentageChange(statsData.currentPeriod.returns, 0),
       isPositive: false,
       description: "За выбранный период",
       icon: RotateCcw,
@@ -338,7 +335,7 @@ const Stats = () => {
               <div key={index} className="mb-4">
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-sm font-medium">{warehouse.name}</span>
-                  <span className="text-sm text-muted-foreground">{warehouse.count} заказов ({percentage}%)</span>
+                  <span className="text-sm text-muted-foreground">{String(warehouse.count)} заказов ({percentage}%)</span>
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                   <div
@@ -384,7 +381,7 @@ const Stats = () => {
               <div key={index} className="mb-4">
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-sm font-medium">{region.name}</span>
-                  <span className="text-sm text-muted-foreground">{region.count} заказов ({percentage}%)</span>
+                  <span className="text-sm text-muted-foreground">{String(region.count)} заказов ({percentage}%)</span>
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                   <div
