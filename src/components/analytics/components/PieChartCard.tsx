@@ -8,6 +8,7 @@ import {
   Cell,
   Tooltip
 } from "recharts";
+import { formatCurrency } from "@/utils/formatCurrency";
 
 interface PieChartCardProps {
   title: string;
@@ -26,7 +27,7 @@ const PieChartCard = ({
   title, 
   icon, 
   data, 
-  valueLabel = "₽", 
+  valueLabel = "", 
   showCount = false,
   emptyMessage = "Нет данных за выбранный период" 
 }: PieChartCardProps) => {
@@ -60,7 +61,7 @@ const PieChartCard = ({
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: any) => [`${value.toLocaleString()} ${valueLabel}`, '']}
+                  formatter={(value: any) => [`${formatCurrency(value)} ${valueLabel}`, '']}
                   contentStyle={{ background: '#ffffff', borderRadius: '4px', border: '1px solid #e5e7eb' }}
                 />
               </PieChart>
@@ -77,7 +78,7 @@ const PieChartCard = ({
                   <span className="text-sm">{item.name}</span>
                 </div>
                 <div className="text-right">
-                  <span className="font-medium">{item.value.toLocaleString()} {valueLabel}</span>
+                  <span className="font-medium">{formatCurrency(item.value)} {valueLabel}</span>
                   {showCount && item.count !== undefined && (
                     <div className="text-xs text-muted-foreground">
                       Кол-во: {item.count}

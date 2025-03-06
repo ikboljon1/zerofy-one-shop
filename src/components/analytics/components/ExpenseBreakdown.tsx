@@ -1,6 +1,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Truck, AlertCircle, WarehouseIcon, Target, Inbox } from "lucide-react";
+import { formatCurrency } from "@/utils/formatCurrency";
 
 interface ExpenseBreakdownProps {
   data: {
@@ -39,7 +40,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
               <Truck className="h-4 w-4 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
-          <p className="text-2xl font-bold">{data.currentPeriod.expenses.logistics.toLocaleString()} ₽</p>
+          <p className="text-2xl font-bold">{formatCurrency(data.currentPeriod.expenses.logistics)}</p>
           <span className="text-xs text-muted-foreground mt-1">
             {totalExpenses > 0 ? ((data.currentPeriod.expenses.logistics / totalExpenses) * 100).toFixed(1) : '0'}% от общих расходов
           </span>
@@ -47,11 +48,11 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Доставка до клиента</span>
-                <span className="font-medium">{(data.currentPeriod.expenses.logistics * 0.65).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                <span className="font-medium">{formatCurrency(data.currentPeriod.expenses.logistics * 0.65)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Доставка на склад</span>
-                <span className="font-medium">{(data.currentPeriod.expenses.logistics * 0.35).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                <span className="font-medium">{formatCurrency(data.currentPeriod.expenses.logistics * 0.35)}</span>
               </div>
             </div>
           </div>
@@ -64,7 +65,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
               <WarehouseIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
-          <p className="text-2xl font-bold">{data.currentPeriod.expenses.storage.toLocaleString()} ₽</p>
+          <p className="text-2xl font-bold">{formatCurrency(data.currentPeriod.expenses.storage)}</p>
           <span className="text-xs text-muted-foreground mt-1">
             {totalExpenses > 0 ? ((data.currentPeriod.expenses.storage / totalExpenses) * 100).toFixed(1) : '0'}% от общих расходов
           </span>
@@ -72,7 +73,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Хранение на складах</span>
-                <span className="font-medium">{data.currentPeriod.expenses.storage.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                <span className="font-medium">{formatCurrency(data.currentPeriod.expenses.storage)}</span>
               </div>
             </div>
           </div>
@@ -85,7 +86,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
               <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
             </div>
           </div>
-          <p className="text-2xl font-bold">{data.currentPeriod.expenses.penalties.toLocaleString()} ₽</p>
+          <p className="text-2xl font-bold">{formatCurrency(data.currentPeriod.expenses.penalties)}</p>
           <span className="text-xs text-muted-foreground mt-1">
             {totalExpenses > 0 ? ((data.currentPeriod.expenses.penalties / totalExpenses) * 100).toFixed(1) : '0'}% от общих расходов
           </span>
@@ -93,11 +94,11 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Брак и повреждения</span>
-                <span className="font-medium">{(data.currentPeriod.expenses.penalties * 0.45).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                <span className="font-medium">{formatCurrency(data.currentPeriod.expenses.penalties * 0.45)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Нарушение правил</span>
-                <span className="font-medium">{(data.currentPeriod.expenses.penalties * 0.55).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                <span className="font-medium">{formatCurrency(data.currentPeriod.expenses.penalties * 0.55)}</span>
               </div>
             </div>
           </div>
@@ -110,7 +111,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
               <Target className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             </div>
           </div>
-          <p className="text-2xl font-bold">{advertisingAmount.toLocaleString()} ₽</p>
+          <p className="text-2xl font-bold">{formatCurrency(advertisingAmount)}</p>
           <span className="text-xs text-muted-foreground mt-1">
             {totalExpenses > 0 ? ((advertisingAmount / totalExpenses) * 100).toFixed(1) : '0'}% от общих расходов
           </span>
@@ -118,7 +119,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Расходы на продвижение</span>
-                <span className="font-medium">{advertisingAmount.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                <span className="font-medium">{formatCurrency(advertisingAmount)}</span>
               </div>
             </div>
           </div>
@@ -131,7 +132,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
               <Inbox className="h-4 w-4 text-green-600 dark:text-green-400" />
             </div>
           </div>
-          <p className="text-2xl font-bold">{acceptanceAmount.toLocaleString()} ₽</p>
+          <p className="text-2xl font-bold">{formatCurrency(acceptanceAmount)}</p>
           <span className="text-xs text-muted-foreground mt-1">
             {totalExpenses > 0 ? ((acceptanceAmount / totalExpenses) * 100).toFixed(1) : '0'}% от общих расходов
           </span>
@@ -139,7 +140,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Платная приемка</span>
-                <span className="font-medium">{acceptanceAmount.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ₽</span>
+                <span className="font-medium">{formatCurrency(acceptanceAmount)}</span>
               </div>
             </div>
           </div>
