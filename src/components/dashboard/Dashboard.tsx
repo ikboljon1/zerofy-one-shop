@@ -15,11 +15,13 @@ import OrdersTable from "./OrdersTable";
 import SalesTable from "./SalesTable";
 import GeographySection from "./GeographySection";
 import Stats from "@/components/Stats";
+import PeriodSelector, { Period } from "./PeriodSelector";
 import { WildberriesOrder, WildberriesSale } from "@/types/store";
 
 const Dashboard = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
+  const [period, setPeriod] = useState<Period>("today");
   const [isLoading, setIsLoading] = useState(false);
   
   const [orders, setOrders] = useState<WildberriesOrder[]>([]);
@@ -42,7 +44,6 @@ const Dashboard = () => {
         return;
       }
 
-      // Load orders
       const ordersResult = await fetchAndUpdateOrders(selectedStore);
       if (ordersResult) {
         setOrders(ordersResult.orders);
@@ -57,7 +58,6 @@ const Dashboard = () => {
         }
       }
 
-      // Load sales
       const salesResult = await fetchAndUpdateSales(selectedStore);
       if (salesResult) {
         setSales(salesResult);
@@ -84,7 +84,6 @@ const Dashboard = () => {
     }
   };
 
-  // Load data on first render
   useEffect(() => {
     const stores = loadStores();
     const selectedStore = stores.find(s => s.isSelected);
@@ -144,14 +143,23 @@ const Dashboard = () => {
         </TabsContent>
 
         <TabsContent value="orders" className="space-y-4">
+          <div className="mb-4">
+            <PeriodSelector value={period} onChange={setPeriod} />
+          </div>
           <OrdersTable orders={orders} />
         </TabsContent>
 
         <TabsContent value="sales" className="space-y-4">
+          <div className="mb-4">
+            <PeriodSelector value={period} onChange={setPeriod} />
+          </div>
           <SalesTable sales={sales} />
         </TabsContent>
 
         <TabsContent value="geography" className="space-y-4">
+          <div className="mb-4">
+            <PeriodSelector value={period} onChange={setPeriod} />
+          </div>
           <GeographySection 
             warehouseDistribution={warehouseDistribution} 
             regionDistribution={regionDistribution}
