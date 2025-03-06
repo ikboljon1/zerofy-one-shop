@@ -59,7 +59,15 @@ export const fetchWarehouses = async (apiKey: string): Promise<WarehouseData[]> 
     
     // Если данных нет в localStorage, импортируем из файла с демо-данными
     const { warehousesData } = await import('@/components/analytics/data/demoData');
-    return warehousesData;
+    
+    // Приведение типов для coordinates, чтобы они соответствовали [number, number]
+    const typedWarehouses = warehousesData.map(warehouse => ({
+      ...warehouse,
+      coordinates: warehouse.coordinates as [number, number],
+      status: warehouse.status as 'active' | 'maintenance' | 'low-stock'
+    }));
+    
+    return typedWarehouses;
   } catch (error) {
     console.error('Error fetching warehouses:', error);
     throw error;
@@ -83,7 +91,14 @@ export const fetchLogisticsRoutes = async (apiKey: string): Promise<LogisticsRou
     
     // Если данных нет в localStorage, импортируем из файла с демо-данными
     const { logisticsRoutes } = await import('@/components/analytics/data/demoData');
-    return logisticsRoutes;
+    
+    // Приведение типов для status, чтобы они соответствовали 'active' | 'delayed'
+    const typedRoutes = logisticsRoutes.map(route => ({
+      ...route,
+      status: route.status as 'active' | 'delayed'
+    }));
+    
+    return typedRoutes;
   } catch (error) {
     console.error('Error fetching logistics routes:', error);
     throw error;
