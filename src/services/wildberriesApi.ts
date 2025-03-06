@@ -175,6 +175,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
         
         productProfitability[productName].sales += record.ppvz_for_pay || 0;
         productProfitability[productName].costs += (record.delivery_rub || 0) + 
+                                                  (record.storage_fee || 0) + 
                                                   (record.penalty || 0);
         productProfitability[productName].price = record.retail_price || productProfitability[productName].price;
         if (record.pic_url && !productProfitability[productName].image) {
@@ -209,30 +210,6 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
         }
         returnsByProduct[productName].value += Math.abs(record.ppvz_for_pay || 0);
         returnsByProduct[productName].count += 1;
-        productProfitability[productName].returnCount += 1;
-      }
-    }
-    
-    // Расчет хранения только для записей с supplier_oper_name === "Хранение"
-    if (record.supplier_oper_name === "Хранение") {
-      totalStorageFee += Math.abs(record.supplier_operation_name_amount || 0);
-      
-      if (record.sa_name) {
-        const productName = record.sa_name;
-        if (!productProfitability[productName]) {
-          productProfitability[productName] = { 
-            name: productName,
-            price: record.retail_price || 0,
-            sales: 0,
-            costs: 0,
-            profit: 0,
-            image: record.pic_url || '',
-            count: 0,
-            returnCount: 0
-          };
-        }
-        
-        productProfitability[productName].costs += Math.abs(record.supplier_operation_name_amount || 0);
       }
     }
     
@@ -246,6 +223,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     
     totalDeliveryRub += record.delivery_rub || 0;
     totalRebillLogisticCost += record.rebill_logistic_cost || 0;
+    totalStorageFee += record.storage_fee || 0;
     totalPenalty += record.penalty || 0;
     totalDeduction += record.deduction || 0;
   }
@@ -298,7 +276,6 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
 
   console.log(`Received and processed data. Total returns: ${Math.abs(totalReturns)}, Returned items count: ${totalReturnCount}, Returned products count: ${productReturns.length}`);
   console.log(`Calculated top profitable products: ${topProfitableProducts.length}, Top unprofitable products: ${topUnprofitableProducts.length}`);
-  console.log(`Total storage fee: ${totalStorageFee}`);
 
   return {
     metrics: {

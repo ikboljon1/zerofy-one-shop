@@ -28,7 +28,7 @@ interface Product {
     acceptance: number;
     deductions?: number;
     ppvz_for_pay?: number;
-    retail_price?: number;
+    retail_price?: number; // Изменено с retail_amount на retail_price
   };
 }
 
@@ -68,7 +68,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       salesAmount: 0,
       transferredAmount: 0,
       soldQuantity: 0,
-      margin: 0
+      margin: 0  // Added margin to the return object
     };
     
     console.log('Calculating for product:', {
@@ -100,10 +100,13 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     
     const netProfit = transferredAmount - costPriceTotal - totalExpenses;
     
+    // Calculate margin as a percentage of costs (not revenue)
+    // This prevents division by zero and unrealistic margins
     let margin = 0;
     if (costPriceTotal > 0) {
       margin = (netProfit / costPriceTotal) * 100;
     } else if (netProfit > 0) {
+      // If cost price is 0 but there's profit, cap the margin at 100%
       margin = 100;
     }
     
@@ -115,7 +118,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       salesAmount,
       transferredAmount,
       soldQuantity: productSales,
-      margin: Math.round(margin)
+      margin: Math.round(margin) // Return the calculated margin
     };
   };
 
@@ -302,8 +305,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           nmId,
           doc_type_name: item.doc_type_name,
           retail_price: item.retail_price,
-          quantity: item.quantity,
-          supplier_oper_name: item.supplier_oper_name
+          quantity: item.quantity
         });
 
         if (!expensesMap.has(nmId)) {
@@ -320,16 +322,11 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         
         const expenses = expensesMap.get(nmId);
         expenses.logistics += item.delivery_rub || 0;
+        expenses.storage += item.storage_fee || 0;
         expenses.penalties += item.penalty || 0;
         expenses.acceptance += item.acceptance || 0;
         expenses.deductions += item.deduction || 0;
         expenses.ppvz_for_pay += item.ppvz_for_pay || 0;
-
-        // Расчет хранения только для записей с supplier_oper_name === "Хранение"
-        if (item.supplier_oper_name === "Хранение") {
-          expenses.storage += Math.abs(item.supplier_operation_name_amount || 0);
-          console.log(`Added storage fee for nmId ${nmId}:`, Math.abs(item.supplier_operation_name_amount || 0));
-        }
 
         if (item.doc_type_name === "Продажа") {
           expenses.retail_price += item.retail_price || 0;
