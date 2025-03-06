@@ -1,3 +1,4 @@
+
 import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY } from "@/types/store";
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
 
@@ -118,7 +119,7 @@ export const getAnalyticsData = (storeId: string) => {
     const storedData = localStorage.getItem(key);
     
     if (!storedData) {
-      // If data is missing, return base structure with demo data
+      // Если данные отсутствуют, возвращаем базовую структуру с демо-данными
       return {
         data: null,
         penalties: [],
@@ -127,9 +128,7 @@ export const getAnalyticsData = (storeId: string) => {
           date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           logistic: 0,
           storage: 0, 
-          penalties: 0,
-          acceptance: 0,
-          advertising: 0
+          penalties: 0
         })),
         productAdvertisingData: []
       };
@@ -137,26 +136,14 @@ export const getAnalyticsData = (storeId: string) => {
     
     let parsedData = JSON.parse(storedData);
     
-    // Check required fields and set default values
+    // Проверяем наличие обязательных полей и устанавливаем значения по умолчанию
     if (!parsedData.deductionsTimeline || !Array.isArray(parsedData.deductionsTimeline) || parsedData.deductionsTimeline.length === 0) {
       console.log("Creating default deductionsTimeline data");
       parsedData.deductionsTimeline = Array.from({ length: 7 }, (_, i) => ({
         date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         logistic: 0,
         storage: 0, 
-        penalties: 0,
-        acceptance: 0,
-        advertising: 0
-      }));
-    } else {
-      // Ensure each item has all required fields
-      parsedData.deductionsTimeline = parsedData.deductionsTimeline.map((item: any) => ({
-        date: item.date,
-        logistic: item.logistic || 0,
-        storage: item.storage || 0,
-        penalties: item.penalties || 0,
-        acceptance: item.acceptance || 0,
-        advertising: item.advertising || 0
+        penalties: 0
       }));
     }
     
@@ -175,7 +162,7 @@ export const getAnalyticsData = (storeId: string) => {
     return parsedData;
   } catch (error) {
     console.error('Error loading analytics data:', error);
-    // Return base structure in case of error
+    // Возвращаем базовую структуру в случае ошибки
     return {
       data: null,
       penalties: [],
@@ -184,9 +171,7 @@ export const getAnalyticsData = (storeId: string) => {
         date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         logistic: 0,
         storage: 0, 
-        penalties: 0,
-        acceptance: 0,
-        advertising: 0
+        penalties: 0
       })),
       productAdvertisingData: []
     };
