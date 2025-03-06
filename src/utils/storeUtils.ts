@@ -1,6 +1,6 @@
 
 import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY } from "@/types/store";
-import { fetchWildberriesStats } from "@/services/wildberriesApi";
+import { fetchWildberriesStats, fetchWildberriesOrders, fetchWildberriesSales } from "@/services/wildberriesApi";
 
 export const getLastWeekDateRange = () => {
   const now = new Date();
@@ -62,14 +62,17 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           timestamp: timestamp
         }));
         
-        // Также сохраняем данные для аналитики и раздела товаров с тем же timestamp
+        // Также сохраняем данные для аналитики с обновленной структурой
         localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify({
           storeId: store.id,
           dateFrom: from.toISOString(),
           dateTo: to.toISOString(),
           data: stats,
           deductionsTimeline: deductionsTimeline,
-          penalties: [],
+          // Новые данные для дашборда
+          ordersByRegion: stats.ordersByRegion || [],
+          ordersByWarehouse: stats.ordersByWarehouse || [],
+          penalties: stats.penaltiesData || [],
           returns: [],
           productAdvertisingData: [],
           advertisingBreakdown: { search: stats.currentPeriod.expenses.advertising || 0 },
@@ -134,7 +137,27 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
       console.log('Analytics data not found or forced refresh requested, returning default structure');
       // Возвращаем базовую структуру с демо-данными
       return {
-        data: null,
+        data: {
+          currentPeriod: {
+            sales: 0,
+            transferred: 0,
+            expenses: {
+              total: 0,
+              logistics: 0,
+              storage: 0,
+              penalties: 0,
+              advertising: 0,
+              acceptance: 0
+            },
+            netProfit: 0,
+            acceptance: 0,
+            orders: 0,
+            returns: 0,
+            cancellations: 0
+          }
+        },
+        ordersByRegion: [],
+        ordersByWarehouse: [],
         penalties: [],
         returns: [],
         deductionsTimeline: Array.from({ length: 7 }, (_, i) => ({
@@ -181,6 +204,28 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
       }));
     }
     
+    // Проверка на наличие новых полей в data
+    if (parsedData.data && parsedData.data.currentPeriod) {
+      if (!parsedData.data.currentPeriod.orders) {
+        parsedData.data.currentPeriod.orders = 0;
+      }
+      if (!parsedData.data.currentPeriod.returns) {
+        parsedData.data.currentPeriod.returns = 0;
+      }
+      if (!parsedData.data.currentPeriod.cancellations) {
+        parsedData.data.currentPeriod.cancellations = 0;
+      }
+    }
+    
+    // Проверка на наличие данных по регионам и складам
+    if (!parsedData.ordersByRegion || !Array.isArray(parsedData.ordersByRegion)) {
+      parsedData.ordersByRegion = [];
+    }
+    
+    if (!parsedData.ordersByWarehouse || !Array.isArray(parsedData.ordersByWarehouse)) {
+      parsedData.ordersByWarehouse = [];
+    }
+    
     if (!parsedData.penalties || !Array.isArray(parsedData.penalties)) {
       parsedData.penalties = [];
     }
@@ -208,7 +253,27 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
     console.error('Error loading analytics data:', error);
     // Возвращаем базовую структуру в случае ошибки
     return {
-      data: null,
+      data: {
+        currentPeriod: {
+          sales: 0,
+          transferred: 0,
+          expenses: {
+            total: 0,
+            logistics: 0,
+            storage: 0,
+            penalties: 0,
+            advertising: 0,
+            acceptance: 0
+          },
+          netProfit: 0,
+          acceptance: 0,
+          orders: 0,
+          returns: 0,
+          cancellations: 0
+        }
+      },
+      ordersByRegion: [],
+      ordersByWarehouse: [],
       penalties: [],
       returns: [],
       deductionsTimeline: Array.from({ length: 7 }, (_, i) => ({
@@ -223,5 +288,68 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
       advertisingBreakdown: { search: 0 },
       timestamp: Date.now() // Добавляем текущий timestamp
     };
+  }
+};
+
+// Функция для получения статистики заказов с сервера Wildberries
+export const fetchOrdersStatistics = async (apiKey: string, from: Date, to: Date) => {
+  try {
+    // Получаем данные о заказах
+    const orders = await fetchWildberriesOrders(apiKey, from, to);
+    
+    // Получаем данные о продажах
+    const sales = await fetchWildberriesSales(apiKey, from, to);
+    
+    // Группируем данные по регионам
+    const regionMap = new Map<string, number>();
+    orders.forEach(order => {
+      const region = order.regionName || 'Неизвестный регион';
+      const currentCount = regionMap.get(region) || 0;
+      regionMap.set(region, currentCount + 1);
+    });
+    
+    const topRegions = Array.from(regionMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([region, count]) => ({ region, count }));
+      
+    // Группируем данные по складам
+    const warehouseMap = new Map<string, number>();
+    orders.forEach(order => {
+      const warehouse = order.warehouseName || 'Неизвестный склад';
+      const currentCount = warehouseMap.get(warehouse) || 0;
+      warehouseMap.set(warehouse, currentCount + 1);
+    });
+    
+    const topWarehouses = Array.from(warehouseMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([warehouse, count]) => ({ warehouse, count }));
+    
+    // Группируем данные по категориям
+    const categoryMap = new Map<string, number>();
+    orders.forEach(order => {
+      const category = order.category || 'Неизвестная категория';
+      const currentCount = categoryMap.get(category) || 0;
+      categoryMap.set(category, currentCount + 1);
+    });
+    
+    const topCategories = Array.from(categoryMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([category, count]) => ({ category, count }));
+    
+    return {
+      totalOrders: orders.length,
+      totalSales: sales.filter(sale => sale.saleID.startsWith('S')).length,
+      totalReturns: sales.filter(sale => sale.saleID.startsWith('R')).length,
+      totalCancellations: orders.filter(order => order.isCancel).length,
+      topRegions,
+      topWarehouses,
+      topCategories
+    };
+  } catch (error) {
+    console.error('Error fetching orders statistics:', error);
+    throw error;
   }
 };
