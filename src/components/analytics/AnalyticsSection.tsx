@@ -78,9 +78,25 @@ interface StoredAnalyticsData {
   data: AnalyticsData;
   penalties: Array<{name: string, value: number}>;
   returns: Array<{name: string, value: number}>;
-  deductionsTimeline: Array<{date: string, logistic: number, storage: number, penalties: number}>;
+  deductionsTimeline: Array<{
+    date: string; 
+    logistic: number; 
+    storage: number; 
+    penalties: number;
+    acceptance: number;
+    advertising: number;
+  }>;
   productAdvertisingData: Array<{name: string, value: number}>;
   advertisingBreakdown: AdvertisingBreakdown;
+}
+
+interface DeductionsTimelineItem {
+  date: string;
+  logistic: number;
+  storage: number;
+  penalties: number;
+  acceptance: number;
+  advertising: number;
 }
 
 const AnalyticsSection = () => {
@@ -90,7 +106,7 @@ const AnalyticsSection = () => {
   const [data, setData] = useState<AnalyticsData>(demoData);
   const [penalties, setPenalties] = useState<Array<{name: string, value: number}>>([]);
   const [returns, setReturns] = useState<Array<{name: string, value: number}>>([]);
-  const [deductionsTimeline, setDeductionsTimeline] = useState(deductionsTimelineData);
+  const [deductionsTimeline, setDeductionsTimeline] = useState<DeductionsTimelineItem[]>(deductionsTimelineData);
   const [productAdvertisingData, setProductAdvertisingData] = useState<Array<{name: string, value: number}>>([]);
   const [advertisingBreakdown, setAdvertisingBreakdown] = useState<AdvertisingBreakdown>({
     search: 0
@@ -261,12 +277,16 @@ const AnalyticsSection = () => {
             const logistic = modifiedData.currentPeriod.expenses.logistics / daysCount;
             const storage = modifiedData.currentPeriod.expenses.storage / daysCount;
             const penalties = modifiedData.currentPeriod.expenses.penalties / daysCount;
+            const acceptance = modifiedData.currentPeriod.expenses.acceptance / daysCount || 0;
+            const advertising = modifiedData.currentPeriod.expenses.advertising / daysCount || 0;
             
             return {
               date: typeof day.date === 'string' ? day.date.split('T')[0] : new Date().toISOString().split('T')[0],
               logistic,
               storage,
-              penalties
+              penalties,
+              acceptance,
+              advertising
             };
           });
         } else {
@@ -275,7 +295,9 @@ const AnalyticsSection = () => {
             date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             logistic: modifiedData.currentPeriod.expenses.logistics / 7,
             storage: modifiedData.currentPeriod.expenses.storage / 7, 
-            penalties: modifiedData.currentPeriod.expenses.penalties / 7
+            penalties: modifiedData.currentPeriod.expenses.penalties / 7,
+            acceptance: modifiedData.currentPeriod.expenses.acceptance / 7 || 0,
+            advertising: modifiedData.currentPeriod.expenses.advertising / 7 || 0
           }));
         }
         
@@ -296,7 +318,9 @@ const AnalyticsSection = () => {
         date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         logistic: 0, 
         storage: 0, 
-        penalties: 0
+        penalties: 0,
+        acceptance: 0,
+        advertising: 0
       })));
       
       setPenalties([]);
@@ -325,7 +349,9 @@ const AnalyticsSection = () => {
         date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         logistic: 0, 
         storage: 0, 
-        penalties: 0
+        penalties: 0,
+        acceptance: 0,
+        advertising: 0
       })));
       
       setPenalties([]);

@@ -3,8 +3,16 @@ import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Card } from '@/components/ui/card';
-import { AlertTriangle, Info, Truck, WarehouseIcon, ShieldAlert, CheckCircle, Timer } from 'lucide-react';
-import { warehousesData, logisticsRoutes } from '@/components/analytics/data/demoData';
+import { AlertTriangle, Info, Truck, WarehouseIcon, ShieldAlert, CheckCircle, Timer, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  fetchWarehouses, 
+  fetchLogisticsRoutes,
+  updateWarehouseStatus,
+  addWarehouseRestock,
+  type WarehouseData,
+  type LogisticsRoute
+} from '@/services/warehouseApi';
 
 interface WarehouseMapProps {
   className?: string;
@@ -13,10 +21,58 @@ interface WarehouseMapProps {
 const WarehouseMap: React.FC<WarehouseMapProps> = ({ className }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
-  const [selectedWarehouse, setSelectedWarehouse] = useState<any>(null);
+  const [selectedWarehouse, setSelectedWarehouse] = useState<WarehouseData | null>(null);
+  const [warehouses, setWarehouses] = useState<WarehouseData[]>([]);
+  const [routes, setRoutes] = useState<LogisticsRoute[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
+  // Функция для загрузки данных о складах и маршрутах
+  const loadWarehouseData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Получаем API ключ из localStorage (в реальном приложении)
+      // или используем тестовый ключ для демонстрации
+      const apiKey = localStorage.getItem('warehouse_api_key') || 'demo_api_key';
+      
+      // Загружаем данные о складах
+      const warehouseData = await fetchWarehouses(apiKey);
+      setWarehouses(warehouseData);
+      
+      // Загружаем данные о маршрутах логистики
+      const logisticsData = await fetchLogisticsRoutes(apiKey);
+      setRoutes(logisticsData);
+      
+      // Если есть данные, устанавливаем первый склад как выбранный по умолчанию
+      if (warehouseData.length > 0) {
+        setSelectedWarehouse(warehouseData[0]);
+      }
+      
+      toast({
+        title: "Данные загружены",
+        description: "Информация о складах и маршрутах успешно загружена",
+      });
+    } catch (error) {
+      console.error('Error loading warehouse data:', error);
+      toast({
+        title: "Ошибка загрузки",
+        description: "Не удалось загрузить данные о складах",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Загрузка данных при первой отрисовке компонента
   useEffect(() => {
-    if (!mapContainer.current || map.current) return;
+    loadWarehouseData();
+  }, []);
+
+  // Инициализация карты после загрузки данных
+  useEffect(() => {
+    if (!mapContainer.current || map.current || warehouses.length === 0 || routes.length === 0) return;
 
     // Инициализация карты
     map.current = L.map(mapContainer.current).setView([55.7522, 37.6156], 4);
@@ -41,7 +97,7 @@ const WarehouseMap: React.FC<WarehouseMapProps> = ({ className }) => {
     };
 
     // Добавление маркеров для складов
-    warehousesData.forEach(warehouse => {
+    warehouses.forEach(warehouse => {
       const marker = L.marker(warehouse.coordinates as L.LatLngExpression, {
         icon: createCustomIcon(warehouse.status)
       })
@@ -61,9 +117,9 @@ const WarehouseMap: React.FC<WarehouseMapProps> = ({ className }) => {
     });
 
     // Добавление линий маршрутов
-    logisticsRoutes.forEach(route => {
-      const origin = warehousesData.find(w => w.id === route.origin);
-      const destination = warehousesData.find(w => w.id === route.destination);
+    routes.forEach(route => {
+      const origin = warehouses.find(w => w.id === route.origin);
+      const destination = warehouses.find(w => w.id === route.destination);
 
       if (origin && destination) {
         const routeColor = route.status === 'active' ? '#6B7280' : '#EF4444';
@@ -84,7 +140,7 @@ const WarehouseMap: React.FC<WarehouseMapProps> = ({ className }) => {
         map.current = null;
       }
     };
-  }, []);
+  }, [warehouses, routes]);
 
   const getWarehouseStatusColor = (status: string): string => {
     switch (status) {
@@ -121,6 +177,53 @@ const WarehouseMap: React.FC<WarehouseMapProps> = ({ className }) => {
     }
   };
 
+  // Обработчик обновления статуса склада
+  const handleUpdateStatus = async (warehouseId: number, newStatus: 'active' | 'maintenance' | 'low-stock') => {
+    try {
+      const apiKey = localStorage.getItem('warehouse_api_key') || 'demo_api_key';
+      const success = await updateWarehouseStatus(apiKey, warehouseId, newStatus);
+      
+      if (success) {
+        // Обновляем данные локально
+        const updatedWarehouses = warehouses.map(warehouse => 
+          warehouse.id === warehouseId ? { ...warehouse, status: newStatus } : warehouse
+        );
+        setWarehouses(updatedWarehouses);
+        
+        // Если обновлен выбранный склад, обновляем и его
+        if (selectedWarehouse && selectedWarehouse.id === warehouseId) {
+          setSelectedWarehouse({ ...selectedWarehouse, status: newStatus });
+        }
+        
+        toast({
+          title: "Статус обновлен",
+          description: "Статус склада успешно изменен",
+        });
+      } else {
+        throw new Error("Не удалось обновить статус");
+      }
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обновить статус склада",
+        variant: "destructive"
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Card className={`p-6 ${className}`}>
+        <div className="flex items-center justify-center h-[500px]">
+          <div className="flex flex-col items-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="mt-4 text-muted-foreground">Загрузка данных о складах...</p>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <Card className={`p-6 ${className}`}>
       <div className="flex items-center justify-between mb-6">
@@ -132,7 +235,7 @@ const WarehouseMap: React.FC<WarehouseMapProps> = ({ className }) => {
           <div className="space-y-2">
             <h4 className="font-medium text-sm text-muted-foreground">Складские помещения</h4>
             <div className="space-y-3 max-h-[380px] overflow-y-auto pr-2">
-              {warehousesData.map(warehouse => (
+              {warehouses.map(warehouse => (
                 <div 
                   key={warehouse.id} 
                   className={`p-3 border rounded-lg cursor-pointer transition-all ${selectedWarehouse?.id === warehouse.id ? 'border-primary bg-primary/5' : 'hover:bg-accent'}`}
@@ -197,11 +300,11 @@ const WarehouseMap: React.FC<WarehouseMapProps> = ({ className }) => {
               <div className="mt-4 pt-3 border-t">
                 <h5 className="font-medium mb-2 text-sm">Маршруты</h5>
                 <div className="space-y-2">
-                  {logisticsRoutes
+                  {routes
                     .filter(route => route.origin === selectedWarehouse.id || route.destination === selectedWarehouse.id)
                     .map((route, index) => {
-                      const originWarehouse = warehousesData.find(w => w.id === route.origin);
-                      const destWarehouse = warehousesData.find(w => w.id === route.destination);
+                      const originWarehouse = warehouses.find(w => w.id === route.origin);
+                      const destWarehouse = warehouses.find(w => w.id === route.destination);
                       
                       const isOutgoing = route.origin === selectedWarehouse.id;
                       const partnerWarehouse = isOutgoing ? destWarehouse : originWarehouse;

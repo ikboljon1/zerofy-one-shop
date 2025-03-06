@@ -1,4 +1,3 @@
-
 // Demo data for analytics dashboard
 export const penaltiesData = [
   { name: "Брак товара", value: 5000 },
