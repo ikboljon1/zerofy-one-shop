@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from "./ui/card";
 import { useEffect, useState } from "react";
 import { 
@@ -692,4 +693,101 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
                             {formatCurrency(payment.sum)}
                           </span>
                         </div>
-                        <span className="text-xs bg-purple-100 dark:bg-purple-900
+                        <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 px-3 py-1.5 rounded-full font-medium">
+                          {format(new Date(payment.date), 'dd.MM.yyyy HH:mm')}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="py-10 flex flex-col items-center justify-center"
+              >
+                <motion.div 
+                  whileHover={{ rotate: 10 }}
+                  className="w-20 h-20 mb-4 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center"
+                >
+                  <DollarSign className="h-10 w-10 text-purple-400" />
+                </motion.div>
+                <h4 className="text-lg font-semibold text-purple-700 dark:text-purple-300 mb-1">
+                  Нет данных о пополнениях
+                </h4>
+                <p className="text-center text-gray-500 max-w-xs">
+                  Информация о пополнениях появится здесь после запуска кампании
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </Card>
+  );
+
+  return (
+    <div className="p-4 space-y-8">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center space-x-2">
+          <Button variant="outline" size="icon" onClick={onBack}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-2xl font-bold">{campaignName}</h1>
+        </div>
+        <Button 
+          className="flex items-center space-x-2" 
+          onClick={fetchData}
+          disabled={loading}
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          <span>Обновить данные</span>
+        </Button>
+      </div>
+
+      <Tabs 
+        value={activeTab} 
+        onValueChange={setActiveTab} 
+        className="w-full"
+      >
+        <TabsList className="mb-4">
+          <TabsTrigger value="stats" className="flex items-center space-x-2">
+            <TrendingUp className="h-4 w-4" />
+            <span>Статистика</span>
+          </TabsTrigger>
+          <TabsTrigger value="products" className="flex items-center space-x-2">
+            <Package className="h-4 w-4" />
+            <span>Товары</span>
+          </TabsTrigger>
+          <TabsTrigger value="keywords" className="flex items-center space-x-2">
+            <Search className="h-4 w-4" />
+            <span>Ключевые слова</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="stats">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              {renderDetailedStats()}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
+              {renderCostHistory()}
+              {renderPaymentHistory()}
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="products">
+          <ProductStatsTable products={productStats} />
+        </TabsContent>
+
+        <TabsContent value="keywords">
+          <KeywordStatisticsComponent campaignId={campaignId} apiKey={apiKey} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+export default CampaignDetails;
