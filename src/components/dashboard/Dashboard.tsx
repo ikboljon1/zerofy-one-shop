@@ -2,12 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar as CalendarIcon, Loader2, RefreshCw } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { format, subDays } from "date-fns";
+import { Loader2, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 import { 
   loadStores,
   getOrdersData, 
@@ -19,16 +15,13 @@ import OrdersTable from "./OrdersTable";
 import SalesTable from "./SalesTable";
 import GeographySection from "./GeographySection";
 import Stats from "@/components/Stats";
-import Chart from "@/components/Chart";
 import { WildberriesOrder, WildberriesSale } from "@/types/store";
 
 const Dashboard = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
-  const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
-  const [dateTo, setDateTo] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState(false);
-
+  
   const [orders, setOrders] = useState<WildberriesOrder[]>([]);
   const [sales, setSales] = useState<WildberriesSale[]>([]);
   const [warehouseDistribution, setWarehouseDistribution] = useState<any[]>([]);
@@ -49,14 +42,13 @@ const Dashboard = () => {
         return;
       }
 
-      // Загружаем заказы
+      // Load orders
       const ordersResult = await fetchAndUpdateOrders(selectedStore);
       if (ordersResult) {
         setOrders(ordersResult.orders);
         setWarehouseDistribution(ordersResult.warehouseDistribution);
         setRegionDistribution(ordersResult.regionDistribution);
       } else {
-        // Если не удалось получить новые данные, пробуем загрузить из хранилища
         const savedOrdersData = getOrdersData(selectedStore.id);
         if (savedOrdersData) {
           setOrders(savedOrdersData.orders || []);
@@ -65,12 +57,11 @@ const Dashboard = () => {
         }
       }
 
-      // Загружаем продажи
+      // Load sales
       const salesResult = await fetchAndUpdateSales(selectedStore);
       if (salesResult) {
         setSales(salesResult);
       } else {
-        // Если не удалось получить новые данные, пробуем загрузить из хранилища
         const savedSalesData = getSalesData(selectedStore.id);
         if (savedSalesData) {
           setSales(savedSalesData.sales || []);
@@ -93,13 +84,12 @@ const Dashboard = () => {
     }
   };
 
-  // Загрузка данных при первом рендере
+  // Load data on first render
   useEffect(() => {
     const stores = loadStores();
     const selectedStore = stores.find(s => s.isSelected);
     
     if (selectedStore) {
-      // Пробуем загрузить данные из хранилища
       const savedOrdersData = getOrdersData(selectedStore.id);
       if (savedOrdersData) {
         setOrders(savedOrdersData.orders || []);
@@ -112,37 +102,11 @@ const Dashboard = () => {
         setSales(savedSalesData.sales || []);
       }
 
-      // Если данных нет или они устарели, загружаем новые
       if (!savedOrdersData || !savedSalesData) {
         fetchData();
       }
     }
   }, []);
-
-  const renderDatePicker = (date: Date, onChange: (date: Date) => void, label: string) => (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          className={cn(
-            "justify-start text-left font-normal",
-            !date && "text-muted-foreground"
-          )}
-        >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? format(date, "PPP") : <span>{label}</span>}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0">
-        <Calendar
-          mode="single"
-          selected={date}
-          onSelect={(date) => date && onChange(date)}
-          initialFocus
-        />
-      </PopoverContent>
-    </Popover>
-  );
 
   return (
     <div className="space-y-4">
@@ -165,11 +129,6 @@ const Dashboard = () => {
             </>
           )}
         </Button>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        {renderDatePicker(dateFrom, setDateFrom, "Начальная дата")}
-        {renderDatePicker(dateTo, setDateTo, "Конечная дата")}
       </div>
 
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
