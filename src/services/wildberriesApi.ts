@@ -120,15 +120,30 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   let totalPenalty = 0;        // Штрафы
   let totalDeduction = 0;      // Удержания
   let totalToPay = 0;          // Итого к оплате
+  let totalReturnCount = 0;    // Количество возвратов
   
-  // Обработка данных детального отчета - точно как в Python коде
+  // Словарь для хранения данных о возвратах по наименованию товара
+  const returnsByProduct: Record<string, { value: number; count: number }> = {};
+  
+  // Обработка данных детального отчета
   for (const record of data) {
     if (record.doc_type_name === 'Продажа') {
       totalSales += record.retail_price_withdisc_rub || 0;
       totalForPay += record.ppvz_for_pay || 0;
     } else if (record.doc_type_name === 'Возврат') {
-      // Используем именно ppvz_for_pay для возвратов, как в Python коде
+      // Для возвратов значение ppvz_for_pay обычно отрицательное
       totalReturns += record.ppvz_for_pay || 0;
+      totalReturnCount += 1;
+      
+      // Группировка возвратов по наименованию товара
+      if (record.sa_name) {
+        const productName = record.sa_name;
+        if (!returnsByProduct[productName]) {
+          returnsByProduct[productName] = { value: 0, count: 0 };
+        }
+        returnsByProduct[productName].value += Math.abs(record.ppvz_for_pay || 0);
+        returnsByProduct[productName].count += 1;
+      }
     }
     
     // Учитываем расходы и доходы (для всех операций)
@@ -142,22 +157,8 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   // Расчет суммы платной приемки
   const totalAcceptance = paidAcceptanceData.reduce((sum, record) => sum + (record.total || 0), 0);
   
-  // Рассчитываем итого к оплате (как в Python коде)
+  // Рассчитываем итого к оплате как в Python коде
   totalToPay = totalForPay - totalDeliveryRub - totalStorageFee - totalReturns - totalPenalty - totalDeduction - totalAcceptance;
-  
-  // Группировка возвратов по наименованию товара и артикулу
-  const returnsByProduct: Record<string, { value: number; count: number }> = {};
-  for (const record of data) {
-    if (record.doc_type_name === 'Возврат' && record.nm_id && record.sa_name) {
-      const productName = record.sa_name;
-      if (!returnsByProduct[productName]) {
-        returnsByProduct[productName] = { value: 0, count: 0 };
-      }
-      // Используем именно ppvz_for_pay для возвратов, как в Python коде
-      returnsByProduct[productName].value += Math.abs(record.ppvz_for_pay || 0);
-      returnsByProduct[productName].count += 1; // Увеличиваем счетчик возвратов
-    }
-  }
   
   // Преобразование в массив и сортировка
   const productReturns = Object.entries(returnsByProduct)
@@ -165,27 +166,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     .sort((a, b) => b.value - a.value)
     .slice(0, 5);
   
-  // Группировка продаж по дням
-  const salesByDay: Record<string, { sales: number, previousSales: number }> = {};
-  for (const record of data) {
-    if (record.doc_type_name === 'Продажа' && record.rr_dt) {
-      const date = record.rr_dt.split('T')[0];
-      if (!salesByDay[date]) {
-        salesByDay[date] = { sales: 0, previousSales: 0 };
-      }
-      salesByDay[date].sales += record.retail_price_withdisc_rub || 0;
-    }
-  }
-  
-  // Преобразование в массив и сортировка по датам
-  const dailySales = Object.entries(salesByDay)
-    .map(([date, { sales, previousSales }]) => ({ date, sales, previousSales }))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  
-  // Подсчитываем общее количество возвратов
-  const totalReturnCount = productReturns.reduce((sum, item) => sum + (item.count || 0), 0);
-  
-  console.log(`Received and processed data from Wildberries API. Total returns: ${totalReturns}, Returned items count: ${totalReturnCount}, Returned products count: ${productReturns.length}`);
+  console.log(`Received and processed data. Total returns: ${Math.abs(totalReturns)}, Returned items count: ${totalReturnCount}, Returned products count: ${productReturns.length}`);
   
   return {
     metrics: {
@@ -194,14 +175,15 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       total_delivery_rub: Math.round(totalDeliveryRub * 100) / 100,
       total_rebill_logistic_cost: Math.round(totalRebillLogisticCost * 100) / 100,
       total_storage_fee: Math.round(totalStorageFee * 100) / 100,
-      total_returns: Math.round(totalReturns * 100) / 100,
+      total_returns: Math.round(Math.abs(totalReturns) * 100) / 100, // Берем абсолютное значение для суммы возвратов
       total_penalty: Math.round(totalPenalty * 100) / 100,
       total_deduction: Math.round(totalDeduction * 100) / 100,
       total_to_pay: Math.round(totalToPay * 100) / 100,
-      total_acceptance: Math.round(totalAcceptance * 100) / 100
+      total_acceptance: Math.round(totalAcceptance * 100) / 100,
+      total_return_count: totalReturnCount
     },
     productReturns,
-    dailySales
+    dailySales: [] // Это будет заполнено позже в основной функции
   };
 };
 
@@ -210,7 +192,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
   try {
     console.log(`Fetching Wildberries stats from ${dateFrom.toISOString()} to ${dateTo.toISOString()}`);
     
-    // В режиме разработки используем дем��-данные
+    // В режиме разработки используем демо-данные
     if (process.env.NODE_ENV === 'development' && !apiKey.startsWith('eyJ')) {
       console.log('Using demo data in development mode');
       return getDemoData();
@@ -294,7 +276,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       topUnprofitableProducts: []
     };
     
-    console.log(`Received and processed data from Wildberries API. Total returns: ${metrics.total_returns}, Returned items count: ${productReturns.length}`);
+    console.log(`Received and processed data from Wildberries API. Total returns: ${metrics.total_returns}, Return count: ${metrics.total_return_count}`);
     
     return response;
   } catch (error) {

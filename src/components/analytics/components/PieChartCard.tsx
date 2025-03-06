@@ -15,7 +15,7 @@ interface PieChartCardProps {
   data: Array<{
     name: string;
     value: number;
-    count?: number; // Добавляем опциональное поле для количества
+    count?: number; // Поле для количества
   }>;
   valueLabel?: string;
   showCount?: boolean; // Флаг для отображения количества
