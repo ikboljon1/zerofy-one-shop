@@ -122,12 +122,13 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   let totalDeduction = 0;      // Удержания
   let totalToPay = 0;          // Итого к оплате
   
-  // Обработка данных детального отчета
+  // Обработка данных детального отчета - точно как в Python коде
   for (const record of data) {
     if (record.doc_type_name === 'Продажа') {
       totalSales += record.retail_price_withdisc_rub || 0;
       totalForPay += record.ppvz_for_pay || 0;
     } else if (record.doc_type_name === 'Возврат') {
+      // Используем именно ppvz_for_pay для возвратов, как в Python коде
       totalReturns += record.ppvz_for_pay || 0;
     }
     
@@ -142,27 +143,10 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   // Расчет суммы платной приемки
   const totalAcceptance = paidAcceptanceData.reduce((sum, record) => sum + (record.total || 0), 0);
   
-  // Рассчитываем итого к оплате
+  // Рассчитываем итого к оплате (как в Python коде)
   totalToPay = totalForPay - totalDeliveryRub - totalStorageFee - totalReturns - totalPenalty - totalDeduction - totalAcceptance;
   
-  // Группировка продаж по категориям
-  const salesByCategory: Record<string, number> = {};
-  for (const record of data) {
-    if (record.doc_type_name === 'Продажа' && record.subject_name) {
-      if (!salesByCategory[record.subject_name]) {
-        salesByCategory[record.subject_name] = 0;
-      }
-      salesByCategory[record.subject_name]++;
-    }
-  }
-  
-  // Преобразование в массив и сортировка
-  const productSales = Object.entries(salesByCategory)
-    .map(([subject_name, quantity]) => ({ subject_name, quantity }))
-    .sort((a, b) => b.quantity - a.quantity)
-    .slice(0, 10);
-    
-  // Группировка возвратов по наименованию товара
+  // Группировка возвратов по наименованию товара и артикулу
   const returnsByProduct: Record<string, number> = {};
   for (const record of data) {
     if (record.doc_type_name === 'Возврат' && record.nm_id && record.sa_name) {
@@ -170,6 +154,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       if (!returnsByProduct[productName]) {
         returnsByProduct[productName] = 0;
       }
+      // Используем именно ppvz_for_pay для возвратов, как в Python коде
       returnsByProduct[productName] += Math.abs(record.ppvz_for_pay || 0);
     }
   }
@@ -210,7 +195,6 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       total_to_pay: Math.round(totalToPay * 100) / 100,
       total_acceptance: Math.round(totalAcceptance * 100) / 100
     },
-    productSales,
     productReturns,
     dailySales
   };
@@ -239,12 +223,48 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
     }
     
     // Вычисляем метрики на основе полученных данных
-    const { metrics, productSales, productReturns, dailySales } = calculateMetrics(reportData, paidAcceptanceData) || {};
+    const result = calculateMetrics(reportData, paidAcceptanceData);
     
-    if (!metrics) {
+    if (!result || !result.metrics) {
       console.log('Failed to calculate metrics, using demo data');
       return getDemoData();
     }
+    
+    const { metrics, productReturns } = result;
+    
+    // Группировка продаж по категориям
+    const salesByCategory: Record<string, number> = {};
+    for (const record of reportData) {
+      if (record.doc_type_name === 'Продажа' && record.subject_name) {
+        if (!salesByCategory[record.subject_name]) {
+          salesByCategory[record.subject_name] = 0;
+        }
+        salesByCategory[record.subject_name]++;
+      }
+    }
+    
+    // Преобразование в массив и сортировка
+    const productSales = Object.entries(salesByCategory)
+      .map(([subject_name, quantity]) => ({ subject_name, quantity }))
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 10);
+    
+    // Группировка продаж по дням
+    const salesByDay: Record<string, { sales: number, previousSales: number }> = {};
+    for (const record of reportData) {
+      if (record.doc_type_name === 'Продажа' && record.rr_dt) {
+        const date = record.rr_dt.split('T')[0];
+        if (!salesByDay[date]) {
+          salesByDay[date] = { sales: 0, previousSales: 0 };
+        }
+        salesByDay[date].sales += record.retail_price_withdisc_rub || 0;
+      }
+    }
+    
+    // Преобразование в массив и сортировка по датам
+    const dailySales = Object.entries(salesByDay)
+      .map(([date, { sales, previousSales }]) => ({ date, sales, previousSales }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
     // Формируем ответ в нужном формате
     const response: WildberriesResponse = {
@@ -269,7 +289,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       topUnprofitableProducts: []
     };
     
-    console.log(`Received and processed data from Wildberries API. Total sales: ${response.currentPeriod.sales}`);
+    console.log(`Received and processed data from Wildberries API. Total returns: ${metrics.total_returns}, Returned items count: ${productReturns.length}`);
     
     return response;
   } catch (error) {
