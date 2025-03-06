@@ -30,7 +30,7 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           lastFetchDate: new Date().toISOString() 
         };
         
-        // Сохраняем полные данные статистики, включая топовые продукты
+        // Сохраняем полные данные статистики, включая топовые продукты с их изображениями
         localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify({
           storeId: store.id,
           dateFrom: from.toISOString(),
