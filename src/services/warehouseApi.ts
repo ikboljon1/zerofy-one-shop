@@ -1,7 +1,8 @@
 
 import axios from 'axios';
 
-interface WarehouseData {
+// Warehouse data interface
+export interface WarehouseData {
   id: number;
   name: string;
   coordinates: [number, number];
@@ -18,7 +19,8 @@ interface WarehouseData {
   avgProcessingTime: string;
 }
 
-interface LogisticsRoute {
+// Logistics route interface
+export interface LogisticsRoute {
   origin: number;
   destination: number;
   volume: string;
@@ -31,7 +33,8 @@ interface LogisticsRoute {
   status: 'active' | 'delayed';
 }
 
-interface InventoryCategory {
+// Inventory category interface
+export interface InventoryCategory {
   category: string;
   totalItems: number;
   valueRub: number;
@@ -41,8 +44,8 @@ interface InventoryCategory {
   inTransit: number;
 }
 
-// Интерфейс для данных о складах от Wildberries API
-interface WildberriesStockItem {
+// Wildberries stock item interface
+export interface WildberriesStockItem {
   lastChangeDate: string;
   warehouseName: string;
   supplierArticle: string;
@@ -63,8 +66,8 @@ interface WildberriesStockItem {
   SCCode: string;
 }
 
-// Интерфейс для данных из отчета об остатках на складах
-interface WildberriesWarehouseRemainsItem {
+// Wildberries warehouse remains item interface
+export interface WildberriesWarehouseRemainsItem {
   brand: string;
   subjectName: string;
   vendorCode: string;
@@ -81,86 +84,52 @@ interface WildberriesWarehouseRemainsItem {
   }[];
 }
 
-// Функция для получения данных о складах
+// Function to fetch warehouses data
 export const fetchWarehouses = async (apiKey: string): Promise<WarehouseData[]> => {
   try {
-    // Здесь должен быть реальный запрос к API, например:
-    // const response = await axios.get('https://api.yourservice.com/warehouses', {
-    //   headers: { 'Authorization': `Bearer ${apiKey}` }
-    // });
-    // return response.data;
-    
-    // В отсутствие реального API возвращаем демо-данные из локального хранилища
-    // или импортируем из файла с демо-данными
-    const storedWarehouses = localStorage.getItem('warehouse_data');
-    if (storedWarehouses) {
-      return JSON.parse(storedWarehouses);
-    }
-    
-    // Если данных нет в localStorage, импортируем из файла с демо-данными
+    // Try to fetch real data from Wildberries API
+    return await fetchWildberriesWarehouseData(apiKey);
+  } catch (error) {
+    console.error('Error fetching warehouses with Wildberries API:', error);
+    // Fall back to demo data
     const { warehousesData } = await import('@/components/analytics/data/demoData');
-    
-    // Приведение типов для coordinates, чтобы они соответствовали [number, number]
-    const typedWarehouses = warehousesData.map(warehouse => ({
+    return warehousesData.map(warehouse => ({
       ...warehouse,
       coordinates: warehouse.coordinates as [number, number],
       status: warehouse.status as 'active' | 'maintenance' | 'low-stock'
     }));
-    
-    return typedWarehouses;
-  } catch (error) {
-    console.error('Error fetching warehouses:', error);
-    throw error;
   }
 };
 
-// Функция для получения данных о маршрутах логистики
+// Function to fetch logistics routes
 export const fetchLogisticsRoutes = async (apiKey: string): Promise<LogisticsRoute[]> => {
   try {
-    // Здесь должен быть реальный запрос к API
-    // const response = await axios.get('https://api.yourservice.com/logistics', {
-    //   headers: { 'Authorization': `Bearer ${apiKey}` }
-    // });
-    // return response.data;
-    
-    // В отсутствие реального API возвращаем демо-данные
     const storedRoutes = localStorage.getItem('logistics_routes');
     if (storedRoutes) {
       return JSON.parse(storedRoutes);
     }
     
-    // Если данных нет в localStorage, импортируем из файла с демо-данными
+    // If no data in localStorage, import from demo data
     const { logisticsRoutes } = await import('@/components/analytics/data/demoData');
-    
-    // Приведение типов для status, чтобы они соответствовали 'active' | 'delayed'
-    const typedRoutes = logisticsRoutes.map(route => ({
+    return logisticsRoutes.map(route => ({
       ...route,
       status: route.status as 'active' | 'delayed'
     }));
-    
-    return typedRoutes;
   } catch (error) {
     console.error('Error fetching logistics routes:', error);
     throw error;
   }
 };
 
-// Функция для получения данных об инвентаре
+// Function to fetch inventory data
 export const fetchInventory = async (apiKey: string): Promise<InventoryCategory[]> => {
   try {
-    // Здесь должен быть реальный запрос к API
-    // const response = await axios.get('https://api.yourservice.com/inventory', {
-    //   headers: { 'Authorization': `Bearer ${apiKey}` }
-    // });
-    // return response.data;
-    
-    // В отсутствие реального API возвращаем демо-данные
     const storedInventory = localStorage.getItem('inventory_data');
     if (storedInventory) {
       return JSON.parse(storedInventory);
     }
     
-    // Если данных нет в localStorage, импортируем из файла с демо-данными
+    // If no data in localStorage, import from demo data
     const { inventoryData } = await import('@/components/analytics/data/demoData');
     return inventoryData;
   } catch (error) {
@@ -169,13 +138,13 @@ export const fetchInventory = async (apiKey: string): Promise<InventoryCategory[
   }
 };
 
-// Функция для получения данных о складах через Wildberries API
+// Function to fetch Wildberries stocks
 export const fetchWildberriesStocks = async (apiKey: string): Promise<WildberriesStockItem[]> => {
   try {
+    // Get date one year ago for the dateFrom parameter
     const dateFrom = new Date();
-    dateFrom.setFullYear(dateFrom.getFullYear() - 1); // Получаем данные за последний год
-    
-    const formattedDate = dateFrom.toISOString().split('T')[0]; // Форматируем в YYYY-MM-DD
+    dateFrom.setFullYear(dateFrom.getFullYear() - 1);
+    const formattedDate = dateFrom.toISOString().split('T')[0]; // Format as YYYY-MM-DD
     
     console.log(`Fetching Wildberries stocks from ${formattedDate}`);
     
@@ -192,12 +161,11 @@ export const fetchWildberriesStocks = async (apiKey: string): Promise<Wildberrie
     return response.data;
   } catch (error) {
     console.error('Error fetching Wildberries stocks:', error);
-    // В случае ошибки возвращаем пустой массив
     return [];
   }
 };
 
-// Функция для создания отчета об остатках на складах через Wildberries API
+// Function to create warehouse remains report
 export const createWarehouseRemainsReport = async (apiKey: string): Promise<string | null> => {
   try {
     const response = await axios.get('https://seller-analytics-api.wildberries.ru/api/v1/warehouse_remains', {
@@ -223,7 +191,7 @@ export const createWarehouseRemainsReport = async (apiKey: string): Promise<stri
   }
 };
 
-// Функция для проверки статуса отчета об остатках на складах
+// Function to check warehouse remains report status
 export const checkWarehouseRemainsStatus = async (apiKey: string, taskId: string): Promise<string> => {
   try {
     const response = await axios.get(`https://seller-analytics-api.wildberries.ru/api/v1/warehouse_remains/tasks/${taskId}/status`, {
@@ -244,7 +212,7 @@ export const checkWarehouseRemainsStatus = async (apiKey: string, taskId: string
   }
 };
 
-// Функция для получения отчета об остатках на складах
+// Function to get warehouse remains report
 export const getWarehouseRemainsReport = async (apiKey: string, taskId: string): Promise<WildberriesWarehouseRemainsItem[]> => {
   try {
     const response = await axios.get(`https://seller-analytics-api.wildberries.ru/api/v1/warehouse_remains/tasks/${taskId}/download`, {
@@ -261,27 +229,17 @@ export const getWarehouseRemainsReport = async (apiKey: string, taskId: string):
   }
 };
 
-// Функция для получения полных данных об остатках на складах Wildberries
+// Function to get full Wildberries warehouse data
 export const fetchWildberriesWarehouseData = async (apiKey: string): Promise<WarehouseData[]> => {
   try {
-    // Шаг 1: Получаем данные о складах через API
+    // Step 1: Get stocks data from API
     const stocks = await fetchWildberriesStocks(apiKey);
     
     if (stocks.length === 0) {
-      console.log('No stock data received, using demo data');
-      const { warehousesData } = await import('@/components/analytics/data/demoData');
-      
-      // Приведение типов для coordinates, чтобы они соответствовали [number, number]
-      const typedWarehouses = warehousesData.map(warehouse => ({
-        ...warehouse,
-        coordinates: warehouse.coordinates as [number, number],
-        status: warehouse.status as 'active' | 'maintenance' | 'low-stock'
-      }));
-      
-      return typedWarehouses;
+      throw new Error('No stock data received from API');
     }
     
-    // Шаг 2: Создаем отчет об остатках
+    // Step 2: Create warehouse remains report
     const taskId = await createWarehouseRemainsReport(apiKey);
     
     if (!taskId) {
@@ -289,13 +247,13 @@ export const fetchWildberriesWarehouseData = async (apiKey: string): Promise<War
       return transformStocksToWarehouses(stocks);
     }
     
-    // Шаг 3: Проверяем статус отчета
+    // Step 3: Check report status
     let status = await checkWarehouseRemainsStatus(apiKey, taskId);
     let attempts = 0;
     
-    // Ждем, пока отчет не будет готов (максимум 30 попыток с интервалом 5 секунд)
+    // Wait for report to be ready (max 30 attempts with 5-second intervals)
     while (status !== 'done' && attempts < 30) {
-      await new Promise(resolve => setTimeout(resolve, 5000)); // Пауза 5 секунд
+      await new Promise(resolve => setTimeout(resolve, 5000)); // 5-second pause
       status = await checkWarehouseRemainsStatus(apiKey, taskId);
       attempts++;
     }
@@ -305,7 +263,7 @@ export const fetchWildberriesWarehouseData = async (apiKey: string): Promise<War
       return transformStocksToWarehouses(stocks);
     }
     
-    // Шаг 4: Получаем отчет
+    // Step 4: Get report
     const remainsReport = await getWarehouseRemainsReport(apiKey, taskId);
     
     if (remainsReport.length === 0) {
@@ -313,28 +271,17 @@ export const fetchWildberriesWarehouseData = async (apiKey: string): Promise<War
       return transformStocksToWarehouses(stocks);
     }
     
-    // Шаг 5: Объединяем данные из stocks и remainsReport
+    // Step 5: Combine data from stocks and remainsReport
     return transformCombinedDataToWarehouses(stocks, remainsReport);
   } catch (error) {
     console.error('Error fetching Wildberries warehouse data:', error);
-    
-    // В случае ошибки возвращаем демо-данные
-    const { warehousesData } = await import('@/components/analytics/data/demoData');
-    
-    // Приведение типов для coordinates, чтобы они соответствовали [number, number]
-    const typedWarehouses = warehousesData.map(warehouse => ({
-      ...warehouse,
-      coordinates: warehouse.coordinates as [number, number],
-      status: warehouse.status as 'active' | 'maintenance' | 'low-stock'
-    }));
-    
-    return typedWarehouses;
+    throw error;
   }
 };
 
-// Функция для преобразования данных из API stocks в формат WarehouseData
+// Transform stocks data to WarehouseData format
 const transformStocksToWarehouses = (stocks: WildberriesStockItem[]): WarehouseData[] => {
-  // Группируем товары по складам
+  // Group items by warehouse
   const warehousesMap = new Map<string, {
     items: number;
     categories: Map<string, number>;
@@ -356,24 +303,24 @@ const transformStocksToWarehouses = (stocks: WildberriesStockItem[]): WarehouseD
     
     const warehouse = warehousesMap.get(warehouseName)!;
     
-    // Увеличиваем количество товаров
+    // Increase item count
     warehouse.items += stock.quantity;
     
-    // Обновляем дату последней поставки, если текущая запись новее
+    // Update last restock date if current record is newer
     if (new Date(stock.lastChangeDate) > new Date(warehouse.lastRestock)) {
       warehouse.lastRestock = stock.lastChangeDate;
     }
     
-    // Увеличиваем счетчик для категории
+    // Increase category counter
     const category = stock.category || 'Неизвестная категория';
     const currentCategoryCount = warehouse.categories.get(category) || 0;
     warehouse.categories.set(category, currentCategoryCount + stock.quantity);
     
-    // Увеличиваем общую стоимость товаров
+    // Increase total item value
     warehouse.totalValue += stock.quantity * stock.Price * (1 - stock.Discount / 100);
   }
   
-  // Координаты основных складов Wildberries для демонстрации
+  // Coordinates of major Wildberries warehouses
   const warehouseCoordinates: Record<string, [number, number]> = {
     'Подольск': [55.431177, 37.544737],
     'Коледино': [55.322614, 37.551605],
@@ -387,9 +334,9 @@ const transformStocksToWarehouses = (stocks: WildberriesStockItem[]): WarehouseD
     'Тула': [54.193122, 37.617348]
   };
   
-  // Преобразуем данные в формат WarehouseData
+  // Transform data to WarehouseData format
   const warehouses: WarehouseData[] = Array.from(warehousesMap.entries()).map(([name, data], index) => {
-    // Находим самую популярную категорию
+    // Find most stocked category
     let mostStockedCategory = 'Разное';
     let maxCategoryCount = 0;
     
@@ -400,22 +347,22 @@ const transformStocksToWarehouses = (stocks: WildberriesStockItem[]): WarehouseD
       }
     }
     
-    // Определяем статус склада на основе данных
+    // Determine warehouse status based on data
     let status: 'active' | 'maintenance' | 'low-stock' = 'active';
     
-    // Если товаров меньше 1000, считаем склад с низким запасом
+    // If items less than 1000, consider low stock
     if (data.items < 1000) {
       status = 'low-stock';
     }
     
-    // Определяем случайный процент заполненности
+    // Random fill rate percentage
     const fillRate = Math.min(100, Math.floor((data.items / 10000) * 100) + Math.floor(Math.random() * 20));
     
-    // Случайные данные для демонстрации
+    // Random data for demonstration
     const fastMovingItems = Math.floor(data.items * (0.3 + Math.random() * 0.2));
     const slowMovingItems = Math.floor(data.items * (0.1 + Math.random() * 0.2));
     
-    // Определяем координаты склада или используем случайные, если нет в списке
+    // Get warehouse coordinates or use random if not in list
     const coordinates = warehouseCoordinates[name] || [
       55.755826 + (Math.random() * 10 - 5),
       37.617300 + (Math.random() * 10 - 5)
@@ -442,29 +389,29 @@ const transformStocksToWarehouses = (stocks: WildberriesStockItem[]): WarehouseD
   return warehouses;
 };
 
-// Функция для преобразования комбинированных данных из API в формат WarehouseData
+// Transform combined data to WarehouseData format
 const transformCombinedDataToWarehouses = (
   stocks: WildberriesStockItem[],
   remains: WildberriesWarehouseRemainsItem[]
 ): WarehouseData[] => {
-  // Сначала получаем базовые данные из stocks
+  // First get base data from stocks
   const baseWarehouses = transformStocksToWarehouses(stocks);
   
-  // Создаем Map для быстрого доступа к складам по имени
+  // Create map for quick warehouse access by name
   const warehousesMap = new Map<string, WarehouseData>(
     baseWarehouses.map(warehouse => [warehouse.name, warehouse])
   );
   
-  // Обновляем данные на основе отчета remains
+  // Update data based on remains report
   for (const item of remains) {
     for (const warehouseData of item.warehouses) {
       const warehouseName = warehouseData.warehouseName;
       
       if (!warehousesMap.has(warehouseName)) {
-        // Если склад еще не в списке, добавляем его с базовыми данными
+        // If warehouse not in list, add with base data
         const newWarehouseId = baseWarehouses.length + warehousesMap.size + 1;
         
-        // Координаты основных складов Wildberries
+        // Coordinates of major Wildberries warehouses
         const warehouseCoordinates: Record<string, [number, number]> = {
           'Подольск': [55.431177, 37.544737],
           'Коледино': [55.322614, 37.551605],
@@ -500,15 +447,13 @@ const transformCombinedDataToWarehouses = (
           avgProcessingTime: `${Math.floor(2 + Math.random() * 5)} ч`
         });
       } else {
-        // Если склад уже в списке, обновляем количество товаров
+        // If warehouse already in list, update item count
         const warehouse = warehousesMap.get(warehouseName)!;
         warehouse.items += warehouseData.quantity;
         
-        // Обновляем другие данные
+        // Update other data
         warehouse.fillRate = Math.min(100, Math.floor((warehouse.items / 10000) * 100) + Math.floor(Math.random() * 20));
         warehouse.status = warehouse.items < 1000 ? 'low-stock' : 'active';
-        
-        // Обновляем другие поля при необходимости
       }
     }
   }
@@ -516,21 +461,16 @@ const transformCombinedDataToWarehouses = (
   return Array.from(warehousesMap.values());
 };
 
-// Функция для обновления статуса склада
+// Function to update warehouse status
 export const updateWarehouseStatus = async (
   apiKey: string, 
   warehouseId: number, 
   status: 'active' | 'maintenance' | 'low-stock'
 ): Promise<boolean> => {
   try {
-    // Здесь должен быть реальный запрос к API
-    // const response = await axios.put(`https://api.yourservice.com/warehouses/${warehouseId}/status`, 
-    //   { status },
-    //   { headers: { 'Authorization': `Bearer ${apiKey}` }}
-    // );
-    // return response.data.success;
+    // Here we would have a real API request in a production environment
     
-    // В отсутствие реального API, обновляем данные в localStorage
+    // For now, update data in localStorage
     const storedWarehouses = localStorage.getItem('warehouse_data');
     if (storedWarehouses) {
       const warehouses = JSON.parse(storedWarehouses);
@@ -547,7 +487,7 @@ export const updateWarehouseStatus = async (
   }
 };
 
-// Функция для добавления новой поставки на склад
+// Function to add restock to warehouse
 export const addWarehouseRestock = async (
   apiKey: string,
   warehouseId: number,
@@ -555,14 +495,9 @@ export const addWarehouseRestock = async (
   date: string
 ): Promise<boolean> => {
   try {
-    // Здесь должен быть реальный запрос к API
-    // const response = await axios.post(`https://api.yourservice.com/warehouses/${warehouseId}/restock`, 
-    //   { items, date },
-    //   { headers: { 'Authorization': `Bearer ${apiKey}` }}
-    // );
-    // return response.data.success;
+    // Here we would have a real API request in a production environment
     
-    // В отсутствие реального API, обновляем данные в localStorage
+    // For now, update data in localStorage
     const storedWarehouses = localStorage.getItem('warehouse_data');
     if (storedWarehouses) {
       const warehouses = JSON.parse(storedWarehouses);
@@ -572,7 +507,7 @@ export const addWarehouseRestock = async (
               ...warehouse, 
               items: warehouse.items + items, 
               lastRestock: date,
-              fillRate: Math.min(100, warehouse.fillRate + Math.round((items / 1000) * 5)) // Примерный расчет заполненности
+              fillRate: Math.min(100, warehouse.fillRate + Math.round((items / 1000) * 5))
             } 
           : warehouse
       );
@@ -585,6 +520,3 @@ export const addWarehouseRestock = async (
     return false;
   }
 };
-
-// Экспортируем типы для использования в других модулях
-export type { WarehouseData, LogisticsRoute, InventoryCategory, WildberriesStockItem, WildberriesWarehouseRemainsItem };

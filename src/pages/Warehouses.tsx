@@ -3,20 +3,75 @@ import React, { useState } from 'react';
 import WarehouseMap from '@/components/WarehouseMap';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { WarehouseIcon, TruckIcon, BarChart3Icon, ClipboardListIcon, PackageSearch, ArrowUpDown, Clock, DollarSign } from 'lucide-react';
+import { WarehouseIcon, TruckIcon, BarChart3Icon, ClipboardListIcon, PackageSearch, ArrowUpDown, Clock, DollarSign, Key } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { inventoryData, warehousesData, warehouseAnalyticsData } from '@/components/analytics/data/demoData';
 import { BarChart, ResponsiveContainer, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 
 const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1'];
 
 const Warehouses: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState<string>(() => {
+    return localStorage.getItem('warehouse_api_key') || '';
+  });
+  const [apiKeyInput, setApiKeyInput] = useState<string>('');
+  const [dialogOpen, setDialogOpen] = useState<boolean>(false);
+  const { toast } = useToast();
+
+  const saveApiKey = () => {
+    if (apiKeyInput.trim()) {
+      localStorage.setItem('warehouse_api_key', apiKeyInput.trim());
+      setApiKey(apiKeyInput.trim());
+      setDialogOpen(false);
+      toast({
+        title: "API ключ сохранен",
+        description: "Ключ API Wildberries успешно сохранен",
+      });
+      // Reload the page to fetch data with the new API key
+      window.location.reload();
+    } else {
+      toast({
+        title: "Ошибка",
+        description: "Пожалуйста, введите корректный API ключ",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <div className="container px-4 py-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Управление складами и логистикой</h1>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="gap-2">
+              <Key className="h-4 w-4" />
+              {apiKey ? 'Изменить API ключ' : 'Настроить API ключ'}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>API ключ Wildberries</DialogTitle>
+              <DialogDescription>
+                Введите ключ API Wildberries для доступа к данным о складах и товарах.
+              </DialogDescription>
+            </DialogHeader>
+            <Input
+              placeholder="Введите API ключ здесь..."
+              value={apiKeyInput}
+              onChange={(e) => setApiKeyInput(e.target.value)}
+              className="mt-2"
+            />
+            <DialogFooter>
+              <Button onClick={saveApiKey}>Сохранить</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Tabs defaultValue="map" className="space-y-4">
