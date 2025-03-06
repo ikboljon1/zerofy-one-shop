@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag, Loader2 } from "lucide-react";
@@ -16,6 +17,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
 import { getAdvertCosts, getAdvertBalance, getAdvertPayments } from "@/services/advertisingApi";
 import { getAnalyticsData } from "@/utils/storeUtils";
+import { WildberriesOrder } from "@/types/store";
 
 import { 
   demoData, 
