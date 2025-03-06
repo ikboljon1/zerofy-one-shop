@@ -2,7 +2,7 @@
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WildberriesOrder } from "@/types/store";
-import { format, subDays, eachDayOfInterval, startOfDay, endOfDay, eachHourOfInterval, addHours, isToday, isYesterday } from "date-fns";
+import { format, subDays, eachDayOfInterval, startOfDay, endOfDay, eachHourOfInterval, addHours, isSameDay, isToday, isYesterday } from "date-fns";
 import { ru } from "date-fns/locale";
 import { 
   AreaChart, 
@@ -17,24 +17,17 @@ import {
   Cell, 
   Legend, 
   BarChart, 
-  Bar,
-  RadialBarChart,
-  RadialBar,
-  LabelList
+  Bar
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ShoppingBag, TrendingUp, BarChart3, PieChart as PieChartIcon } from "lucide-react";
-import { formatCurrency } from "@/utils/formatCurrency";
+import { ShoppingBag, TrendingUp } from "lucide-react";
 
 interface OrdersChartProps {
   orders: WildberriesOrder[];
 }
 
-const COLORS = [
-  '#8884d8', '#82ca9d', '#ffc658', '#ff8042', 
-  '#0088fe', '#00C49F', '#FFBB28', '#FF8042', '#ff0000'
-];
+const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088fe', '#00C49F', '#FFBB28', '#FF8042', '#ff0000'];
 
 const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
   const isMobile = useIsMobile();
@@ -42,6 +35,7 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
   const shouldDisplayHourly = useMemo(() => {
     if (orders.length === 0) return false;
     
+    // Check if all orders are from today or yesterday
     const firstOrderDate = new Date(orders[0].date);
     return isToday(firstOrderDate) || isYesterday(firstOrderDate);
   }, [orders]);
@@ -50,15 +44,18 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
     if (orders.length === 0) return [];
     
     if (shouldDisplayHourly) {
+      // Get the date of the first order (assuming all orders are from the same day - today or yesterday)
       const orderDate = new Date(orders[0].date);
       const dayStart = startOfDay(orderDate);
       const dayEnd = endOfDay(orderDate);
       
+      // Generate array of all hours in the day
       const hoursInterval = eachHourOfInterval({
         start: dayStart,
         end: dayEnd,
       });
       
+      // Count orders per hour
       return hoursInterval.map(hour => {
         const hourEnd = addHours(hour, 1);
         
@@ -80,14 +77,17 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
         };
       });
     } else {
+      // Get date range for the last 7 days
       const today = new Date();
-      const sevenDaysAgo = subDays(today, 6);
+      const sevenDaysAgo = subDays(today, 6); // 7 days including today
       
+      // Generate array of all days
       const daysInterval = eachDayOfInterval({
         start: sevenDaysAgo,
         end: today,
       });
       
+      // Count orders per day
       return daysInterval.map(day => {
         const dayStart = startOfDay(day);
         const dayEnd = endOfDay(day);
@@ -118,10 +118,10 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
     const returned = orders.filter(order => order.isReturn).length;
     
     return [
-      { name: 'Активные', value: active, fill: '#10b981' },
-      { name: 'Отменённые', value: cancelled, fill: '#ef4444' },
-      { name: 'Возвраты', value: returned, fill: '#f59e0b' },
-    ].filter(item => item.value > 0);
+      { name: 'Активные', value: active },
+      { name: 'Отменённые', value: cancelled },
+      { name: 'Возвраты', value: returned },
+    ];
   }, [orders]);
 
   const warehouseData = useMemo(() => {
@@ -171,25 +171,23 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
     },
   };
 
-  const totalOrders = cancelledVsActiveData.reduce((sum, item) => sum + item.value, 0);
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
       <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-white to-indigo-50/30 dark:from-gray-900 dark:to-indigo-950/30">
-        <CardHeader className="pb-2 border-b border-indigo-100/50 dark:border-indigo-900/30">
+        <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-indigo-500" />
+              <TrendingUp className="h-5 w-5 text-indigo-500" />
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-700 dark:from-indigo-400 dark:to-blue-400">
                 {shouldDisplayHourly ? 'Заказы по часам' : 'Заказы по дням'}
               </span>
             </CardTitle>
-            <div className="text-xs text-muted-foreground bg-background/80 dark:bg-gray-800/80 px-2 py-1 rounded-full shadow-sm">
+            <div className="text-xs text-muted-foreground bg-background/80 dark:bg-gray-800/80 px-2 py-1 rounded-full">
               {shouldDisplayHourly ? 'Почасовая статистика' : 'Ежедневная статистика'}
             </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-4">
+        <CardContent>
           <div className="h-[300px]">
             <ChartContainer 
               config={orderConfig}
@@ -202,31 +200,28 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
                 >
                   <defs>
                     <linearGradient id="colorActive" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-active)" stopOpacity={0.9}/>
+                      <stop offset="5%" stopColor="var(--color-active)" stopOpacity={0.8}/>
                       <stop offset="95%" stopColor="var(--color-active)" stopOpacity={0.1}/>
                     </linearGradient>
                     <linearGradient id="colorCancelled" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-cancelled)" stopOpacity={0.9}/>
+                      <stop offset="5%" stopColor="var(--color-cancelled)" stopOpacity={0.8}/>
                       <stop offset="95%" stopColor="var(--color-cancelled)" stopOpacity={0.1}/>
                     </linearGradient>
                     <linearGradient id="colorReturned" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-returned)" stopOpacity={0.9}/>
+                      <stop offset="5%" stopColor="var(--color-returned)" stopOpacity={0.8}/>
                       <stop offset="95%" stopColor="var(--color-returned)" stopOpacity={0.1}/>
                     </linearGradient>
-                    <filter id="shadow" x="-2" y="-2" width="104%" height="104%">
-                      <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#000" floodOpacity="0.3"/>
-                    </filter>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.3} />
                   <XAxis 
                     dataKey="date" 
-                    tick={{ fontSize: 12, fontWeight: 500 }}
+                    tick={{ fontSize: 12 }}
                     tickLine={{ stroke: 'var(--border)' }}
                     axisLine={{ stroke: 'var(--border)' }}
                   />
                   <YAxis 
                     tickFormatter={(value) => value === 0 ? '0' : value}
-                    tick={{ fontSize: 12, fontWeight: 500 }}
+                    tick={{ fontSize: 12 }}
                     tickLine={{ stroke: 'var(--border)' }}
                     axisLine={{ stroke: 'var(--border)' }}
                   />
@@ -237,28 +232,28 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
                     type="monotone" 
                     dataKey="active" 
                     stroke="var(--color-active)" 
-                    strokeWidth={2.5}
+                    strokeWidth={2}
                     fillOpacity={1}
                     fill="url(#colorActive)"
-                    activeDot={{ r: 7, strokeWidth: 1, stroke: "#fff", fill: "var(--color-active)", filter: "url(#shadow)" }}
+                    activeDot={{ r: 6, strokeWidth: 0 }}
                   />
                   <Area 
                     type="monotone" 
                     dataKey="cancelled" 
                     stroke="var(--color-cancelled)" 
-                    strokeWidth={2.5}
+                    strokeWidth={2}
                     fillOpacity={1}
                     fill="url(#colorCancelled)"
-                    activeDot={{ r: 7, strokeWidth: 1, stroke: "#fff", fill: "var(--color-cancelled)", filter: "url(#shadow)" }}
+                    activeDot={{ r: 6, strokeWidth: 0 }}
                   />
                   <Area 
                     type="monotone" 
                     dataKey="returned" 
                     stroke="var(--color-returned)" 
-                    strokeWidth={2.5}
+                    strokeWidth={2}
                     fillOpacity={1}
                     fill="url(#colorReturned)"
-                    activeDot={{ r: 7, strokeWidth: 1, stroke: "#fff", fill: "var(--color-returned)", filter: "url(#shadow)" }}
+                    activeDot={{ r: 6, strokeWidth: 0 }}
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -268,69 +263,47 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
       </Card>
 
       <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-white to-indigo-50/30 dark:from-gray-900 dark:to-indigo-950/30">
-        <CardHeader className="pb-2 border-b border-indigo-100/50 dark:border-indigo-900/30">
+        <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg flex items-center gap-2">
-              <PieChartIcon className="h-5 w-5 text-indigo-500" />
+              <ShoppingBag className="h-5 w-5 text-indigo-500" />
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-700 dark:from-indigo-400 dark:to-blue-400">
                 Распределение заказов
               </span>
             </CardTitle>
           </div>
         </CardHeader>
-        <CardContent className="flex justify-center pt-4">
-          <div className="h-[300px] w-full relative">
+        <CardContent className="flex justify-center">
+          <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <defs>
                   {cancelledVsActiveData.map((entry, index) => (
-                    <linearGradient key={`gradient-${index}`} id={`gradient-${index}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={entry.fill} stopOpacity={0.9}/>
-                      <stop offset="100%" stopColor={entry.fill} stopOpacity={0.6}/>
+                    <linearGradient key={`pieGradient-${index}`} id={`pieGradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={index === 0 ? "#10b981" : index === 1 ? "#ef4444" : "#f59e0b"} stopOpacity={0.9}/>
+                      <stop offset="100%" stopColor={index === 0 ? "#059669" : index === 1 ? "#dc2626" : "#d97706"} stopOpacity={0.9}/>
                     </linearGradient>
                   ))}
-                  <filter id="glow" height="200%" width="200%" x="-50%" y="-50%">
-                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                    <feMerge>
-                      <feMergeNode in="coloredBlur"/>
-                      <feMergeNode in="SourceGraphic"/>
-                    </feMerge>
-                  </filter>
                 </defs>
                 <Pie
                   data={cancelledVsActiveData}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
-                  outerRadius={90}
+                  outerRadius={100}
                   paddingAngle={4}
                   dataKey="value"
-                  animationBegin={0}
-                  animationDuration={1500}
-                  animationEasing="ease-out"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                 >
                   {cancelledVsActiveData.map((entry, index) => (
                     <Cell 
                       key={`cell-${index}`} 
-                      fill={`url(#gradient-${index})`} 
-                      stroke="#fff"
+                      fill={`url(#pieGradient-${index})`} 
+                      stroke="rgba(255,255,255,0.3)"
                       strokeWidth={2}
-                      className="filter drop-shadow-md hover:drop-shadow-lg transition-all duration-300"
                     />
                   ))}
-                  <LabelList 
-                    dataKey="name" 
-                    position="outside" 
-                    fill="#888" 
-                    fontSize={12} 
-                    offset={15}
-                    formatter={(value: string) => {
-                      const item = cancelledVsActiveData.find(item => item.name === value);
-                      const percentage = item && totalOrders > 0 ? 
-                        `${Math.round((item.value / totalOrders) * 100)}%` : '';
-                      return `${value} ${percentage}`;
-                    }}
-                  />
                 </Pie>
                 <Tooltip
                   formatter={(value) => [`${value} заказов`, ""]}
@@ -341,29 +314,16 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
                     boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
                   }}
                 />
+                <Legend 
+                  verticalAlign="bottom"
+                  iconType="circle"
+                  iconSize={10}
+                  formatter={(value, entry) => (
+                    <span className="text-sm font-medium">{value}</span>
+                  )}
+                />
               </PieChart>
             </ResponsiveContainer>
-            
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-28 h-28 rounded-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm flex flex-col items-center justify-center shadow-xl border-2 border-indigo-200/50 dark:border-indigo-800/50 animate-pulse-slow">
-                <span className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-600 dark:from-indigo-400 dark:to-blue-400">
-                  {totalOrders}
-                </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">заказов</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="mt-4 text-xs text-muted-foreground bg-background/80 dark:bg-gray-800/80 p-2 rounded border border-border">
-            <h4 className="font-medium mb-1">Как рассчитываются данные</h4>
-            <ul className="list-disc pl-4 space-y-1 text-[10px]">
-              <li>Данные собираются из ваших заказов Wildberries с помощью API</li>
-              <li>Для складов мы группируем заказы по полю warehouseName из ответа API</li>
-              <li>Для регионов мы группируем заказы по полю regionName из ответа API</li>
-              <li>Мы подсчитываем вхождения каждого склада/региона и расчитываем проценты</li>
-              <li>Диаграммы отображают 5 лучших складов и регионов по количеству заказов</li>
-              <li>Эти географические данные предоставляют ценную информацию о том, где хранятся ваши продукты и где находятся ваши клиенты, помогая вам оптимизировать ваши логистические и маркетинговые стратегии.</li>
-            </ul>
           </div>
         </CardContent>
       </Card>
