@@ -55,7 +55,7 @@ const WarehouseCoefficientsTable: React.FC<WarehouseCoefficientsTableProps> = ({
                 <Badge 
                   variant={
                     coef.coefficient === -1 ? "destructive" : 
-                    coef.coefficient === 0 ? "success" : "default"
+                    coef.coefficient === 0 ? "secondary" : "default"
                   }
                 >
                   {formatCoefficientValue(coef.coefficient)}

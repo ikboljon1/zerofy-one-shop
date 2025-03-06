@@ -35,7 +35,7 @@ const SupplyOptionsResults: React.FC<SupplyOptionsResultsProps> = ({ results, wa
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>Результаты проверки доступности ({results.result.length} товаров)</span>
-          <Badge variant={hasErrors ? "destructive" : "success"}>
+          <Badge variant={hasErrors ? "destructive" : "secondary"}>
             {hasErrors ? "Есть ошибки" : "Все товары доступны"}
           </Badge>
         </CardTitle>
