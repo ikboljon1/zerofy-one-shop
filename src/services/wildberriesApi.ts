@@ -213,6 +213,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       }
     }
     
+    // Расчет хранения только для записей с supplier_oper_name === "Хранение"
     if (record.supplier_oper_name === "Хранение") {
       totalStorageFee += Math.abs(record.supplier_operation_name_amount || 0);
       
@@ -233,8 +234,6 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
         
         productProfitability[productName].costs += Math.abs(record.supplier_operation_name_amount || 0);
       }
-    } else {
-      totalStorageFee += record.storage_fee || 0;
     }
     
     if (record.penalty && record.penalty > 0) {

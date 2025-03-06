@@ -327,8 +327,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         if (item.supplier_oper_name === "Хранение") {
           expenses.storage += Math.abs(item.supplier_operation_name_amount || 0);
           console.log(`Added storage fee for nmId ${nmId}:`, Math.abs(item.supplier_operation_name_amount || 0));
-        } else {
-          expenses.storage += item.storage_fee || 0;
         }
 
         if (item.doc_type_name === "Продажа") {
