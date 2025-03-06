@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { WildberriesOrder, WildberriesSale } from "@/types/store";
 
 export interface WildberriesResponse {
   currentPeriod: {
@@ -52,6 +53,18 @@ export interface WildberriesResponse {
     margin: number;
     returnCount: number;
     category: string;
+  }>;
+  orders?: WildberriesOrder[];
+  sales?: WildberriesSale[];
+  warehouseDistribution?: Array<{
+    name: string;
+    count: number;
+    percentage: number;
+  }>;
+  regionDistribution?: Array<{
+    name: string;
+    count: number;
+    percentage: number;
   }>;
 }
 
@@ -299,6 +312,50 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   };
 };
 
+export const fetchWildberriesOrders = async (apiKey: string, dateFrom: Date): Promise<WildberriesOrder[]> => {
+  try {
+    const formattedDate = formatDateRFC3339(dateFrom);
+    const url = "https://statistics-api.wildberries.ru/api/v1/supplier/orders";
+    
+    const headers = {
+      "Authorization": apiKey,
+    };
+    
+    const params = {
+      "dateFrom": formattedDate
+    };
+    
+    console.log("Fetching orders from Wildberries API...");
+    const response = await axios.get(url, { headers, params });
+    return response.data || [];
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    return [];
+  }
+};
+
+export const fetchWildberriesSales = async (apiKey: string, dateFrom: Date): Promise<WildberriesSale[]> => {
+  try {
+    const formattedDate = formatDateRFC3339(dateFrom);
+    const url = "https://statistics-api.wildberries.ru/api/v1/supplier/sales";
+    
+    const headers = {
+      "Authorization": apiKey,
+    };
+    
+    const params = {
+      "dateFrom": formattedDate
+    };
+    
+    console.log("Fetching sales from Wildberries API...");
+    const response = await axios.get(url, { headers, params });
+    return response.data || [];
+  } catch (error) {
+    console.error("Error fetching sales:", error);
+    return [];
+  }
+};
+
 export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
   try {
     console.log(`Fetching Wildberries stats from ${dateFrom.toISOString()} to ${dateTo.toISOString()}`);
@@ -311,6 +368,9 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
     const reportData = await fetchReportDetail(apiKey, dateFrom, dateTo);
     
     const paidAcceptanceData = await fetchPaidAcceptanceReport(apiKey, dateFrom, dateTo);
+    
+    const ordersData = await fetchWildberriesOrders(apiKey, dateFrom);
+    const salesData = await fetchWildberriesSales(apiKey, dateFrom);
     
     if (!reportData || reportData.length === 0) {
       console.log('No data received from Wildberries API, using demo data');
@@ -356,6 +416,41 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       .map(([date, { sales, previousSales }]) => ({ date, sales, previousSales }))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
+    const warehouseCounts: Record<string, number> = {};
+    const totalOrders = ordersData.length;
+    
+    ordersData.forEach(order => {
+      if (order.warehouseName) {
+        warehouseCounts[order.warehouseName] = (warehouseCounts[order.warehouseName] || 0) + 1;
+      }
+    });
+    
+    const warehouseDistribution = Object.entries(warehouseCounts)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: (count / totalOrders) * 100
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+    
+    const regionCounts: Record<string, number> = {};
+    
+    ordersData.forEach(order => {
+      if (order.regionName) {
+        regionCounts[order.regionName] = (regionCounts[order.regionName] || 0) + 1;
+      }
+    });
+    
+    const regionDistribution = Object.entries(regionCounts)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: (count / totalOrders) * 100
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+    
     const response: WildberriesResponse = {
       currentPeriod: {
         sales: metrics.total_sales,
@@ -376,7 +471,11 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       productReturns,
       penaltiesData,
       topProfitableProducts: result.topProfitableProducts || [],
-      topUnprofitableProducts: result.topUnprofitableProducts || []
+      topUnprofitableProducts: result.topUnprofitableProducts || [],
+      orders: ordersData,
+      sales: salesData,
+      warehouseDistribution,
+      regionDistribution
     };
     
     console.log(`Received and processed data from Wildberries API. Total returns: ${metrics.total_returns}, Return count: ${metrics.total_return_count}`);
@@ -509,6 +608,145 @@ const getDemoData = (): WildberriesResponse => {
         returnCount: 10,
         category: "Аксессуары" 
       }
+    ],
+    orders: [
+      {
+        date: "2025-03-04T18:08:31",
+        lastChangeDate: "2025-03-06T10:11:07",
+        warehouseName: "Подольск",
+        warehouseType: "Склад продавца",
+        countryName: "Россия",
+        oblastOkrugName: "Центральный федеральный округ",
+        regionName: "Московская",
+        supplierArticle: "12345",
+        nmId: 1234567,
+        barcode: "123453559000",
+        category: "Бытовая техника",
+        subject: "Мультистайлеры",
+        brand: "Тест",
+        techSize: "0",
+        incomeID: 56735459,
+        isSupply: false,
+        isRealization: true,
+        totalPrice: 1887,
+        discountPercent: 18,
+        spp: 26,
+        finishedPrice: 1145,
+        priceWithDisc: 1547,
+        isCancel: false,
+        cancelDate: "0001-01-01T00:00:00",
+        orderType: "Клиентский",
+        sticker: "926912515",
+        gNumber: "34343462218572569531",
+        srid: "11.rf9ef11fce1684117b0nhj96222982382.3.0"
+      },
+      {
+        date: "2025-03-03T14:22:45",
+        lastChangeDate: "2025-03-05T09:43:21",
+        warehouseName: "Коледино",
+        warehouseType: "Склад WB",
+        countryName: "Россия",
+        oblastOkrugName: "Центральный федеральный округ",
+        regionName: "Московская",
+        supplierArticle: "67890",
+        nmId: 7654321,
+        barcode: "765432112000",
+        category: "Одежда",
+        subject: "Платья",
+        brand: "Тест",
+        techSize: "44",
+        incomeID: 56735460,
+        isSupply: false,
+        isRealization: true,
+        totalPrice: 2500,
+        discountPercent: 15,
+        spp: 20,
+        finishedPrice: 1700,
+        priceWithDisc: 2125,
+        isCancel: false,
+        cancelDate: "0001-01-01T00:00:00",
+        orderType: "Клиентский",
+        sticker: "926912516",
+        gNumber: "34343462218572569532",
+        srid: "11.rf9ef11fce1684117b0nhj96222982383.3.0"
+      },
+      {
+        date: "2025-03-02T10:15:33",
+        lastChangeDate: "2025-03-04T11:22:18",
+        warehouseName: "Электросталь",
+        warehouseType: "Склад WB",
+        countryName: "Россия",
+        oblastOkrugName: "Центральный федеральный округ",
+        regionName: "Московская",
+        supplierArticle: "11122",
+        nmId: 2233445,
+        barcode: "223344556000",
+        category: "Аксессуары",
+        subject: "Сумки",
+        brand: "Тест",
+        techSize: "0",
+        incomeID: 56735461,
+        isSupply: false,
+        isRealization: true,
+        totalPrice: 3200,
+        discountPercent: 10,
+        spp: 15,
+        finishedPrice: 2448,
+        priceWithDisc: 2880,
+        isCancel: false,
+        cancelDate: "0001-01-01T00:00:00",
+        orderType: "Клиентский",
+        sticker: "926912517",
+        gNumber: "34343462218572569533",
+        srid: "11.rf9ef11fce1684117b0nhj96222982384.3.0"
+      }
+    ],
+    sales: [
+      {
+        date: "2025-03-04T18:08:31",
+        lastChangeDate: "2025-03-06T10:11:07",
+        warehouseName: "Подольск",
+        warehouseType: "Склад продавца",
+        countryName: "Россия",
+        oblastOkrugName: "Центральный федеральный округ",
+        regionName: "Московская",
+        supplierArticle: "12345",
+        nmId: 1234567,
+        barcode: "123453559000",
+        category: "Бытовая техника",
+        subject: "Мультистайлеры",
+        brand: "Тест",
+        techSize: "0",
+        incomeID: 56735459,
+        isSupply: false,
+        isRealization: true,
+        totalPrice: 1887,
+        discountPercent: 18,
+        spp: 20,
+        paymentSaleAmount: 93,
+        forPay: 1284.01,
+        finishedPrice: 1145,
+        priceWithDisc: 1547,
+        saleID: "S9993700024",
+        orderType: "Клиентский",
+        sticker: "926912515",
+        gNumber: "34343462218572569531",
+        srid: "11.rf9ef11fce1684117b0nhj96222982382.3.0"
+      }
+    ],
+    warehouseDistribution: [
+      { name: "Подольск", count: 150, percentage: 30 },
+      { name: "Коледино", count: 120, percentage: 24 },
+      { name: "Электросталь", count: 95, percentage: 19 },
+      { name: "Казань", count: 75, percentage: 15 },
+      { name: "Санкт-Петербург", count: 60, percentage: 12 }
+    ],
+    regionDistribution: [
+      { name: "Московская", count: 180, percentage: 36 },
+      { name: "Санкт-Петербург", count: 110, percentage: 22 },
+      { name: "Краснодарский край", count: 85, percentage: 17 },
+      { name: "Татарстан", count: 75, percentage: 15 },
+      { name: "Свердловская", count: 50, percentage: 10 }
     ]
   };
 };

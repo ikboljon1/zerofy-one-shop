@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
-import Stats from "@/components/Stats";
 import Chart from "@/components/Chart";
 import ProductsComponent from "@/components/Products";
 import Stores from "@/components/Stores";
@@ -12,6 +11,7 @@ import Warehouses from "@/pages/Warehouses";
 import Advertising from "@/components/Advertising";
 import MainLayout from "@/components/layout/MainLayout";
 import AnalyticsSection from "@/components/analytics/AnalyticsSection";
+import Dashboard from "@/components/dashboard/Dashboard";
 import { getProductProfitabilityData } from "@/utils/storeUtils";
 
 const Index = () => {
@@ -72,16 +72,7 @@ const Index = () => {
             transition={{ duration: 0.3 }}
             className={isMobile ? 'space-y-4' : 'space-y-6'}
           >
-            <Stats />
-            <Chart />
-            <ProductsComponent 
-              topProfitableProducts={profitable.length > 0 ? profitable : [
-                { name: "Выберите магазин в разделе 'Магазины'", price: "0", profit: "0", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" }
-              ]}
-              topUnprofitableProducts={unprofitable.length > 0 ? unprofitable : [
-                { name: "Выберите магазин в разделе 'Магазины'", price: "0", profit: "0", image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg" }
-              ]}
-            />
+            <Dashboard />
           </motion.div>
         );
       case "analytics":

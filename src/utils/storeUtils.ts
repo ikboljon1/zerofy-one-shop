@@ -1,6 +1,5 @@
-
-import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY } from "@/types/store";
-import { fetchWildberriesStats } from "@/services/wildberriesApi";
+import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY, ORDERS_STORAGE_KEY, SALES_STORAGE_KEY, WildberriesOrder, WildberriesSale } from "@/types/store";
+import { fetchWildberriesStats, fetchWildberriesOrders, fetchWildberriesSales } from "@/services/wildberriesApi";
 
 export const getLastWeekDateRange = () => {
   const now = new Date();
@@ -76,6 +75,30 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           timestamp: timestamp
         }));
         
+        // Сохраняем данные о заказах отдельно
+        if (stats.orders && stats.orders.length > 0) {
+          localStorage.setItem(`${ORDERS_STORAGE_KEY}_${store.id}`, JSON.stringify({
+            storeId: store.id,
+            dateFrom: from.toISOString(),
+            dateTo: to.toISOString(),
+            orders: stats.orders,
+            warehouseDistribution: stats.warehouseDistribution || [],
+            regionDistribution: stats.regionDistribution || [],
+            timestamp: timestamp
+          }));
+        }
+        
+        // Сохраняем данные о продажах отдельно
+        if (stats.sales && stats.sales.length > 0) {
+          localStorage.setItem(`${SALES_STORAGE_KEY}_${store.id}`, JSON.stringify({
+            storeId: store.id,
+            dateFrom: from.toISOString(),
+            dateTo: to.toISOString(),
+            sales: stats.sales,
+            timestamp: timestamp
+          }));
+        }
+        
         // Детализированные данные по продуктам для раздела товаров с тем же timestamp
         if (stats.topProfitableProducts || stats.topUnprofitableProducts) {
           localStorage.setItem(`products_detailed_${store.id}`, JSON.stringify({
@@ -95,6 +118,129 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
     }
   }
   return store;
+};
+
+// Получение данных о заказах для конкретного магазина
+export const getOrdersData = (storeId: string) => {
+  try {
+    const storedData = localStorage.getItem(`${ORDERS_STORAGE_KEY}_${storeId}`);
+    if (storedData) {
+      return JSON.parse(storedData);
+    }
+    return null;
+  } catch (error) {
+    console.error('Error loading orders data:', error);
+    return null;
+  }
+};
+
+// Получение данных о продажах для конкретного магазина
+export const getSalesData = (storeId: string) => {
+  try {
+    const storedData = localStorage.getItem(`${SALES_STORAGE_KEY}_${storeId}`);
+    if (storedData) {
+      return JSON.parse(storedData);
+    }
+    return null;
+  } catch (error) {
+    console.error('Error loading sales data:', error);
+    return null;
+  }
+};
+
+// Загрузка и обновление данных о заказах
+export const fetchAndUpdateOrders = async (store: Store) => {
+  if (store.marketplace === "Wildberries") {
+    try {
+      const { from } = getLastWeekDateRange();
+      const orders = await fetchWildberriesOrders(store.apiKey, from);
+      
+      if (orders && orders.length > 0) {
+        // Рассчитываем распределение складов
+        const warehouseCounts: Record<string, number> = {};
+        const totalOrders = orders.length;
+        
+        orders.forEach(order => {
+          if (order.warehouseName) {
+            warehouseCounts[order.warehouseName] = (warehouseCounts[order.warehouseName] || 0) + 1;
+          }
+        });
+        
+        const warehouseDistribution = Object.entries(warehouseCounts)
+          .map(([name, count]) => ({
+            name,
+            count,
+            percentage: (count / totalOrders) * 100
+          }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5);
+        
+        // Рассчитываем распределение регионов
+        const regionCounts: Record<string, number> = {};
+        
+        orders.forEach(order => {
+          if (order.regionName) {
+            regionCounts[order.regionName] = (regionCounts[order.regionName] || 0) + 1;
+          }
+        });
+        
+        const regionDistribution = Object.entries(regionCounts)
+          .map(([name, count]) => ({
+            name,
+            count,
+            percentage: (count / totalOrders) * 100
+          }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5);
+        
+        // Сохраняем данные в localStorage
+        localStorage.setItem(`${ORDERS_STORAGE_KEY}_${store.id}`, JSON.stringify({
+          storeId: store.id,
+          dateFrom: from.toISOString(),
+          dateTo: new Date().toISOString(),
+          orders,
+          warehouseDistribution,
+          regionDistribution,
+          timestamp: Date.now()
+        }));
+        
+        return {
+          orders,
+          warehouseDistribution,
+          regionDistribution
+        };
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    }
+  }
+  return null;
+};
+
+// Загрузка и обновление данных о продажах
+export const fetchAndUpdateSales = async (store: Store) => {
+  if (store.marketplace === "Wildberries") {
+    try {
+      const { from } = getLastWeekDateRange();
+      const sales = await fetchWildberriesSales(store.apiKey, from);
+      
+      if (sales && sales.length > 0) {
+        // Сохраняем данные в localStorage
+        localStorage.setItem(`${SALES_STORAGE_KEY}_${store.id}`, JSON.stringify({
+          storeId: store.id,
+          dateFrom: from.toISOString(),
+          dateTo: new Date().toISOString(),
+          sales,
+          timestamp: Date.now()
+        }));
+        
+        return sales;
+      }
+    } catch (error) {
+      console.error('Error fetching sales:', error);
+    }
+  }
+  return null;
 };
 
 // Получение данных о доходности товаров для конкретного магазина
