@@ -53,6 +53,7 @@ export interface WildberriesResponse {
     returnCount: number;
     category: string;
   }>;
+  orders?: Array<WildberriesOrder>;
 }
 
 const formatDate = (date: Date): string => {
@@ -509,6 +510,18 @@ const getDemoData = (): WildberriesResponse => {
         returnCount: 10,
         category: "Аксессуары" 
       }
+    ],
+    orders: [
+      { orderId: "WB1001", warehouseName: "Коледино", regionName: "Москва", date: "2025-02-26", price: 3200 },
+      { orderId: "WB1002", warehouseName: "Коледино", regionName: "Москва", date: "2025-02-26", price: 1500 },
+      { orderId: "WB1003", warehouseName: "Электросталь", regionName: "Московская область", date: "2025-02-27", price: 2800 },
+      { orderId: "WB1004", warehouseName: "Подольск", regionName: "Московская область", date: "2025-02-27", price: 3500 },
+      { orderId: "WB1005", warehouseName: "Санкт-Петербург", regionName: "Санкт-Петербург", date: "2025-02-28", price: 1200 },
+      { orderId: "WB1006", warehouseName: "Новосибирск", regionName: "Новосибирская область", date: "2025-02-28", price: 1800 },
+      { orderId: "WB1007", warehouseName: "Коледино", regionName: "Москва", date: "2025-03-01", price: 4200 },
+      { orderId: "WB1008", warehouseName: "Казань", regionName: "Татарстан", date: "2025-03-01", price: 2500 },
+      { orderId: "WB1009", warehouseName: "Краснодар", regionName: "Краснодарский край", date: "2025-03-02", price: 1900 },
+      { orderId: "WB1010", warehouseName: "Коледино", regionName: "Москва", date: "2025-03-02", price: 3100 }
     ]
   };
 };
