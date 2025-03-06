@@ -32,10 +32,14 @@ const Dashboard = () => {
     const now = new Date();
     const itemDate = new Date(date);
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
 
     switch (period) {
       case "today":
         return itemDate >= todayStart;
+      case "yesterday":
+        return itemDate >= yesterdayStart && itemDate < todayStart;
       case "week":
         const weekAgo = new Date(todayStart);
         weekAgo.setDate(weekAgo.getDate() - 7);

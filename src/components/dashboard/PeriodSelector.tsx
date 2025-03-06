@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export type Period = "today" | "week" | "2weeks" | "4weeks";
+export type Period = "today" | "yesterday" | "week" | "2weeks" | "4weeks";
 
 interface PeriodSelectorProps {
   value: Period;
@@ -23,6 +23,7 @@ const PeriodSelector = ({ value, onChange }: PeriodSelectorProps) => {
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="today">Сегодня</SelectItem>
+        <SelectItem value="yesterday">Вчера</SelectItem>
         <SelectItem value="week">Неделя</SelectItem>
         <SelectItem value="2weeks">2 недели</SelectItem>
         <SelectItem value="4weeks">4 недели</SelectItem>
