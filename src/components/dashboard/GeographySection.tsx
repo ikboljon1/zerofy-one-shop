@@ -1,8 +1,9 @@
 
 import React from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
-import { Warehouse, MapPin } from "lucide-react";
+import { Warehouse, MapPin, Info } from "lucide-react";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
 interface DistributionItem {
   name: string;
@@ -82,40 +83,64 @@ const GeographySection: React.FC<GeographySectionProps> = ({
   };
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Warehouse className="mr-2 h-5 w-5" />
-            Распределение заказов по складам
-          </CardTitle>
-          <CardDescription>
-            Топ 5 складов Wildberries, обрабатывающих ваши заказы
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="px-2">
-          {renderPieChart(warehouseDistribution, "count")}
-          <div className="mt-4 px-4">
-            {renderDistributionList(warehouseDistribution)}
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Warehouse className="mr-2 h-5 w-5" />
+              Распределение заказов по складам
+            </CardTitle>
+            <CardDescription>
+              Топ 5 складов Wildberries, обрабатывающих ваши заказы
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-2">
+            {renderPieChart(warehouseDistribution, "count")}
+            <div className="mt-4 px-4">
+              {renderDistributionList(warehouseDistribution)}
+            </div>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <MapPin className="mr-2 h-5 w-5" />
-            Распределение заказов по регионам
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <MapPin className="mr-2 h-5 w-5" />
+              Распределение заказов по регионам
+            </CardTitle>
+            <CardDescription>
+              Топ 5 регионов, откуда поступают ваши заказы
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-2">
+            {renderPieChart(regionDistribution, "count")}
+            <div className="mt-4 px-4">
+              {renderDistributionList(regionDistribution)}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      <Card className="bg-muted/50 border-dashed">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center">
+            <Info className="mr-2 h-4 w-4 text-blue-500" />
+            Как рассчитываются данные
           </CardTitle>
-          <CardDescription>
-            Топ 5 регионов, откуда поступают ваши заказы
-          </CardDescription>
         </CardHeader>
-        <CardContent className="px-2">
-          {renderPieChart(regionDistribution, "count")}
-          <div className="mt-4 px-4">
-            {renderDistributionList(regionDistribution)}
-          </div>
+        <CardContent className="text-sm text-muted-foreground space-y-2">
+          <p>Данные собираются из ваших заказов Wildberries с помощью API:</p>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li>Для складов мы группируем заказы по полю warehouseName из ответа API</li>
+            <li>Для регионов мы группируем заказы по полю regionName из ответа API</li>
+            <li>Мы подсчитываем вхождения каждого склада/региона и расчитываем проценты</li>
+            <li>Диаграммы отображают 5 лучших складов и регионов по количеству заказов</li>
+          </ul>
+          <p className="pt-2">
+            Эти географические данные предоставляют ценную информацию о том, где хранятся ваши продукты и где находятся ваши клиенты, 
+            помогая вам оптимизировать ваши логистические и маркетинговые стратегии.
+          </p>
         </CardContent>
       </Card>
     </div>
