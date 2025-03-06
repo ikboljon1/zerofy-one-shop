@@ -14,6 +14,7 @@ import {
   ReferenceLine,
   Label
 } from "recharts";
+import { formatCurrency } from "@/utils/formatCurrency";
 
 interface DeductionsChartProps {
   data: Array<{
@@ -71,7 +72,7 @@ const DeductionsChart = ({ data }: DeductionsChartProps) => {
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm text-gray-500">Логистика</span>
             <span className={`${isMobile ? 'text-sm' : 'text-md'} font-semibold text-violet-600 dark:text-violet-400`}>
-              {totals.logistic.toLocaleString()} ₽
+              {formatCurrency(totals.logistic)}
             </span>
           </div>
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
@@ -91,7 +92,7 @@ const DeductionsChart = ({ data }: DeductionsChartProps) => {
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm text-gray-500">Хранение</span>
             <span className={`${isMobile ? 'text-sm' : 'text-md'} font-semibold text-emerald-600 dark:text-emerald-400`}>
-              {totals.storage.toLocaleString()} ₽
+              {formatCurrency(totals.storage)}
             </span>
           </div>
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
@@ -111,7 +112,7 @@ const DeductionsChart = ({ data }: DeductionsChartProps) => {
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm text-gray-500">Штрафы</span>
             <span className={`${isMobile ? 'text-sm' : 'text-md'} font-semibold text-pink-600 dark:text-pink-400`}>
-              {totals.penalties.toLocaleString()} ₽
+              {formatCurrency(totals.penalties)}
             </span>
           </div>
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
@@ -160,7 +161,7 @@ const DeductionsChart = ({ data }: DeductionsChartProps) => {
               width={isMobile ? 30 : 40}
             />
             <Tooltip
-              formatter={(value: any) => [`${value.toLocaleString()} ₽`, '']}
+              formatter={(value: any) => [`${formatCurrency(value)}`, '']}
               contentStyle={{ 
                 background: 'rgba(255, 255, 255, 0.97)', 
                 borderRadius: '8px', 

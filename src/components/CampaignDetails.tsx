@@ -783,7 +783,12 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
         </TabsContent>
 
         <TabsContent value="keywords">
-          <KeywordStatisticsComponent campaignId={campaignId} apiKey={apiKey} />
+          <KeywordStatisticsComponent 
+            campaignId={campaignId} 
+            apiKey={apiKey} 
+            dateFrom={new Date(new Date().setDate(new Date().getDate() - 30))}
+            dateTo={new Date()}
+          />
         </TabsContent>
       </Tabs>
     </div>
