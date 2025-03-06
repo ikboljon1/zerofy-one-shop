@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   Card,
@@ -8,7 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { WildberriesSale } from "@/types/store";
-import { ShoppingCart, CreditCard, BarChart3, Tag } from "lucide-react";
+import { ShoppingCart, CreditCard, BarChart3, Tag, PackageX } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 interface SalesMetricsProps {
