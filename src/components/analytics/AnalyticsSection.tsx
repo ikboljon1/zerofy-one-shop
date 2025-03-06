@@ -153,37 +153,48 @@ const AnalyticsSection = () => {
 
   const loadStoredAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
     try {
-      // Используем новую функцию getAnalyticsData для получения данных с проверками и поддержкой forceRefresh
-      const analyticsData = getAnalyticsData(storeId, forceRefresh);
+      // Всегда получаем свежие данные из localStorage
+      const storageKey = `${ANALYTICS_STORAGE_KEY}_${storeId}`;
+      const storedData = localStorage.getItem(storageKey);
       
-      if (analyticsData) {
-        // Устанавливаем данные с проверками на существование
-        setDateFrom(new Date(analyticsData.dateFrom || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)));
-        setDateTo(new Date(analyticsData.dateTo || new Date()));
+      if (!storedData || forceRefresh) {
+        return false;
+      }
+      
+      try {
+        const parsedData = JSON.parse(storedData);
         
-        if (analyticsData.data) {
-          setData(analyticsData.data);
+        // Проверяем, что данные не устарели (опционально можно добавить проверку по времени)
+        if (parsedData) {
+          setDateFrom(new Date(parsedData.dateFrom || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)));
+          setDateTo(new Date(parsedData.dateTo || new Date()));
+          
+          if (parsedData.data) {
+            setData(parsedData.data);
+          }
+          
+          setPenalties(parsedData.penalties || []);
+          setReturns(parsedData.returns || []);
+          setDeductionsTimeline(parsedData.deductionsTimeline || []);
+          setProductAdvertisingData(parsedData.productAdvertisingData || []);
+          
+          if (parsedData.advertisingBreakdown) {
+            setAdvertisingBreakdown(parsedData.advertisingBreakdown);
+          }
+          
+          if (parsedData.timestamp) {
+            setDataTimestamp(parsedData.timestamp);
+          }
+          
+          console.log('Analytics data loaded from localStorage with timestamp:', parsedData.timestamp);
+          return true;
         }
-        
-        // Используем проверенные данные
-        setPenalties(analyticsData.penalties || []);
-        setReturns(analyticsData.returns || []);
-        setDeductionsTimeline(analyticsData.deductionsTimeline || []);
-        setProductAdvertisingData(analyticsData.productAdvertisingData || []);
-        
-        if (analyticsData.advertisingBreakdown) {
-          setAdvertisingBreakdown(analyticsData.advertisingBreakdown);
-        }
-        
-        if (analyticsData.timestamp) {
-          setDataTimestamp(analyticsData.timestamp);
-        }
-        
-        console.log('Analytics data loaded from localStorage with timestamp:', analyticsData.timestamp);
-        return true;
+      } catch (error) {
+        console.error('Error parsing analytics data:', error);
+        return false;
       }
     } catch (error) {
-      console.error('Error parsing stored analytics data:', error);
+      console.error('Error loading stored analytics data:', error);
     }
     return false;
   };
@@ -333,7 +344,7 @@ const AnalyticsSection = () => {
         
         setDeductionsTimeline(newDeductionsTimeline);
         
-        // Вызываем saveAnalyticsData с принудительным обновлением timestamp
+        // Сохраняем данные в localStorage
         saveAnalyticsData(selectedStore.id);
         
         toast({
@@ -369,7 +380,7 @@ const AnalyticsSection = () => {
   useEffect(() => {
     const selectedStore = getSelectedStore();
     if (selectedStore) {
-      // Загружаем данные сначала без принудительного обновления
+      // Всегда загружаем свежие данные напрямую из localStorage
       const hasStoredData = loadStoredAnalyticsData(selectedStore.id);
       
       if (!hasStoredData) {
@@ -397,6 +408,21 @@ const AnalyticsSection = () => {
       setReturns([]);
       setIsLoading(false);
     }
+    
+    // Добавляем обработчик события для отслеживания изменений в localStorage
+    const handleStorageChange = (e: StorageEvent) => {
+      const selectedStore = getSelectedStore();
+      if (selectedStore && e.key === `${ANALYTICS_STORAGE_KEY}_${selectedStore.id}`) {
+        console.log('Analytics data changed in another tab/window. Reloading...');
+        loadStoredAnalyticsData(selectedStore.id);
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const hasAdvertisingData = productAdvertisingData && productAdvertisingData.length > 0;

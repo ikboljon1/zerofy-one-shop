@@ -50,14 +50,17 @@ const SalesChart = ({ data }: SalesChartProps) => {
   }
   
   return (
-    <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950/30">
+    <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950/30 hover:shadow-xl transition-all duration-300">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-purple-700 to-indigo-700 dark:from-purple-400 dark:to-indigo-400">Динамика продаж</h3>
-        <div className="bg-purple-100 dark:bg-purple-900/60 p-2 rounded-full shadow-inner">
+        <div className="bg-purple-100 dark:bg-purple-900/60 p-2 rounded-full shadow-inner animate-pulse">
           <DollarSign className="h-5 w-5 text-purple-600 dark:text-purple-400" />
         </div>
       </div>
-      <div className="h-[300px]">
+      <div className="h-[300px] relative">
+        {/* Glowing background effect */}
+        <div className="absolute inset-0 bg-gradient-to-b from-purple-400/5 to-transparent rounded-lg opacity-50"></div>
+        
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data.dailySales} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
             <defs>
@@ -65,6 +68,11 @@ const SalesChart = ({ data }: SalesChartProps) => {
                 <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8}/>
                 <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
               </linearGradient>
+              {/* Add glowing effect */}
+              <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="6" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
             <XAxis 
@@ -101,6 +109,7 @@ const SalesChart = ({ data }: SalesChartProps) => {
                 border: '1px solid #e5e7eb',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
               }}
+              cursor={{ stroke: '#8B5CF6', strokeWidth: 1, strokeDasharray: '5 5' }}
             />
             {!isMobile && (
               <ReferenceLine 
@@ -111,7 +120,8 @@ const SalesChart = ({ data }: SalesChartProps) => {
                   value: "Средние продажи",
                   position: "insideTopLeft",
                   fill: "#8B5CF6",
-                  fontSize: 12
+                  fontSize: 12,
+                  fontWeight: 600
                 }}
               />
             )}
@@ -119,11 +129,17 @@ const SalesChart = ({ data }: SalesChartProps) => {
               type="monotone"
               dataKey="sales"
               stroke="#8B5CF6"
-              strokeWidth={2}
+              strokeWidth={3}
               fillOpacity={1}
               fill="url(#colorSales)"
               name="Продажи"
-              activeDot={{ r: 6, strokeWidth: 0, fill: "#8B5CF6" }}
+              activeDot={{ 
+                r: 8, 
+                strokeWidth: 2, 
+                stroke: "#ffffff", 
+                fill: "#8B5CF6", 
+                filter: "url(#glow)"
+              }}
             />
           </AreaChart>
         </ResponsiveContainer>
