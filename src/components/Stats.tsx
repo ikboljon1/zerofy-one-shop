@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -7,14 +6,14 @@ import { format, subDays } from "date-fns";
 import { 
   Calendar as CalendarIcon, 
   Loader2,
-  ShoppingBag,
-  ShoppingCart,
-  RefreshCw,
-  XSquare,
+  DollarSign,
+  CreditCard,
+  Wallet,
   PieChart,
   Package,
-  Map,
-  Store,
+  PackageCheck,
+  Receipt,
+  CheckSquare,
   ArrowUpRight,
   ArrowDownRight
 } from "lucide-react";
@@ -24,7 +23,6 @@ import { fetchWildberriesStats } from "@/services/wildberriesApi";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Chart from "@/components/Chart";
-import { getAnalyticsData } from "@/utils/storeUtils";
 
 const calculatePercentageChange = (current: number, previous: number): string => {
   if (previous === 0) return '0%';
@@ -128,106 +126,90 @@ const Stats = () => {
     return data.productSales;
   };
 
-  // Use the new property names for the main metrics
+  // Use the correct property names based on API response
   const stats = statsData ? [
     {
-      title: "Заказы",
-      value: statsData.currentPeriod.orders?.toLocaleString() || "0",
-      change: calculatePercentageChange(
-        statsData.currentPeriod.orders || 0, 
-        statsData.previousPeriod?.orders || 0
-      ),
-      isPositive: (statsData.currentPeriod.orders || 0) >= (statsData.previousPeriod?.orders || 0),
+      title: "Продажа",
+      value: statsData.currentPeriod.sales.toLocaleString(),
+      change: calculatePercentageChange(statsData.currentPeriod.sales, statsData.previousPeriod?.sales || 0),
+      isPositive: statsData.currentPeriod.sales >= (statsData.previousPeriod?.sales || 0),
       description: "За выбранный период",
-      icon: ShoppingBag,
+      icon: DollarSign,
       gradient: "from-[#fdfcfb] to-[#e2d1c3]",
+      iconColor: "text-green-600"
+    },
+    {
+      title: "Перечислено",
+      value: statsData.currentPeriod.transferred.toLocaleString(),
+      change: calculatePercentageChange(statsData.currentPeriod.transferred, statsData.previousPeriod?.transferred || 0),
+      isPositive: statsData.currentPeriod.transferred >= (statsData.previousPeriod?.transferred || 0),
+      description: "За выбранный период",
+      icon: CreditCard,
+      gradient: "from-[#accbee] to-[#e7f0fd]",
       iconColor: "text-blue-600"
     },
     {
-      title: "Продажи",
-      value: (statsData.currentPeriod.sales || 0).toLocaleString(),
-      change: calculatePercentageChange(
-        statsData.currentPeriod.sales || 0, 
-        statsData.previousPeriod?.sales || 0
-      ),
-      isPositive: (statsData.currentPeriod.sales || 0) >= (statsData.previousPeriod?.sales || 0),
+      title: "Расходы",
+      value: statsData.currentPeriod.expenses.total.toLocaleString(),
+      change: calculatePercentageChange(statsData.currentPeriod.expenses.total, statsData.previousPeriod?.expenses?.total || 0),
+      isPositive: statsData.currentPeriod.expenses.total <= (statsData.previousPeriod?.expenses?.total || 0),
       description: "За выбранный период",
-      icon: ShoppingCart,
-      gradient: "from-[#accbee] to-[#e7f0fd]",
-      iconColor: "text-purple-600"
-    },
-    {
-      title: "Возвраты",
-      value: (statsData.currentPeriod.returns || 0).toLocaleString(),
-      change: calculatePercentageChange(
-        statsData.currentPeriod.returns || 0, 
-        statsData.previousPeriod?.returns || 0
-      ),
-      isPositive: (statsData.currentPeriod.returns || 0) <= (statsData.previousPeriod?.returns || 0),
-      description: "За выбранный период",
-      icon: RefreshCw,
+      icon: Wallet,
       gradient: "from-[#ee9ca7] to-[#ffdde1]",
-      iconColor: "text-amber-600"
+      iconColor: "text-red-600"
     },
     {
-      title: "Отмены заказов",
-      value: (statsData.currentPeriod.cancellations || 0).toLocaleString(),
-      change: calculatePercentageChange(
-        statsData.currentPeriod.cancellations || 0, 
-        statsData.previousPeriod?.cancellations || 0
-      ),
-      isPositive: (statsData.currentPeriod.cancellations || 0) <= (statsData.previousPeriod?.cancellations || 0),
+      title: "Чистая прибыль",
+      value: statsData.currentPeriod.netProfit.toLocaleString(),
+      change: calculatePercentageChange(statsData.currentPeriod.netProfit, statsData.previousPeriod?.netProfit || 0),
+      isPositive: statsData.currentPeriod.netProfit >= (statsData.previousPeriod?.netProfit || 0),
       description: "За выбранный период",
-      icon: XSquare,
+      icon: PieChart,
       gradient: "from-[#d299c2] to-[#fef9d7]",
-      iconColor: "text-red-600"
+      iconColor: "text-purple-600"
     }
   ] : [];
 
-  // Use the regional and warehouse data for additional stats
   const additionalStats = statsData ? [
     {
-      title: "Доход",
-      value: statsData.currentPeriod.netProfit?.toLocaleString() || "0",
-      change: calculatePercentageChange(
-        statsData.currentPeriod.netProfit || 0, 
-        statsData.previousPeriod?.netProfit || 0
-      ),
-      isPositive: (statsData.currentPeriod.netProfit || 0) >= (statsData.previousPeriod?.netProfit || 0),
+      title: "Логистика",
+      value: statsData.currentPeriod.expenses.logistics.toLocaleString(),
+      change: calculatePercentageChange(statsData.currentPeriod.expenses.logistics, statsData.previousPeriod?.expenses?.logistics || 0),
+      isPositive: statsData.currentPeriod.expenses.logistics <= (statsData.previousPeriod?.expenses?.logistics || 0),
       description: "За выбранный период",
-      icon: PieChart,
+      icon: Package,
       gradient: "from-[#243949] to-[#517fa4]",
+      iconColor: "text-blue-500"
+    },
+    {
+      title: "Хранение",
+      value: statsData.currentPeriod.expenses.storage.toLocaleString(),
+      change: calculatePercentageChange(statsData.currentPeriod.expenses.storage, statsData.previousPeriod?.expenses?.storage || 0),
+      isPositive: statsData.currentPeriod.expenses.storage <= (statsData.previousPeriod?.expenses?.storage || 0),
+      description: "За выбранный период",
+      icon: PackageCheck,
+      gradient: "from-[#c1c161] to-[#d4d4b1]",
       iconColor: "text-green-500"
     },
     {
-      title: "Популярная категория",
-      value: statsData.productSales?.[0]?.subject_name || "Нет данных",
-      change: "",
-      isPositive: true,
-      description: "Самая продаваемая",
-      icon: Package,
-      gradient: "from-[#c1c161] to-[#d4d4b1]",
-      iconColor: "text-violet-500"
-    },
-    {
-      title: "Популярный регион",
-      value: statsData.ordersByRegion?.[0]?.region || "Нет данных",
-      change: "",
-      isPositive: true,
-      description: "Наибольшее число заказов",
-      icon: Map,
+      title: "Штрафы",
+      value: statsData.currentPeriod.expenses.penalties.toLocaleString(),
+      change: calculatePercentageChange(statsData.currentPeriod.expenses.penalties, statsData.previousPeriod?.expenses?.penalties || 0),
+      isPositive: statsData.currentPeriod.expenses.penalties <= (statsData.previousPeriod?.expenses?.penalties || 0),
+      description: "За выбранный период",
+      icon: Receipt,
       gradient: "from-[#e6b980] to-[#eacda3]",
-      iconColor: "text-cyan-500"
+      iconColor: "text-red-500"
     },
     {
-      title: "Основной склад",
-      value: statsData.ordersByWarehouse?.[0]?.warehouse || "Нет данных",
-      change: "",
-      isPositive: true,
-      description: "Наибольшее число отгрузок",
-      icon: Store,
+      title: "Приемка",
+      value: statsData.currentPeriod.acceptance.toLocaleString(),
+      change: calculatePercentageChange(statsData.currentPeriod.acceptance, statsData.previousPeriod?.acceptance || 0),
+      isPositive: statsData.currentPeriod.acceptance >= (statsData.previousPeriod?.acceptance || 0),
+      description: "За выбранный период",
+      icon: CheckSquare,
       gradient: "from-[#accbee] to-[#e7f0fd]",
-      iconColor: "text-indigo-500"
+      iconColor: "text-teal-500"
     }
   ] : [];
 
@@ -266,22 +248,20 @@ const Stats = () => {
           <div className="flex flex-col space-y-2">
             <div className="flex items-center justify-between">
               <stat.icon className={`h-8 w-8 ${stat.iconColor}`} />
-              {stat.change && (
-                <div className="flex items-center space-x-1">
-                  <span
-                    className={`text-sm ${
-                      stat.isPositive ? "text-green-500" : "text-red-500"
-                    }`}
-                  >
-                    {stat.change}
-                  </span>
-                  {stat.isPositive ? (
-                    <ArrowUpRight className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <ArrowDownRight className="h-4 w-4 text-red-500" />
-                  )}
-                </div>
-              )}
+              <div className="flex items-center space-x-1">
+                <span
+                  className={`text-sm ${
+                    stat.isPositive ? "text-green-500" : "text-red-500"
+                  }`}
+                >
+                  {stat.change}
+                </span>
+                {stat.isPositive ? (
+                  <ArrowUpRight className="h-4 w-4 text-green-500" />
+                ) : (
+                  <ArrowDownRight className="h-4 w-4 text-red-500" />
+                )}
+              </div>
             </div>
             <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
             <p className={`font-bold ${isMobile ? 'text-xl' : 'text-2xl'}`}>{stat.value}</p>
@@ -340,7 +320,7 @@ const Stats = () => {
               productSales={prepareProductSalesData(statsData)}
             />
             <div className="mt-8">
-              <h3 className="text-lg font-semibold mb-4">Дополнительная информация</h3>
+              <h3 className="text-lg font-semibold mb-4">Дополнительная статистика</h3>
               {isMobile ? (
                 <>
                   {renderStatsRow(additionalStats, 0, 2)}

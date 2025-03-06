@@ -37,9 +37,6 @@ export const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#
 export const demoData = {
   currentPeriod: {
     sales: 1250000,
-    orders: 320,
-    returns: 15,
-    cancellations: 8,
     transferred: 1125000, // К перечислению продавцу
     expenses: {
       total: 125000,
@@ -51,12 +48,6 @@ export const demoData = {
     },
     netProfit: 875000,
     acceptance: 30000
-  },
-  previousPeriod: {
-    sales: 1100000,
-    orders: 290,
-    returns: 12,
-    cancellations: 5
   },
   dailySales: Array.from({ length: 30 }, (_, i) => ({
     date: new Date(2024, 0, i + 1).toISOString(),
@@ -134,20 +125,6 @@ export const demoData = {
       returnCount: 25,
       category: "Аксессуары"
     }
-  ],
-  penaltiesData: penaltiesData,
-  ordersByRegion: [
-    { region: "Московская", count: 120 },
-    { region: "Санкт-Петербург", count: 85 },
-    { region: "Новосибирская", count: 42 },
-    { region: "Екатеринбург", count: 38 },
-    { region: "Краснодарский край", count: 35 }
-  ],
-  ordersByWarehouse: [
-    { warehouse: "Московский", count: 180 },
-    { warehouse: "Санкт-Петербургский", count: 75 },
-    { warehouse: "Подольск", count: 40 },
-    { warehouse: "Казань", count: 25 }
   ]
 };
 
