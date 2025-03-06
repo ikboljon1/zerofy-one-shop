@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2 } from "lucide-react";
+import { formatCurrency } from "@/utils/formatCurrency";
 
 interface StoreCardProps {
   store: Store;
@@ -52,19 +53,19 @@ export function StoreCard({
             <>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Продажи:</span>
-                <span className="font-medium">{store.stats.currentPeriod.sales.toLocaleString()} ₽</span>
+                <span className="font-medium">{formatCurrency(store.stats.currentPeriod.sales)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Перечислено:</span>
-                <span className="font-medium">{store.stats.currentPeriod.transferred.toLocaleString()} ₽</span>
+                <span className="font-medium">{formatCurrency(store.stats.currentPeriod.transferred)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Расходы:</span>
-                <span className="font-medium">{store.stats.currentPeriod.expenses.total.toLocaleString()} ₽</span>
+                <span className="font-medium">{formatCurrency(store.stats.currentPeriod.expenses.total)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Чистая прибыль:</span>
-                <span className="font-medium">{store.stats.currentPeriod.netProfit.toLocaleString()} ₽</span>
+                <span className="font-medium">{formatCurrency(store.stats.currentPeriod.netProfit)}</span>
               </div>
             </>
           )}
@@ -81,4 +82,3 @@ export function StoreCard({
     </Card>
   );
 }
-

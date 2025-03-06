@@ -2,6 +2,7 @@
 import { Card } from "@/components/ui/card";
 import { DollarSign, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { ShoppingCart, TrendingDown, Percent } from "../icons";
+import { formatCurrency } from "@/utils/formatCurrency";
 
 interface KeyMetricsProps {
   data: {
@@ -23,7 +24,7 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
           <div>
             <p className="text-sm font-medium text-muted-foreground mb-1">Общая сумма продаж</p>
             <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-700 to-purple-900 dark:from-purple-400 dark:to-purple-200">
-              {data.currentPeriod.sales.toLocaleString()} ₽
+              {formatCurrency(data.currentPeriod.sales)}
             </h3>
             <div className="flex items-center mt-2 text-sm text-green-600 dark:text-green-400">
               <ArrowUpRight className="h-4 w-4 mr-1" />
@@ -59,7 +60,7 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
           <div>
             <p className="text-sm font-medium text-muted-foreground mb-1">Общие удержания</p>
             <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-700 to-red-900 dark:from-red-400 dark:to-red-200">
-              {data.currentPeriod.expenses.total.toLocaleString()} ₽
+              {formatCurrency(data.currentPeriod.expenses.total)}
             </h3>
             <div className="flex items-center mt-2 text-sm text-red-600 dark:text-red-400">
               <ArrowDownRight className="h-4 w-4 mr-1" />
@@ -77,7 +78,7 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
           <div>
             <p className="text-sm font-medium text-muted-foreground mb-1">Чистая прибыль</p>
             <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-700 to-green-900 dark:from-green-400 dark:to-green-200">
-              {data.currentPeriod.netProfit.toLocaleString()} ₽
+              {formatCurrency(data.currentPeriod.netProfit)}
             </h3>
             <div className="flex items-center mt-2 text-sm text-green-600 dark:text-green-400">
               <ArrowUpRight className="h-4 w-4 mr-1" />

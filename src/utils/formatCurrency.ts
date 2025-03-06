@@ -1,15 +1,14 @@
 
 /**
- * Форматирует число как валюту (руб.)
+ * Форматирует число как валюту (без символа рубля)
  * @param value Число для форматирования
  * @returns Отформатированная строка
  */
 export const formatCurrency = (value: number): string => {
-  if (isNaN(value)) return "0 ₽";
+  if (isNaN(value)) return "0";
   
   return new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency: 'RUB',
+    style: 'decimal',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
   }).format(value);
