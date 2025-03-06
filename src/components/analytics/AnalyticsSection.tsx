@@ -73,6 +73,7 @@ interface AnalyticsData {
     returnCount?: number;
     category?: string;
   }>;
+  orders?: WildberriesOrder[];
 }
 
 interface AdvertisingBreakdown {

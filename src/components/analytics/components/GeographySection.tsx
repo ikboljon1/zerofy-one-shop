@@ -1,8 +1,7 @@
-
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MapPin, PackageBox } from "lucide-react";
+import { MapPin, Package } from "lucide-react";
 import { useState, useEffect } from "react";
 import { calculateWarehouseDistribution, calculateRegionDistribution } from "@/utils/storeUtils";
 
@@ -21,7 +20,6 @@ const GeographySection = ({ orders }: GeographySectionProps) => {
     }
   }, [orders]);
   
-  // Sort and limit data for display
   const topWarehouses = Object.entries(warehouseData)
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count)
@@ -90,7 +88,7 @@ const GeographySection = ({ orders }: GeographySectionProps) => {
           topWarehouses, 
           totalWarehouseOrders, 
           "Распределение заказов по складам", 
-          <PackageBox className="text-purple-500" />,
+          <Package className="text-purple-500" />,
           "bg-purple-600"
         )}
         {renderDistributionChart(
