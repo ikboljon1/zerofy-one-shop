@@ -9,8 +9,10 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip
+  Tooltip,
+  ReferenceLine
 } from "recharts";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SalesChartProps {
   data: {
@@ -22,8 +24,14 @@ interface SalesChartProps {
 }
 
 const SalesChart = ({ data }: SalesChartProps) => {
+  const isMobile = useIsMobile();
   // Check if data is valid and has sales data
   const hasSalesData = data && data.dailySales && data.dailySales.length > 0;
+  
+  // Calculate average sales
+  const avgSales = hasSalesData 
+    ? data.dailySales.reduce((sum, item) => sum + item.sales, 0) / data.dailySales.length
+    : 0;
   
   if (!hasSalesData) {
     return (
@@ -51,14 +59,14 @@ const SalesChart = ({ data }: SalesChartProps) => {
       </div>
       <div className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data.dailySales}>
+          <AreaChart data={data.dailySales} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8}/>
                 <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
             <XAxis 
               dataKey="date" 
               tickFormatter={(value) => {
@@ -66,10 +74,16 @@ const SalesChart = ({ data }: SalesChartProps) => {
                 return `${date.getDate()}.${date.getMonth() + 1}`;
               }}
               stroke="#9ca3af"
+              tick={{ fontSize: 12 }}
+              tickLine={{ stroke: '#e5e7eb' }}
+              axisLine={{ stroke: '#e5e7eb' }}
             />
             <YAxis 
               stroke="#9ca3af"
               tickFormatter={(value) => value >= 1000 ? `${value/1000}k` : value}
+              tick={{ fontSize: 12 }}
+              tickLine={{ stroke: '#e5e7eb' }}
+              axisLine={{ stroke: '#e5e7eb' }}
             />
             <Tooltip 
               formatter={(value: any) => [`${value.toLocaleString()} ₽`, 'Продажи']}
@@ -88,6 +102,19 @@ const SalesChart = ({ data }: SalesChartProps) => {
                 boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
               }}
             />
+            {!isMobile && (
+              <ReferenceLine 
+                y={avgSales} 
+                stroke="#8B5CF6" 
+                strokeDasharray="3 3"
+                label={{
+                  value: "Средние продажи",
+                  position: "insideTopLeft",
+                  fill: "#8B5CF6",
+                  fontSize: 12
+                }}
+              />
+            )}
             <Area
               type="monotone"
               dataKey="sales"
@@ -96,6 +123,7 @@ const SalesChart = ({ data }: SalesChartProps) => {
               fillOpacity={1}
               fill="url(#colorSales)"
               name="Продажи"
+              activeDot={{ r: 6, strokeWidth: 0, fill: "#8B5CF6" }}
             />
           </AreaChart>
         </ResponsiveContainer>
