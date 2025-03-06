@@ -1,4 +1,5 @@
-import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY, WildberriesOrder } from "@/types/store";
+
+import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY } from "@/types/store";
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
 
 export const getLastWeekDateRange = () => {
@@ -29,6 +30,7 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           lastFetchDate: new Date().toISOString() 
         };
         
+        // Создаем базовую структуру для deductionsTimeline, если она отсутствует
         const deductionsTimeline = stats.dailySales?.map((day: any) => {
           const daysCount = stats.dailySales.length || 1;
           const logistic = (stats.currentPeriod.expenses.logistics || 0) / daysCount;
@@ -47,8 +49,10 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           };
         }) || [];
         
+        // Генерируем уникальный timestamp для данных, чтобы предотвратить кэширование
         const timestamp = Date.now();
         
+        // Сохраняем полные данные статистики, включая топовые продукты с их изображениями
         localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify({
           storeId: store.id,
           dateFrom: from.toISOString(),
@@ -58,6 +62,7 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           timestamp: timestamp
         }));
         
+        // Также сохраняем данные для аналитики и раздела товаров с тем же timestamp
         localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify({
           storeId: store.id,
           dateFrom: from.toISOString(),
@@ -71,6 +76,7 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           timestamp: timestamp
         }));
         
+        // Детализированные данные по продуктам для раздела товаров с тем же timestamp
         if (stats.topProfitableProducts || stats.topUnprofitableProducts) {
           localStorage.setItem(`products_detailed_${store.id}`, JSON.stringify({
             profitableProducts: stats.topProfitableProducts || [],
@@ -84,12 +90,14 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
       }
     } catch (error) {
       console.error('Error refreshing stats:', error);
+      // Return store without stats on error
       return store;
     }
   }
   return store;
 };
 
+// Получение данных о доходности товаров для конкретного магазина
 export const getProductProfitabilityData = (storeId: string) => {
   try {
     const storedData = localStorage.getItem(`products_detailed_${storeId}`);
@@ -97,6 +105,7 @@ export const getProductProfitabilityData = (storeId: string) => {
       return JSON.parse(storedData);
     }
     
+    // Также пробуем загрузить из аналитики, если специальные данные не найдены
     const analyticsData = localStorage.getItem(`marketplace_analytics_${storeId}`);
     if (analyticsData) {
       const parsedData = JSON.parse(analyticsData);
@@ -114,13 +123,16 @@ export const getProductProfitabilityData = (storeId: string) => {
   }
 };
 
+// Получение данных аналитики с проверкой обязательных полей и принудительным обновлением при наличии параметра forceRefresh
 export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
   try {
     const key = `marketplace_analytics_${storeId}`;
     const storedData = localStorage.getItem(key);
     
+    // Если данные отсутствуют или запрошено принудительное обновление, возвращаем пустую структуру
     if (!storedData || forceRefresh) {
       console.log('Analytics data not found or forced refresh requested, returning default structure');
+      // Возвращаем базовую структуру с демо-данными
       return {
         data: null,
         penalties: [],
@@ -135,16 +147,18 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
         })),
         productAdvertisingData: [],
         advertisingBreakdown: { search: 0 },
-        timestamp: Date.now()
+        timestamp: Date.now() // Добавляем текущий timestamp
       };
     }
     
     let parsedData = JSON.parse(storedData);
     
+    // Добавляем timestamp, если отсутствует
     if (!parsedData.timestamp) {
       parsedData.timestamp = Date.now();
     }
     
+    // Проверяем наличие обязательных полей и устанавливаем значения по умолчанию
     if (!parsedData.deductionsTimeline || !Array.isArray(parsedData.deductionsTimeline) || parsedData.deductionsTimeline.length === 0) {
       console.log("Creating default deductionsTimeline data");
       parsedData.deductionsTimeline = Array.from({ length: 7 }, (_, i) => ({
@@ -156,6 +170,7 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
         advertising: 0
       }));
     } else {
+      // Ensure all items in deductionsTimeline have all required properties
       parsedData.deductionsTimeline = parsedData.deductionsTimeline.map((item: any) => ({
         date: item.date || new Date().toISOString().split('T')[0],
         logistic: item.logistic || 0,
@@ -183,6 +198,7 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
     }
     
     if (parsedData.data && parsedData.data.currentPeriod && parsedData.data.currentPeriod.expenses) {
+      // Ensure all expense fields exist
       parsedData.data.currentPeriod.expenses.advertising = parsedData.data.currentPeriod.expenses.advertising || 0;
       parsedData.data.currentPeriod.expenses.acceptance = parsedData.data.currentPeriod.expenses.acceptance || 0;
     }
@@ -190,6 +206,7 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
     return parsedData;
   } catch (error) {
     console.error('Error loading analytics data:', error);
+    // Возвращаем базовую структуру в случае ошибки
     return {
       data: null,
       penalties: [],
@@ -204,47 +221,7 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
       })),
       productAdvertisingData: [],
       advertisingBreakdown: { search: 0 },
-      timestamp: Date.now()
+      timestamp: Date.now() // Добавляем текущий timestamp
     };
   }
-};
-
-export const calculateWarehouseDistribution = (orders: WildberriesOrder[] = []) => {
-  if (!orders || orders.length === 0) return [];
-  
-  const warehouseCounts: Record<string, number> = {};
-  let totalOrders = orders.length;
-  
-  orders.forEach(order => {
-    const warehouse = order.warehouseName || 'Неизвестный склад';
-    warehouseCounts[warehouse] = (warehouseCounts[warehouse] || 0) + 1;
-  });
-  
-  const distribution = Object.entries(warehouseCounts).map(([name, count]) => ({
-    name,
-    count,
-    percentage: Math.round((count / totalOrders) * 100)
-  }));
-  
-  return distribution.sort((a, b) => b.count - a.count).slice(0, 5);
-};
-
-export const calculateRegionDistribution = (orders: WildberriesOrder[] = []) => {
-  if (!orders || orders.length === 0) return [];
-  
-  const regionCounts: Record<string, number> = {};
-  let totalOrders = orders.length;
-  
-  orders.forEach(order => {
-    const region = order.regionName || 'Неизвестный регион';
-    regionCounts[region] = (regionCounts[region] || 0) + 1;
-  });
-  
-  const distribution = Object.entries(regionCounts).map(([name, count]) => ({
-    name,
-    count,
-    percentage: Math.round((count / totalOrders) * 100)
-  }));
-  
-  return distribution.sort((a, b) => b.count - a.count).slice(0, 5);
 };

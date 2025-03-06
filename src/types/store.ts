@@ -20,14 +20,5 @@ export const STATS_STORAGE_KEY = 'marketplace_stats';
 
 export const marketplaces: Marketplace[] = ["Wildberries", "Ozon", "Yandexmarket", "Uzum"];
 
-// Order data types
-export interface WildberriesOrder {
-  orderId: string;
-  warehouseName: string;
-  regionName: string;
-  date: string;
-  price: number;
-}
-
 // Re-export the WildberriesResponse from the API to avoid duplicate definitions
 export type WildberriesResponse = ApiWildberriesResponse;

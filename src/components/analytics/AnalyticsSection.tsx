@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag, Loader2 } from "lucide-react";
@@ -10,13 +11,11 @@ import DeductionsChart from "./components/DeductionsChart";
 import PieChartCard from "./components/PieChartCard";
 import ExpenseBreakdown from "./components/ExpenseBreakdown";
 import ProductList from "./components/ProductList";
-import GeographySection from "./components/GeographySection";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
 import { getAdvertCosts, getAdvertBalance, getAdvertPayments } from "@/services/advertisingApi";
 import { getAnalyticsData } from "@/utils/storeUtils";
-import { WildberriesOrder } from "@/types/store";
 
 import { 
   demoData, 
@@ -74,7 +73,6 @@ interface AnalyticsData {
     returnCount?: number;
     category?: string;
   }>;
-  orders?: Array<WildberriesOrder>;
 }
 
 interface AdvertisingBreakdown {
@@ -98,7 +96,7 @@ interface StoredAnalyticsData {
   }>;
   productAdvertisingData: Array<{name: string, value: number}>;
   advertisingBreakdown: AdvertisingBreakdown;
-  timestamp: number;
+  timestamp: number; // Добавляем timestamp для отслеживания обновлений
 }
 
 interface DeductionsTimelineItem {
@@ -132,6 +130,7 @@ const AnalyticsSection = () => {
   };
 
   const saveAnalyticsData = (storeId: string) => {
+    // Обновляем timestamp при каждом сохранении
     const timestamp = Date.now();
     setDataTimestamp(timestamp);
     
@@ -154,9 +153,11 @@ const AnalyticsSection = () => {
 
   const loadStoredAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
     try {
+      // Используем новую функцию getAnalyticsData для получения данных с проверками и поддержкой forceRefresh
       const analyticsData = getAnalyticsData(storeId, forceRefresh);
       
       if (analyticsData) {
+        // Устанавливаем данные с проверками на существование
         setDateFrom(new Date(analyticsData.dateFrom || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)));
         setDateTo(new Date(analyticsData.dateTo || new Date()));
         
@@ -164,6 +165,7 @@ const AnalyticsSection = () => {
           setData(analyticsData.data);
         }
         
+        // Используем проверенные данные
         setPenalties(analyticsData.penalties || []);
         setReturns(analyticsData.returns || []);
         setDeductionsTimeline(analyticsData.deductionsTimeline || []);
@@ -203,6 +205,7 @@ const AnalyticsSection = () => {
 
       const statsData = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
       
+      // Try-catch block for advertising API to prevent it from breaking everything else
       let totalAdvertisingCost = 0;
       try {
         const advertCosts = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
@@ -248,6 +251,7 @@ const AnalyticsSection = () => {
         }
       } catch (error) {
         console.error('Error fetching advertising data:', error);
+        // If advertising API fails, use demo data for advertising
         setProductAdvertisingData(advertisingData);
         setAdvertisingBreakdown({
           search: demoData.currentPeriod.expenses.advertising
@@ -269,8 +273,7 @@ const AnalyticsSection = () => {
           productSales: statsData.productSales,
           productReturns: statsData.productReturns || [],
           topProfitableProducts: statsData.topProfitableProducts,
-          topUnprofitableProducts: statsData.topUnprofitableProducts,
-          orders: statsData.orders
+          topUnprofitableProducts: statsData.topUnprofitableProducts
         };
         
         modifiedData.currentPeriod.expenses.total =
@@ -282,9 +285,11 @@ const AnalyticsSection = () => {
         
         setData(modifiedData);
         
+        // Set real penalties data if available
         if (statsData.penaltiesData && statsData.penaltiesData.length > 0) {
           setPenalties(statsData.penaltiesData);
         } else {
+          // Clear penalties if none exist (don't use demo data)
           setPenalties([]);
         }
         
@@ -294,6 +299,7 @@ const AnalyticsSection = () => {
           setReturns([]);
         }
         
+        // Создаем данные для графика удержаний на основе ежедневных данных
         let newDeductionsTimeline = [];
         if (statsData.dailySales && statsData.dailySales.length > 0) {
           const daysCount = statsData.dailySales.length;
@@ -314,6 +320,7 @@ const AnalyticsSection = () => {
             };
           });
         } else {
+          // Создаем базовые данные для графика, если нет ежедневных данных
           newDeductionsTimeline = Array.from({ length: 7 }, (_, i) => ({
             date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             logistic: modifiedData.currentPeriod.expenses.logistics / 7,
@@ -326,6 +333,7 @@ const AnalyticsSection = () => {
         
         setDeductionsTimeline(newDeductionsTimeline);
         
+        // Вызываем saveAnalyticsData с принудительным обновлением timestamp
         saveAnalyticsData(selectedStore.id);
         
         toast({
@@ -341,6 +349,7 @@ const AnalyticsSection = () => {
         variant: "destructive"
       });
       
+      // Устанавливаем базовые данные для графика удержаний при ошибке
       setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
         date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         logistic: 0, 
@@ -360,17 +369,20 @@ const AnalyticsSection = () => {
   useEffect(() => {
     const selectedStore = getSelectedStore();
     if (selectedStore) {
+      // Загружаем данные сначала без принудительного обновления
       const hasStoredData = loadStoredAnalyticsData(selectedStore.id);
       
       if (!hasStoredData) {
         setPenalties([]);
         setProductAdvertisingData([]);
         setReturns([]);
+        // Если нет сохраненных данных, загружаем новые
         fetchData();
       } else {
         setIsLoading(false);
       }
     } else {
+      // Устанавливаем базовые данные для графика удержаний, если нет выбранного магазина
       setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
         date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         logistic: 0, 
@@ -425,8 +437,6 @@ const AnalyticsSection = () => {
           <SalesChart data={data} />
           <DeductionsChart data={deductionsTimeline} />
         </div>
-
-        <GeographySection orders={data.orders || []} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <PieChartCard 
