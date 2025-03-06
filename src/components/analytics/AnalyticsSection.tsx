@@ -96,6 +96,7 @@ interface StoredAnalyticsData {
   }>;
   productAdvertisingData: Array<{name: string, value: number}>;
   advertisingBreakdown: AdvertisingBreakdown;
+  timestamp: number; // Добавляем timestamp для отслеживания обновлений
 }
 
 interface DeductionsTimelineItem {
@@ -119,6 +120,7 @@ const AnalyticsSection = () => {
   const [advertisingBreakdown, setAdvertisingBreakdown] = useState<AdvertisingBreakdown>({
     search: 0
   });
+  const [dataTimestamp, setDataTimestamp] = useState<number>(Date.now());
   const isMobile = useIsMobile();
   const { toast } = useToast();
 
@@ -128,6 +130,10 @@ const AnalyticsSection = () => {
   };
 
   const saveAnalyticsData = (storeId: string) => {
+    // Обновляем timestamp при каждом сохранении
+    const timestamp = Date.now();
+    setDataTimestamp(timestamp);
+    
     const analyticsData: StoredAnalyticsData = {
       storeId,
       dateFrom: dateFrom.toISOString(),
@@ -137,17 +143,18 @@ const AnalyticsSection = () => {
       returns,
       deductionsTimeline,
       productAdvertisingData,
-      advertisingBreakdown
+      advertisingBreakdown,
+      timestamp
     };
     
     localStorage.setItem(`${ANALYTICS_STORAGE_KEY}_${storeId}`, JSON.stringify(analyticsData));
-    console.log('Analytics data saved to localStorage');
+    console.log('Analytics data saved to localStorage with timestamp:', timestamp);
   };
 
-  const loadStoredAnalyticsData = (storeId: string) => {
+  const loadStoredAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
     try {
-      // Используем новую функцию getAnalyticsData для получения данных с проверками
-      const analyticsData = getAnalyticsData(storeId);
+      // Используем новую функцию getAnalyticsData для получения данных с проверками и поддержкой forceRefresh
+      const analyticsData = getAnalyticsData(storeId, forceRefresh);
       
       if (analyticsData) {
         // Устанавливаем данные с проверками на существование
@@ -168,7 +175,11 @@ const AnalyticsSection = () => {
           setAdvertisingBreakdown(analyticsData.advertisingBreakdown);
         }
         
-        console.log('Analytics data loaded from localStorage');
+        if (analyticsData.timestamp) {
+          setDataTimestamp(analyticsData.timestamp);
+        }
+        
+        console.log('Analytics data loaded from localStorage with timestamp:', analyticsData.timestamp);
         return true;
       }
     } catch (error) {
@@ -322,7 +333,13 @@ const AnalyticsSection = () => {
         
         setDeductionsTimeline(newDeductionsTimeline);
         
+        // Вызываем saveAnalyticsData с принудительным обновлением timestamp
         saveAnalyticsData(selectedStore.id);
+        
+        toast({
+          title: "Успех",
+          description: "Аналитические данные успешно обновлены",
+        });
       }
     } catch (error) {
       console.error('Error fetching analytics data:', error);
@@ -352,12 +369,14 @@ const AnalyticsSection = () => {
   useEffect(() => {
     const selectedStore = getSelectedStore();
     if (selectedStore) {
+      // Загружаем данные сначала без принудительного обновления
       const hasStoredData = loadStoredAnalyticsData(selectedStore.id);
       
       if (!hasStoredData) {
         setPenalties([]);
         setProductAdvertisingData([]);
         setReturns([]);
+        // Если нет сохраненных данных, загружаем новые
         fetchData();
       } else {
         setIsLoading(false);

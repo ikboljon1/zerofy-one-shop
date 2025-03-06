@@ -49,16 +49,20 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           };
         }) || [];
         
+        // Генерируем уникальный timestamp для данных, чтобы предотвратить кэширование
+        const timestamp = Date.now();
+        
         // Сохраняем полные данные статистики, включая топовые продукты с их изображениями
         localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify({
           storeId: store.id,
           dateFrom: from.toISOString(),
           dateTo: to.toISOString(),
           stats: stats,
-          deductionsTimeline: deductionsTimeline
+          deductionsTimeline: deductionsTimeline,
+          timestamp: timestamp
         }));
         
-        // Также сохраняем данные для аналитики и раздела товаров
+        // Также сохраняем данные для аналитики и раздела товаров с тем же timestamp
         localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify({
           storeId: store.id,
           dateFrom: from.toISOString(),
@@ -68,15 +72,17 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           penalties: [],
           returns: [],
           productAdvertisingData: [],
-          advertisingBreakdown: { search: stats.currentPeriod.expenses.advertising || 0 }
+          advertisingBreakdown: { search: stats.currentPeriod.expenses.advertising || 0 },
+          timestamp: timestamp
         }));
         
-        // Детализированные данные по продуктам для раздела товаров
+        // Детализированные данные по продуктам для раздела товаров с тем же timestamp
         if (stats.topProfitableProducts || stats.topUnprofitableProducts) {
           localStorage.setItem(`products_detailed_${store.id}`, JSON.stringify({
             profitableProducts: stats.topProfitableProducts || [],
             unprofitableProducts: stats.topUnprofitableProducts || [],
-            updateDate: new Date().toISOString()
+            updateDate: new Date().toISOString(),
+            timestamp: timestamp
           }));
         }
         
@@ -117,14 +123,16 @@ export const getProductProfitabilityData = (storeId: string) => {
   }
 };
 
-// Получение данных аналитики с проверкой обязательных полей
-export const getAnalyticsData = (storeId: string) => {
+// Получение данных аналитики с проверкой обязательных полей и принудительным обновлением при наличии параметра forceRefresh
+export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
   try {
     const key = `marketplace_analytics_${storeId}`;
     const storedData = localStorage.getItem(key);
     
-    if (!storedData) {
-      // Если данные отсутствуют, возвращаем базовую структуру с демо-данными
+    // Если данные отсутствуют или запрошено принудительное обновление, возвращаем пустую структуру
+    if (!storedData || forceRefresh) {
+      console.log('Analytics data not found or forced refresh requested, returning default structure');
+      // Возвращаем базовую структуру с демо-данными
       return {
         data: null,
         penalties: [],
@@ -138,11 +146,17 @@ export const getAnalyticsData = (storeId: string) => {
           advertising: 0
         })),
         productAdvertisingData: [],
-        advertisingBreakdown: { search: 0 }
+        advertisingBreakdown: { search: 0 },
+        timestamp: Date.now() // Добавляем текущий timestamp
       };
     }
     
     let parsedData = JSON.parse(storedData);
+    
+    // Добавляем timestamp, если отсутствует
+    if (!parsedData.timestamp) {
+      parsedData.timestamp = Date.now();
+    }
     
     // Проверяем наличие обязательных полей и устанавливаем значения по умолчанию
     if (!parsedData.deductionsTimeline || !Array.isArray(parsedData.deductionsTimeline) || parsedData.deductionsTimeline.length === 0) {
@@ -206,7 +220,8 @@ export const getAnalyticsData = (storeId: string) => {
         advertising: 0
       })),
       productAdvertisingData: [],
-      advertisingBreakdown: { search: 0 }
+      advertisingBreakdown: { search: 0 },
+      timestamp: Date.now() // Добавляем текущий timestamp
     };
   }
 };
