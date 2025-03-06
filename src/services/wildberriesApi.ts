@@ -1,6 +1,4 @@
-
 import axios from 'axios';
-import { WildberriesOrder } from '@/types/store';
 
 export interface WildberriesResponse {
   currentPeriod: {
