@@ -35,7 +35,7 @@ const PieChartCard = ({
     <Card className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold">{title}</h3>
-        <div className="bg-red-100 dark:bg-red-900/60 p-2 rounded-md">
+        <div className="bg-primary/10 dark:bg-primary/20 p-2 rounded-md">
           {icon}
         </div>
       </div>
