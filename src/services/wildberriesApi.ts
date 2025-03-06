@@ -27,6 +27,7 @@ export interface WildberriesResponse {
   productReturns: Array<{
     name: string;
     value: number;
+    count?: number;
   }>;
   penaltiesData?: Array<{
     name: string;
@@ -248,7 +249,11 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     name: item.name,
     price: item.price.toString(),
     profit: item.profit.toString(),
-    image: item.image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
+    image: item.image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg",
+    quantitySold: item.count || 0,
+    margin: Math.round((item.profit / item.sales) * 100) || 0,
+    returnRate: 2.5, // Default value since we don't have real data
+    category: "Одежда" // Default category
   }));
   
   const sortedByLoss = [...productProfitabilityArray].sort((a, b) => a.profit - b.profit);
@@ -257,7 +262,11 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     name: item.name,
     price: item.price.toString(),
     profit: item.profit.toString(),
-    image: item.image || "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg"
+    image: item.image || "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg",
+    quantitySold: item.count || 0,
+    margin: Math.round((item.profit / item.sales) * 100) || 0,
+    returnRate: 15.0, // Higher default return rate for unprofitable items
+    category: "Одежда" // Default category
   }));
   
   const productReturns = Object.entries(returnsByProduct)
