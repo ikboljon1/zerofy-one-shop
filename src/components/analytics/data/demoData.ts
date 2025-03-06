@@ -1,3 +1,4 @@
+
 // Demo data for analytics dashboard
 export const penaltiesData = [
   { name: "Брак товара", value: 5000 },
@@ -32,6 +33,8 @@ export const advertisingData = [
   { name: "Другие форматы", value: 4100 }
 ];
 
+export const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1'];
+
 export const demoData = {
   currentPeriod: {
     sales: 1250000,
@@ -61,15 +64,67 @@ export const demoData = {
   ],
   productReturns: returnsData,
   topProfitableProducts: [
-    { name: "Платье летнее", price: "1,200 ₽", profit: "+25,000 ₽", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" },
-    { name: "Кроссовки спортивные", price: "3,500 ₽", profit: "+18,000 ₽", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" },
-    { name: "Джинсы классические", price: "2,800 ₽", profit: "+15,500 ₽", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" }
+    { 
+      name: "Платье летнее", 
+      price: "1,200 ₽", 
+      profit: "+25,000 ₽", 
+      image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg",
+      quantitySold: 78,
+      margin: 45,
+      returnRate: 1.2,
+      category: "Женская одежда"
+    },
+    { 
+      name: "Кроссовки спортивные", 
+      price: "3,500 ₽", 
+      profit: "+18,000 ₽", 
+      image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg",
+      quantitySold: 42,
+      margin: 38,
+      returnRate: 2.5,
+      category: "Обувь"
+    },
+    { 
+      name: "Джинсы классические", 
+      price: "2,800 ₽", 
+      profit: "+15,500 ₽", 
+      image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg",
+      quantitySold: 36,
+      margin: 32,
+      returnRate: 3.1,
+      category: "Мужская одежда"
+    }
   ],
   topUnprofitableProducts: [
-    { name: "Шарф зимний", price: "800 ₽", profit: "-5,200 ₽", image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg" },
-    { name: "Рубашка офисная", price: "1,500 ₽", profit: "-3,800 ₽", image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg" },
-    { name: "Перчатки кожаные", price: "1,200 ₽", profit: "-2,900 ₽", image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg" }
+    { 
+      name: "Шарф зимний", 
+      price: "800 ₽", 
+      profit: "-5,200 ₽", 
+      image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg",
+      quantitySold: 8,
+      margin: 12,
+      returnRate: 18.5,
+      category: "Аксессуары"
+    },
+    { 
+      name: "Рубашка офисная", 
+      price: "1,500 ₽", 
+      profit: "-3,800 ₽", 
+      image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg",
+      quantitySold: 5,
+      margin: 8,
+      returnRate: 12.0,
+      category: "Мужская одежда"
+    },
+    { 
+      name: "Перчатки кожаные", 
+      price: "1,200 ₽", 
+      profit: "-2,900 ₽", 
+      image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg",
+      quantitySold: 3,
+      margin: 15,
+      returnRate: 25.0,
+      category: "Аксессуары"
+    }
   ]
 };
-
-export const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1'];
