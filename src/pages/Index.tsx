@@ -12,59 +12,45 @@ import Advertising from "@/components/Advertising";
 import MainLayout from "@/components/layout/MainLayout";
 import AnalyticsSection from "@/components/analytics/AnalyticsSection";
 
-// Мок-данные для топ продуктов
-const mockTopProfitableProducts = [
-  {
-    name: "Товар 1",
-    price: "1000",
-    profit: "300",
-    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
-  },
-  {
-    name: "Товар 2",
-    price: "2000",
-    profit: "500",
-    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
-  },
-  {
-    name: "Товар 3",
-    price: "1500",
-    profit: "400",
-    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
-  }
-];
-
-const mockTopUnprofitableProducts = [
-  {
-    name: "Товар 4",
-    price: "1000",
-    profit: "-100",
-    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
-  },
-  {
-    name: "Товар 5",
-    price: "2000",
-    profit: "-200",
-    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
-  },
-  {
-    name: "Товар 6",
-    price: "1500",
-    profit: "-150",
-    image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
-  }
-];
-
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
   const isMobile = useIsMobile();
   const [selectedStore, setSelectedStore] = useState<{id: string; apiKey: string} | null>(null);
+
+  const getProductsData = () => {
+    const selectedStore = getSelectedStore();
+    if (!selectedStore) return { profitable: [], unprofitable: [] };
+    
+    const storageKey = `marketplace_analytics_${selectedStore.id}`;
+    const storedData = localStorage.getItem(storageKey);
+    
+    if (storedData) {
+      try {
+        const parsedData = JSON.parse(storedData);
+        return {
+          profitable: parsedData.data.topProfitableProducts || [],
+          unprofitable: parsedData.data.topUnprofitableProducts || []
+        };
+      } catch (e) {
+        console.error("Error parsing analytics data:", e);
+      }
+    }
+    
+    return { profitable: [], unprofitable: [] };
+  };
+
+  const getSelectedStore = () => {
+    const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
+    return stores.find((store: any) => store.isSelected) || null;
+  };
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
   };
 
   const renderContent = () => {
+    const { profitable, unprofitable } = getProductsData();
+    
     switch (activeTab) {
       case "home":
         return (
@@ -77,8 +63,12 @@ const Index = () => {
             <Stats />
             <Chart />
             <ProductsComponent 
-              topProfitableProducts={mockTopProfitableProducts}
-              topUnprofitableProducts={mockTopUnprofitableProducts}
+              topProfitableProducts={profitable.length > 0 ? profitable : [
+                { name: "Выберите магазин в разделе 'Магазины'", price: "0", profit: "0", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" }
+              ]}
+              topUnprofitableProducts={unprofitable.length > 0 ? unprofitable : [
+                { name: "Выберите магазин в разделе 'Магазины'", price: "0", profit: "0", image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg" }
+              ]}
             />
           </motion.div>
         );

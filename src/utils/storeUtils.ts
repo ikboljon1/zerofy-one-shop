@@ -30,11 +30,20 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           lastFetchDate: new Date().toISOString() 
         };
         
+        // Сохраняем полные данные статистики, включая топовые продукты
         localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify({
           storeId: store.id,
           dateFrom: from.toISOString(),
           dateTo: to.toISOString(),
           stats: stats
+        }));
+        
+        // Также сохраняем данные для аналитики
+        localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify({
+          storeId: store.id,
+          dateFrom: from.toISOString(),
+          dateTo: to.toISOString(),
+          data: stats
         }));
         
         return updatedStore;

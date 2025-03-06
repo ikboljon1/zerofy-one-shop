@@ -42,18 +42,15 @@ export interface WildberriesResponse {
   }>;
 }
 
-// Функция для форматирования даты в YYYY-MM-DD формат
 const formatDate = (date: Date): string => {
   return date.toISOString().split('T')[0];
 };
 
-// Функция для форматирования даты в RFC3339 формат (YYYY-MM-DDT00:00:00)
 const formatDateRFC3339 = (date: Date, isEnd: boolean = false): string => {
   const formattedDate = date.toISOString().split('T')[0];
   return isEnd ? `${formattedDate}T23:59:59` : `${formattedDate}T00:00:00`;
 };
 
-// Функция для получения детальных данных отчета
 const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
   try {
     const formattedDateFrom = formatDate(dateFrom);
@@ -80,7 +77,6 @@ const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date) =
   }
 };
 
-// Функция для получения данных о платной приемке
 const fetchPaidAcceptanceReport = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
   try {
     const formattedDateFrom = formatDate(dateFrom);
@@ -105,7 +101,6 @@ const fetchPaidAcceptanceReport = async (apiKey: string, dateFrom: Date, dateTo:
   }
 };
 
-// Функция для вычисления метрик на основе полученных данных
 const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   if (!data || data.length === 0) {
     return null;
@@ -122,22 +117,68 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   let totalToPay = 0;          // Итого к оплате
   let totalReturnCount = 0;    // Количество возвратов
   
-  // Словарь для хранения данных о возвратах по наименованию товара
   const returnsByProduct: Record<string, { value: number; count: number }> = {};
   
-  // Обработка данных детального отчета
+  const productProfitability: Record<string, { 
+    name: string;
+    price: number;
+    sales: number;
+    costs: number;
+    profit: number;
+    image: string;
+    count: number;
+  }> = {};
+  
   for (const record of data) {
     if (record.doc_type_name === 'Продажа') {
       totalSales += record.retail_price_withdisc_rub || 0;
       totalForPay += record.ppvz_for_pay || 0;
+      
+      if (record.sa_name) {
+        const productName = record.sa_name;
+        if (!productProfitability[productName]) {
+          productProfitability[productName] = { 
+            name: productName,
+            price: record.retail_price || 0,
+            sales: 0,
+            costs: 0,
+            profit: 0,
+            image: record.pic_url || '',
+            count: 0
+          };
+        }
+        
+        productProfitability[productName].sales += record.ppvz_for_pay || 0;
+        productProfitability[productName].costs += (record.delivery_rub || 0) + 
+                                                  (record.storage_fee || 0) + 
+                                                  (record.penalty || 0);
+        productProfitability[productName].price = record.retail_price || productProfitability[productName].price;
+        if (record.pic_url && !productProfitability[productName].image) {
+          productProfitability[productName].image = record.pic_url;
+        }
+        productProfitability[productName].count += 1;
+      }
+      
     } else if (record.doc_type_name === 'Возврат') {
-      // Для возвратов значение ppvz_for_pay обычно отрицательное
       totalReturns += record.ppvz_for_pay || 0;
       totalReturnCount += 1;
       
-      // Группировка возвратов по наименованию товара
       if (record.sa_name) {
         const productName = record.sa_name;
+        if (!productProfitability[productName]) {
+          productProfitability[productName] = { 
+            name: productName,
+            price: record.retail_price || 0,
+            sales: 0,
+            costs: 0,
+            profit: 0,
+            image: record.pic_url || '',
+            count: 0
+          };
+        }
+        
+        productProfitability[productName].sales += record.ppvz_for_pay || 0;
+        
         if (!returnsByProduct[productName]) {
           returnsByProduct[productName] = { value: 0, count: 0 };
         }
@@ -146,7 +187,6 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       }
     }
     
-    // Учитываем расходы и доходы (для всех операций)
     totalDeliveryRub += record.delivery_rub || 0;
     totalRebillLogisticCost += record.rebill_logistic_cost || 0;
     totalStorageFee += record.storage_fee || 0;
@@ -154,19 +194,41 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     totalDeduction += record.deduction || 0;
   }
   
-  // Расчет суммы платной приемки
   const totalAcceptance = paidAcceptanceData.reduce((sum, record) => sum + (record.total || 0), 0);
   
-  // Рассчитываем итого к оплате как в Python коде
   totalToPay = totalForPay - totalDeliveryRub - totalStorageFee - totalReturns - totalPenalty - totalDeduction - totalAcceptance;
   
-  // Преобразование в массив и сортировка
+  for (const key in productProfitability) {
+    productProfitability[key].profit = productProfitability[key].sales - productProfitability[key].costs;
+  }
+  
+  const productProfitabilityArray = Object.values(productProfitability);
+  
+  const sortedByProfit = [...productProfitabilityArray].sort((a, b) => b.profit - a.profit);
+  
+  const topProfitableProducts = sortedByProfit.slice(0, 3).map(item => ({
+    name: item.name,
+    price: item.price.toString(),
+    profit: item.profit.toString(),
+    image: item.image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"
+  }));
+  
+  const sortedByLoss = [...productProfitabilityArray].sort((a, b) => a.profit - b.profit);
+  
+  const topUnprofitableProducts = sortedByLoss.slice(0, 3).map(item => ({
+    name: item.name,
+    price: item.price.toString(),
+    profit: item.profit.toString(),
+    image: item.image || "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg"
+  }));
+  
   const productReturns = Object.entries(returnsByProduct)
     .map(([name, { value, count }]) => ({ name, value, count }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 5);
   
   console.log(`Received and processed data. Total returns: ${Math.abs(totalReturns)}, Returned items count: ${totalReturnCount}, Returned products count: ${productReturns.length}`);
+  console.log(`Calculated top profitable products: ${topProfitableProducts.length}, Top unprofitable products: ${topUnprofitableProducts.length}`);
   
   return {
     metrics: {
@@ -175,7 +237,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       total_delivery_rub: Math.round(totalDeliveryRub * 100) / 100,
       total_rebill_logistic_cost: Math.round(totalRebillLogisticCost * 100) / 100,
       total_storage_fee: Math.round(totalStorageFee * 100) / 100,
-      total_returns: Math.round(Math.abs(totalReturns) * 100) / 100, // Берем абсолютное значение для суммы возвратов
+      total_returns: Math.round(Math.abs(totalReturns) * 100) / 100,
       total_penalty: Math.round(totalPenalty * 100) / 100,
       total_deduction: Math.round(totalDeduction * 100) / 100,
       total_to_pay: Math.round(totalToPay * 100) / 100,
@@ -183,25 +245,23 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       total_return_count: totalReturnCount
     },
     productReturns,
-    dailySales: [] // Это будет заполнено позже в основной функции
+    topProfitableProducts,
+    topUnprofitableProducts,
+    dailySales: []
   };
 };
 
-// Функция для получения статистики Wildberries
 export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
   try {
     console.log(`Fetching Wildberries stats from ${dateFrom.toISOString()} to ${dateTo.toISOString()}`);
     
-    // В режиме разработки используем демо-данные
     if (process.env.NODE_ENV === 'development' && !apiKey.startsWith('eyJ')) {
       console.log('Using demo data in development mode');
       return getDemoData();
     }
     
-    // Получаем детальные данные отчета
     const reportData = await fetchReportDetail(apiKey, dateFrom, dateTo);
     
-    // Получаем данные о платной приемке
     const paidAcceptanceData = await fetchPaidAcceptanceReport(apiKey, dateFrom, dateTo);
     
     if (!reportData || reportData.length === 0) {
@@ -209,7 +269,6 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       return getDemoData();
     }
     
-    // Вычисляем метрики на основе полученных данных
     const result = calculateMetrics(reportData, paidAcceptanceData);
     
     if (!result || !result.metrics) {
@@ -219,7 +278,6 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
     
     const { metrics, productReturns } = result;
     
-    // Группировка продаж по категориям
     const salesByCategory: Record<string, number> = {};
     for (const record of reportData) {
       if (record.doc_type_name === 'Продажа' && record.subject_name) {
@@ -230,13 +288,11 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       }
     }
     
-    // Преобразование в массив и сортировка
     const productSales = Object.entries(salesByCategory)
       .map(([subject_name, quantity]) => ({ subject_name, quantity }))
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 10);
     
-    // Группировка продаж по дням
     const salesByDay: Record<string, { sales: number, previousSales: number }> = {};
     for (const record of reportData) {
       if (record.doc_type_name === 'Продажа' && record.rr_dt) {
@@ -248,12 +304,10 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       }
     }
     
-    // Преобразование в массив и сортировка по датам
     const dailySales = Object.entries(salesByDay)
       .map(([date, { sales, previousSales }]) => ({ date, sales, previousSales }))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
-    // Формируем ответ в нужном формате
     const response: WildberriesResponse = {
       currentPeriod: {
         sales: metrics.total_sales,
@@ -264,7 +318,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
           storage: metrics.total_storage_fee,
           penalties: metrics.total_penalty,
           acceptance: metrics.total_acceptance,
-          advertising: 0 // Реклама не включена в API отчет, будет добавлена отдельно
+          advertising: 0
         },
         netProfit: metrics.total_to_pay,
         acceptance: metrics.total_acceptance
@@ -285,7 +339,6 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
   }
 };
 
-// Функция для получения демо-данных
 const getDemoData = (): WildberriesResponse => {
   return {
     currentPeriod: {
@@ -344,10 +397,14 @@ const getDemoData = (): WildberriesResponse => {
       { name: "Куртка зимняя", value: 3000 }
     ],
     topProfitableProducts: [
-      { name: "Загрузка...", price: "0", profit: "+0", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" }
+      { name: "Костюм женский спортивный", price: "3200", profit: "25000", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" },
+      { name: "Платье летнее", price: "1200", profit: "18000", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" },
+      { name: "Джинсы классические", price: "2800", profit: "15500", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" }
     ],
     topUnprofitableProducts: [
-      { name: "Загрузка...", price: "0", profit: "0", image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg" }
+      { name: "Шарф зимний", price: "800", profit: "-5200", image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg" },
+      { name: "Рубашка офисная", price: "1500", profit: "-3800", image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg" },
+      { name: "Перчатки кожаные", price: "1200", profit: "-2900", image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg" }
     ]
   };
 };
