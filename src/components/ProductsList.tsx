@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Package, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -324,10 +325,10 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         expenses.deductions += item.deduction || 0;
         expenses.ppvz_for_pay += item.ppvz_for_pay || 0;
 
+        // Расчет хранения только для записей с supplier_oper_name === "Хранение"
         if (item.supplier_oper_name === "Хранение") {
-          const storageFee = Math.abs(item.supplier_operation_name_amount || 0);
-          expenses.storage += storageFee;
-          console.log(`Added storage fee for nmId ${nmId} (${item.doc_type_name}):`, storageFee);
+          expenses.storage += Math.abs(item.supplier_operation_name_amount || 0);
+          console.log(`Added storage fee for nmId ${nmId}:`, Math.abs(item.supplier_operation_name_amount || 0));
         }
 
         if (item.doc_type_name === "Продажа") {
