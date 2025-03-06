@@ -1,4 +1,3 @@
-
 import axios from "axios";
 
 // Интерфейсы для заказов и продаж
@@ -69,24 +68,9 @@ export interface WildberriesSale {
 export interface WildberriesStats {
   currentPeriod: {
     sales: number;
-    transferred: number;
-    expenses: {
-      total: number;
-      logistics: number;
-      storage: number;
-      penalties: number;
-      advertising: number;
-      acceptance: number;
-    };
-    netProfit: number;
-    acceptance: number;
-    // Новые поля для обновлённой статистики
     orders: number;
     returns: number;
     cancellations: number;
-  };
-  previousPeriod?: {
-    sales: number;
     transferred: number;
     expenses: {
       total: number;
@@ -98,7 +82,9 @@ export interface WildberriesStats {
     };
     netProfit: number;
     acceptance: number;
-    // Новые поля для обновлённой статистики
+  };
+  previousPeriod?: {
+    sales: number;
     orders: number;
     returns: number;
     cancellations: number;
@@ -116,7 +102,6 @@ export interface WildberriesStats {
     name: string;
     value: number;
   }>;
-  // Топовые товары
   topProfitableProducts?: Array<{
     name: string;
     price: string;
@@ -137,7 +122,6 @@ export interface WildberriesStats {
     returnCount?: number;
     category?: string;
   }>;
-  // Детализация для дашборда
   ordersByRegion?: Array<{
     region: string;
     count: number;
@@ -153,304 +137,169 @@ export interface WildberriesStats {
 }
 
 // Функция для получения данных по заказам
-export const fetchWildberriesOrders = async (
-  apiKey: string,
-  from: Date,
-  to: Date,
-  flag: number = 0
-): Promise<WildberriesOrder[]> => {
+export const fetchWildberriesOrders = async (apiKey: string, from?: Date, to?: Date) => {
+  // If no dates provided, use current day
+  const dateFrom = from || new Date();
+  dateFrom.setHours(0, 0, 0, 0);
+  
+  const dateTo = to || new Date();
+  dateTo.setHours(23, 59, 59, 999);
+  
   try {
-    const dateFrom = from.toISOString().split('T')[0];
-    
     const response = await axios.get('https://statistics-api.wildberries.ru/api/v1/supplier/orders', {
       headers: {
-        'Authorization': apiKey
+        'Authorization': apiKey,
       },
       params: {
-        dateFrom,
-        flag
+        dateFrom: dateFrom.toISOString().split('T')[0],
+        flag: 1
       }
     });
     
-    console.log('Заказы получены:', response.data.length);
-    return response.data;
+    return response.data || [];
   } catch (error) {
-    console.error('Ошибка при получении заказов:', error);
-    throw error;
+    console.error("Error fetching Wildberries orders:", error);
+    return [];
   }
 };
 
 // Функция для получения данных по продажам
-export const fetchWildberriesSales = async (
-  apiKey: string,
-  from: Date,
-  to: Date,
-  flag: number = 0
-): Promise<WildberriesSale[]> => {
+export const fetchWildberriesSales = async (apiKey: string, from?: Date, to?: Date) => {
+  // If no dates provided, use current day
+  const dateFrom = from || new Date();
+  dateFrom.setHours(0, 0, 0, 0);
+  
+  const dateTo = to || new Date();
+  dateTo.setHours(23, 59, 59, 999);
+  
   try {
-    const dateFrom = from.toISOString().split('T')[0];
-    
     const response = await axios.get('https://statistics-api.wildberries.ru/api/v1/supplier/sales', {
       headers: {
-        'Authorization': apiKey
+        'Authorization': apiKey,
       },
       params: {
-        dateFrom,
-        flag
+        dateFrom: dateFrom.toISOString().split('T')[0],
+        flag: 1
       }
     });
     
-    console.log('Продажи получены:', response.data.length);
-    return response.data;
+    return response.data || [];
   } catch (error) {
-    console.error('Ошибка при получении продаж:', error);
-    throw error;
+    console.error("Error fetching Wildberries sales:", error);
+    return [];
   }
 };
 
 // Основная функция для получения статистики
-export const fetchWildberriesStats = async (apiKey: string, from: Date, to: Date): Promise<WildberriesStats> => {
+export const fetchWildberriesStats = async (apiKey: string, from?: Date, to?: Date) => {
   try {
-    // Получаем данные о заказах
+    // Fetch orders data
     const orders = await fetchWildberriesOrders(apiKey, from, to);
     
-    // Получаем данные о продажах
+    // Fetch sales data
     const sales = await fetchWildberriesSales(apiKey, from, to);
     
-    // Вычисляем основные метрики
-    const totalOrders = orders.length;
-    const totalCancellations = orders.filter(order => order.isCancel).length;
+    // Process orders data to get regions, warehouses, and categories
+    const regions = new Map();
+    const warehouses = new Map();
+    const categories = new Map();
     
-    // Считаем продажи (строки с saleID, начинающимся с 'S')
-    const actualSales = sales.filter(sale => sale.saleID.startsWith('S'));
-    const totalSales = actualSales.reduce((sum, sale) => sum + sale.finishedPrice, 0);
+    // Count orders, cancellations, and group by region/warehouse
+    let totalOrders = 0;
+    let cancelledOrders = 0;
     
-    // Считаем возвраты (строки с saleID, начинающимся с 'R')
-    const returns = sales.filter(sale => sale.saleID.startsWith('R'));
-    const totalReturns = returns.length;
-    
-    // Сумма к перечислению продавцу
-    const totalTransferred = actualSales.reduce((sum, sale) => sum + sale.forPay, 0);
-    
-    // Собираем данные о ежедневных продажах
-    const dailySalesMap = new Map<string, number>();
-    
-    actualSales.forEach(sale => {
-      const dateStr = sale.date.split('T')[0];
-      const currentAmount = dailySalesMap.get(dateStr) || 0;
-      dailySalesMap.set(dateStr, currentAmount + sale.finishedPrice);
-    });
-    
-    const dailySalesArray = Array.from(dailySalesMap).map(([date, sales]) => ({
-      date,
-      sales,
-      previousSales: sales * 0.85 // Для примера, можно рассчитать по прошлому периоду
-    })).sort((a, b) => a.date.localeCompare(b.date));
-    
-    // Собираем данные о продажах по категориям
-    const productSalesMap = new Map<string, number>();
-    
-    actualSales.forEach(sale => {
-      const currentQuantity = productSalesMap.get(sale.subject) || 0;
-      productSalesMap.set(sale.subject, currentQuantity + 1);
-    });
-    
-    const productSalesArray = Array.from(productSalesMap).map(([subject_name, quantity]) => ({
-      subject_name,
-      quantity
-    })).sort((a, b) => b.quantity - a.quantity);
-    
-    // Топ прибыльных и убыточных товаров
-    const productPerformanceMap = new Map<string, {
-      totalSales: number,
-      totalQuantity: number,
-      totalReturns: number,
-      nmId: number,
-      price: number,
-      name: string,
-      category: string
-    }>();
-    
-    // Обрабатываем продажи
-    actualSales.forEach(sale => {
-      const key = `${sale.supplierArticle}-${sale.nmId}`;
-      const existingProduct = productPerformanceMap.get(key) || {
-        totalSales: 0,
-        totalQuantity: 0,
-        totalReturns: 0,
-        nmId: sale.nmId,
-        price: sale.priceWithDisc,
-        name: `${sale.brand} ${sale.subject} (${sale.supplierArticle})`,
-        category: sale.category
-      };
+    orders.forEach((order: any) => {
+      totalOrders++;
       
-      existingProduct.totalSales += sale.forPay;
-      existingProduct.totalQuantity += 1;
+      if (order.isCancel) {
+        cancelledOrders++;
+      }
       
-      productPerformanceMap.set(key, existingProduct);
-    });
-    
-    // Обрабатываем возвраты
-    returns.forEach(returnItem => {
-      const key = `${returnItem.supplierArticle}-${returnItem.nmId}`;
-      if (productPerformanceMap.has(key)) {
-        const existingProduct = productPerformanceMap.get(key)!;
-        existingProduct.totalReturns += 1;
-        productPerformanceMap.set(key, existingProduct);
+      // Group by region
+      if (order.regionName) {
+        const count = regions.get(order.regionName) || 0;
+        regions.set(order.regionName, count + 1);
+      }
+      
+      // Group by warehouse
+      if (order.warehouseName) {
+        const count = warehouses.get(order.warehouseName) || 0;
+        warehouses.set(order.warehouseName, count + 1);
+      }
+      
+      // Group by category
+      if (order.subject) {
+        const count = categories.get(order.subject) || 0;
+        categories.set(order.subject, count + 1);
       }
     });
     
-    // Формируем топ прибыльных и убыточных товаров
-    const productsList = Array.from(productPerformanceMap.values())
-      .map(product => ({
-        ...product,
-        profit: product.totalSales,
-        margin: (product.totalSales / (product.totalQuantity * product.price) * 100) || 0
-      }))
-      .sort((a, b) => b.profit - a.profit);
+    // Process sales data to get totalSales and returns
+    let totalSales = 0;
+    let returns = 0;
     
-    const topProfitable = productsList.slice(0, 5).map(product => ({
-      name: product.name,
-      price: product.price.toFixed(0),
-      profit: product.profit.toFixed(0),
-      image: `https://images.wbstatic.net/big/new/${Math.floor(product.nmId / 10000) * 10000}/${product.nmId}-1.jpg`,
-      quantitySold: product.totalQuantity,
-      margin: Math.round(product.margin),
-      returnCount: product.totalReturns,
-      category: product.category
-    }));
-    
-    const topUnprofitable = [...productsList]
-      .sort((a, b) => a.profit - b.profit)
-      .slice(0, 5)
-      .map(product => ({
-        name: product.name,
-        price: product.price.toFixed(0),
-        profit: product.profit.toFixed(0),
-        image: `https://images.wbstatic.net/big/new/${Math.floor(product.nmId / 10000) * 10000}/${product.nmId}-1.jpg`,
-        quantitySold: product.totalQuantity,
-        margin: Math.round(product.margin),
-        returnCount: product.totalReturns,
-        category: product.category
-      }));
-    
-    // Дополнительные аналитические данные
-    
-    // Заказы по регионам
-    const regionMap = new Map<string, number>();
-    orders.forEach(order => {
-      const currentCount = regionMap.get(order.regionName) || 0;
-      regionMap.set(order.regionName, currentCount + 1);
+    sales.forEach((sale: any) => {
+      if (sale.saleID && sale.saleID.startsWith('S')) {
+        totalSales += sale.finishedPrice || 0;
+      } else if (sale.saleID && sale.saleID.startsWith('R')) {
+        returns++;
+      }
     });
     
-    const ordersByRegion = Array.from(regionMap)
+    // Convert maps to sorted arrays
+    const ordersByRegion = Array.from(regions.entries())
       .map(([region, count]) => ({ region, count }))
       .sort((a, b) => b.count - a.count);
     
-    // Заказы по складам
-    const warehouseMap = new Map<string, number>();
-    orders.forEach(order => {
-      const currentCount = warehouseMap.get(order.warehouseName) || 0;
-      warehouseMap.set(order.warehouseName, currentCount + 1);
-    });
-    
-    const ordersByWarehouse = Array.from(warehouseMap)
+    const ordersByWarehouse = Array.from(warehouses.entries())
       .map(([warehouse, count]) => ({ warehouse, count }))
       .sort((a, b) => b.count - a.count);
     
-    // Возвраты по причинам (simplified)
-    const returnTypesMap = new Map<string, number>();
-    returns.forEach(returnItem => {
-      const reason = returnItem.orderType || 'Другое';
-      const currentValue = returnTypesMap.get(reason) || 0;
-      returnTypesMap.set(reason, currentValue + returnItem.finishedPrice);
-    });
+    const productSales = Array.from(categories.entries())
+      .map(([subject_name, count]) => ({ subject_name, count }))
+      .sort((a, b) => b.count - a.count);
     
-    const penaltiesData = Array.from(returnTypesMap)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
+    // Calculate daily sales for today
+    const today = new Date().toISOString().split('T')[0];
+    const dailySales = [{
+      date: today,
+      sales: totalSales
+    }];
     
-    // Формируем предыдущий период (для примера берем 85% от текущего)
-    const previousPeriod = {
-      sales: totalSales * 0.85,
-      transferred: totalTransferred * 0.85,
-      expenses: {
-        total: totalSales * 0.15,
-        logistics: totalSales * 0.05,
-        storage: totalSales * 0.03,
-        penalties: totalSales * 0.02,
-        advertising: totalSales * 0.03,
-        acceptance: totalSales * 0.02
-      },
-      netProfit: totalTransferred * 0.85,
-      acceptance: totalSales * 0.02,
-      orders: totalOrders * 0.85,
-      returns: totalReturns * 0.85,
-      cancellations: totalCancellations * 0.85
-    };
-    
-    // Формируем итоговый объект с данными
-    return {
+    // Create the stats object with the new structure for orders, sales, returns, and cancellations
+    const stats = {
       currentPeriod: {
         sales: totalSales,
-        transferred: totalTransferred,
-        expenses: {
-          total: totalSales * 0.15, // Примерные расходы
-          logistics: totalSales * 0.05,
-          storage: totalSales * 0.03,
-          penalties: totalSales * 0.02,
-          advertising: totalSales * 0.03,
-          acceptance: totalSales * 0.02
-        },
-        netProfit: totalTransferred,
-        acceptance: totalSales * 0.02,
         orders: totalOrders,
-        returns: totalReturns,
-        cancellations: totalCancellations
-      },
-      previousPeriod,
-      dailySales: dailySalesArray,
-      productSales: productSalesArray,
-      topProfitableProducts: topProfitable,
-      topUnprofitableProducts: topUnprofitable,
-      ordersByRegion,
-      ordersByWarehouse,
-      penaltiesData
-    };
-  } catch (error) {
-    console.error('Error fetching wildberries stats:', error);
-    
-    // Return demo data if real API fails
-    return {
-      currentPeriod: {
-        sales: 1250000,
-        transferred: 1125000,
+        returns: returns,
+        cancellations: cancelledOrders,
+        transferred: 0,
         expenses: {
-          total: 125000,
-          logistics: 45000,
-          storage: 35000,
-          penalties: 15000,
-          advertising: 30000,
-          acceptance: 30000
+          total: 0,
+          logistics: 0,
+          storage: 0,
+          penalties: 0,
+          advertising: 0,
+          acceptance: 0
         },
-        netProfit: 875000,
-        acceptance: 30000,
-        orders: 450,
-        returns: 32,
-        cancellations: 15
+        netProfit: 0,
+        acceptance: 0
       },
-      dailySales: Array.from({ length: 30 }, (_, i) => ({
-        date: new Date(2024, 0, i + 1).toISOString(),
-        sales: Math.floor(Math.random() * 50000) + 20000,
-        previousSales: Math.floor(Math.random() * 40000) + 15000
-      })),
-      productSales: [
-        { subject_name: "Футболки", quantity: 150 },
-        { subject_name: "Джинсы", quantity: 120 },
-        { subject_name: "Куртки", quantity: 80 },
-        { subject_name: "Обувь", quantity: 200 },
-        { subject_name: "Аксессуары", quantity: 95 }
-      ]
+      previousPeriod: {
+        sales: 0,
+        orders: 0,
+        returns: 0,
+        cancellations: 0
+      },
+      dailySales,
+      productSales,
+      ordersByRegion,
+      ordersByWarehouse
     };
+    
+    return stats;
+  } catch (error) {
+    console.error("Error in fetchWildberriesStats:", error);
+    throw error;
   }
 };

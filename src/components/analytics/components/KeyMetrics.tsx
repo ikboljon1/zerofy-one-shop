@@ -2,26 +2,10 @@
 import { Card } from "@/components/ui/card";
 import { ShoppingCart, ArrowUpRight, ArrowDownRight, ShoppingBag, RefreshCw, XSquare } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { AnalyticsData } from "@/types/analytics";
 
 interface KeyMetricsProps {
-  data: {
-    currentPeriod: {
-      sales: number;
-      orders: number;
-      returns: number;
-      cancellations: number;
-      expenses: {
-        total: number;
-      };
-      netProfit: number;
-    };
-    previousPeriod?: {
-      sales: number;
-      orders: number;
-      returns: number;
-      cancellations: number;
-    };
-  };
+  data: AnalyticsData;
 }
 
 const KeyMetrics = ({ data }: KeyMetricsProps) => {
