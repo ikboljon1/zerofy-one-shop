@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Package, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -66,7 +67,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       revenue: 0,
       salesAmount: 0,
       transferredAmount: 0,
-      soldQuantity: 0
+      soldQuantity: 0,
+      margin: 0  // Added margin to the return object
     };
     
     console.log('Calculating for product:', {
@@ -98,6 +100,16 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     
     const netProfit = transferredAmount - costPriceTotal - totalExpenses;
     
+    // Calculate margin as a percentage of costs (not revenue)
+    // This prevents division by zero and unrealistic margins
+    let margin = 0;
+    if (costPriceTotal > 0) {
+      margin = (netProfit / costPriceTotal) * 100;
+    } else if (netProfit > 0) {
+      // If cost price is 0 but there's profit, cap the margin at 100%
+      margin = 100;
+    }
+    
     return {
       netProfit,
       productSales,
@@ -105,7 +117,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       revenue: salesAmount,
       salesAmount,
       transferredAmount,
-      soldQuantity: productSales
+      soldQuantity: productSales,
+      margin: Math.round(margin) // Return the calculated margin
     };
   };
 
@@ -544,6 +557,12 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                         <span>Чистая прибыль:</span>
                         <span className={profitDetails.netProfit >= 0 ? "text-green-500" : "text-red-500"}>
                           {profitDetails.netProfit.toFixed(2)} ₽
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xs font-medium mt-1">
+                        <span>Маржа:</span>
+                        <span className={profitDetails.margin >= 0 ? "text-green-500" : "text-red-500"}>
+                          {profitDetails.margin.toFixed(0)}%
                         </span>
                       </div>
                     </div>
