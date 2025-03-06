@@ -1,17 +1,113 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import WarehouseMap from '@/components/WarehouseMap';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { WarehouseIcon, TruckIcon, BarChart3Icon, ClipboardListIcon, PackageSearch, ArrowUpDown, Clock, DollarSign } from 'lucide-react';
+import { 
+  WarehouseIcon, TruckIcon, BarChart3Icon, ClipboardListIcon, 
+  PackageSearch, ArrowUpDown, Clock, DollarSign, PackageOpen, Box
+} from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { inventoryData, warehousesData, warehouseAnalyticsData } from '@/components/analytics/data/demoData';
 import { BarChart, ResponsiveContainer, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
+import { 
+  fetchAcceptanceCoefficients, 
+  fetchWarehouses, 
+  fetchAcceptanceOptions 
+} from '@/services/suppliesApi';
+import { SupplyForm, WarehouseCoefficientsTable, SupplyOptionsResults } from '@/components/supplies';
+import { 
+  SupplyFormData, 
+  WarehouseCoefficient, 
+  Warehouse as WBWarehouse,
+  SupplyOptionsResponse
+} from '@/types/supplies';
+import { toast } from 'sonner';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1'];
 
 const Warehouses: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('map');
+  const [wbWarehouses, setWbWarehouses] = useState<WBWarehouse[]>([]);
+  const [coefficients, setCoefficients] = useState<WarehouseCoefficient[]>([]);
+  const [supplyResults, setSupplyResults] = useState<SupplyOptionsResponse | null>(null);
+  const [loading, setLoading] = useState({
+    warehouses: false,
+    coefficients: false,
+    options: false
+  });
+
+  // Эмуляция API-ключа (в реальном приложении должен быть получен от пользователя)
+  const apiKey = "test_api_key";
+
+  useEffect(() => {
+    if (activeTab === 'supplies') {
+      loadWarehouses();
+      loadCoefficients();
+    }
+  }, [activeTab]);
+
+  const loadWarehouses = async () => {
+    try {
+      setLoading(prev => ({ ...prev, warehouses: true }));
+      const data = await fetchWarehouses(apiKey);
+      setWbWarehouses(data);
+    } catch (error) {
+      console.error('Ошибка при загрузке складов:', error);
+      toast.error('Не удалось загрузить список складов');
+    } finally {
+      setLoading(prev => ({ ...prev, warehouses: false }));
+    }
+  };
+
+  const loadCoefficients = async () => {
+    try {
+      setLoading(prev => ({ ...prev, coefficients: true }));
+      const data = await fetchAcceptanceCoefficients(apiKey);
+      setCoefficients(data);
+    } catch (error) {
+      console.error('Ошибка при загрузке коэффициентов:', error);
+      toast.error('Не удалось загрузить коэффициенты приемки');
+    } finally {
+      setLoading(prev => ({ ...prev, coefficients: false }));
+    }
+  };
+
+  const handleSupplySubmit = async (data: SupplyFormData) => {
+    try {
+      setLoading(prev => ({ ...prev, options: true }));
+      
+      if (!data.selectedWarehouse) {
+        toast.error('Выберите склад назначения');
+        return;
+      }
+      
+      // Проверка доступности товаров на выбранном складе
+      const optionsResponse = await fetchAcceptanceOptions(
+        apiKey,
+        data.items,
+        data.selectedWarehouse
+      );
+      
+      setSupplyResults(optionsResponse);
+      
+      // Проверка на наличие ошибок
+      const hasErrors = optionsResponse.result.some(item => item.isError);
+      
+      if (hasErrors) {
+        toast.warning('Обнаружены проблемы с некоторыми товарами');
+      } else {
+        toast.success('Все товары доступны для поставки');
+      }
+    } catch (error) {
+      console.error('Ошибка при проверке доступности:', error);
+      toast.error('Не удалось проверить доступность товаров');
+    } finally {
+      setLoading(prev => ({ ...prev, options: false }));
+    }
+  };
 
   return (
     <div className="container px-4 py-6 space-y-6">
@@ -19,8 +115,8 @@ const Warehouses: React.FC = () => {
         <h1 className="text-2xl font-bold">Управление складами и логистикой</h1>
       </div>
 
-      <Tabs defaultValue="map" className="space-y-4">
-        <TabsList className="grid grid-cols-4 w-full max-w-md">
+      <Tabs defaultValue="map" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid grid-cols-5 w-full max-w-3xl">
           <TabsTrigger value="map" className="flex items-center justify-center">
             <WarehouseIcon className="h-4 w-4 mr-2" />
             <span>Карта</span>
@@ -36,6 +132,10 @@ const Warehouses: React.FC = () => {
           <TabsTrigger value="analytics" className="flex items-center justify-center">
             <BarChart3Icon className="h-4 w-4 mr-2" />
             <span>Аналитика</span>
+          </TabsTrigger>
+          <TabsTrigger value="supplies" className="flex items-center justify-center">
+            <PackageOpen className="h-4 w-4 mr-2" />
+            <span>Поставки</span>
           </TabsTrigger>
         </TabsList>
 
@@ -306,6 +406,62 @@ const Warehouses: React.FC = () => {
               </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="supplies" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-1">
+              {loading.warehouses ? (
+                <Card>
+                  <CardHeader>
+                    <Skeleton className="h-8 w-3/4" />
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                  </CardContent>
+                </Card>
+              ) : (
+                <SupplyForm 
+                  warehouses={wbWarehouses} 
+                  onSupplySubmit={handleSupplySubmit} 
+                />
+              )}
+            </div>
+            
+            <div className="lg:col-span-2">
+              {supplyResults ? (
+                <SupplyOptionsResults 
+                  results={supplyResults} 
+                  warehouses={wbWarehouses} 
+                />
+              ) : (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Box className="h-5 w-5 mr-2" />
+                      Коэффициенты приемки
+                    </CardTitle>
+                    <CardDescription>
+                      Информация о доступности приемки товаров на складах WB
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {loading.coefficients ? (
+                      <div className="space-y-2">
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                    ) : (
+                      <WarehouseCoefficientsTable coefficients={coefficients} />
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
