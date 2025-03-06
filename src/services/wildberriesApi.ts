@@ -15,6 +15,8 @@ export interface WildberriesResponse {
     };
     netProfit: number;
     acceptance: number;
+    returnsTotal?: number;
+    returnsCount?: number;
   };
   dailySales: Array<{
     date: string;
@@ -28,6 +30,7 @@ export interface WildberriesResponse {
   productReturns: Array<{
     name: string;
     value: number;
+    count?: number;
   }>;
   topProfitableProducts?: Array<{
     name: string;
@@ -121,6 +124,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   let totalPenalty = 0;        // Штрафы
   let totalDeduction = 0;      // Удержания
   let totalToPay = 0;          // Итого к оплате
+  let totalReturnsCount = 0;   // Количество возвратов
   
   // Обработка данных детального отчета - точно как в Python коде
   for (const record of data) {
@@ -130,6 +134,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     } else if (record.doc_type_name === 'Возврат') {
       // Используем именно ppvz_for_pay для возвратов, как в Python коде
       totalReturns += record.ppvz_for_pay || 0;
+      totalReturnsCount += 1; // Подсчет количества возвратов
     }
     
     // Учитываем расходы и доходы (для всех операций)
@@ -147,21 +152,22 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   totalToPay = totalForPay - totalDeliveryRub - totalStorageFee - totalReturns - totalPenalty - totalDeduction - totalAcceptance;
   
   // Группировка возвратов по наименованию товара и артикулу
-  const returnsByProduct: Record<string, number> = {};
+  const returnsByProduct: Record<string, {value: number, count: number}> = {};
   for (const record of data) {
     if (record.doc_type_name === 'Возврат' && record.nm_id && record.sa_name) {
       const productName = record.sa_name;
       if (!returnsByProduct[productName]) {
-        returnsByProduct[productName] = 0;
+        returnsByProduct[productName] = { value: 0, count: 0 };
       }
       // Используем именно ppvz_for_pay для возвратов, как в Python коде
-      returnsByProduct[productName] += Math.abs(record.ppvz_for_pay || 0);
+      returnsByProduct[productName].value += Math.abs(record.ppvz_for_pay || 0);
+      returnsByProduct[productName].count += 1;
     }
   }
   
   // Преобразование в массив и сортировка
   const productReturns = Object.entries(returnsByProduct)
-    .map(([name, value]) => ({ name, value }))
+    .map(([name, data]) => ({ name, value: data.value, count: data.count }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 5);
   
@@ -193,7 +199,8 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       total_penalty: Math.round(totalPenalty * 100) / 100,
       total_deduction: Math.round(totalDeduction * 100) / 100,
       total_to_pay: Math.round(totalToPay * 100) / 100,
-      total_acceptance: Math.round(totalAcceptance * 100) / 100
+      total_acceptance: Math.round(totalAcceptance * 100) / 100,
+      total_returns_count: totalReturnsCount
     },
     productReturns,
     dailySales
@@ -280,7 +287,9 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
           advertising: 0 // Реклама не включена в API отчет, будет добавлена отдельно
         },
         netProfit: metrics.total_to_pay,
-        acceptance: metrics.total_acceptance
+        acceptance: metrics.total_acceptance,
+        returnsTotal: metrics.total_returns,
+        returnsCount: metrics.total_returns_count
       },
       dailySales,
       productSales,
@@ -289,7 +298,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       topUnprofitableProducts: []
     };
     
-    console.log(`Received and processed data from Wildberries API. Total returns: ${metrics.total_returns}, Returned items count: ${productReturns.length}`);
+    console.log(`Received and processed data from Wildberries API. Total returns: ${metrics.total_returns}, Returned items count: ${metrics.total_returns_count}, Returned products count: ${productReturns.length}`);
     
     return response;
   } catch (error) {
@@ -313,7 +322,9 @@ const getDemoData = (): WildberriesResponse => {
         advertising: 0
       },
       netProfit: 147037.23,
-      acceptance: 0
+      acceptance: 0,
+      returnsTotal: 14603.83,
+      returnsCount: 5
     },
     dailySales: [
       {
@@ -350,11 +361,11 @@ const getDemoData = (): WildberriesResponse => {
       { subject_name: "Костюмы спортивные", quantity: 1 }
     ],
     productReturns: [
-      { name: "Костюм женский спортивный", value: 12000 },
-      { name: "Платье летнее", value: 8500 },
-      { name: "Футболка мужская", value: 6300 },
-      { name: "Джинсы классические", value: 4200 },
-      { name: "Куртка зимняя", value: 3000 }
+      { name: "Костюм женский спортивный", value: 6000, count: 2 },
+      { name: "Платье летнее", value: 4250, count: 1 },
+      { name: "Футболка мужская", value: 2153.83, count: 1 },
+      { name: "Джинсы классические", value: 1200, count: 0 },
+      { name: "Куртка зимняя", value: 1000, count: 1 }
     ],
     topProfitableProducts: [
       { name: "Загрузка...", price: "0", profit: "+0", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" }
