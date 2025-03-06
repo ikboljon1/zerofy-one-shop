@@ -38,13 +38,22 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           stats: stats
         }));
         
-        // Также сохраняем данные для аналитики
+        // Также сохраняем данные для аналитики и раздела товаров
         localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify({
           storeId: store.id,
           dateFrom: from.toISOString(),
           dateTo: to.toISOString(),
           data: stats
         }));
+        
+        // Детализированные данные по продуктам для раздела товаров
+        if (stats.topProfitableProducts || stats.topUnprofitableProducts) {
+          localStorage.setItem(`products_detailed_${store.id}`, JSON.stringify({
+            profitableProducts: stats.topProfitableProducts || [],
+            unprofitableProducts: stats.topUnprofitableProducts || [],
+            updateDate: new Date().toISOString()
+          }));
+        }
         
         return updatedStore;
       }
@@ -55,4 +64,30 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
     }
   }
   return store;
+};
+
+// Получение данных о доходности товаров для конкретного магазина
+export const getProductProfitabilityData = (storeId: string) => {
+  try {
+    const storedData = localStorage.getItem(`products_detailed_${storeId}`);
+    if (storedData) {
+      return JSON.parse(storedData);
+    }
+    
+    // Также пробуем загрузить из аналитики, если специальные данные не найдены
+    const analyticsData = localStorage.getItem(`marketplace_analytics_${storeId}`);
+    if (analyticsData) {
+      const parsedData = JSON.parse(analyticsData);
+      return {
+        profitableProducts: parsedData.data.topProfitableProducts || [],
+        unprofitableProducts: parsedData.data.topUnprofitableProducts || [],
+        updateDate: parsedData.dateTo
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error loading product profitability data:', error);
+    return null;
+  }
 };

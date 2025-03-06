@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -11,6 +12,7 @@ import Warehouses from "@/pages/Warehouses";
 import Advertising from "@/components/Advertising";
 import MainLayout from "@/components/layout/MainLayout";
 import AnalyticsSection from "@/components/analytics/AnalyticsSection";
+import { getProductProfitabilityData } from "@/utils/storeUtils";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
@@ -21,6 +23,16 @@ const Index = () => {
     const selectedStore = getSelectedStore();
     if (!selectedStore) return { profitable: [], unprofitable: [] };
     
+    // Сначала пробуем загрузить детализированные данные о товарах 
+    const profitabilityData = getProductProfitabilityData(selectedStore.id);
+    if (profitabilityData) {
+      return {
+        profitable: profitabilityData.profitableProducts || [],
+        unprofitable: profitabilityData.unprofitableProducts || []
+      };
+    }
+    
+    // Если нет детализированных данных, пробуем загрузить из аналитики
     const storageKey = `marketplace_analytics_${selectedStore.id}`;
     const storedData = localStorage.getItem(storageKey);
     
