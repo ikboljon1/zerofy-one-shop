@@ -44,14 +44,18 @@ const ProductList = ({ title, products = [], isProfitable }: ProductListProps) =
 
   const getProfitabilityReason = (product: Product) => {
     if (isProfitable) {
-      if (product.quantitySold && product.quantitySold > 50) {
+      if (product.margin && product.margin > 30) {
+        return "Высокая маржинальность";
+      } else if (product.quantitySold && product.quantitySold > 50) {
         return "Высокие объемы продаж";
       } else if (product.returnCount !== undefined && product.returnCount < 3) {
         return "Низкое количество возвратов";
       }
       return "Стабильные продажи";
     } else {
-      if (product.returnCount !== undefined && product.returnCount > 10) {
+      if (product.margin && product.margin < 10) {
+        return "Низкая маржинальность";
+      } else if (product.returnCount !== undefined && product.returnCount > 10) {
         return "Высокое количество возвратов";
       } else if (product.quantitySold && product.quantitySold < 5) {
         return "Низкие объемы продаж";
@@ -113,6 +117,13 @@ const ProductList = ({ title, products = [], isProfitable }: ProductListProps) =
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 text-sm">
+                <div className="flex items-center">
+                  <DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />
+                  <span className={`${isProfitable ? 'text-green-600' : 'text-red-600'} font-medium`}>
+                    Маржа: {product.margin !== undefined ? `${product.margin}%` : 'Н/Д'}
+                  </span>
+                </div>
+                
                 <div className="flex items-center">
                   <FileText className="h-4 w-4 mr-1 text-muted-foreground" />
                   <span>
