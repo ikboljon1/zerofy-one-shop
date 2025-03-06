@@ -1,10 +1,12 @@
-
 import axios from 'axios';
 import { 
   WarehouseCoefficient,
   SupplyOptionsResponse,
   SupplyItem,
-  Warehouse
+  Warehouse,
+  WildberriesStock,
+  StocksByCategory,
+  StocksByWarehouse
 } from '@/types/supplies';
 
 // Базовый URL для API поставок
@@ -196,4 +198,277 @@ export const fetchWarehouses = async (apiKey: string): Promise<Warehouse[]> => {
     console.error('Ошибка при получении списка складов:', error);
     throw error;
   }
+};
+
+// Функция для получения списка складов
+export const fetchStocks = async (apiKey: string, dateFrom: string = '2020-01-01'): Promise<WildberriesStock[]> => {
+  // In real environment, this would make an API call to the Wildberries API
+  // For demonstration purposes, we'll return mock data
+  console.log(`Fetching stocks with API key: ${apiKey} from date: ${dateFrom}`);
+  
+  // Mock data based on the example response
+  const mockStocks: WildberriesStock[] = [
+    {
+      lastChangeDate: "2023-07-05T11:13:35",
+      warehouseName: "Краснодар",
+      supplierArticle: "443284",
+      nmId: 1439871458,
+      barcode: "2037401340280",
+      quantity: 33,
+      inWayToClient: 1,
+      inWayFromClient: 0,
+      quantityFull: 34,
+      category: "Посуда и инвентарь",
+      subject: "Формы для запекания",
+      brand: "X",
+      techSize: "0",
+      Price: 185,
+      Discount: 0,
+      isSupply: true,
+      isRealization: false,
+      SCCode: "Tech"
+    },
+    {
+      lastChangeDate: "2023-07-05T12:15:30",
+      warehouseName: "Коледино",
+      supplierArticle: "T-159",
+      nmId: 2539871459,
+      barcode: "2037401340281",
+      quantity: 42,
+      inWayToClient: 5,
+      inWayFromClient: 2,
+      quantityFull: 49,
+      category: "Одежда",
+      subject: "Футболки",
+      brand: "BrandX",
+      techSize: "44",
+      Price: 1200,
+      Discount: 15,
+      isSupply: true,
+      isRealization: false,
+      SCCode: "Fashion"
+    },
+    {
+      lastChangeDate: "2023-07-06T09:23:41",
+      warehouseName: "Электросталь",
+      supplierArticle: "J-220",
+      nmId: 1439871460,
+      barcode: "2037401340282",
+      quantity: 18,
+      inWayToClient: 2,
+      inWayFromClient: 1,
+      quantityFull: 21,
+      category: "Одежда",
+      subject: "Джинсы",
+      brand: "JeansCo",
+      techSize: "46",
+      Price: 2300,
+      Discount: 10,
+      isSupply: true,
+      isRealization: false,
+      SCCode: "Fashion"
+    },
+    {
+      lastChangeDate: "2023-07-06T10:45:12",
+      warehouseName: "Подольск",
+      supplierArticle: "SH-105",
+      nmId: 1439871461,
+      barcode: "2037401340283",
+      quantity: 27,
+      inWayToClient: 3,
+      inWayFromClient: 0,
+      quantityFull: 30,
+      category: "Обувь",
+      subject: "Кроссовки",
+      brand: "SportWear",
+      techSize: "42",
+      Price: 3500,
+      Discount: 20,
+      isSupply: true,
+      isRealization: false,
+      SCCode: "Shoes"
+    },
+    {
+      lastChangeDate: "2023-07-06T11:30:55",
+      warehouseName: "Краснодар",
+      supplierArticle: "D-310",
+      nmId: 1439871462,
+      barcode: "2037401340284",
+      quantity: 15,
+      inWayToClient: 2,
+      inWayFromClient: 1,
+      quantityFull: 18,
+      category: "Одежда",
+      subject: "Платья",
+      brand: "FashionLady",
+      techSize: "42",
+      Price: 2800,
+      Discount: 15,
+      isSupply: true,
+      isRealization: false,
+      SCCode: "Fashion"
+    },
+    {
+      lastChangeDate: "2023-07-07T09:15:22",
+      warehouseName: "Коледино",
+      supplierArticle: "JK-75",
+      nmId: 1439871463,
+      barcode: "2037401340285",
+      quantity: 20,
+      inWayToClient: 1,
+      inWayFromClient: 0,
+      quantityFull: 21,
+      category: "Одежда",
+      subject: "Куртки",
+      brand: "OutdoorStyle",
+      techSize: "48",
+      Price: 4500,
+      Discount: 10,
+      isSupply: true,
+      isRealization: false,
+      SCCode: "Fashion"
+    },
+    {
+      lastChangeDate: "2023-07-07T10:20:18",
+      warehouseName: "Электросталь",
+      supplierArticle: "SW-42",
+      nmId: 1439871464,
+      barcode: "2037401340286",
+      quantity: 30,
+      inWayToClient: 4,
+      inWayFromClient: 2,
+      quantityFull: 36,
+      category: "Одежда",
+      subject: "Свитера",
+      brand: "WarmWear",
+      techSize: "46",
+      Price: 2100,
+      Discount: 5,
+      isSupply: true,
+      isRealization: false,
+      SCCode: "Fashion"
+    },
+    {
+      lastChangeDate: "2023-07-07T14:35:42",
+      warehouseName: "Подольск",
+      supplierArticle: "BG-18",
+      nmId: 1439871465,
+      barcode: "2037401340287",
+      quantity: 25,
+      inWayToClient: 2,
+      inWayFromClient: 1,
+      quantityFull: 28,
+      category: "Аксессуары",
+      subject: "Сумки",
+      brand: "BagStyle",
+      techSize: "0",
+      Price: 1800,
+      Discount: 10,
+      isSupply: true,
+      isRealization: false,
+      SCCode: "Accessories"
+    },
+    {
+      lastChangeDate: "2023-07-08T08:10:33",
+      warehouseName: "Краснодар",
+      supplierArticle: "TS-220",
+      nmId: 1439871466,
+      barcode: "2037401340288",
+      quantity: 40,
+      inWayToClient: 5,
+      inWayFromClient: 2,
+      quantityFull: 47,
+      category: "Электроника",
+      subject: "Наушники",
+      brand: "SoundMax",
+      techSize: "0",
+      Price: 1500,
+      Discount: 20,
+      isSupply: true,
+      isRealization: false,
+      SCCode: "Electronics"
+    },
+    {
+      lastChangeDate: "2023-07-08T09:25:17",
+      warehouseName: "Коледино",
+      supplierArticle: "BS-77",
+      nmId: 1439871467,
+      barcode: "2037401340289",
+      quantity: 22,
+      inWayToClient: 3,
+      inWayFromClient: 1,
+      quantityFull: 26,
+      category: "Одежда",
+      subject: "Рубашки",
+      brand: "BusinessStyle",
+      techSize: "44",
+      Price: 1900,
+      Discount: 15,
+      isSupply: true,
+      isRealization: false,
+      SCCode: "Fashion"
+    }
+  ];
+  
+  return mockStocks;
+};
+
+// Transform raw stocks data into category-based summary
+export const processStocksByCategory = (stocks: WildberriesStock[]): StocksByCategory[] => {
+  const categoriesMap: Record<string, StocksByCategory> = {};
+  
+  stocks.forEach(stock => {
+    if (!categoriesMap[stock.category]) {
+      categoriesMap[stock.category] = {
+        category: stock.category,
+        totalItems: 0,
+        valueRub: 0,
+        topSellingItem: '',
+        averageTurnover: '7 дней',
+        returns: 0,
+        inTransit: 0
+      };
+    }
+    
+    const category = categoriesMap[stock.category];
+    category.totalItems += stock.quantity;
+    category.valueRub += stock.quantity * (stock.Price * (1 - stock.Discount / 100));
+    category.inTransit += stock.inWayToClient;
+    
+    // Just for demo purposes, set the top selling item to be the most expensive one
+    if (!category.topSellingItem || stock.Price > 0) {
+      category.topSellingItem = stock.subject;
+    }
+    
+    // Random returns for demo
+    category.returns = Math.floor(category.totalItems * 0.03);
+  });
+  
+  return Object.values(categoriesMap);
+};
+
+// Transform raw stocks data into warehouse-based summary
+export const processStocksByWarehouse = (stocks: WildberriesStock[]): StocksByWarehouse[] => {
+  const warehousesMap: Record<string, StocksByWarehouse> = {};
+  
+  stocks.forEach(stock => {
+    if (!warehousesMap[stock.warehouseName]) {
+      warehousesMap[stock.warehouseName] = {
+        warehouseName: stock.warehouseName,
+        totalItems: 0,
+        categories: {}
+      };
+    }
+    
+    const warehouse = warehousesMap[stock.warehouseName];
+    warehouse.totalItems += stock.quantity;
+    
+    if (!warehouse.categories[stock.category]) {
+      warehouse.categories[stock.category] = 0;
+    }
+    
+    warehouse.categories[stock.category] += stock.quantity;
+  });
+  
+  return Object.values(warehousesMap);
 };

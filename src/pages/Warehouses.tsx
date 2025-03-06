@@ -5,25 +5,37 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   WarehouseIcon, TruckIcon, BarChart3Icon, ClipboardListIcon, 
-  PackageSearch, ArrowUpDown, Clock, DollarSign, PackageOpen, Box
+  PackageSearch, ArrowUpDown, Clock, DollarSign, PackageOpen, Box, RefreshCw
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { inventoryData, warehousesData, warehouseAnalyticsData } from '@/components/analytics/data/demoData';
+import { warehouseAnalyticsData } from '@/components/analytics/data/demoData';
 import { BarChart, ResponsiveContainer, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
 import { 
   fetchAcceptanceCoefficients, 
   fetchWarehouses, 
-  fetchAcceptanceOptions 
+  fetchAcceptanceOptions,
+  fetchStocks,
+  processStocksByCategory,
+  processStocksByWarehouse
 } from '@/services/suppliesApi';
-import { SupplyForm, WarehouseCoefficientsTable, SupplyOptionsResults } from '@/components/supplies';
+import { 
+  SupplyForm, 
+  WarehouseCoefficientsTable, 
+  SupplyOptionsResults,
+  InventoryDetails
+} from '@/components/supplies';
 import { 
   SupplyFormData, 
   WarehouseCoefficient, 
   Warehouse as WBWarehouse,
-  SupplyOptionsResponse
+  SupplyOptionsResponse,
+  WildberriesStock,
+  StocksByCategory,
+  StocksByWarehouse
 } from '@/types/supplies';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 
 const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1'];
 
@@ -33,10 +45,14 @@ const Warehouses: React.FC = () => {
   const [wbWarehouses, setWbWarehouses] = useState<WBWarehouse[]>([]);
   const [coefficients, setCoefficients] = useState<WarehouseCoefficient[]>([]);
   const [supplyResults, setSupplyResults] = useState<SupplyOptionsResponse | null>(null);
+  const [stocks, setStocks] = useState<WildberriesStock[]>([]);
+  const [categorySummary, setCategorySummary] = useState<StocksByCategory[]>([]);
+  const [warehouseSummary, setWarehouseSummary] = useState<StocksByWarehouse[]>([]);
   const [loading, setLoading] = useState({
     warehouses: false,
     coefficients: false,
-    options: false
+    options: false,
+    inventory: false
   });
 
   // Эмуляция API-ключа (в реальном приложении должен быть получен от пользователя)
@@ -46,6 +62,8 @@ const Warehouses: React.FC = () => {
     if (activeTab === 'supplies') {
       loadWarehouses();
       loadCoefficients();
+    } else if (activeTab === 'inventory') {
+      loadInventory();
     }
   }, [activeTab]);
 
@@ -72,6 +90,28 @@ const Warehouses: React.FC = () => {
       toast.error('Не удалось загрузить коэффициенты приемки');
     } finally {
       setLoading(prev => ({ ...prev, coefficients: false }));
+    }
+  };
+
+  const loadInventory = async () => {
+    try {
+      setLoading(prev => ({ ...prev, inventory: true }));
+      const stocksData = await fetchStocks(apiKey);
+      setStocks(stocksData);
+      
+      // Process the stocks data
+      const categoryData = processStocksByCategory(stocksData);
+      const warehouseData = processStocksByWarehouse(stocksData);
+      
+      setCategorySummary(categoryData);
+      setWarehouseSummary(warehouseData);
+      
+      toast.success('Данные об остатках товаров успешно загружены');
+    } catch (error) {
+      console.error('Ошибка при загрузке остатков:', error);
+      toast.error('Не удалось загрузить данные об остатках товаров');
+    } finally {
+      setLoading(prev => ({ ...prev, inventory: false }));
     }
   };
 
@@ -144,110 +184,39 @@ const Warehouses: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="inventory" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-            <Card className="lg:col-span-3">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <PackageSearch className="h-5 w-5 mr-2" />
-                  Обзор инвентаря
-                </CardTitle>
-                <CardDescription>
-                  Статистика по категориям товаров на всех складах
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Категория</TableHead>
-                      <TableHead>Количество</TableHead>
-                      <TableHead>Стоимость (₽)</TableHead>
-                      <TableHead>Товар-лидер</TableHead>
-                      <TableHead>Ср. оборот</TableHead>
-                      <TableHead>Возвраты</TableHead>
-                      <TableHead>В пути</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {inventoryData.map((item, index) => (
-                      <TableRow 
-                        key={index}
-                        className={`cursor-pointer ${selectedCategory === item.category ? 'bg-primary/5' : ''}`}
-                        onClick={() => setSelectedCategory(item.category)}
-                      >
-                        <TableCell className="font-medium">{item.category}</TableCell>
-                        <TableCell>{item.totalItems.toLocaleString()}</TableCell>
-                        <TableCell>{item.valueRub.toLocaleString()}</TableCell>
-                        <TableCell>{item.topSellingItem}</TableCell>
-                        <TableCell>{item.averageTurnover}</TableCell>
-                        <TableCell>{item.returns}</TableCell>
-                        <TableCell>{item.inTransit}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Распределение по категориям</CardTitle>
-              </CardHeader>
-              <CardContent className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={inventoryData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={2}
-                      dataKey="totalItems"
-                      nameKey="category"
-                      label={({name}) => name.split(' ')[0]}
-                      labelLine={false}
-                    >
-                      {inventoryData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => value.toLocaleString()} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h2 className="text-lg font-semibold">Остатки товаров на складах</h2>
+              <p className="text-sm text-muted-foreground">Актуальная информация о количестве товаров</p>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={loadInventory}
+              disabled={loading.inventory}
+              className="flex items-center gap-2"
+            >
+              {loading.inventory ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              Обновить данные
+            </Button>
           </div>
 
-          {selectedCategory && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Размещение {selectedCategory} по складам</CardTitle>
-                <CardDescription>
-                  Распределение товаров выбранной категории
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={warehousesData.map(w => ({
-                        name: w.name.split(' ')[0],
-                        value: Math.floor(Math.random() * 3000) + 500
-                      }))}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip formatter={(value) => value.toLocaleString()} />
-                      <Bar dataKey="value" name="Количество" fill="#8884d8" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+          {loading.inventory ? (
+            <div className="grid gap-4">
+              <Skeleton className="h-[400px] w-full" />
+              <Skeleton className="h-[300px] w-full" />
+            </div>
+          ) : (
+            <InventoryDetails
+              stocks={stocks}
+              categorySummary={categorySummary}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+            />
           )}
         </TabsContent>
 
