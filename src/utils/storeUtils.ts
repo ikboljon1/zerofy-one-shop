@@ -36,12 +36,16 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           const logistic = (stats.currentPeriod.expenses.logistics || 0) / daysCount;
           const storage = (stats.currentPeriod.expenses.storage || 0) / daysCount;
           const penalties = (stats.currentPeriod.expenses.penalties || 0) / daysCount;
+          const acceptance = (stats.currentPeriod.expenses.acceptance || 0) / daysCount;
+          const advertising = (stats.currentPeriod.expenses.advertising || 0) / daysCount;
           
           return {
             date: typeof day.date === 'string' ? day.date.split('T')[0] : new Date().toISOString().split('T')[0],
             logistic,
             storage,
-            penalties
+            penalties,
+            acceptance,
+            advertising
           };
         }) || [];
         
@@ -63,7 +67,8 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           deductionsTimeline: deductionsTimeline,
           penalties: [],
           returns: [],
-          productAdvertisingData: []
+          productAdvertisingData: [],
+          advertisingBreakdown: { search: stats.currentPeriod.expenses.advertising || 0 }
         }));
         
         // Детализированные данные по продуктам для раздела товаров
@@ -128,9 +133,12 @@ export const getAnalyticsData = (storeId: string) => {
           date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           logistic: 0,
           storage: 0, 
-          penalties: 0
+          penalties: 0,
+          acceptance: 0,
+          advertising: 0
         })),
-        productAdvertisingData: []
+        productAdvertisingData: [],
+        advertisingBreakdown: { search: 0 }
       };
     }
     
@@ -143,7 +151,19 @@ export const getAnalyticsData = (storeId: string) => {
         date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         logistic: 0,
         storage: 0, 
-        penalties: 0
+        penalties: 0,
+        acceptance: 0,
+        advertising: 0
+      }));
+    } else {
+      // Ensure all items in deductionsTimeline have all required properties
+      parsedData.deductionsTimeline = parsedData.deductionsTimeline.map((item: any) => ({
+        date: item.date || new Date().toISOString().split('T')[0],
+        logistic: item.logistic || 0,
+        storage: item.storage || 0,
+        penalties: item.penalties || 0,
+        acceptance: item.acceptance || 0,
+        advertising: item.advertising || 0
       }));
     }
     
@@ -159,6 +179,16 @@ export const getAnalyticsData = (storeId: string) => {
       parsedData.productAdvertisingData = [];
     }
     
+    if (!parsedData.advertisingBreakdown) {
+      parsedData.advertisingBreakdown = { search: 0 };
+    }
+    
+    if (parsedData.data && parsedData.data.currentPeriod && parsedData.data.currentPeriod.expenses) {
+      // Ensure all expense fields exist
+      parsedData.data.currentPeriod.expenses.advertising = parsedData.data.currentPeriod.expenses.advertising || 0;
+      parsedData.data.currentPeriod.expenses.acceptance = parsedData.data.currentPeriod.expenses.acceptance || 0;
+    }
+    
     return parsedData;
   } catch (error) {
     console.error('Error loading analytics data:', error);
@@ -171,9 +201,12 @@ export const getAnalyticsData = (storeId: string) => {
         date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         logistic: 0,
         storage: 0, 
-        penalties: 0
+        penalties: 0,
+        acceptance: 0,
+        advertising: 0
       })),
-      productAdvertisingData: []
+      productAdvertisingData: [],
+      advertisingBreakdown: { search: 0 }
     };
   }
 };

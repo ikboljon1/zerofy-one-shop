@@ -58,12 +58,20 @@ interface AnalyticsData {
     price: string;
     profit: string;
     image: string;
+    quantitySold?: number;
+    margin?: number;
+    returnCount?: number;
+    category?: string;
   }>;
   topUnprofitableProducts?: Array<{
     name: string;
     price: string;
     profit: string;
     image: string;
+    quantitySold?: number;
+    margin?: number;
+    returnCount?: number;
+    category?: string;
   }>;
 }
 
@@ -151,10 +159,10 @@ const AnalyticsSection = () => {
         }
         
         // Используем проверенные данные
-        setPenalties(analyticsData.penalties);
-        setReturns(analyticsData.returns);
-        setDeductionsTimeline(analyticsData.deductionsTimeline);
-        setProductAdvertisingData(analyticsData.productAdvertisingData);
+        setPenalties(analyticsData.penalties || []);
+        setReturns(analyticsData.returns || []);
+        setDeductionsTimeline(analyticsData.deductionsTimeline || []);
+        setProductAdvertisingData(analyticsData.productAdvertisingData || []);
         
         if (analyticsData.advertisingBreakdown) {
           setAdvertisingBreakdown(analyticsData.advertisingBreakdown);
@@ -186,43 +194,54 @@ const AnalyticsSection = () => {
 
       const statsData = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
       
-      const advertCosts = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
-      
+      // Try-catch block for advertising API to prevent it from breaking everything else
       let totalAdvertisingCost = 0;
-      if (advertCosts && advertCosts.length > 0) {
-        totalAdvertisingCost = advertCosts.reduce((sum, cost) => sum + cost.updSum, 0);
+      try {
+        const advertCosts = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
         
-        setAdvertisingBreakdown({
-          search: totalAdvertisingCost
-        });
-        
-        const campaignCosts: Record<string, number> = {};
-        
-        advertCosts.forEach(cost => {
-          if (!campaignCosts[cost.campName]) {
-            campaignCosts[cost.campName] = 0;
+        if (advertCosts && advertCosts.length > 0) {
+          totalAdvertisingCost = advertCosts.reduce((sum, cost) => sum + cost.updSum, 0);
+          
+          setAdvertisingBreakdown({
+            search: totalAdvertisingCost
+          });
+          
+          const campaignCosts: Record<string, number> = {};
+          
+          advertCosts.forEach(cost => {
+            if (!campaignCosts[cost.campName]) {
+              campaignCosts[cost.campName] = 0;
+            }
+            campaignCosts[cost.campName] += cost.updSum;
+          });
+          
+          const advertisingDataArray = Object.entries(campaignCosts)
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value);
+          
+          let topProducts = advertisingDataArray.slice(0, 4);
+          const otherProducts = advertisingDataArray.slice(4);
+          
+          if (otherProducts.length > 0) {
+            const otherSum = otherProducts.reduce((sum, item) => sum + item.value, 0);
+            topProducts.push({ name: "Другие товары", value: otherSum });
           }
-          campaignCosts[cost.campName] += cost.updSum;
-        });
-        
-        const advertisingDataArray = Object.entries(campaignCosts)
-          .map(([name, value]) => ({ name, value }))
-          .sort((a, b) => b.value - a.value);
-        
-        let topProducts = advertisingDataArray.slice(0, 4);
-        const otherProducts = advertisingDataArray.slice(4);
-        
-        if (otherProducts.length > 0) {
-          const otherSum = otherProducts.reduce((sum, item) => sum + item.value, 0);
-          topProducts.push({ name: "Другие товары", value: otherSum });
+          
+          setProductAdvertisingData(topProducts.length > 0 ? topProducts : []);
+        } else {
+          if (productAdvertisingData.length === 0) {
+            setProductAdvertisingData(advertisingData);
+          }
+          
+          setAdvertisingBreakdown({
+            search: demoData.currentPeriod.expenses.advertising
+          });
+          totalAdvertisingCost = demoData.currentPeriod.expenses.advertising;
         }
-        
-        setProductAdvertisingData(topProducts.length > 0 ? topProducts : []);
-      } else {
-        if (productAdvertisingData.length === 0) {
-          setProductAdvertisingData(advertisingData);
-        }
-        
+      } catch (error) {
+        console.error('Error fetching advertising data:', error);
+        // If advertising API fails, use demo data for advertising
+        setProductAdvertisingData(advertisingData);
         setAdvertisingBreakdown({
           search: demoData.currentPeriod.expenses.advertising
         });

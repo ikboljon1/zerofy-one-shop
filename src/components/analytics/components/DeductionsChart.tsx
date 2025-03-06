@@ -32,25 +32,28 @@ interface DeductionsChartProps {
 const DeductionsChart = ({ data }: DeductionsChartProps) => {
   const isMobile = useIsMobile();
   
-  // Calculate totals for each category
+  // Calculate totals for each category including acceptance and advertising
   const totals = data.reduce(
     (acc, item) => {
-      acc.logistic += item.logistic;
-      acc.storage += item.storage;
-      acc.penalties += item.penalties;
+      acc.logistic += item.logistic || 0;
+      acc.storage += item.storage || 0;
+      acc.penalties += item.penalties || 0;
+      acc.acceptance += item.acceptance || 0;
+      acc.advertising += item.advertising || 0;
       return acc;
     },
-    { logistic: 0, storage: 0, penalties: 0 }
+    { logistic: 0, storage: 0, penalties: 0, acceptance: 0, advertising: 0 }
   );
 
   // Calculate average per day for reference line
-  const days = data.length;
+  const days = data.length || 1;
   const avgLogistic = totals.logistic / days;
   const avgStorage = totals.storage / days;
   const avgPenalties = totals.penalties / days;
 
   // Calculate totals for percentage calculations
-  const grandTotal = totals.logistic + totals.storage + totals.penalties;
+  const grandTotal = totals.logistic + totals.storage + totals.penalties + 
+                    totals.acceptance + totals.advertising;
 
   return (
     <Card className="p-4 sm:p-6 shadow-xl border-0 rounded-xl overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-blue-950/30">
@@ -82,12 +85,12 @@ const DeductionsChart = ({ data }: DeductionsChartProps) => {
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
             <div 
               className="bg-violet-600 dark:bg-violet-500 h-2.5 rounded-full" 
-              style={{ width: `${(totals.logistic / grandTotal) * 100}%` }}
+              style={{ width: `${grandTotal > 0 ? (totals.logistic / grandTotal) * 100 : 0}%` }}
             ></div>
           </div>
           {isMobile && (
             <div className="mt-1 text-xs text-gray-500">
-              {((totals.logistic / grandTotal) * 100).toFixed(1)}% от общей суммы
+              {grandTotal > 0 ? ((totals.logistic / grandTotal) * 100).toFixed(1) : '0'}% от общей суммы
             </div>
           )}
         </div>
@@ -102,12 +105,12 @@ const DeductionsChart = ({ data }: DeductionsChartProps) => {
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
             <div 
               className="bg-emerald-600 dark:bg-emerald-500 h-2.5 rounded-full" 
-              style={{ width: `${(totals.storage / grandTotal) * 100}%` }}
+              style={{ width: `${grandTotal > 0 ? (totals.storage / grandTotal) * 100 : 0}%` }}
             ></div>
           </div>
           {isMobile && (
             <div className="mt-1 text-xs text-gray-500">
-              {((totals.storage / grandTotal) * 100).toFixed(1)}% от общей суммы
+              {grandTotal > 0 ? ((totals.storage / grandTotal) * 100).toFixed(1) : '0'}% от общей суммы
             </div>
           )}
         </div>
@@ -122,12 +125,12 @@ const DeductionsChart = ({ data }: DeductionsChartProps) => {
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
             <div 
               className="bg-pink-600 dark:bg-pink-500 h-2.5 rounded-full" 
-              style={{ width: `${(totals.penalties / grandTotal) * 100}%` }}
+              style={{ width: `${grandTotal > 0 ? (totals.penalties / grandTotal) * 100 : 0}%` }}
             ></div>
           </div>
           {isMobile && (
             <div className="mt-1 text-xs text-gray-500">
-              {((totals.penalties / grandTotal) * 100).toFixed(1)}% от общей суммы
+              {grandTotal > 0 ? ((totals.penalties / grandTotal) * 100).toFixed(1) : '0'}% от общей суммы
             </div>
           )}
         </div>
@@ -222,13 +225,32 @@ const DeductionsChart = ({ data }: DeductionsChartProps) => {
               animationEasing="ease-in-out"
               animationBegin={600}
             />
+            {/* Add bars for acceptance and advertising if they exist in the data */}
+            <Bar 
+              dataKey="acceptance" 
+              name="Приемка" 
+              fill="#F59E0B" 
+              radius={[4, 4, 0, 0]} 
+              animationDuration={1500}
+              animationEasing="ease-in-out"
+              animationBegin={900}
+            />
+            <Bar 
+              dataKey="advertising" 
+              name="Реклама" 
+              fill="#3B82F6" 
+              radius={[4, 4, 0, 0]} 
+              animationDuration={1500}
+              animationEasing="ease-in-out"
+              animationBegin={1200}
+            />
           </BarChart>
         </ResponsiveContainer>
       </div>
       
       {/* Mobile-only legend */}
       {isMobile && (
-        <div className="flex justify-center space-x-4 mt-3">
+        <div className="flex flex-wrap justify-center gap-3 mt-3">
           <div className="flex items-center">
             <span className="h-3 w-3 rounded-full bg-violet-600 mr-1"></span>
             <span className="text-xs">Логистика</span>
@@ -240,6 +262,14 @@ const DeductionsChart = ({ data }: DeductionsChartProps) => {
           <div className="flex items-center">
             <span className="h-3 w-3 rounded-full bg-pink-600 mr-1"></span>
             <span className="text-xs">Штрафы</span>
+          </div>
+          <div className="flex items-center">
+            <span className="h-3 w-3 rounded-full bg-amber-500 mr-1"></span>
+            <span className="text-xs">Приемка</span>
+          </div>
+          <div className="flex items-center">
+            <span className="h-3 w-3 rounded-full bg-blue-500 mr-1"></span>
+            <span className="text-xs">Реклама</span>
           </div>
         </div>
       )}
