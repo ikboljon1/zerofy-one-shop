@@ -1,4 +1,3 @@
-
 // Demo data for analytics dashboard
 export const penaltiesData = [
   { name: "Брак товара", value: 5000 },
@@ -9,11 +8,11 @@ export const penaltiesData = [
 ];
 
 export const returnsData = [
-  { name: "Костюм женский спортивный", value: 12000 },
-  { name: "Платье летнее", value: 8500 },
-  { name: "Футболка мужская", value: 6300 },
-  { name: "Джинсы классические", value: 4200 },
-  { name: "Куртка зимняя", value: 3000 }
+  { name: "Костюм женский спортивный", value: 12000, count: 3 },
+  { name: "Платье летнее", value: 8500, count: 2 },
+  { name: "Футболка мужская", value: 6300, count: 4 },
+  { name: "Джинсы классические", value: 4200, count: 1 },
+  { name: "Куртка зимняя", value: 3000, count: 1 }
 ];
 
 export const deductionsTimelineData = [

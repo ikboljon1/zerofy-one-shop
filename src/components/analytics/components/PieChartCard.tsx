@@ -15,11 +15,19 @@ interface PieChartCardProps {
   data: Array<{
     name: string;
     value: number;
+    count?: number; // Добавляем опциональное поле для количества
   }>;
   valueLabel?: string;
+  showCount?: boolean; // Флаг для отображения количества
 }
 
-const PieChartCard = ({ title, icon, data, valueLabel = "₽" }: PieChartCardProps) => {
+const PieChartCard = ({ 
+  title, 
+  icon, 
+  data, 
+  valueLabel = "₽", 
+  showCount = false 
+}: PieChartCardProps) => {
   // Проверяем, что данные не пустые и содержат значения больше нуля
   const hasData = data && data.length > 0 && data.some(item => item.value > 0);
 
@@ -66,7 +74,14 @@ const PieChartCard = ({ title, icon, data, valueLabel = "₽" }: PieChartCardPro
                   ></div>
                   <span className="text-sm">{item.name}</span>
                 </div>
-                <span className="font-medium">{item.value.toLocaleString()} {valueLabel}</span>
+                <div className="text-right">
+                  <span className="font-medium">{item.value.toLocaleString()} {valueLabel}</span>
+                  {showCount && item.count !== undefined && (
+                    <div className="text-xs text-muted-foreground">
+                      Кол-во: {item.count}
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>

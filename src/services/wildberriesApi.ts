@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 
 export interface WildberriesResponse {
@@ -147,21 +146,22 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   totalToPay = totalForPay - totalDeliveryRub - totalStorageFee - totalReturns - totalPenalty - totalDeduction - totalAcceptance;
   
   // Группировка возвратов по наименованию товара и артикулу
-  const returnsByProduct: Record<string, number> = {};
+  const returnsByProduct: Record<string, { value: number; count: number }> = {};
   for (const record of data) {
     if (record.doc_type_name === 'Возврат' && record.nm_id && record.sa_name) {
       const productName = record.sa_name;
       if (!returnsByProduct[productName]) {
-        returnsByProduct[productName] = 0;
+        returnsByProduct[productName] = { value: 0, count: 0 };
       }
       // Используем именно ppvz_for_pay для возвратов, как в Python коде
-      returnsByProduct[productName] += Math.abs(record.ppvz_for_pay || 0);
+      returnsByProduct[productName].value += Math.abs(record.ppvz_for_pay || 0);
+      returnsByProduct[productName].count += 1; // Увеличиваем счетчик возвратов
     }
   }
   
   // Преобразование в массив и сортировка
   const productReturns = Object.entries(returnsByProduct)
-    .map(([name, value]) => ({ name, value }))
+    .map(([name, { value, count }]) => ({ name, value, count }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 5);
   
@@ -181,6 +181,11 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   const dailySales = Object.entries(salesByDay)
     .map(([date, { sales, previousSales }]) => ({ date, sales, previousSales }))
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  
+  // Подсчитываем общее количество возвратов
+  const totalReturnCount = productReturns.reduce((sum, item) => sum + (item.count || 0), 0);
+  
+  console.log(`Received and processed data from Wildberries API. Total returns: ${totalReturns}, Returned items count: ${totalReturnCount}, Returned products count: ${productReturns.length}`);
   
   return {
     metrics: {
@@ -205,7 +210,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
   try {
     console.log(`Fetching Wildberries stats from ${dateFrom.toISOString()} to ${dateTo.toISOString()}`);
     
-    // В режиме разработки используем демо-данные
+    // В режиме разработки используем дем��-данные
     if (process.env.NODE_ENV === 'development' && !apiKey.startsWith('eyJ')) {
       console.log('Using demo data in development mode');
       return getDemoData();
