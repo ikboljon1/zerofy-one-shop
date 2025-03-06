@@ -11,13 +11,11 @@ import DeductionsChart from "./components/DeductionsChart";
 import PieChartCard from "./components/PieChartCard";
 import ExpenseBreakdown from "./components/ExpenseBreakdown";
 import ProductList from "./components/ProductList";
-import GeographySection from "./components/GeographySection";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
 import { getAdvertCosts, getAdvertBalance, getAdvertPayments } from "@/services/advertisingApi";
 import { getAnalyticsData } from "@/utils/storeUtils";
-import { WildberriesOrder } from "@/types/store";
 
 import { 
   demoData, 
@@ -75,7 +73,6 @@ interface AnalyticsData {
     returnCount?: number;
     category?: string;
   }>;
-  orders?: WildberriesOrder[];
 }
 
 interface AdvertisingBreakdown {
@@ -440,8 +437,6 @@ const AnalyticsSection = () => {
           <SalesChart data={data} />
           <DeductionsChart data={deductionsTimeline} />
         </div>
-        
-        <GeographySection orders={data?.orders || []} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <PieChartCard 

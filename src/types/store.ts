@@ -41,9 +41,6 @@ export interface WildberriesOrder {
   orderType: string;
   regionName: string;
   srid: string;
-  warehouseType?: string;
-  countryName?: string;
-  oblastOkrugName?: string;
 }
 
 // Interface for Wildberries sale
@@ -56,8 +53,4 @@ export interface WildberriesSale {
   saleID: string;
   regionName: string;
   srid: string;
-  warehouseName?: string;
-  warehouseType?: string;
-  countryName?: string;
-  oblastOkrugName?: string;
 }
