@@ -88,3 +88,37 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
     return null;
   }
 };
+
+// Calculate warehouse distribution data
+export const calculateWarehouseDistribution = (orders: any[]) => {
+  if (!orders || orders.length === 0) return {};
+  
+  const warehouseCounts: Record<string, number> = {};
+  
+  orders.forEach(order => {
+    const warehouse = order.warehouseName || "Неизвестный склад";
+    if (!warehouseCounts[warehouse]) {
+      warehouseCounts[warehouse] = 0;
+    }
+    warehouseCounts[warehouse]++;
+  });
+  
+  return warehouseCounts;
+};
+
+// Calculate region distribution data
+export const calculateRegionDistribution = (orders: any[]) => {
+  if (!orders || orders.length === 0) return {};
+  
+  const regionCounts: Record<string, number> = {};
+  
+  orders.forEach(order => {
+    const region = order.regionName || "Неизвестный регион";
+    if (!regionCounts[region]) {
+      regionCounts[region] = 0;
+    }
+    regionCounts[region]++;
+  });
+  
+  return regionCounts;
+};
