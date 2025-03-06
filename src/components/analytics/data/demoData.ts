@@ -68,30 +68,30 @@ export const demoData = {
       name: "Платье летнее", 
       price: "1200", 
       profit: "25000", 
-      image: "https://styles.redditmedia.com/t5_2wquw3/styles/communityIcon_hm9h2653hk541.png",
+      image: "https://images.wbstatic.net/big/new/22270000/22271973-1.jpg",
       quantitySold: 78,
       margin: 45,
-      returnRate: 1.2,
+      returnCount: 2,
       category: "Женская одежда"
     },
     { 
       name: "Кроссовки спортивные", 
       price: "3500", 
       profit: "18000", 
-      image: "https://styles.redditmedia.com/t5_2vhfr/styles/communityIcon_br4e2k2k2rd71.png",
+      image: "https://images.wbstatic.net/big/new/10050000/10052354-1.jpg",
       quantitySold: 42,
       margin: 38,
-      returnRate: 2.5,
+      returnCount: 1,
       category: "Обувь"
     },
     { 
       name: "Джинсы классические", 
       price: "2800", 
       profit: "15500", 
-      image: "https://www.wildberries.ru/images/catalog-v3-10.jpg?v=202311270958",
+      image: "https://images.wbstatic.net/big/new/13730000/13733711-1.jpg",
       quantitySold: 36,
       margin: 32,
-      returnRate: 3.1,
+      returnCount: 3,
       category: "Мужская одежда"
     }
   ],
@@ -100,30 +100,30 @@ export const demoData = {
       name: "Шарф зимний", 
       price: "800", 
       profit: "-5200", 
-      image: "https://www.wildberries.ru/images/catalog-v3-3.jpg?v=202311270958",
+      image: "https://images.wbstatic.net/big/new/11080000/11081822-1.jpg",
       quantitySold: 8,
       margin: 12,
-      returnRate: 18.5,
+      returnCount: 18,
       category: "Аксессуары"
     },
     { 
       name: "Рубашка офисная", 
       price: "1500", 
       profit: "-3800", 
-      image: "https://www.wildberries.ru/images/catalog-v3-5.jpg?v=202311270958",
+      image: "https://images.wbstatic.net/big/new/9080000/9080277-1.jpg",
       quantitySold: 5,
       margin: 8,
-      returnRate: 12.0,
+      returnCount: 12,
       category: "Мужская одежда"
     },
     { 
       name: "Перчатки кожаные", 
       price: "1200", 
       profit: "-2900", 
-      image: "https://www.wildberries.ru/images/catalog-v3.jpg?v=202311270958",
+      image: "https://images.wbstatic.net/big/new/10320000/10328291-1.jpg",
       quantitySold: 3,
       margin: 15,
-      returnRate: 25.0,
+      returnCount: 25,
       category: "Аксессуары"
     }
   ]

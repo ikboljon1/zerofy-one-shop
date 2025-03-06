@@ -11,7 +11,7 @@ interface Product {
   image: string;
   quantitySold?: number;
   margin?: number;
-  returnCount?: number; // Changed from returnRate to returnCount
+  returnCount?: number;
   category?: string;
 }
 
