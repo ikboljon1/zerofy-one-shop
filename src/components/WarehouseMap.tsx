@@ -3,29 +3,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Card } from '@/components/ui/card';
-import { AlertTriangle, Info, Truck, WarehouseIcon } from 'lucide-react';
-
-// Мок-данные для демонстрации
-const warehousesData = [
-  { id: 1, name: "Московский склад", coordinates: [55.7522, 37.6156], size: "12,000 м²", items: 14500, status: "active" },
-  { id: 2, name: "Санкт-Петербургский склад", coordinates: [59.9343, 30.3351], size: "8,000 м²", items: 9800, status: "active" },
-  { id: 3, name: "Новосибирский склад", coordinates: [55.0415, 82.9346], size: "5,500 м²", items: 6200, status: "active" },
-  { id: 4, name: "Екатеринбургский склад", coordinates: [56.8519, 60.6122], size: "4,500 м²", items: 5100, status: "active" },
-  { id: 5, name: "Казанский склад", coordinates: [55.7887, 49.1221], size: "3,800 м²", items: 4300, status: "maintenance" },
-  { id: 6, name: "Ростовский склад", coordinates: [47.2357, 39.7015], size: "3,500 м²", items: 3900, status: "low-stock" }
-];
-
-// Маршруты между складами
-const routes = [
-  { origin: 1, destination: 2, volume: "320 единиц/день", transport: "грузовик" },
-  { origin: 1, destination: 3, volume: "220 единиц/день", transport: "авиаперевозка" },
-  { origin: 1, destination: 4, volume: "180 единиц/день", transport: "грузовик" },
-  { origin: 1, destination: 5, volume: "150 единиц/день", transport: "грузовик" },
-  { origin: 1, destination: 6, volume: "140 единиц/день", transport: "грузовик" },
-  { origin: 2, destination: 3, volume: "90 единиц/день", transport: "грузовик" },
-  { origin: 4, destination: 3, volume: "70 единиц/день", transport: "грузовик" },
-  { origin: 5, destination: 6, volume: "50 единиц/день", transport: "грузовик" }
-];
+import { AlertTriangle, Info, Truck, WarehouseIcon, ShieldAlert, CheckCircle, Timer } from 'lucide-react';
+import { warehousesData, logisticsRoutes } from '@/components/analytics/data/demoData';
 
 interface WarehouseMapProps {
   className?: string;
@@ -82,16 +61,19 @@ const WarehouseMap: React.FC<WarehouseMapProps> = ({ className }) => {
     });
 
     // Добавление линий маршрутов
-    routes.forEach(route => {
+    logisticsRoutes.forEach(route => {
       const origin = warehousesData.find(w => w.id === route.origin);
       const destination = warehousesData.find(w => w.id === route.destination);
 
       if (origin && destination) {
+        const routeColor = route.status === 'active' ? '#6B7280' : '#EF4444';
+        const dashStyle = route.transport === 'авиаперевозка' ? '8, 8' : '5, 10';
+        
         L.polyline([origin.coordinates, destination.coordinates], {
-          color: '#6B7280',
+          color: routeColor,
           weight: 2,
           opacity: 0.5,
-          dashArray: '5, 10'
+          dashArray: dashStyle
         }).addTo(map.current!);
       }
     });
@@ -124,10 +106,18 @@ const WarehouseMap: React.FC<WarehouseMapProps> = ({ className }) => {
 
   const getWarehouseStatusIcon = (status: string) => {
     switch (status) {
-      case 'active': return <div className="bg-green-100 p-2 rounded-full"><WarehouseIcon className="h-4 w-4 text-green-600" /></div>;
-      case 'maintenance': return <div className="bg-amber-100 p-2 rounded-full"><AlertTriangle className="h-4 w-4 text-amber-600" /></div>;
-      case 'low-stock': return <div className="bg-red-100 p-2 rounded-full"><Info className="h-4 w-4 text-red-600" /></div>;
+      case 'active': return <div className="bg-green-100 p-2 rounded-full"><CheckCircle className="h-4 w-4 text-green-600" /></div>;
+      case 'maintenance': return <div className="bg-amber-100 p-2 rounded-full"><Timer className="h-4 w-4 text-amber-600" /></div>;
+      case 'low-stock': return <div className="bg-red-100 p-2 rounded-full"><ShieldAlert className="h-4 w-4 text-red-600" /></div>;
       default: return <div className="bg-gray-100 p-2 rounded-full"><WarehouseIcon className="h-4 w-4 text-gray-600" /></div>;
+    }
+  };
+
+  const getRouteStatusIcon = (status: string) => {
+    switch (status) {
+      case 'active': return <div className="bg-green-100 p-1 rounded-full"><CheckCircle className="h-3 w-3 text-green-600" /></div>;
+      case 'delayed': return <div className="bg-red-100 p-1 rounded-full"><AlertTriangle className="h-3 w-3 text-red-600" /></div>;
+      default: return <div className="bg-gray-100 p-1 rounded-full"><Info className="h-3 w-3 text-gray-600" /></div>;
     }
   };
 
@@ -153,7 +143,7 @@ const WarehouseMap: React.FC<WarehouseMapProps> = ({ className }) => {
                     {getWarehouseStatusIcon(warehouse.status)}
                   </div>
                   <div className="mt-1 text-sm text-muted-foreground">
-                    {warehouse.items.toLocaleString()} товаров
+                    {warehouse.items.toLocaleString()} товаров • {warehouse.fillRate}% заполнения
                   </div>
                 </div>
               ))}
@@ -169,7 +159,7 @@ const WarehouseMap: React.FC<WarehouseMapProps> = ({ className }) => {
                   <span>{selectedWarehouse.size}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Количество товаров:</span>
+                  <span className="text-muted-foreground">Товаров:</span>
                   <span>{selectedWarehouse.items.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
@@ -183,33 +173,52 @@ const WarehouseMap: React.FC<WarehouseMapProps> = ({ className }) => {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Координаты:</span>
-                  <span>{selectedWarehouse.coordinates.join(', ')}</span>
+                  <span className="text-muted-foreground">Загруженность:</span>
+                  <span>{selectedWarehouse.fillRate}%</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Загруженность:</span>
-                  <span>{Math.floor(Math.random() * 30) + 70}%</span>
+                  <span className="text-muted-foreground">Управляющий:</span>
+                  <span>{selectedWarehouse.manager}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Последняя поставка:</span>
+                  <span>{selectedWarehouse.lastRestock}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Осн. категория:</span>
+                  <span>{selectedWarehouse.mostStockedCategory}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Время обработки:</span>
+                  <span>{selectedWarehouse.avgProcessingTime}</span>
                 </div>
               </div>
 
               <div className="mt-4 pt-3 border-t">
                 <h5 className="font-medium mb-2 text-sm">Маршруты</h5>
                 <div className="space-y-2">
-                  {routes
+                  {logisticsRoutes
                     .filter(route => route.origin === selectedWarehouse.id || route.destination === selectedWarehouse.id)
                     .map((route, index) => {
                       const originWarehouse = warehousesData.find(w => w.id === route.origin);
                       const destWarehouse = warehousesData.find(w => w.id === route.destination);
+                      
+                      const isOutgoing = route.origin === selectedWarehouse.id;
+                      const partnerWarehouse = isOutgoing ? destWarehouse : originWarehouse;
                       
                       return (
                         <div key={index} className="text-sm flex items-center justify-between">
                           <div className="flex items-center">
                             <Truck className="h-3 w-3 mr-2 text-muted-foreground" />
                             <span>
-                              {originWarehouse?.name.split(' ')[0]} → {destWarehouse?.name.split(' ')[0]}
+                              {isOutgoing ? 'Отправка → ' : 'Получение ← '}
+                              {partnerWarehouse?.name.split(' ')[0]}
                             </span>
                           </div>
-                          <span className="text-xs text-muted-foreground">{route.volume}</span>
+                          <div className="flex items-center">
+                            <span className="text-xs text-muted-foreground mr-2">{route.volume}</span>
+                            {getRouteStatusIcon(route.status)}
+                          </div>
                         </div>
                       );
                     })
