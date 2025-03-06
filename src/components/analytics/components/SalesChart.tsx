@@ -13,6 +13,7 @@ import {
   ReferenceLine
 } from "recharts";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useEffect, useState } from "react";
 
 interface SalesChartProps {
   data: {
@@ -26,15 +27,38 @@ interface SalesChartProps {
 
 const SalesChart = ({ data }: SalesChartProps) => {
   const isMobile = useIsMobile();
-  // Check if data is valid and has sales data
-  const hasSalesData = data && data.dailySales && data.dailySales.length > 0;
+  const [chartData, setChartData] = useState<Array<{
+    date: string;
+    sales: number;
+    previousSales?: number;
+  }>>([]);
+  
+  // Effect to update chart data when data prop changes
+  useEffect(() => {
+    // Check if data is valid and has sales data
+    const hasSalesData = data && data.dailySales && data.dailySales.length > 0;
+    
+    if (hasSalesData) {
+      // Гарантируем, что данные правильно отформатированы для графика
+      const formattedData = data.dailySales.map(item => ({
+        ...item,
+        date: typeof item.date === 'string' ? item.date : new Date().toISOString().split('T')[0],
+        sales: typeof item.sales === 'number' ? item.sales : 0,
+        previousSales: typeof item.previousSales === 'number' ? item.previousSales : 0
+      }));
+      
+      setChartData(formattedData);
+    } else {
+      setChartData([]);
+    }
+  }, [data]);
   
   // Calculate average sales
-  const avgSales = hasSalesData 
-    ? data.dailySales.reduce((sum, item) => sum + item.sales, 0) / data.dailySales.length
+  const avgSales = chartData.length > 0 
+    ? chartData.reduce((sum, item) => sum + item.sales, 0) / chartData.length
     : 0;
   
-  if (!hasSalesData) {
+  if (chartData.length === 0) {
     return (
       <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950/30">
         <div className="flex items-center justify-between mb-6">
@@ -49,14 +73,6 @@ const SalesChart = ({ data }: SalesChartProps) => {
       </Card>
     );
   }
-  
-  // Гарантируем, что данные правильно отформатированы для графика
-  const chartData = data.dailySales.map(item => ({
-    ...item,
-    date: typeof item.date === 'string' ? item.date : new Date().toISOString().split('T')[0],
-    sales: typeof item.sales === 'number' ? item.sales : 0,
-    previousSales: typeof item.previousSales === 'number' ? item.previousSales : 0
-  }));
   
   return (
     <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950/30 hover:shadow-xl transition-all duration-300">
@@ -75,7 +91,7 @@ const SalesChart = ({ data }: SalesChartProps) => {
             <defs>
               <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
+                <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.1}/>
               </linearGradient>
               {/* Add glowing effect */}
               <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
