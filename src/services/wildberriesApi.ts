@@ -37,12 +37,20 @@ export interface WildberriesResponse {
     price: string;
     profit: string;
     image: string;
+    quantitySold: number;
+    margin: number;
+    returnRate: number;
+    category: string;
   }>;
   topUnprofitableProducts?: Array<{
     name: string;
     price: string;
     profit: string;
     image: string;
+    quantitySold: number;
+    margin: number;
+    returnRate: number;
+    category: string;
   }>;
 }
 
@@ -422,22 +430,76 @@ const getDemoData = (): WildberriesResponse => {
       { subject_name: "Костюмы спортивные", quantity: 1 }
     ],
     productReturns: [
-      { name: "Костюм женский спортивный", value: 12000 },
-      { name: "Платье летнее", value: 8500 },
-      { name: "Футболка мужская", value: 6300 },
-      { name: "Джинсы классические", value: 4200 },
-      { name: "Куртка зимняя", value: 3000 }
+      { name: "Костюм женский спортивный", value: 12000, count: 3 },
+      { name: "Платье летнее", value: 8500, count: 2 },
+      { name: "Футболка мужская", value: 6300, count: 4 },
+      { name: "Джинсы классические", value: 4200, count: 1 },
+      { name: "Куртка зимняя", value: 3000, count: 1 }
     ],
     penaltiesData: [],
     topProfitableProducts: [
-      { name: "Костюм женский спортивный", price: "3200", profit: "25000", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" },
-      { name: "Платье летнее", price: "1200", profit: "18000", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" },
-      { name: "Джинсы классические", price: "2800", profit: "15500", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" }
+      { 
+        name: "Костюм женский спортивный", 
+        price: "3200", 
+        profit: "25000", 
+        image: "https://images.wbstatic.net/big/new/25250000/25251346-1.jpg",
+        quantitySold: 65,
+        margin: 42,
+        returnRate: 1.8,
+        category: "Женская одежда"
+      },
+      { 
+        name: "Платье летнее", 
+        price: "1200", 
+        profit: "18000", 
+        image: "https://images.wbstatic.net/big/new/22270000/22271973-1.jpg",
+        quantitySold: 58,
+        margin: 45,
+        returnRate: 1.5,
+        category: "Женская одежда" 
+      },
+      { 
+        name: "Джинсы классические", 
+        price: "2800", 
+        profit: "15500", 
+        image: "https://images.wbstatic.net/big/new/13730000/13733711-1.jpg",
+        quantitySold: 42,
+        margin: 35,
+        returnRate: 2.2,
+        category: "Мужская одежда" 
+      }
     ],
     topUnprofitableProducts: [
-      { name: "Шарф зимний", price: "800", profit: "-5200", image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg" },
-      { name: "Рубашка офисная", price: "1500", profit: "-3800", image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg" },
-      { name: "Перчатки кожаные", price: "1200", profit: "-2900", image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg" }
+      { 
+        name: "Шарф зимний", 
+        price: "800", 
+        profit: "-5200", 
+        image: "https://images.wbstatic.net/big/new/11080000/11081822-1.jpg",
+        quantitySold: 4,
+        margin: 8,
+        returnRate: 22.5,
+        category: "Аксессуары" 
+      },
+      { 
+        name: "Рубашка офисная", 
+        price: "1500", 
+        profit: "-3800", 
+        image: "https://images.wbstatic.net/big/new/9080000/9080277-1.jpg",
+        quantitySold: 3,
+        margin: 5,
+        returnRate: 18.0,
+        category: "Мужская одежда" 
+      },
+      { 
+        name: "Перчатки кожаные", 
+        price: "1200", 
+        profit: "-2900", 
+        image: "https://images.wbstatic.net/big/new/10320000/10328291-1.jpg",
+        quantitySold: 2,
+        margin: 12,
+        returnRate: 25.0,
+        category: "Аксессуары" 
+      }
     ]
   };
 };

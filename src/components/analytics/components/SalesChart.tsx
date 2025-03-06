@@ -22,6 +22,25 @@ interface SalesChartProps {
 }
 
 const SalesChart = ({ data }: SalesChartProps) => {
+  // Check if data is valid and has sales data
+  const hasSalesData = data && data.dailySales && data.dailySales.length > 0;
+  
+  if (!hasSalesData) {
+    return (
+      <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950/30">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-purple-700 to-indigo-700 dark:from-purple-400 dark:to-indigo-400">Динамика продаж</h3>
+          <div className="bg-purple-100 dark:bg-purple-900/60 p-2 rounded-full shadow-inner">
+            <DollarSign className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+          </div>
+        </div>
+        <div className="h-[300px] flex items-center justify-center">
+          <p className="text-muted-foreground">Нет данных о продажах за выбранный период</p>
+        </div>
+      </Card>
+    );
+  }
+  
   return (
     <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950/30">
       <div className="flex items-center justify-between mb-6">
@@ -55,8 +74,12 @@ const SalesChart = ({ data }: SalesChartProps) => {
             <Tooltip 
               formatter={(value: any) => [`${value.toLocaleString()} ₽`, 'Продажи']}
               labelFormatter={(label) => {
-                const date = new Date(label);
-                return format(date, 'dd.MM.yyyy');
+                try {
+                  const date = new Date(label);
+                  return format(date, 'dd.MM.yyyy');
+                } catch (e) {
+                  return label;
+                }
               }}
               contentStyle={{ 
                 background: 'rgba(255, 255, 255, 0.95)', 
