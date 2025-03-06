@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,6 +27,85 @@ const Dashboard = () => {
   const [sales, setSales] = useState<WildberriesSale[]>([]);
   const [warehouseDistribution, setWarehouseDistribution] = useState<any[]>([]);
   const [regionDistribution, setRegionDistribution] = useState<any[]>([]);
+
+  const filterDataByPeriod = (date: string, period: Period) => {
+    const now = new Date();
+    const itemDate = new Date(date);
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    switch (period) {
+      case "today":
+        return itemDate >= todayStart;
+      case "week":
+        const weekAgo = new Date(todayStart);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return itemDate >= weekAgo;
+      case "2weeks":
+        const twoWeeksAgo = new Date(todayStart);
+        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+        return itemDate >= twoWeeksAgo;
+      case "4weeks":
+        const fourWeeksAgo = new Date(todayStart);
+        fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+        return itemDate >= fourWeeksAgo;
+      default:
+        return true;
+    }
+  };
+
+  const getFilteredOrders = (orders: WildberriesOrder[]) => {
+    const filteredOrders = orders.filter(order => filterDataByPeriod(order.date, period));
+
+    // Recalculate distributions based on filtered orders
+    const warehouseCounts: Record<string, number> = {};
+    const regionCounts: Record<string, number> = {};
+    const totalOrders = filteredOrders.length;
+
+    filteredOrders.forEach(order => {
+      if (order.warehouseName) {
+        warehouseCounts[order.warehouseName] = (warehouseCounts[order.warehouseName] || 0) + 1;
+      }
+      if (order.regionName) {
+        regionCounts[order.regionName] = (regionCounts[order.regionName] || 0) + 1;
+      }
+    });
+
+    const newWarehouseDistribution = Object.entries(warehouseCounts)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: (count / totalOrders) * 100
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    const newRegionDistribution = Object.entries(regionCounts)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: (count / totalOrders) * 100
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    return {
+      orders: filteredOrders,
+      warehouseDistribution: newWarehouseDistribution,
+      regionDistribution: newRegionDistribution
+    };
+  };
+
+  const getFilteredSales = (sales: WildberriesSale[]) => {
+    return sales.filter(sale => filterDataByPeriod(sale.date, period));
+  };
+
+  useEffect(() => {
+    if (orders.length > 0) {
+      const { orders: filteredOrders, warehouseDistribution: newWarehouseDistribution, regionDistribution: newRegionDistribution } = getFilteredOrders(orders);
+      setWarehouseDistribution(newWarehouseDistribution);
+      setRegionDistribution(newRegionDistribution);
+    }
+  }, [period, orders]);
 
   const fetchData = async () => {
     try {
@@ -146,14 +224,14 @@ const Dashboard = () => {
           <div className="mb-4">
             <PeriodSelector value={period} onChange={setPeriod} />
           </div>
-          <OrdersTable orders={orders} />
+          <OrdersTable orders={getFilteredOrders(orders).orders} />
         </TabsContent>
 
         <TabsContent value="sales" className="space-y-4">
           <div className="mb-4">
             <PeriodSelector value={period} onChange={setPeriod} />
           </div>
-          <SalesTable sales={sales} />
+          <SalesTable sales={getFilteredSales(sales)} />
         </TabsContent>
 
         <TabsContent value="geography" className="space-y-4">
