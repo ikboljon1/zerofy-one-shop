@@ -16,13 +16,17 @@ import {
 } from "recharts";
 import { formatCurrency } from "@/utils/formatCurrency";
 
+interface DeductionsData {
+  date: string;
+  logistic: number;
+  storage: number;
+  penalties: number;
+  acceptance?: number;
+  advertising?: number;
+}
+
 interface DeductionsChartProps {
-  data: Array<{
-    date: string;
-    logistic: number;
-    storage: number;
-    penalties: number;
-  }>;
+  data: DeductionsData[];
 }
 
 const DeductionsChart = ({ data }: DeductionsChartProps) => {
