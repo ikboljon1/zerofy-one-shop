@@ -15,7 +15,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
 import { getAdvertCosts, getAdvertBalance, getAdvertPayments } from "@/services/advertisingApi";
-import { getAnalyticsData } from "@/utils/storeUtils";
+import { getAnalyticsData, saveAnalyticsData } from "@/utils/storeUtils";
 
 import { 
   demoData, 
@@ -96,7 +96,7 @@ interface StoredAnalyticsData {
   }>;
   productAdvertisingData: Array<{name: string, value: number}>;
   advertisingBreakdown: AdvertisingBreakdown;
-  timestamp: number; // Добавляем timestamp для отслеживания обновлений
+  timestamp: number;
 }
 
 interface DeductionsTimelineItem {
@@ -129,6 +129,7 @@ const AnalyticsSection = () => {
     return stores.find((store: any) => store.isSelected) || null;
   };
 
+  // Улучшенная функция сохранения данных аналитики
   const saveAnalyticsData = (storeId: string) => {
     // Обновляем timestamp при каждом сохранении
     const timestamp = Date.now();
@@ -147,10 +148,19 @@ const AnalyticsSection = () => {
       timestamp
     };
     
+    // Сохраняем данные в localStorage и оповещаем другие вкладки об обновлении
     localStorage.setItem(`${ANALYTICS_STORAGE_KEY}_${storeId}`, JSON.stringify(analyticsData));
+    
+    // Используем StorageEvent для синхронизации между вкладками
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: `${ANALYTICS_STORAGE_KEY}_${storeId}`,
+      newValue: JSON.stringify(analyticsData)
+    }));
+    
     console.log('Analytics data saved to localStorage with timestamp:', timestamp);
   };
 
+  // Улучшенная функция загрузки данных аналитики
   const loadStoredAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
     try {
       // Всегда получаем свежие данные из localStorage
@@ -164,31 +174,25 @@ const AnalyticsSection = () => {
       try {
         const parsedData = JSON.parse(storedData);
         
-        // Проверяем, что данные не устарели (опционально можно добавить проверку по времени)
-        if (parsedData) {
-          setDateFrom(new Date(parsedData.dateFrom || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)));
-          setDateTo(new Date(parsedData.dateTo || new Date()));
-          
-          if (parsedData.data) {
-            setData(parsedData.data);
-          }
-          
-          setPenalties(parsedData.penalties || []);
-          setReturns(parsedData.returns || []);
-          setDeductionsTimeline(parsedData.deductionsTimeline || []);
-          setProductAdvertisingData(parsedData.productAdvertisingData || []);
-          
-          if (parsedData.advertisingBreakdown) {
-            setAdvertisingBreakdown(parsedData.advertisingBreakdown);
-          }
-          
-          if (parsedData.timestamp) {
-            setDataTimestamp(parsedData.timestamp);
-          }
-          
-          console.log('Analytics data loaded from localStorage with timestamp:', parsedData.timestamp);
-          return true;
+        // Проверяем валидность данных
+        if (!parsedData || !parsedData.data || !parsedData.timestamp) {
+          console.warn('Invalid analytics data in localStorage');
+          return false;
         }
+        
+        // Устанавливаем все данные из хранилища
+        setDateFrom(new Date(parsedData.dateFrom || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)));
+        setDateTo(new Date(parsedData.dateTo || new Date()));
+        setData(parsedData.data);
+        setPenalties(parsedData.penalties || []);
+        setReturns(parsedData.returns || []);
+        setDeductionsTimeline(parsedData.deductionsTimeline || []);
+        setProductAdvertisingData(parsedData.productAdvertisingData || []);
+        setAdvertisingBreakdown(parsedData.advertisingBreakdown || { search: 0 });
+        setDataTimestamp(parsedData.timestamp);
+        
+        console.log('Analytics data loaded from localStorage with timestamp:', parsedData.timestamp);
+        return true;
       } catch (error) {
         console.error('Error parsing analytics data:', error);
         return false;
@@ -214,6 +218,7 @@ const AnalyticsSection = () => {
         return;
       }
 
+      // Запрашиваем данные статистики
       const statsData = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
       
       // Try-catch block for advertising API to prevent it from breaking everything else
@@ -270,6 +275,7 @@ const AnalyticsSection = () => {
         totalAdvertisingCost = demoData.currentPeriod.expenses.advertising;
       }
       
+      // Формируем обновленные данные
       if (statsData) {
         const modifiedData: AnalyticsData = {
           currentPeriod: {
@@ -347,6 +353,9 @@ const AnalyticsSection = () => {
         // Сохраняем данные в localStorage
         saveAnalyticsData(selectedStore.id);
         
+        // Также обновляем данные для других компонентов через storeUtils
+        saveAnalyticsData(selectedStore.id);
+        
         toast({
           title: "Успех",
           description: "Аналитические данные успешно обновлены",
@@ -409,12 +418,26 @@ const AnalyticsSection = () => {
       setIsLoading(false);
     }
     
-    // Добавляем обработчик события для отслеживания изменений в localStorage
+    // Улучшенный обработчик событий хранилища с проверкой актуальности данных
     const handleStorageChange = (e: StorageEvent) => {
       const selectedStore = getSelectedStore();
       if (selectedStore && e.key === `${ANALYTICS_STORAGE_KEY}_${selectedStore.id}`) {
-        console.log('Analytics data changed in another tab/window. Reloading...');
-        loadStoredAnalyticsData(selectedStore.id);
+        if (e.newValue) {
+          try {
+            const newData = JSON.parse(e.newValue);
+            const currentTimestamp = dataTimestamp;
+            
+            // Проверяем, что новые данные более свежие
+            if (newData.timestamp > currentTimestamp) {
+              console.log('Newer analytics data detected in storage. Reloading...');
+              loadStoredAnalyticsData(selectedStore.id);
+            } else {
+              console.log('Storage event triggered, but data is not newer than current');
+            }
+          } catch (error) {
+            console.error('Error parsing new storage data:', error);
+          }
+        }
       }
     };
     
@@ -423,7 +446,7 @@ const AnalyticsSection = () => {
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, []);
+  }, [dataTimestamp]);
 
   const hasAdvertisingData = productAdvertisingData && productAdvertisingData.length > 0;
   const hasPenaltiesData = penalties && penalties.length > 0;

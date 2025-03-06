@@ -19,6 +19,7 @@ interface SalesChartProps {
     dailySales: Array<{
       date: string;
       sales: number;
+      previousSales?: number;
     }>;
   };
 }
@@ -49,6 +50,14 @@ const SalesChart = ({ data }: SalesChartProps) => {
     );
   }
   
+  // Гарантируем, что данные правильно отформатированы для графика
+  const chartData = data.dailySales.map(item => ({
+    ...item,
+    date: typeof item.date === 'string' ? item.date : new Date().toISOString().split('T')[0],
+    sales: typeof item.sales === 'number' ? item.sales : 0,
+    previousSales: typeof item.previousSales === 'number' ? item.previousSales : 0
+  }));
+  
   return (
     <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950/30 hover:shadow-xl transition-all duration-300">
       <div className="flex items-center justify-between mb-6">
@@ -62,7 +71,7 @@ const SalesChart = ({ data }: SalesChartProps) => {
         <div className="absolute inset-0 bg-gradient-to-b from-purple-400/5 to-transparent rounded-lg opacity-50"></div>
         
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data.dailySales} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+          <AreaChart data={chartData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8}/>
@@ -78,8 +87,13 @@ const SalesChart = ({ data }: SalesChartProps) => {
             <XAxis 
               dataKey="date" 
               tickFormatter={(value) => {
-                const date = new Date(value);
-                return `${date.getDate()}.${date.getMonth() + 1}`;
+                try {
+                  const date = new Date(value);
+                  return `${date.getDate()}.${date.getMonth() + 1}`;
+                } catch (e) {
+                  console.log('Error formatting date:', e, value);
+                  return value;
+                }
               }}
               stroke="#9ca3af"
               tick={{ fontSize: 12 }}
@@ -100,6 +114,7 @@ const SalesChart = ({ data }: SalesChartProps) => {
                   const date = new Date(label);
                   return format(date, 'dd.MM.yyyy');
                 } catch (e) {
+                  console.error('Error formatting tooltip date:', e, label);
                   return label;
                 }
               }}
