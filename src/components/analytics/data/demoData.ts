@@ -1,4 +1,3 @@
-
 // Demo data for analytics dashboard
 export const penaltiesData = [
   { name: "Брак товара", value: 5000 },
@@ -17,13 +16,62 @@ export const returnsData = [
 ];
 
 export const deductionsTimelineData = [
-  { date: "01.05.2024", logistic: 1200, storage: 800, penalties: 500 },
-  { date: "02.05.2024", logistic: 1100, storage: 900, penalties: 300 },
-  { date: "03.05.2024", logistic: 1500, storage: 750, penalties: 800 },
-  { date: "04.05.2024", logistic: 1300, storage: 850, penalties: 200 },
-  { date: "05.05.2024", logistic: 1400, storage: 950, penalties: 600 },
-  { date: "06.05.2024", logistic: 1250, storage: 700, penalties: 400 },
-  { date: "07.05.2024", logistic: 1600, storage: 800, penalties: 350 }
+  { 
+    date: "2024-05-01", 
+    logistic: 1200, 
+    storage: 800, 
+    penalties: 500,
+    acceptance: 300,
+    advertising: 450
+  },
+  { 
+    date: "2024-05-02", 
+    logistic: 1100, 
+    storage: 900, 
+    penalties: 300,
+    acceptance: 250,
+    advertising: 500
+  },
+  { 
+    date: "2024-05-03", 
+    logistic: 1500, 
+    storage: 750, 
+    penalties: 800,
+    acceptance: 400,
+    advertising: 600
+  },
+  { 
+    date: "2024-05-04", 
+    logistic: 1300, 
+    storage: 850, 
+    penalties: 200,
+    acceptance: 350,
+    advertising: 550
+  },
+  { 
+    date: "2024-05-05", 
+    logistic: 1400, 
+    storage: 950, 
+    penalties: 600,
+    acceptance: 300,
+    advertising: 480
+  },
+  { 
+    date: "2024-05-06", 
+    logistic: 1250, 
+    storage: 700, 
+    penalties: 400,
+    acceptance: 280,
+    advertising: 520
+  },
+  { 
+    date: "2024-05-07", 
+    logistic: 1600, 
+    storage: 800, 
+    penalties: 350,
+    acceptance: 320,
+    advertising: 490
+  }
 ];
 
 export const advertisingData = [
