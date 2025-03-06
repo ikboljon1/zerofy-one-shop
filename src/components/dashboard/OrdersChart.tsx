@@ -1,7 +1,8 @@
+
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WildberriesOrder } from "@/types/store";
-import { format, subDays, eachDayOfInterval, startOfDay, endOfDay, eachHourOfInterval, addHours, isSameDay, isToday, isYesterday } from "date-fns";
+import { format, subDays, eachDayOfInterval, startOfDay, endOfDay, eachHourOfInterval, addHours, isToday, isYesterday } from "date-fns";
 import { ru } from "date-fns/locale";
 import { 
   AreaChart, 
@@ -278,28 +279,45 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
           </div>
         </CardHeader>
         <CardContent className="flex justify-center pt-4">
-          <div className="h-[300px] w-full">
+          <div className="h-[300px] w-full relative">
             <ResponsiveContainer width="100%" height="100%">
-              <RadialBarChart 
-                innerRadius="30%" 
-                outerRadius="90%" 
-                data={cancelledVsActiveData} 
-                startAngle={90} 
-                endAngle={-270}
-                cx="50%"
-                cy="50%"
-              >
-                <RadialBar
-                  background={{ fill: 'rgba(0,0,0,0.05)' }}
-                  label={{ 
-                    position: 'insideStart', 
-                    fill: '#fff', 
-                    fontWeight: 600,
-                    fontSize: 14,
-                  }}
-                  cornerRadius={12}
+              <PieChart>
+                <defs>
+                  {cancelledVsActiveData.map((entry, index) => (
+                    <linearGradient key={`gradient-${index}`} id={`gradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={entry.fill} stopOpacity={0.9}/>
+                      <stop offset="100%" stopColor={entry.fill} stopOpacity={0.6}/>
+                    </linearGradient>
+                  ))}
+                  <filter id="glow" height="200%" width="200%" x="-50%" y="-50%">
+                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                    <feMerge>
+                      <feMergeNode in="coloredBlur"/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
+                </defs>
+                <Pie
+                  data={cancelledVsActiveData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={90}
+                  paddingAngle={4}
                   dataKey="value"
+                  animationBegin={0}
+                  animationDuration={1500}
+                  animationEasing="ease-out"
                 >
+                  {cancelledVsActiveData.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={`url(#gradient-${index})`} 
+                      stroke="#fff"
+                      strokeWidth={2}
+                      className="filter drop-shadow-md hover:drop-shadow-lg transition-all duration-300"
+                    />
+                  ))}
                   <LabelList 
                     dataKey="name" 
                     position="outside" 
@@ -313,7 +331,7 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
                       return `${value} ${percentage}`;
                     }}
                   />
-                </RadialBar>
+                </Pie>
                 <Tooltip
                   formatter={(value) => [`${value} заказов`, ""]}
                   contentStyle={{ 
@@ -323,11 +341,11 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
                     boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
                   }}
                 />
-              </RadialBarChart>
+              </PieChart>
             </ResponsiveContainer>
             
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-24 h-24 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm flex flex-col items-center justify-center shadow-lg border border-indigo-200/50 dark:border-indigo-800/50 animate-pulse-slow">
+              <div className="w-28 h-28 rounded-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm flex flex-col items-center justify-center shadow-xl border-2 border-indigo-200/50 dark:border-indigo-800/50 animate-pulse-slow">
                 <span className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-600 dark:from-indigo-400 dark:to-blue-400">
                   {totalOrders}
                 </span>
