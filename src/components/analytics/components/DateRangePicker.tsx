@@ -14,7 +14,7 @@ const DateRangePicker = ({
   return (
     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
       <div className="space-y-1">
-        <h2 className="text-lg sm:text-xl font-semibold">Аналитика продаж и удержаний</h2>
+        <h2 className="text-lg sm:text-xl font-semibold">Аналитика продаж и заказов</h2>
         <p className="text-sm text-muted-foreground">
           Данные за текущий день
         </p>

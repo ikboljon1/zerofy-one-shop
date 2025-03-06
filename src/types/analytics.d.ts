@@ -26,8 +26,12 @@ export interface AnalyticsData {
   dailySales?: Array<{
     date: string;
     sales: number;
+    previousSales?: number;
   }>;
-  productSales?: Array<any>;
+  productSales?: Array<{
+    subject_name: string;
+    quantity: number;
+  }>;
   ordersByRegion?: Array<{
     region: string;
     count: number;
@@ -36,6 +40,32 @@ export interface AnalyticsData {
     warehouse: string;
     count: number;
   }>;
-  topProfitableProducts?: Array<any>;
-  topUnprofitableProducts?: Array<any>;
+  topProfitableProducts?: Array<{
+    name: string;
+    price: string;
+    profit: string;
+    image: string;
+    quantitySold?: number;
+    margin?: number;
+    returnCount?: number;
+    category?: string;
+  }>;
+  topUnprofitableProducts?: Array<{
+    name: string;
+    price: string;
+    profit: string;
+    image: string;
+    quantitySold?: number;
+    margin?: number;
+    returnCount?: number;
+    category?: string;
+  }>;
+  productReturns?: Array<{
+    name: string;
+    value: number;
+  }>;
+  penaltiesData?: Array<{
+    name: string;
+    value: number;
+  }>;
 }

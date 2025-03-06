@@ -9,5 +9,15 @@ export interface Store {
   lastFetchDate?: string;
 }
 
+export interface NewStore {
+  marketplace?: Marketplace;
+  name?: string;
+  apiKey?: string;
+}
+
+export type Marketplace = "Wildberries" | "Ozon" | "Yandex Market";
+
+export const marketplaces: Marketplace[] = ["Wildberries", "Ozon", "Yandex Market"];
+
 export const STORES_STORAGE_KEY = 'marketplace_stores';
 export const STATS_STORAGE_KEY = 'marketplace_stats';
