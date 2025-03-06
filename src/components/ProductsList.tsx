@@ -305,7 +305,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           nmId,
           doc_type_name: item.doc_type_name,
           retail_price: item.retail_price,
-          quantity: item.quantity
+          quantity: item.quantity,
+          supplier_oper_name: item.supplier_oper_name
         });
 
         if (!expensesMap.has(nmId)) {
@@ -322,11 +323,19 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         
         const expenses = expensesMap.get(nmId);
         expenses.logistics += item.delivery_rub || 0;
-        expenses.storage += item.storage_fee || 0;
         expenses.penalties += item.penalty || 0;
         expenses.acceptance += item.acceptance || 0;
         expenses.deductions += item.deduction || 0;
         expenses.ppvz_for_pay += item.ppvz_for_pay || 0;
+
+        // Учитываем расходы на хранение только если supplier_oper_name === "Хранение"
+        if (item.supplier_oper_name === "Хранение") {
+          expenses.storage += Math.abs(item.supplier_operation_name_amount || 0);
+          console.log(`Added storage fee for nmId ${nmId}:`, Math.abs(item.supplier_operation_name_amount || 0));
+        } else {
+          // Для обратной совместимости также учитываем storage_fee
+          expenses.storage += item.storage_fee || 0;
+        }
 
         if (item.doc_type_name === "Продажа") {
           expenses.retail_price += item.retail_price || 0;
