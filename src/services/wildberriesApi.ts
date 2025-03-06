@@ -28,6 +28,10 @@ export interface WildberriesResponse {
     name: string;
     value: number;
   }>;
+  penaltiesData?: Array<{
+    name: string;
+    value: number;
+  }>;
   topProfitableProducts?: Array<{
     name: string;
     price: string;
@@ -354,8 +358,8 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       productSales,
       productReturns,
       penaltiesData,
-      topProfitableProducts: [],
-      topUnprofitableProducts: []
+      topProfitableProducts: result.topProfitableProducts || [],
+      topUnprofitableProducts: result.topUnprofitableProducts || []
     };
     
     console.log(`Received and processed data from Wildberries API. Total returns: ${metrics.total_returns}, Return count: ${metrics.total_return_count}`);
@@ -424,6 +428,7 @@ const getDemoData = (): WildberriesResponse => {
       { name: "Джинсы классические", value: 4200 },
       { name: "Куртка зимняя", value: 3000 }
     ],
+    penaltiesData: [],
     topProfitableProducts: [
       { name: "Костюм женский спортивный", price: "3200", profit: "25000", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" },
       { name: "Платье летнее", price: "1200", profit: "18000", image: "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg" },
@@ -433,7 +438,6 @@ const getDemoData = (): WildberriesResponse => {
       { name: "Шарф зимний", price: "800", profit: "-5200", image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg" },
       { name: "Рубашка офисная", price: "1500", profit: "-3800", image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg" },
       { name: "Перчатки кожаные", price: "1200", profit: "-2900", image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg" }
-    ],
-    penaltiesData: []
+    ]
   };
 };
