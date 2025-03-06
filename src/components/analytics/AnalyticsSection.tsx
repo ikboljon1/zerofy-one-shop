@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag, Loader2 } from "lucide-react";
@@ -17,7 +18,6 @@ import { getAdvertCosts, getAdvertBalance, getAdvertPayments } from "@/services/
 
 import { 
   demoData, 
-  penaltiesData,
   deductionsTimelineData,
   advertisingData
 } from "./data/demoData";
@@ -87,7 +87,7 @@ const AnalyticsSection = () => {
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState<AnalyticsData>(demoData);
-  const [penalties, setPenalties] = useState(penaltiesData);
+  const [penalties, setPenalties] = useState<Array<{name: string, value: number}>>([]);
   const [returns, setReturns] = useState<Array<{name: string, value: number}>>([]);
   const [deductionsTimeline, setDeductionsTimeline] = useState(deductionsTimelineData);
   const [productAdvertisingData, setProductAdvertisingData] = useState<Array<{name: string, value: number}>>([]);
@@ -127,7 +127,12 @@ const AnalyticsSection = () => {
         setDateFrom(new Date(parsedData.dateFrom));
         setDateTo(new Date(parsedData.dateTo));
         setData(parsedData.data);
-        setPenalties(parsedData.penalties);
+        
+        if (parsedData.penalties && parsedData.penalties.length > 0) {
+          setPenalties(parsedData.penalties);
+        } else {
+          setPenalties([]);
+        }
         
         if (parsedData.returns && parsedData.returns.length > 0) {
           setReturns(parsedData.returns);
@@ -240,6 +245,14 @@ const AnalyticsSection = () => {
         
         setData(modifiedData);
         
+        // Set real penalties data if available
+        if (statsData.penaltiesData && statsData.penaltiesData.length > 0) {
+          setPenalties(statsData.penaltiesData);
+        } else {
+          // Clear penalties if none exist (don't use demo data)
+          setPenalties([]);
+        }
+        
         if (statsData.productReturns && statsData.productReturns.length > 0) {
           setReturns(statsData.productReturns);
         } else {
@@ -271,6 +284,7 @@ const AnalyticsSection = () => {
         description: "Не удалось загрузить аналитические данные",
         variant: "destructive"
       });
+      setPenalties([]);
       setReturns([]);
     } finally {
       setIsLoading(false);
@@ -283,6 +297,7 @@ const AnalyticsSection = () => {
       const hasStoredData = loadStoredAnalyticsData(selectedStore.id);
       
       if (!hasStoredData) {
+        setPenalties([]);
         setProductAdvertisingData([]);
         setReturns([]);
         fetchData();
@@ -290,6 +305,7 @@ const AnalyticsSection = () => {
         setIsLoading(false);
       }
     } else {
+      setPenalties([]);
       setProductAdvertisingData([]);
       setReturns([]);
       setIsLoading(false);
@@ -297,6 +313,7 @@ const AnalyticsSection = () => {
   }, []);
 
   const hasAdvertisingData = productAdvertisingData && productAdvertisingData.length > 0;
+  const hasPenaltiesData = penalties && penalties.length > 0;
 
   const handleDateChange = () => {
     fetchData();
@@ -339,12 +356,14 @@ const AnalyticsSection = () => {
             title="Детализация по штрафам"
             icon={<AlertCircle className="h-4 w-4 text-purple-600 dark:text-purple-400" />}
             data={penalties}
+            emptyMessage="Штрафы отсутствуют"
           />
           <PieChartCard 
             title="Возврат товаров"
             icon={<PackageX className="h-4 w-4 text-red-600 dark:text-red-400" />}
             data={returns}
             showCount={true}
+            emptyMessage="Возвраты отсутствуют"
           />
         </div>
 
@@ -355,6 +374,7 @@ const AnalyticsSection = () => {
             title="Расходы на рекламу по товарам"
             icon={<Tag className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
             data={productAdvertisingData}
+            emptyMessage="Нет данных о расходах на рекламу"
           />
         )}
 

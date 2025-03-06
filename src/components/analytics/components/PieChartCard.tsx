@@ -19,6 +19,7 @@ interface PieChartCardProps {
   }>;
   valueLabel?: string;
   showCount?: boolean; // Флаг для отображения количества
+  emptyMessage?: string; // Сообщение при отсутствии данных
 }
 
 const PieChartCard = ({ 
@@ -26,7 +27,8 @@ const PieChartCard = ({
   icon, 
   data, 
   valueLabel = "₽", 
-  showCount = false 
+  showCount = false,
+  emptyMessage = "Нет данных за выбранный период" 
 }: PieChartCardProps) => {
   // Проверяем, что данные не пустые и содержат значения больше нуля
   const hasData = data && data.length > 0 && data.some(item => item.value > 0);
@@ -88,7 +90,7 @@ const PieChartCard = ({
         </div>
       ) : (
         <div className="py-8 text-center text-muted-foreground">
-          <p>Нет данных за выбранный период</p>
+          <p>{emptyMessage}</p>
         </div>
       )}
     </Card>

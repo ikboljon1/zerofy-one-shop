@@ -51,6 +51,16 @@ const formatDateRFC3339 = (date: Date, isEnd: boolean = false): string => {
   return isEnd ? `${formattedDate}T23:59:59` : `${formattedDate}T00:00:00`;
 };
 
+const getLastWeekDateRange = () => {
+  const today = new Date();
+  const lastWeek = new Date(today);
+  lastWeek.setDate(today.getDate() - 7);
+  return {
+    dateFrom: lastWeek,
+    dateTo: today
+  };
+};
+
 const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
   try {
     const formattedDateFrom = formatDate(dateFrom);
@@ -118,6 +128,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   let totalReturnCount = 0;    // Количество возвратов
   
   const returnsByProduct: Record<string, { value: number; count: number }> = {};
+  const penaltiesByReason: Record<string, number> = {}; // Track penalties by reason
   
   const productProfitability: Record<string, { 
     name: string;
@@ -187,12 +198,27 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       }
     }
     
+    // Process penalties by reason if available
+    if (record.penalty && record.penalty > 0) {
+      const reason = record.penalty_reason || 'Другие причины';
+      if (!penaltiesByReason[reason]) {
+        penaltiesByReason[reason] = 0;
+      }
+      penaltiesByReason[reason] += record.penalty;
+    }
+    
     totalDeliveryRub += record.delivery_rub || 0;
     totalRebillLogisticCost += record.rebill_logistic_cost || 0;
     totalStorageFee += record.storage_fee || 0;
     totalPenalty += record.penalty || 0;
     totalDeduction += record.deduction || 0;
   }
+  
+  // Process penalties for the chart - convert to array format
+  const penaltiesData = Object.entries(penaltiesByReason).map(([name, value]) => ({
+    name,
+    value: Math.round(value * 100) / 100
+  })).sort((a, b) => b.value - a.value);
   
   const totalAcceptance = paidAcceptanceData.reduce((sum, record) => sum + (record.total || 0), 0);
   
@@ -244,6 +270,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       total_acceptance: Math.round(totalAcceptance * 100) / 100,
       total_return_count: totalReturnCount
     },
+    penaltiesData,
     productReturns,
     topProfitableProducts,
     topUnprofitableProducts,
@@ -276,7 +303,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       return getDemoData();
     }
     
-    const { metrics, productReturns } = result;
+    const { metrics, productReturns, penaltiesData } = result;
     
     const salesByCategory: Record<string, number> = {};
     for (const record of reportData) {
@@ -326,6 +353,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       dailySales,
       productSales,
       productReturns,
+      penaltiesData,
       topProfitableProducts: [],
       topUnprofitableProducts: []
     };
@@ -405,6 +433,7 @@ const getDemoData = (): WildberriesResponse => {
       { name: "Шарф зимний", price: "800", profit: "-5200", image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg" },
       { name: "Рубашка офисная", price: "1500", profit: "-3800", image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg" },
       { name: "Перчатки кожаные", price: "1200", profit: "-2900", image: "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg" }
-    ]
+    ],
+    penaltiesData: []
   };
 };
