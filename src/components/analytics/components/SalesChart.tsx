@@ -13,52 +13,27 @@ import {
   ReferenceLine
 } from "recharts";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useEffect, useState } from "react";
 
 interface SalesChartProps {
   data: {
     dailySales: Array<{
       date: string;
       sales: number;
-      previousSales?: number;
     }>;
   };
 }
 
 const SalesChart = ({ data }: SalesChartProps) => {
   const isMobile = useIsMobile();
-  const [chartData, setChartData] = useState<Array<{
-    date: string;
-    sales: number;
-    previousSales?: number;
-  }>>([]);
-  
-  // Effect to update chart data when data prop changes
-  useEffect(() => {
-    // Check if data is valid and has sales data
-    const hasSalesData = data && data.dailySales && data.dailySales.length > 0;
-    
-    if (hasSalesData) {
-      // Гарантируем, что данные правильно отформатированы для графика
-      const formattedData = data.dailySales.map(item => ({
-        ...item,
-        date: typeof item.date === 'string' ? item.date : new Date().toISOString().split('T')[0],
-        sales: typeof item.sales === 'number' ? item.sales : 0,
-        previousSales: typeof item.previousSales === 'number' ? item.previousSales : 0
-      }));
-      
-      setChartData(formattedData);
-    } else {
-      setChartData([]);
-    }
-  }, [data]);
+  // Check if data is valid and has sales data
+  const hasSalesData = data && data.dailySales && data.dailySales.length > 0;
   
   // Calculate average sales
-  const avgSales = chartData.length > 0 
-    ? chartData.reduce((sum, item) => sum + item.sales, 0) / chartData.length
+  const avgSales = hasSalesData 
+    ? data.dailySales.reduce((sum, item) => sum + item.sales, 0) / data.dailySales.length
     : 0;
   
-  if (chartData.length === 0) {
+  if (!hasSalesData) {
     return (
       <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950/30">
         <div className="flex items-center justify-between mb-6">
@@ -75,41 +50,28 @@ const SalesChart = ({ data }: SalesChartProps) => {
   }
   
   return (
-    <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950/30 hover:shadow-xl transition-all duration-300">
+    <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950/30">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-purple-700 to-indigo-700 dark:from-purple-400 dark:to-indigo-400">Динамика продаж</h3>
-        <div className="bg-purple-100 dark:bg-purple-900/60 p-2 rounded-full shadow-inner animate-pulse">
+        <div className="bg-purple-100 dark:bg-purple-900/60 p-2 rounded-full shadow-inner">
           <DollarSign className="h-5 w-5 text-purple-600 dark:text-purple-400" />
         </div>
       </div>
-      <div className="h-[300px] relative">
-        {/* Glowing background effect */}
-        <div className="absolute inset-0 bg-gradient-to-b from-purple-400/5 to-transparent rounded-lg opacity-50"></div>
-        
+      <div className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+          <AreaChart data={data.dailySales} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.1}/>
+                <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
               </linearGradient>
-              {/* Add glowing effect */}
-              <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation="6" result="blur" />
-                <feComposite in="SourceGraphic" in2="blur" operator="over" />
-              </filter>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
             <XAxis 
               dataKey="date" 
               tickFormatter={(value) => {
-                try {
-                  const date = new Date(value);
-                  return `${date.getDate()}.${date.getMonth() + 1}`;
-                } catch (e) {
-                  console.log('Error formatting date:', e, value);
-                  return value;
-                }
+                const date = new Date(value);
+                return `${date.getDate()}.${date.getMonth() + 1}`;
               }}
               stroke="#9ca3af"
               tick={{ fontSize: 12 }}
@@ -130,7 +92,6 @@ const SalesChart = ({ data }: SalesChartProps) => {
                   const date = new Date(label);
                   return format(date, 'dd.MM.yyyy');
                 } catch (e) {
-                  console.error('Error formatting tooltip date:', e, label);
                   return label;
                 }
               }}
@@ -140,7 +101,6 @@ const SalesChart = ({ data }: SalesChartProps) => {
                 border: '1px solid #e5e7eb',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
               }}
-              cursor={{ stroke: '#8B5CF6', strokeWidth: 1, strokeDasharray: '5 5' }}
             />
             {!isMobile && (
               <ReferenceLine 
@@ -151,8 +111,7 @@ const SalesChart = ({ data }: SalesChartProps) => {
                   value: "Средние продажи",
                   position: "insideTopLeft",
                   fill: "#8B5CF6",
-                  fontSize: 12,
-                  fontWeight: 600
+                  fontSize: 12
                 }}
               />
             )}
@@ -160,17 +119,11 @@ const SalesChart = ({ data }: SalesChartProps) => {
               type="monotone"
               dataKey="sales"
               stroke="#8B5CF6"
-              strokeWidth={3}
+              strokeWidth={2}
               fillOpacity={1}
               fill="url(#colorSales)"
               name="Продажи"
-              activeDot={{ 
-                r: 8, 
-                strokeWidth: 2, 
-                stroke: "#ffffff", 
-                fill: "#8B5CF6", 
-                filter: "url(#glow)"
-              }}
+              activeDot={{ r: 6, strokeWidth: 0, fill: "#8B5CF6" }}
             />
           </AreaChart>
         </ResponsiveContainer>
