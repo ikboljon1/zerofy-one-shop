@@ -1,6 +1,6 @@
 
 import { Card } from "@/components/ui/card";
-import { DollarSign } from "lucide-react";
+import { DollarSign, TrendingUp } from "lucide-react";
 import { format } from "date-fns";
 import {
   ResponsiveContainer,
@@ -37,7 +37,10 @@ const SalesChart = ({ data }: SalesChartProps) => {
     return (
       <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950/30">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-purple-700 to-indigo-700 dark:from-purple-400 dark:to-indigo-400">Динамика продаж</h3>
+          <h3 className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-purple-700 to-indigo-700 dark:from-purple-400 dark:to-indigo-400 flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            Динамика продаж
+          </h3>
           <div className="bg-purple-100 dark:bg-purple-900/60 p-2 rounded-full shadow-inner">
             <DollarSign className="h-5 w-5 text-purple-600 dark:text-purple-400" />
           </div>
@@ -52,7 +55,10 @@ const SalesChart = ({ data }: SalesChartProps) => {
   return (
     <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950/30">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-purple-700 to-indigo-700 dark:from-purple-400 dark:to-indigo-400">Динамика продаж</h3>
+        <h3 className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-purple-700 to-indigo-700 dark:from-purple-400 dark:to-indigo-400 flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+          Динамика продаж
+        </h3>
         <div className="bg-purple-100 dark:bg-purple-900/60 p-2 rounded-full shadow-inner">
           <DollarSign className="h-5 w-5 text-purple-600 dark:text-purple-400" />
         </div>
@@ -61,10 +67,18 @@ const SalesChart = ({ data }: SalesChartProps) => {
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data.dailySales} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
             <defs>
-              <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="colorSalesGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8}/>
                 <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
               </linearGradient>
+              <filter id="salesShadow" x="-2" y="-2" width="104%" height="104%">
+                <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#8B5CF6" floodOpacity="0.3"/>
+              </filter>
+              <filter id="salesGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+                <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="glow" />
+                <feComposite in="SourceGraphic" in2="glow" operator="over" />
+              </filter>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
             <XAxis 
@@ -74,14 +88,14 @@ const SalesChart = ({ data }: SalesChartProps) => {
                 return `${date.getDate()}.${date.getMonth() + 1}`;
               }}
               stroke="#9ca3af"
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: 12, fontWeight: 500 }}
               tickLine={{ stroke: '#e5e7eb' }}
               axisLine={{ stroke: '#e5e7eb' }}
             />
             <YAxis 
               stroke="#9ca3af"
               tickFormatter={(value) => value >= 1000 ? `${value/1000}k` : value}
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: 12, fontWeight: 500 }}
               tickLine={{ stroke: '#e5e7eb' }}
               axisLine={{ stroke: '#e5e7eb' }}
             />
@@ -101,8 +115,9 @@ const SalesChart = ({ data }: SalesChartProps) => {
                 border: '1px solid #e5e7eb',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
               }}
+              cursor={{ stroke: '#8B5CF6', strokeWidth: 1, strokeDasharray: '5 5' }}
             />
-            {!isMobile && (
+            {!isMobile && avgSales > 0 && (
               <ReferenceLine 
                 y={avgSales} 
                 stroke="#8B5CF6" 
@@ -111,7 +126,8 @@ const SalesChart = ({ data }: SalesChartProps) => {
                   value: "Средние продажи",
                   position: "insideTopLeft",
                   fill: "#8B5CF6",
-                  fontSize: 12
+                  fontSize: 12,
+                  fontWeight: 500
                 }}
               />
             )}
@@ -119,11 +135,17 @@ const SalesChart = ({ data }: SalesChartProps) => {
               type="monotone"
               dataKey="sales"
               stroke="#8B5CF6"
-              strokeWidth={2}
+              strokeWidth={3}
               fillOpacity={1}
-              fill="url(#colorSales)"
+              fill="url(#colorSalesGradient)"
               name="Продажи"
-              activeDot={{ r: 6, strokeWidth: 0, fill: "#8B5CF6" }}
+              activeDot={{ 
+                r: 7, 
+                strokeWidth: 1, 
+                stroke: "#fff", 
+                fill: "#8B5CF6",
+                filter: "url(#salesShadow)"
+              }}
             />
           </AreaChart>
         </ResponsiveContainer>
