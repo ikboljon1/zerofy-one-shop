@@ -1,4 +1,3 @@
-
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WildberriesOrder } from "@/types/store";
@@ -42,7 +41,6 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
   const shouldDisplayHourly = useMemo(() => {
     if (orders.length === 0) return false;
     
-    // Check if all orders are from today or yesterday
     const firstOrderDate = new Date(orders[0].date);
     return isToday(firstOrderDate) || isYesterday(firstOrderDate);
   }, [orders]);
@@ -51,18 +49,15 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
     if (orders.length === 0) return [];
     
     if (shouldDisplayHourly) {
-      // Get the date of the first order (assuming all orders are from the same day - today or yesterday)
       const orderDate = new Date(orders[0].date);
       const dayStart = startOfDay(orderDate);
       const dayEnd = endOfDay(orderDate);
       
-      // Generate array of all hours in the day
       const hoursInterval = eachHourOfInterval({
         start: dayStart,
         end: dayEnd,
       });
       
-      // Count orders per hour
       return hoursInterval.map(hour => {
         const hourEnd = addHours(hour, 1);
         
@@ -84,17 +79,14 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
         };
       });
     } else {
-      // Get date range for the last 7 days
       const today = new Date();
-      const sevenDaysAgo = subDays(today, 6); // 7 days including today
+      const sevenDaysAgo = subDays(today, 6);
       
-      // Generate array of all days
       const daysInterval = eachDayOfInterval({
         start: sevenDaysAgo,
         end: today,
       });
       
-      // Count orders per day
       return daysInterval.map(day => {
         const dayStart = startOfDay(day);
         const dayEnd = endOfDay(day);
@@ -128,7 +120,7 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
       { name: 'Активные', value: active, fill: '#10b981' },
       { name: 'Отменённые', value: cancelled, fill: '#ef4444' },
       { name: 'Возвраты', value: returned, fill: '#f59e0b' },
-    ].filter(item => item.value > 0); // Only include items with values > 0
+    ].filter(item => item.value > 0);
   }, [orders]);
 
   const warehouseData = useMemo(() => {
@@ -178,7 +170,6 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
     },
   };
 
-  // Calculate total orders for displaying in the center of the chart
   const totalOrders = cancelledVsActiveData.reduce((sum, item) => sum + item.value, 0);
 
   return (
@@ -299,7 +290,6 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
                 cy="50%"
               >
                 <RadialBar
-                  minAngle={15}
                   background={{ fill: 'rgba(0,0,0,0.05)' }}
                   label={{ 
                     position: 'insideStart', 
@@ -336,7 +326,6 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
               </RadialBarChart>
             </ResponsiveContainer>
             
-            {/* Center circle showing total orders */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="w-24 h-24 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm flex flex-col items-center justify-center shadow-lg border border-indigo-200/50 dark:border-indigo-800/50 animate-pulse-slow">
                 <span className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-600 dark:from-indigo-400 dark:to-blue-400">
