@@ -40,7 +40,7 @@ export interface WildberriesResponse {
     image: string;
     quantitySold: number;
     margin: number;
-    returnRate: number;
+    returnCount: number;
     category: string;
   }>;
   topUnprofitableProducts?: Array<{
@@ -50,7 +50,7 @@ export interface WildberriesResponse {
     image: string;
     quantitySold: number;
     margin: number;
-    returnRate: number;
+    returnCount: number;
     category: string;
   }>;
 }
@@ -129,20 +129,19 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     return null;
   }
 
-  let totalSales = 0;          // Продажа
-  let totalForPay = 0;         // К перечислению за товар
-  let totalDeliveryRub = 0;    // Стоимость логистики
-  let totalRebillLogisticCost = 0; // Логистика (возмещение издержек)
-  let totalStorageFee = 0;     // Стоимость хранения
-  let totalReturns = 0;        // Возврат
-  let totalPenalty = 0;        // Штрафы
-  let totalDeduction = 0;      // Удержания
-  let totalToPay = 0;          // Итого к оплате
-  let totalReturnCount = 0;    // Количество возвратов
-  
+  let totalSales = 0;
+  let totalForPay = 0;
+  let totalDeliveryRub = 0;
+  let totalRebillLogisticCost = 0;
+  let totalStorageFee = 0;
+  let totalReturns = 0;
+  let totalPenalty = 0;
+  let totalDeduction = 0;
+  let totalToPay = 0;
+  let totalReturnCount = 0;
+
   const returnsByProduct: Record<string, { value: number; count: number }> = {};
-  const penaltiesByReason: Record<string, number> = {}; // Track penalties by reason
-  
+  const penaltiesByReason: Record<string, number> = {};
   const productProfitability: Record<string, { 
     name: string;
     price: number;
@@ -151,8 +150,9 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     profit: number;
     image: string;
     count: number;
+    returnCount: number;
   }> = {};
-  
+
   for (const record of data) {
     if (record.doc_type_name === 'Продажа') {
       totalSales += record.retail_price_withdisc_rub || 0;
@@ -168,7 +168,8 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
             costs: 0,
             profit: 0,
             image: record.pic_url || '',
-            count: 0
+            count: 0,
+            returnCount: 0
           };
         }
         
@@ -197,7 +198,8 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
             costs: 0,
             profit: 0,
             image: record.pic_url || '',
-            count: 0
+            count: 0,
+            returnCount: 0
           };
         }
         
@@ -211,7 +213,6 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       }
     }
     
-    // Process penalties by reason if available
     if (record.penalty && record.penalty > 0) {
       const reason = record.penalty_reason || 'Другие причины';
       if (!penaltiesByReason[reason]) {
@@ -226,25 +227,24 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     totalPenalty += record.penalty || 0;
     totalDeduction += record.deduction || 0;
   }
-  
-  // Process penalties for the chart - convert to array format
+
   const penaltiesData = Object.entries(penaltiesByReason).map(([name, value]) => ({
     name,
     value: Math.round(value * 100) / 100
   })).sort((a, b) => b.value - a.value);
-  
+
   const totalAcceptance = paidAcceptanceData.reduce((sum, record) => sum + (record.total || 0), 0);
-  
+
   totalToPay = totalForPay - totalDeliveryRub - totalStorageFee - totalReturns - totalPenalty - totalDeduction - totalAcceptance;
-  
+
   for (const key in productProfitability) {
     productProfitability[key].profit = productProfitability[key].sales - productProfitability[key].costs;
   }
-  
+
   const productProfitabilityArray = Object.values(productProfitability);
-  
+
   const sortedByProfit = [...productProfitabilityArray].sort((a, b) => b.profit - a.profit);
-  
+
   const topProfitableProducts = sortedByProfit.slice(0, 3).map(item => ({
     name: item.name,
     price: item.price.toString(),
@@ -252,12 +252,12 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     image: item.image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg",
     quantitySold: item.count || 0,
     margin: Math.round((item.profit / item.sales) * 100) || 0,
-    returnRate: 2.5, // Default value since we don't have real data
-    category: "Одежда" // Default category
+    returnCount: item.returnCount || 0,
+    category: "Одежда"
   }));
-  
+
   const sortedByLoss = [...productProfitabilityArray].sort((a, b) => a.profit - b.profit);
-  
+
   const topUnprofitableProducts = sortedByLoss.slice(0, 3).map(item => ({
     name: item.name,
     price: item.price.toString(),
@@ -265,18 +265,18 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     image: item.image || "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg",
     quantitySold: item.count || 0,
     margin: Math.round((item.profit / item.sales) * 100) || 0,
-    returnRate: 15.0, // Higher default return rate for unprofitable items
-    category: "Одежда" // Default category
+    returnCount: item.returnCount || 0,
+    category: "Одежда"
   }));
-  
+
   const productReturns = Object.entries(returnsByProduct)
     .map(([name, { value, count }]) => ({ name, value, count }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 5);
-  
+
   console.log(`Received and processed data. Total returns: ${Math.abs(totalReturns)}, Returned items count: ${totalReturnCount}, Returned products count: ${productReturns.length}`);
   console.log(`Calculated top profitable products: ${topProfitableProducts.length}, Top unprofitable products: ${topUnprofitableProducts.length}`);
-  
+
   return {
     metrics: {
       total_sales: Math.round(totalSales * 100) / 100,
@@ -454,7 +454,7 @@ const getDemoData = (): WildberriesResponse => {
         image: "https://images.wbstatic.net/big/new/25250000/25251346-1.jpg",
         quantitySold: 65,
         margin: 42,
-        returnRate: 1.8,
+        returnCount: 3,
         category: "Женская одежда"
       },
       { 
@@ -464,7 +464,7 @@ const getDemoData = (): WildberriesResponse => {
         image: "https://images.wbstatic.net/big/new/22270000/22271973-1.jpg",
         quantitySold: 58,
         margin: 45,
-        returnRate: 1.5,
+        returnCount: 2,
         category: "Женская одежда" 
       },
       { 
@@ -474,7 +474,7 @@ const getDemoData = (): WildberriesResponse => {
         image: "https://images.wbstatic.net/big/new/13730000/13733711-1.jpg",
         quantitySold: 42,
         margin: 35,
-        returnRate: 2.2,
+        returnCount: 1,
         category: "Мужская одежда" 
       }
     ],
@@ -486,7 +486,7 @@ const getDemoData = (): WildberriesResponse => {
         image: "https://images.wbstatic.net/big/new/11080000/11081822-1.jpg",
         quantitySold: 4,
         margin: 8,
-        returnRate: 22.5,
+        returnCount: 12,
         category: "Аксессуары" 
       },
       { 
@@ -496,7 +496,7 @@ const getDemoData = (): WildberriesResponse => {
         image: "https://images.wbstatic.net/big/new/9080000/9080277-1.jpg",
         quantitySold: 3,
         margin: 5,
-        returnRate: 18.0,
+        returnCount: 8,
         category: "Мужская одежда" 
       },
       { 
@@ -506,7 +506,7 @@ const getDemoData = (): WildberriesResponse => {
         image: "https://images.wbstatic.net/big/new/10320000/10328291-1.jpg",
         quantitySold: 2,
         margin: 12,
-        returnRate: 25.0,
+        returnCount: 10,
         category: "Аксессуары" 
       }
     ]

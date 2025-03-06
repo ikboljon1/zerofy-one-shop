@@ -11,7 +11,7 @@ interface Product {
   image: string;
   quantitySold?: number;
   margin?: number;
-  returnRate?: number;
+  returnCount?: number; // Changed from returnRate to returnCount
   category?: string;
 }
 
@@ -35,15 +35,15 @@ const Products = ({
         return "Высокая маржинальность";
       } else if (product.quantitySold && product.quantitySold > 50) {
         return "Высокие объемы продаж";
-      } else if (product.returnRate && product.returnRate < 2) {
-        return "Низкий процент возвратов";
+      } else if (product.returnCount !== undefined && product.returnCount < 3) {
+        return "Низкое количество возвратов";
       }
       return "Стабильные продажи";
     } else {
       if (product.margin && product.margin < 10) {
         return "Низкая маржинальность";
-      } else if (product.returnRate && product.returnRate > 10) {
-        return "Высокий процент возвратов";
+      } else if (product.returnCount !== undefined && product.returnCount > 10) {
+        return "Высокое количество возвратов";
       } else if (product.quantitySold && product.quantitySold < 5) {
         return "Низкие объемы продаж";
       }
@@ -110,18 +110,25 @@ const Products = ({
               <div className="flex items-center">
                 <DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />
                 <span className={isProfitable ? 'text-green-600' : 'text-red-600'}>
-                  {product.margin ? `Маржа: ${product.margin}%` : 'Маржа: N/A'}
+                  {product.margin !== undefined ? `Маржа: ${product.margin}%` : 'Маржа: Н/Д'}
                 </span>
               </div>
               
               <div className="flex items-center">
                 <FileText className="h-4 w-4 mr-1 text-muted-foreground" />
                 <span>
-                  {product.quantitySold ? `Продано: ${product.quantitySold} шт.` : 'Продано: N/A'}
+                  {product.quantitySold !== undefined ? `Продано: ${product.quantitySold} шт.` : 'Продано: Н/Д'}
                 </span>
               </div>
               
-              <div className="flex items-center col-span-2">
+              <div className="flex items-center">
+                <ArrowDown className={`h-4 w-4 mr-1 ${product.returnCount && product.returnCount > 5 ? 'text-red-500' : 'text-muted-foreground'}`} />
+                <span>
+                  {product.returnCount !== undefined ? `Возвраты: ${product.returnCount} шт.` : 'Возвраты: Н/Д'}
+                </span>
+              </div>
+              
+              <div className="flex items-center">
                 <Info className="h-4 w-4 mr-1 text-muted-foreground" />
                 <span className="font-medium">
                   {getProfitabilityReason(product, isProfitable)}

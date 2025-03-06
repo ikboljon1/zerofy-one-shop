@@ -11,7 +11,7 @@ interface Product {
   image: string;
   quantitySold?: number;
   margin?: number;
-  returnRate?: number;
+  returnCount?: number; // Changed from returnRate to returnCount
   category?: string;
 }
 
@@ -48,15 +48,15 @@ const ProductList = ({ title, products = [], isProfitable }: ProductListProps) =
         return "Высокая маржинальность";
       } else if (product.quantitySold && product.quantitySold > 50) {
         return "Высокие объемы продаж";
-      } else if (product.returnRate && product.returnRate < 2) {
-        return "Низкий процент возвратов";
+      } else if (product.returnCount !== undefined && product.returnCount < 3) {
+        return "Низкое количество возвратов";
       }
       return "Стабильные продажи";
     } else {
       if (product.margin && product.margin < 10) {
         return "Низкая маржинальность";
-      } else if (product.returnRate && product.returnRate > 10) {
-        return "Высокий процент возвратов";
+      } else if (product.returnCount !== undefined && product.returnCount > 10) {
+        return "Высокое количество возвратов";
       } else if (product.quantitySold && product.quantitySold < 5) {
         return "Низкие объемы продаж";
       }
@@ -120,21 +120,21 @@ const ProductList = ({ title, products = [], isProfitable }: ProductListProps) =
                 <div className="flex items-center">
                   <DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />
                   <span className={`${isProfitable ? 'text-green-600' : 'text-red-600'} font-medium`}>
-                    Маржа: {product.margin ? `${product.margin}%` : '15%'}
+                    Маржа: {product.margin !== undefined ? `${product.margin}%` : 'Н/Д'}
                   </span>
                 </div>
                 
                 <div className="flex items-center">
                   <FileText className="h-4 w-4 mr-1 text-muted-foreground" />
                   <span>
-                    Продано: {product.quantitySold ? `${product.quantitySold} шт.` : isProfitable ? '65 шт.' : '4 шт.'}
+                    Продано: {product.quantitySold !== undefined ? `${product.quantitySold} шт.` : 'Н/Д'}
                   </span>
                 </div>
                 
                 <div className="flex items-center">
-                  <ArrowDown className={`h-4 w-4 mr-1 ${product.returnRate && product.returnRate > 5 ? 'text-red-500' : 'text-muted-foreground'}`} />
+                  <ArrowDown className={`h-4 w-4 mr-1 ${product.returnCount && product.returnCount > 5 ? 'text-red-500' : 'text-muted-foreground'}`} />
                   <span>
-                    Возвраты: {product.returnRate !== undefined ? `${product.returnRate}%` : isProfitable ? '1.5%' : '12.0%'}
+                    Возвраты: {product.returnCount !== undefined ? `${product.returnCount} шт.` : 'Н/Д'}
                   </span>
                 </div>
                 
