@@ -50,6 +50,7 @@ export interface WildberriesOrder {
   finishedPrice: number;
   priceWithDisc: number;
   isCancel: boolean;
+  isReturn?: boolean; // Added isReturn property as optional
   cancelDate: string;
   orderType: string;
   sticker: string;
@@ -83,6 +84,7 @@ export interface WildberriesSale {
   forPay: number;
   finishedPrice: number;
   priceWithDisc: number;
+  isReturn?: boolean; // Added isReturn property as optional
   saleID: string;
   orderType: string;
   sticker: string;

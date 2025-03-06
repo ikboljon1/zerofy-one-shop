@@ -301,11 +301,14 @@ const SalesChart: React.FC<SalesChartProps> = ({ sales }) => {
                   dataKey="amount"
                   nameKey="name"
                   labelLine={false}
-                  label={({ name, percent }) => 
-                    name.length > 12 
-                      ? `${name.slice(0, 12)}...: ${(percent * 100).toFixed(0)}%` 
-                      : `${name}: ${(percent * 100).toFixed(0)}%`
-                  }
+                  label={({ name, percent }) => {
+                    if (typeof percent === 'number') {
+                      return name.length > 12 
+                        ? `${name.slice(0, 12)}...: ${(percent * 100).toFixed(0)}%` 
+                        : `${name}: ${(percent * 100).toFixed(0)}%`;
+                    }
+                    return '';
+                  }}
                 >
                   {categorySalesData.map((entry, index) => (
                     <Cell 
@@ -317,10 +320,12 @@ const SalesChart: React.FC<SalesChartProps> = ({ sales }) => {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value, name, props) => {
-                    const percentage = ((value / totalRevenue) * 100).toFixed(1);
+                  formatter={(value, name) => {
+                    // Make sure value is treated as a number
+                    const numValue = typeof value === 'number' ? value : 0;
+                    const percentage = totalRevenue > 0 ? ((numValue / totalRevenue) * 100).toFixed(1) : '0';
                     return [
-                      `${formatCurrency(value)} ₽ (${percentage}%)`,
+                      `${formatCurrency(numValue)} ₽ (${percentage}%)`,
                       name
                     ];
                   }}
@@ -335,7 +340,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ sales }) => {
                   verticalAlign="bottom"
                   iconType="circle"
                   iconSize={10}
-                  formatter={(value, entry) => (
+                  formatter={(value) => (
                     <span className="text-sm font-medium">{value}</span>
                   )}
                 />
