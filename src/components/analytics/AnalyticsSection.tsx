@@ -15,6 +15,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
 import { getAdvertCosts, getAdvertBalance, getAdvertPayments } from "@/services/advertisingApi";
+import { getAnalyticsData } from "@/utils/storeUtils";
 
 import { 
   demoData, 
@@ -120,41 +121,34 @@ const AnalyticsSection = () => {
   };
 
   const loadStoredAnalyticsData = (storeId: string) => {
-    const storedData = localStorage.getItem(`${ANALYTICS_STORAGE_KEY}_${storeId}`);
-    if (storedData) {
-      try {
-        const parsedData: StoredAnalyticsData = JSON.parse(storedData);
-        setDateFrom(new Date(parsedData.dateFrom));
-        setDateTo(new Date(parsedData.dateTo));
-        setData(parsedData.data);
+    try {
+      // Используем новую функцию getAnalyticsData для получения данных с проверками
+      const analyticsData = getAnalyticsData(storeId);
+      
+      if (analyticsData) {
+        // Устанавливаем данные с проверками на существование
+        setDateFrom(new Date(analyticsData.dateFrom || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)));
+        setDateTo(new Date(analyticsData.dateTo || new Date()));
         
-        if (parsedData.penalties && parsedData.penalties.length > 0) {
-          setPenalties(parsedData.penalties);
-        } else {
-          setPenalties([]);
+        if (analyticsData.data) {
+          setData(analyticsData.data);
         }
         
-        if (parsedData.returns && parsedData.returns.length > 0) {
-          setReturns(parsedData.returns);
-        } else {
-          setReturns([]);
+        // Используем проверенные данные
+        setPenalties(analyticsData.penalties);
+        setReturns(analyticsData.returns);
+        setDeductionsTimeline(analyticsData.deductionsTimeline);
+        setProductAdvertisingData(analyticsData.productAdvertisingData);
+        
+        if (analyticsData.advertisingBreakdown) {
+          setAdvertisingBreakdown(analyticsData.advertisingBreakdown);
         }
         
-        setDeductionsTimeline(parsedData.deductionsTimeline);
-        
-        if (parsedData.productAdvertisingData && parsedData.productAdvertisingData.length > 0) {
-          setProductAdvertisingData(parsedData.productAdvertisingData);
-        } else {
-          setProductAdvertisingData([]);
-        }
-        
-        setAdvertisingBreakdown(parsedData.advertisingBreakdown);
         console.log('Analytics data loaded from localStorage');
         return true;
-      } catch (error) {
-        console.error('Error parsing stored analytics data:', error);
-        return false;
       }
+    } catch (error) {
+      console.error('Error parsing stored analytics data:', error);
     }
     return false;
   };
@@ -259,19 +253,31 @@ const AnalyticsSection = () => {
           setReturns([]);
         }
         
-        const newDeductionsTimeline = statsData.dailySales.map((day: any) => {
+        // Создаем данные для графика удержаний на основе ежедневных данных
+        let newDeductionsTimeline = [];
+        if (statsData.dailySales && statsData.dailySales.length > 0) {
           const daysCount = statsData.dailySales.length;
-          const logistic = modifiedData.currentPeriod.expenses.logistics / daysCount;
-          const storage = modifiedData.currentPeriod.expenses.storage / daysCount;
-          const penalties = modifiedData.currentPeriod.expenses.penalties / daysCount;
-          
-          return {
-            date: day.date.split('T')[0],
-            logistic,
-            storage,
-            penalties
-          };
-        });
+          newDeductionsTimeline = statsData.dailySales.map((day: any) => {
+            const logistic = modifiedData.currentPeriod.expenses.logistics / daysCount;
+            const storage = modifiedData.currentPeriod.expenses.storage / daysCount;
+            const penalties = modifiedData.currentPeriod.expenses.penalties / daysCount;
+            
+            return {
+              date: typeof day.date === 'string' ? day.date.split('T')[0] : new Date().toISOString().split('T')[0],
+              logistic,
+              storage,
+              penalties
+            };
+          });
+        } else {
+          // Создаем базовые данные для графика, если нет ежедневных данных
+          newDeductionsTimeline = Array.from({ length: 7 }, (_, i) => ({
+            date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            logistic: modifiedData.currentPeriod.expenses.logistics / 7,
+            storage: modifiedData.currentPeriod.expenses.storage / 7, 
+            penalties: modifiedData.currentPeriod.expenses.penalties / 7
+          }));
+        }
         
         setDeductionsTimeline(newDeductionsTimeline);
         
@@ -284,6 +290,15 @@ const AnalyticsSection = () => {
         description: "Не удалось загрузить аналитические данные",
         variant: "destructive"
       });
+      
+      // Устанавливаем базовые данные для графика удержаний при ошибке
+      setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
+        date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        logistic: 0, 
+        storage: 0, 
+        penalties: 0
+      })));
+      
       setPenalties([]);
       setReturns([]);
     } finally {
@@ -305,6 +320,14 @@ const AnalyticsSection = () => {
         setIsLoading(false);
       }
     } else {
+      // Устанавливаем базовые данные для графика удержаний, если нет выбранного магазина
+      setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
+        date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        logistic: 0, 
+        storage: 0, 
+        penalties: 0
+      })));
+      
       setPenalties([]);
       setProductAdvertisingData([]);
       setReturns([]);

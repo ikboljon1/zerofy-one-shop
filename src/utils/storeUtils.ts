@@ -30,12 +30,28 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           lastFetchDate: new Date().toISOString() 
         };
         
+        // Создаем базовую структуру для deductionsTimeline, если она отсутствует
+        const deductionsTimeline = stats.dailySales?.map((day: any) => {
+          const daysCount = stats.dailySales.length || 1;
+          const logistic = (stats.currentPeriod.expenses.logistics || 0) / daysCount;
+          const storage = (stats.currentPeriod.expenses.storage || 0) / daysCount;
+          const penalties = (stats.currentPeriod.expenses.penalties || 0) / daysCount;
+          
+          return {
+            date: typeof day.date === 'string' ? day.date.split('T')[0] : new Date().toISOString().split('T')[0],
+            logistic,
+            storage,
+            penalties
+          };
+        }) || [];
+        
         // Сохраняем полные данные статистики, включая топовые продукты с их изображениями
         localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify({
           storeId: store.id,
           dateFrom: from.toISOString(),
           dateTo: to.toISOString(),
-          stats: stats
+          stats: stats,
+          deductionsTimeline: deductionsTimeline
         }));
         
         // Также сохраняем данные для аналитики и раздела товаров
@@ -43,7 +59,11 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           storeId: store.id,
           dateFrom: from.toISOString(),
           dateTo: to.toISOString(),
-          data: stats
+          data: stats,
+          deductionsTimeline: deductionsTimeline,
+          penalties: [],
+          returns: [],
+          productAdvertisingData: []
         }));
         
         // Детализированные данные по продуктам для раздела товаров
@@ -89,5 +109,71 @@ export const getProductProfitabilityData = (storeId: string) => {
   } catch (error) {
     console.error('Error loading product profitability data:', error);
     return null;
+  }
+};
+
+// Получение данных аналитики с проверкой обязательных полей
+export const getAnalyticsData = (storeId: string) => {
+  try {
+    const key = `marketplace_analytics_${storeId}`;
+    const storedData = localStorage.getItem(key);
+    
+    if (!storedData) {
+      // Если данные отсутствуют, возвращаем базовую структуру с демо-данными
+      return {
+        data: null,
+        penalties: [],
+        returns: [],
+        deductionsTimeline: Array.from({ length: 7 }, (_, i) => ({
+          date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          logistic: 0,
+          storage: 0, 
+          penalties: 0
+        })),
+        productAdvertisingData: []
+      };
+    }
+    
+    let parsedData = JSON.parse(storedData);
+    
+    // Проверяем наличие обязательных полей и устанавливаем значения по умолчанию
+    if (!parsedData.deductionsTimeline || !Array.isArray(parsedData.deductionsTimeline) || parsedData.deductionsTimeline.length === 0) {
+      console.log("Creating default deductionsTimeline data");
+      parsedData.deductionsTimeline = Array.from({ length: 7 }, (_, i) => ({
+        date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        logistic: 0,
+        storage: 0, 
+        penalties: 0
+      }));
+    }
+    
+    if (!parsedData.penalties || !Array.isArray(parsedData.penalties)) {
+      parsedData.penalties = [];
+    }
+    
+    if (!parsedData.returns || !Array.isArray(parsedData.returns)) {
+      parsedData.returns = [];
+    }
+    
+    if (!parsedData.productAdvertisingData || !Array.isArray(parsedData.productAdvertisingData)) {
+      parsedData.productAdvertisingData = [];
+    }
+    
+    return parsedData;
+  } catch (error) {
+    console.error('Error loading analytics data:', error);
+    // Возвращаем базовую структуру в случае ошибки
+    return {
+      data: null,
+      penalties: [],
+      returns: [],
+      deductionsTimeline: Array.from({ length: 7 }, (_, i) => ({
+        date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        logistic: 0,
+        storage: 0, 
+        penalties: 0
+      })),
+      productAdvertisingData: []
+    };
   }
 };
