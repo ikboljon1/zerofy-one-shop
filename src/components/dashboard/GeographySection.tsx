@@ -1,10 +1,8 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
-import { Warehouse, MapPin, Package, Clock24, Calendar } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Warehouse, MapPin } from "lucide-react";
 
 interface DistributionItem {
   name: string;
@@ -23,8 +21,6 @@ const GeographySection: React.FC<GeographySectionProps> = ({
   warehouseDistribution,
   regionDistribution,
 }) => {
-  const [timePeriod, setTimePeriod] = useState<"24h" | "week">("24h");
-
   const renderPieChart = (data: DistributionItem[], dataKey: string) => {
     if (!data || data.length === 0) return null;
 
@@ -85,105 +81,42 @@ const GeographySection: React.FC<GeographySectionProps> = ({
     );
   };
 
-  const renderOverview = (title: string, icon: React.ReactNode, data: DistributionItem[]) => {
-    const totalOrders = data.reduce((sum, item) => sum + item.count, 0);
-    
-    return (
-      <div className="bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-950/20 dark:to-indigo-950/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800/30 mb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {icon}
-            <h3 className="font-medium">{title}</h3>
-          </div>
-          <div className="flex items-center gap-1">
-            <Package className="h-4 w-4 text-blue-500" />
-            <span className="font-semibold">{totalOrders}</span>
-            <span className="text-sm text-muted-foreground">заказов</span>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">География заказов</h2>
-        <div className="inline-flex items-center p-1 bg-muted rounded-md">
-          <Button 
-            variant={timePeriod === "24h" ? "default" : "ghost"} 
-            size="sm" 
-            onClick={() => setTimePeriod("24h")}
-            className="flex items-center gap-1"
-          >
-            <Clock24 className="h-4 w-4" />
-            24 часа
-          </Button>
-          <Button 
-            variant={timePeriod === "week" ? "default" : "ghost"} 
-            size="sm" 
-            onClick={() => setTimePeriod("week")}
-            className="flex items-center gap-1"
-          >
-            <Calendar className="h-4 w-4" />
-            Неделя
-          </Button>
-        </div>
-      </div>
-      
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Warehouse className="mr-2 h-5 w-5" />
-              Распределение заказов по складам
-            </CardTitle>
-            <CardDescription>
-              Топ 5 складов Wildberries, обрабатывающих ваши заказы
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="px-2">
-            {renderOverview("Склады", <Warehouse className="h-4 w-4 text-blue-500" />, warehouseDistribution)}
-            {renderPieChart(warehouseDistribution, "count")}
-            <div className="mt-4 px-4">
-              {renderDistributionList(warehouseDistribution)}
-            </div>
-          </CardContent>
-        </Card>
+    <div className="grid gap-4 md:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Warehouse className="mr-2 h-5 w-5" />
+            Распределение заказов по складам
+          </CardTitle>
+          <CardDescription>
+            Топ 5 складов Wildberries, обрабатывающих ваши заказы
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="px-2">
+          {renderPieChart(warehouseDistribution, "count")}
+          <div className="mt-4 px-4">
+            {renderDistributionList(warehouseDistribution)}
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <MapPin className="mr-2 h-5 w-5" />
-              Распределение заказов по регионам
-            </CardTitle>
-            <CardDescription>
-              Топ 5 регионов, откуда поступают ваши заказы
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="px-2">
-            {renderOverview("Регионы", <MapPin className="h-4 w-4 text-blue-500" />, regionDistribution)}
-            {renderPieChart(regionDistribution, "count")}
-            <div className="mt-4 px-4">
-              {renderDistributionList(regionDistribution)}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      <Card className="p-4">
-        <h3 className="text-lg font-medium mb-2">Как рассчитываются данные</h3>
-        <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground">
-          <li>Данные собираются из ваших заказов Wildberries с помощью API</li>
-          <li>Для складов мы группируем заказы по полю warehouseName из ответа API</li>
-          <li>Для регионов мы группируем заказы по полю regionName из ответа API</li>
-          <li>Мы подсчитываем вхождения каждого склада/региона и расчитываем проценты</li>
-          <li>Диаграммы отображают 5 лучших складов и регионов по количеству заказов</li>
-        </ul>
-        <p className="mt-4 text-sm">
-          Эти географические данные предоставляют ценную информацию о том, где хранятся ваши продукты и где находятся ваши клиенты, 
-          помогая вам оптимизировать ваши логистические и маркетинговые стратегии.
-        </p>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <MapPin className="mr-2 h-5 w-5" />
+            Распределение заказов по регионам
+          </CardTitle>
+          <CardDescription>
+            Топ 5 регионов, откуда поступают ваши заказы
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="px-2">
+          {renderPieChart(regionDistribution, "count")}
+          <div className="mt-4 px-4">
+            {renderDistributionList(regionDistribution)}
+          </div>
+        </CardContent>
       </Card>
     </div>
   );

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar as CalendarIcon, Loader2, RefreshCw, Clock24, Calendar } from "lucide-react";
+import { Calendar as CalendarIcon, Loader2, RefreshCw } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, subDays } from "date-fns";
@@ -28,7 +28,6 @@ const Dashboard = () => {
   const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState(false);
-  const [timePeriod, setTimePeriod] = useState<"24h" | "week">("24h");
 
   const [orders, setOrders] = useState<WildberriesOrder[]>([]);
   const [sales, setSales] = useState<WildberriesSale[]>([]);
@@ -50,13 +49,8 @@ const Dashboard = () => {
         return;
       }
 
-      // Определяем дату начала для запроса в зависимости от выбранного периода
-      const periodDateFrom = timePeriod === "24h" 
-        ? subDays(new Date(), 1) 
-        : subDays(new Date(), 7);
-
       // Загружаем заказы
-      const ordersResult = await fetchAndUpdateOrders(selectedStore, periodDateFrom);
+      const ordersResult = await fetchAndUpdateOrders(selectedStore);
       if (ordersResult) {
         setOrders(ordersResult.orders);
         setWarehouseDistribution(ordersResult.warehouseDistribution);
@@ -72,7 +66,7 @@ const Dashboard = () => {
       }
 
       // Загружаем продажи
-      const salesResult = await fetchAndUpdateSales(selectedStore, periodDateFrom);
+      const salesResult = await fetchAndUpdateSales(selectedStore);
       if (salesResult) {
         setSales(salesResult);
       } else {
@@ -125,13 +119,6 @@ const Dashboard = () => {
     }
   }, []);
 
-  // Обновление данных при изменении периода времени
-  useEffect(() => {
-    if (timePeriod) {
-      fetchData();
-    }
-  }, [timePeriod]);
-
   const renderDatePicker = (date: Date, onChange: (date: Date) => void, label: string) => (
     <Popover>
       <PopoverTrigger asChild>
@@ -157,29 +144,6 @@ const Dashboard = () => {
     </Popover>
   );
 
-  const renderTimePeriodSelector = () => (
-    <div className="inline-flex items-center p-1 bg-muted rounded-md">
-      <Button 
-        variant={timePeriod === "24h" ? "default" : "ghost"} 
-        size="sm" 
-        onClick={() => setTimePeriod("24h")}
-        className="flex items-center gap-1"
-      >
-        <Clock24 className="h-4 w-4" />
-        24 часа
-      </Button>
-      <Button 
-        variant={timePeriod === "week" ? "default" : "ghost"} 
-        size="sm" 
-        onClick={() => setTimePeriod("week")}
-        className="flex items-center gap-1"
-      >
-        <Calendar className="h-4 w-4" />
-        Неделя
-      </Button>
-    </div>
-  );
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -203,12 +167,9 @@ const Dashboard = () => {
         </Button>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          {renderDatePicker(dateFrom, setDateFrom, "Начальная дата")}
-          {renderDatePicker(dateTo, setDateTo, "Конечная дата")}
-        </div>
-        {renderTimePeriodSelector()}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        {renderDatePicker(dateFrom, setDateFrom, "Начальная дата")}
+        {renderDatePicker(dateTo, setDateTo, "Конечная дата")}
       </div>
 
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
