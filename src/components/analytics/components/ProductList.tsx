@@ -1,6 +1,7 @@
 
 import { Card } from "@/components/ui/card";
 import { ArrowUp, ArrowDown, TrendingUp, TrendingDown } from "lucide-react";
+import { formatCurrency } from "@/utils/formatCurrency";
 
 interface Product {
   name: string;
@@ -26,6 +27,15 @@ const ProductList = ({ title, products = [], isProfitable }: ProductListProps) =
 
   const IconComponent = isProfitable ? TrendingUp : TrendingDown;
 
+  const formatNumberWithSign = (value: string) => {
+    const numValue = parseFloat(value.replace(/[^\d.-]/g, ''));
+    if (isNaN(numValue)) return value;
+    
+    return isProfitable 
+      ? `+${formatCurrency(numValue)}` 
+      : formatCurrency(numValue);
+  };
+
   return (
     <Card className="p-6">
       <div className="flex items-center justify-between mb-4">
@@ -50,11 +60,11 @@ const ProductList = ({ title, products = [], isProfitable }: ProductListProps) =
               </div>
               <div className="flex-1">
                 <h4 className="font-medium">{product.name || "Неизвестный товар"}</h4>
-                <p className="text-sm text-muted-foreground">Цена: {product.price}</p>
+                <p className="text-sm text-muted-foreground">Цена: {formatCurrency(parseFloat(product.price))}</p>
               </div>
               <div className="text-right flex items-center">
                 <span className={`${textColorClass} font-semibold mr-1`}>
-                  {isProfitable ? '+' : ''}{product.profit}
+                  {formatNumberWithSign(product.profit)}
                 </span>
                 {isProfitable ? (
                   <ArrowUp className="h-4 w-4 text-green-500" />
