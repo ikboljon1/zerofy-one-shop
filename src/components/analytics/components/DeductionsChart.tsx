@@ -27,8 +27,11 @@ interface DeductionsChartProps {
 const DeductionsChart = ({ data }: DeductionsChartProps) => {
   const isMobile = useIsMobile();
   
-  // Calculate totals for each category
-  const totals = data.reduce(
+  // Check if data is valid and not empty
+  const isValidData = data && Array.isArray(data) && data.length > 0;
+  
+  // Calculate totals for each category only if data is valid
+  const totals = isValidData ? data.reduce(
     (acc, item) => {
       acc.logistic += item.logistic;
       acc.storage += item.storage;
@@ -36,16 +39,34 @@ const DeductionsChart = ({ data }: DeductionsChartProps) => {
       return acc;
     },
     { logistic: 0, storage: 0, penalties: 0 }
-  );
+  ) : { logistic: 0, storage: 0, penalties: 0 };
 
   // Calculate average per day for reference line
-  const days = data.length;
+  const days = isValidData ? data.length : 1;
   const avgLogistic = totals.logistic / days;
   const avgStorage = totals.storage / days;
   const avgPenalties = totals.penalties / days;
 
   // Calculate totals for percentage calculations
   const grandTotal = totals.logistic + totals.storage + totals.penalties;
+
+  if (!isValidData) {
+    return (
+      <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-blue-950/30">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-700 dark:from-blue-400 dark:to-indigo-400">
+            Структура удержаний по дням
+          </h3>
+          <div className="bg-red-100 dark:bg-red-900/60 p-2 rounded-full shadow-inner">
+            <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-400" />
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+          Нет данных за выбранный период
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-4 sm:p-6 shadow-xl border-0 rounded-xl overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-blue-950/30">
@@ -77,12 +98,12 @@ const DeductionsChart = ({ data }: DeductionsChartProps) => {
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
             <div 
               className="bg-violet-600 dark:bg-violet-500 h-2.5 rounded-full" 
-              style={{ width: `${(totals.logistic / grandTotal) * 100}%` }}
+              style={{ width: `${grandTotal > 0 ? (totals.logistic / grandTotal) * 100 : 0}%` }}
             ></div>
           </div>
           {isMobile && (
             <div className="mt-1 text-xs text-gray-500">
-              {((totals.logistic / grandTotal) * 100).toFixed(1)}% от общей суммы
+              {grandTotal > 0 ? ((totals.logistic / grandTotal) * 100).toFixed(1) : '0'}% от общей суммы
             </div>
           )}
         </div>
@@ -97,12 +118,12 @@ const DeductionsChart = ({ data }: DeductionsChartProps) => {
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
             <div 
               className="bg-emerald-600 dark:bg-emerald-500 h-2.5 rounded-full" 
-              style={{ width: `${(totals.storage / grandTotal) * 100}%` }}
+              style={{ width: `${grandTotal > 0 ? (totals.storage / grandTotal) * 100 : 0}%` }}
             ></div>
           </div>
           {isMobile && (
             <div className="mt-1 text-xs text-gray-500">
-              {((totals.storage / grandTotal) * 100).toFixed(1)}% от общей суммы
+              {grandTotal > 0 ? ((totals.storage / grandTotal) * 100).toFixed(1) : '0'}% от общей суммы
             </div>
           )}
         </div>
@@ -117,12 +138,12 @@ const DeductionsChart = ({ data }: DeductionsChartProps) => {
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
             <div 
               className="bg-pink-600 dark:bg-pink-500 h-2.5 rounded-full" 
-              style={{ width: `${(totals.penalties / grandTotal) * 100}%` }}
+              style={{ width: `${grandTotal > 0 ? (totals.penalties / grandTotal) * 100 : 0}%` }}
             ></div>
           </div>
           {isMobile && (
             <div className="mt-1 text-xs text-gray-500">
-              {((totals.penalties / grandTotal) * 100).toFixed(1)}% от общей суммы
+              {grandTotal > 0 ? ((totals.penalties / grandTotal) * 100).toFixed(1) : '0'}% от общей суммы
             </div>
           )}
         </div>

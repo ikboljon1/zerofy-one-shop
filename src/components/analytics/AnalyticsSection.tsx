@@ -89,7 +89,7 @@ const AnalyticsSection = () => {
   const [data, setData] = useState<AnalyticsData>(demoData);
   const [penalties, setPenalties] = useState<Array<{name: string, value: number}>>([]);
   const [returns, setReturns] = useState<Array<{name: string, value: number}>>([]);
-  const [deductionsTimeline, setDeductionsTimeline] = useState(deductionsTimelineData);
+  const [deductionsTimeline, setDeductionsTimeline] = useState<Array<{date: string, logistic: number, storage: number, penalties: number}>>([]);
   const [productAdvertisingData, setProductAdvertisingData] = useState<Array<{name: string, value: number}>>([]);
   const [advertisingBreakdown, setAdvertisingBreakdown] = useState<AdvertisingBreakdown>({
     search: 0
@@ -140,7 +140,11 @@ const AnalyticsSection = () => {
           setReturns([]);
         }
         
-        setDeductionsTimeline(parsedData.deductionsTimeline);
+        if (parsedData.deductionsTimeline && parsedData.deductionsTimeline.length > 0) {
+          setDeductionsTimeline(parsedData.deductionsTimeline);
+        } else {
+          setDeductionsTimeline([]);
+        }
         
         if (parsedData.productAdvertisingData && parsedData.productAdvertisingData.length > 0) {
           setProductAdvertisingData(parsedData.productAdvertisingData);
@@ -210,7 +214,7 @@ const AnalyticsSection = () => {
         setProductAdvertisingData(topProducts.length > 0 ? topProducts : []);
       } else {
         if (productAdvertisingData.length === 0) {
-          setProductAdvertisingData(advertisingData);
+          setProductAdvertisingData([]);
         }
         
         setAdvertisingBreakdown({
@@ -259,21 +263,26 @@ const AnalyticsSection = () => {
           setReturns([]);
         }
         
-        const newDeductionsTimeline = statsData.dailySales.map((day: any) => {
-          const daysCount = statsData.dailySales.length;
-          const logistic = modifiedData.currentPeriod.expenses.logistics / daysCount;
-          const storage = modifiedData.currentPeriod.expenses.storage / daysCount;
-          const penalties = modifiedData.currentPeriod.expenses.penalties / daysCount;
+        // Create deductions timeline from dailySales data
+        if (statsData.dailySales && statsData.dailySales.length > 0) {
+          const newDeductionsTimeline = statsData.dailySales.map((day: any) => {
+            const daysCount = statsData.dailySales.length;
+            const logistic = modifiedData.currentPeriod.expenses.logistics / daysCount;
+            const storage = modifiedData.currentPeriod.expenses.storage / daysCount;
+            const penalties = modifiedData.currentPeriod.expenses.penalties / daysCount;
+            
+            return {
+              date: day.date.split('T')[0],
+              logistic,
+              storage,
+              penalties
+            };
+          });
           
-          return {
-            date: day.date.split('T')[0],
-            logistic,
-            storage,
-            penalties
-          };
-        });
-        
-        setDeductionsTimeline(newDeductionsTimeline);
+          setDeductionsTimeline(newDeductionsTimeline);
+        } else {
+          setDeductionsTimeline([]);
+        }
         
         saveAnalyticsData(selectedStore.id);
       }
@@ -286,6 +295,7 @@ const AnalyticsSection = () => {
       });
       setPenalties([]);
       setReturns([]);
+      setDeductionsTimeline([]);
     } finally {
       setIsLoading(false);
     }
@@ -300,6 +310,7 @@ const AnalyticsSection = () => {
         setPenalties([]);
         setProductAdvertisingData([]);
         setReturns([]);
+        setDeductionsTimeline([]);
         fetchData();
       } else {
         setIsLoading(false);
@@ -308,6 +319,27 @@ const AnalyticsSection = () => {
       setPenalties([]);
       setProductAdvertisingData([]);
       setReturns([]);
+      setDeductionsTimeline([]);
+      // Initialize with empty demo data
+      setData({
+        currentPeriod: {
+          sales: 0,
+          transferred: 0,
+          expenses: {
+            total: 0,
+            logistics: 0,
+            storage: 0,
+            penalties: 0,
+            advertising: 0,
+            acceptance: 0
+          },
+          netProfit: 0,
+          acceptance: 0
+        },
+        dailySales: [],
+        productSales: [],
+        productReturns: []
+      });
       setIsLoading(false);
     }
   }, []);

@@ -12,7 +12,7 @@ interface Product {
 
 interface ProductListProps {
   title: string;
-  products: Product[];
+  products: Product[] | undefined;
   isProfitable: boolean;
 }
 
