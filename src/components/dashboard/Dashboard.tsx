@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +17,10 @@ import GeographySection from "./GeographySection";
 import Stats from "@/components/Stats";
 import PeriodSelector, { Period } from "./PeriodSelector";
 import { WildberriesOrder, WildberriesSale } from "@/types/store";
+import OrderMetrics from "./OrderMetrics";
+import SalesMetrics from "./SalesMetrics";
+import OrdersChart from "./OrdersChart";
+import SalesChart from "./SalesChart";
 
 const Dashboard = () => {
   const { toast } = useToast();
@@ -225,16 +230,32 @@ const Dashboard = () => {
         </TabsContent>
 
         <TabsContent value="orders" className="space-y-4">
-          <div className="mb-4">
+          <div className="mb-4 flex justify-between items-center">
             <PeriodSelector value={period} onChange={setPeriod} />
           </div>
+          
+          {orders.length > 0 && (
+            <>
+              <OrderMetrics orders={getFilteredOrders(orders).orders} />
+              <OrdersChart orders={getFilteredOrders(orders).orders} />
+            </>
+          )}
+          
           <OrdersTable orders={getFilteredOrders(orders).orders} />
         </TabsContent>
 
         <TabsContent value="sales" className="space-y-4">
-          <div className="mb-4">
+          <div className="mb-4 flex justify-between items-center">
             <PeriodSelector value={period} onChange={setPeriod} />
           </div>
+          
+          {sales.length > 0 && (
+            <>
+              <SalesMetrics sales={getFilteredSales(sales)} />
+              <SalesChart sales={getFilteredSales(sales)} />
+            </>
+          )}
+          
           <SalesTable sales={getFilteredSales(sales)} />
         </TabsContent>
 

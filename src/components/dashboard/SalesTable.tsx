@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Calendar, ShoppingBag, ArrowUpDown } from "lucide-react";
+import { Search, Calendar, ShoppingBag, ArrowUpDown, PackageX } from "lucide-react";
 import { WildberriesSale } from "@/types/store";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -69,6 +69,9 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales, title = "Продажи"
       return dateString;
     }
   };
+
+  // Check if a sale is a return (negative price)
+  const isReturn = (sale: WildberriesSale) => sale.priceWithDisc < 0;
 
   return (
     <Card>
@@ -150,25 +153,45 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales, title = "Продажи"
                 </TableHead>
                 <TableHead>Склад</TableHead>
                 <TableHead>Регион</TableHead>
+                <TableHead>Тип</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedSales.length > 0 ? (
                 sortedSales.map((sale, index) => (
-                  <TableRow key={sale.saleID || index}>
+                  <TableRow 
+                    key={sale.saleID || index}
+                    className={isReturn(sale) ? "bg-red-50 dark:bg-red-950/20" : ""}
+                  >
                     <TableCell>{formatDate(sale.date)}</TableCell>
                     <TableCell>{sale.supplierArticle}</TableCell>
                     <TableCell>{sale.saleID}</TableCell>
                     <TableCell>{sale.category}</TableCell>
-                    <TableCell>{formatCurrency(sale.priceWithDisc)} ₽</TableCell>
-                    <TableCell>{formatCurrency(sale.forPay)} ₽</TableCell>
+                    <TableCell className={isReturn(sale) ? "text-red-600 dark:text-red-400 font-medium" : ""}>
+                      {formatCurrency(sale.priceWithDisc)} ₽
+                    </TableCell>
+                    <TableCell className={isReturn(sale) ? "text-red-600 dark:text-red-400 font-medium" : ""}>
+                      {formatCurrency(sale.forPay)} ₽
+                    </TableCell>
                     <TableCell>{sale.warehouseName}</TableCell>
                     <TableCell>{sale.regionName}</TableCell>
+                    <TableCell>
+                      {isReturn(sale) ? (
+                        <div className="flex items-center gap-1 px-2 py-1 bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300 rounded-full text-xs font-medium">
+                          <PackageX className="h-3 w-3" />
+                          <span>Возврат</span>
+                        </div>
+                      ) : (
+                        <div className="px-2 py-1 bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300 rounded-full text-xs font-medium">
+                          Продажа
+                        </div>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-4">
+                  <TableCell colSpan={9} className="text-center py-4">
                     {searchTerm ? "Продажи не найдены" : "Продаж нет"}
                   </TableCell>
                 </TableRow>
