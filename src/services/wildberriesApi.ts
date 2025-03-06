@@ -1,70 +1,4 @@
-
 import axios from 'axios';
-import { subDays } from 'date-fns';
-
-// Types for API responses
-export interface WildberriesOrder {
-  date: string;
-  lastChangeDate: string;
-  warehouseName: string;
-  warehouseType: string;
-  countryName: string;
-  oblastOkrugName: string;
-  regionName: string;
-  supplierArticle: string;
-  nmId: number;
-  barcode: string;
-  category: string;
-  subject: string;
-  brand: string;
-  techSize: string;
-  incomeID: number;
-  isSupply: boolean;
-  isRealization: boolean;
-  totalPrice: number;
-  discountPercent: number;
-  spp: number;
-  finishedPrice: number;
-  priceWithDisc: number;
-  isCancel: boolean;
-  cancelDate: string;
-  orderType: string;
-  sticker: string;
-  gNumber: string;
-  srid: string;
-}
-
-export interface WildberriesSale {
-  date: string;
-  lastChangeDate: string;
-  warehouseName: string;
-  warehouseType: string;
-  countryName: string;
-  oblastOkrugName: string;
-  regionName: string;
-  supplierArticle: string;
-  nmId: number;
-  barcode: string;
-  category: string;
-  subject: string;
-  brand: string;
-  techSize: string;
-  incomeID: number;
-  isSupply: boolean;
-  isRealization: boolean;
-  totalPrice: number;
-  discountPercent: number;
-  spp: number;
-  paymentSaleAmount: number;
-  forPay: number;
-  finishedPrice: number;
-  priceWithDisc: number;
-  saleID: string;
-  orderType: string;
-  sticker: string;
-  gNumber: string;
-  srid: string;
-}
 
 export interface WildberriesResponse {
   currentPeriod: {
@@ -80,9 +14,6 @@ export interface WildberriesResponse {
     };
     netProfit: number;
     acceptance: number;
-    orders: number;
-    returns: number;
-    cancellations: number;
   };
   dailySales: Array<{
     date: string;
@@ -93,7 +24,7 @@ export interface WildberriesResponse {
     subject_name: string;
     quantity: number;
   }>;
-  productReturns?: Array<{
+  productReturns: Array<{
     name: string;
     value: number;
     count?: number;
@@ -122,289 +53,250 @@ export interface WildberriesResponse {
     returnCount: number;
     category: string;
   }>;
-  ordersByWarehouse: Record<string, number>;
-  ordersByRegion: Record<string, number>;
-  salesByDay: Record<string, number>;
-  returnsData: {
-    count: number;
-    amount: number;
-    byReason: Record<string, number>;
-  };
 }
 
 const formatDate = (date: Date): string => {
   return date.toISOString().split('T')[0];
 };
 
-const formatDateRFC3339 = (date: Date): string => {
-  return date.toISOString().split('.')[0];
+const formatDateRFC3339 = (date: Date, isEnd: boolean = false): string => {
+  const formattedDate = date.toISOString().split('T')[0];
+  return isEnd ? `${formattedDate}T23:59:59` : `${formattedDate}T00:00:00`;
 };
 
-// Function to fetch orders with pagination
-export const fetchWildberriesOrders = async (apiKey: string, dateFrom: Date): Promise<WildberriesOrder[]> => {
-  try {
-    console.log(`Fetching Wildberries orders from ${dateFrom.toISOString()}`);
-    
-    // Use demo data in development mode if not a proper API key
-    if (process.env.NODE_ENV === 'development' && !apiKey.startsWith('eyJ')) {
-      console.log('Using demo orders data in development mode');
-      return getDemoOrders();
-    }
-    
-    const allOrders: WildberriesOrder[] = [];
-    let nextDateFrom = formatDateRFC3339(dateFrom);
-    let hasMoreData = true;
-    
-    // Implement pagination using lastChangeDate
-    while (hasMoreData) {
-      console.log(`Fetching orders batch with dateFrom: ${nextDateFrom}`);
-      
-      const url = "https://statistics-api.wildberries.ru/api/v1/supplier/orders";
-      const headers = {
-        "Authorization": apiKey,
-      };
-      const params = {
-        "dateFrom": nextDateFrom,
-      };
-      
-      const response = await axios.get(url, { headers, params });
-      const orders: WildberriesOrder[] = response.data;
-      
-      if (orders.length === 0) {
-        // No more data to fetch
-        hasMoreData = false;
-      } else {
-        allOrders.push(...orders);
-        // Get lastChangeDate from the last order for the next request
-        nextDateFrom = orders[orders.length - 1].lastChangeDate;
-        
-        // Rate limiting: wait 1 minute between requests (Wildberries API limitation)
-        // In production, we'd implement a proper delay, but for this example we'll just log
-        console.log(`Fetched ${orders.length} orders. Total orders now: ${allOrders.length}`);
-        console.log("Note: In a production environment, we would wait 1 minute before making the next request due to API rate limits");
-        
-        // For the sake of the demo, we'll limit to one batch
-        hasMoreData = false;
-      }
-    }
-    
-    console.log(`Completed fetching orders. Total: ${allOrders.length} orders`);
-    return allOrders;
-  } catch (error) {
-    console.error("Error fetching Wildberries orders:", error);
-    return getDemoOrders();
-  }
-};
-
-// Function to fetch sales with pagination
-export const fetchWildberriesSales = async (apiKey: string, dateFrom: Date): Promise<WildberriesSale[]> => {
-  try {
-    console.log(`Fetching Wildberries sales from ${dateFrom.toISOString()}`);
-    
-    // Use demo data in development mode if not a proper API key
-    if (process.env.NODE_ENV === 'development' && !apiKey.startsWith('eyJ')) {
-      console.log('Using demo sales data in development mode');
-      return getDemoSales();
-    }
-    
-    const allSales: WildberriesSale[] = [];
-    let nextDateFrom = formatDateRFC3339(dateFrom);
-    let hasMoreData = true;
-    
-    // Implement pagination using lastChangeDate
-    while (hasMoreData) {
-      console.log(`Fetching sales batch with dateFrom: ${nextDateFrom}`);
-      
-      const url = "https://statistics-api.wildberries.ru/api/v1/supplier/sales";
-      const headers = {
-        "Authorization": apiKey,
-      };
-      const params = {
-        "dateFrom": nextDateFrom,
-      };
-      
-      const response = await axios.get(url, { headers, params });
-      const sales: WildberriesSale[] = response.data;
-      
-      if (sales.length === 0) {
-        // No more data to fetch
-        hasMoreData = false;
-      } else {
-        allSales.push(...sales);
-        // Get lastChangeDate from the last sale for the next request
-        nextDateFrom = sales[sales.length - 1].lastChangeDate;
-        
-        // Rate limiting: wait 1 minute between requests (Wildberries API limitation)
-        // In production, we'd implement a proper delay, but for this example we'll just log
-        console.log(`Fetched ${sales.length} sales. Total sales now: ${allSales.length}`);
-        console.log("Note: In a production environment, we would wait 1 minute before making the next request due to API rate limits");
-        
-        // For the sake of the demo, we'll limit to one batch
-        hasMoreData = false;
-      }
-    }
-    
-    console.log(`Completed fetching sales. Total: ${allSales.length} sales`);
-    return allSales;
-  } catch (error) {
-    console.error("Error fetching Wildberries sales:", error);
-    return getDemoSales();
-  }
-};
-
-// Process the orders and sales data to generate insights for the dashboard
-export const processWildberriesData = (orders: WildberriesOrder[], sales: WildberriesSale[], dateFrom: Date, dateTo: Date): WildberriesResponse => {
-  // Initialize summary data
-  const summary = {
-    totalSales: 0,
-    totalTransferred: 0,
-    totalLogistics: 0,
-    totalStorage: 0,
-    totalPenalties: 0,
-    totalDeduction: 0,
-    totalAcceptance: 0,
-    totalReturns: 0,
-    totalOrders: 0,
-    totalCancellations: 0,
-    totalWithDiscount: 0,
+const getLastWeekDateRange = () => {
+  const today = new Date();
+  const lastWeek = new Date(today);
+  lastWeek.setDate(today.getDate() - 7);
+  return {
+    dateFrom: lastWeek,
+    dateTo: today
   };
-  
-  // Track data for charts and breakdowns
-  const ordersByWarehouse: Record<string, number> = {};
-  const ordersByRegion: Record<string, number> = {};
-  const salesByDay: Record<string, number> = {};
-  const salesByProduct: Record<string, number> = {};
-  const productQuantities: Record<string, number> = {};
+};
+
+const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
+  try {
+    const formattedDateFrom = formatDate(dateFrom);
+    const formattedDateTo = formatDate(dateTo);
+    const url = "https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod";
+    
+    const headers = {
+      "Authorization": apiKey,
+    };
+    
+    const params = {
+      "dateFrom": formattedDateFrom,
+      "dateTo": formattedDateTo,
+      "rrdid": 0,
+      "limit": 100000,
+    };
+    
+    console.log("Fetching report detail from Wildberries API...");
+    const response = await axios.get(url, { headers, params });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching report detail:", error);
+    return null;
+  }
+};
+
+const fetchPaidAcceptanceReport = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
+  try {
+    const formattedDateFrom = formatDate(dateFrom);
+    const formattedDateTo = formatDate(dateTo);
+    const url = "https://seller-analytics-api.wildberries.ru/api/v1/analytics/acceptance-report";
+    
+    const headers = {
+      "Authorization": apiKey,
+    };
+    
+    const params = {
+      "dateFrom": formattedDateFrom,
+      "dateTo": formattedDateTo,
+    };
+    
+    console.log("Fetching paid acceptance report from Wildberries API...");
+    const response = await axios.get(url, { headers, params });
+    return response.data.report || [];
+  } catch (error) {
+    console.error("Error fetching paid acceptance report:", error);
+    return [];
+  }
+};
+
+const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
+  if (!data || data.length === 0) {
+    return null;
+  }
+
+  let totalSales = 0;
+  let totalForPay = 0;
+  let totalDeliveryRub = 0;
+  let totalRebillLogisticCost = 0;
+  let totalStorageFee = 0;
+  let totalReturns = 0;
+  let totalPenalty = 0;
+  let totalDeduction = 0;
+  let totalToPay = 0;
+  let totalReturnCount = 0;
+
   const returnsByProduct: Record<string, { value: number; count: number }> = {};
   const penaltiesByReason: Record<string, number> = {};
-  
-  // Process orders
-  orders.forEach(order => {
-    // Count total orders
-    summary.totalOrders++;
-    
-    // Count cancellations
-    if (order.isCancel) {
-      summary.totalCancellations++;
-    }
-    
-    // Track orders by warehouse
-    const warehouse = order.warehouseName;
-    ordersByWarehouse[warehouse] = (ordersByWarehouse[warehouse] || 0) + 1;
-    
-    // Track orders by region
-    const region = order.regionName;
-    ordersByRegion[region] = (ordersByRegion[region] || 0) + 1;
-    
-    // Track orders by date
-    const orderDate = order.date.split('T')[0];
-    salesByDay[orderDate] = (salesByDay[orderDate] || 0) + order.priceWithDisc;
-    
-    // Track product sales
-    if (order.subject && !order.isCancel) {
-      salesByProduct[order.subject] = (salesByProduct[order.subject] || 0) + order.priceWithDisc;
-      productQuantities[order.subject] = (productQuantities[order.subject] || 0) + 1;
-    }
-  });
-  
-  // Process sales
-  sales.forEach(sale => {
-    const saleId = sale.saleID || '';
-    
-    // Check if it's a sale or return
-    if (saleId.startsWith('S')) {
-      // It's a sale
-      summary.totalSales += sale.priceWithDisc;
-      summary.totalTransferred += sale.forPay || 0;
+  const productProfitability: Record<string, { 
+    name: string;
+    price: number;
+    sales: number;
+    costs: number;
+    profit: number;
+    image: string;
+    count: number;
+    returnCount: number;
+  }> = {};
+
+  for (const record of data) {
+    if (record.doc_type_name === 'Продажа') {
+      totalSales += record.retail_price_withdisc_rub || 0;
+      totalForPay += record.ppvz_for_pay || 0;
       
-      // Estimate logistics cost (simplified)
-      const logisticsCost = sale.priceWithDisc * 0.05; // Estimate 5% for logistics
-      summary.totalLogistics += logisticsCost;
+      if (record.sa_name) {
+        const productName = record.sa_name;
+        if (!productProfitability[productName]) {
+          productProfitability[productName] = { 
+            name: productName,
+            price: record.retail_price || 0,
+            sales: 0,
+            costs: 0,
+            profit: 0,
+            image: record.pic_url || '',
+            count: 0,
+            returnCount: 0
+          };
+        }
+        
+        productProfitability[productName].sales += record.ppvz_for_pay || 0;
+        productProfitability[productName].costs += (record.delivery_rub || 0) + 
+                                                  (record.storage_fee || 0) + 
+                                                  (record.penalty || 0);
+        productProfitability[productName].price = record.retail_price || productProfitability[productName].price;
+        if (record.pic_url && !productProfitability[productName].image) {
+          productProfitability[productName].image = record.pic_url;
+        }
+        productProfitability[productName].count += 1;
+      }
       
-      // Estimate storage cost (simplified)
-      const storageCost = sale.priceWithDisc * 0.02; // Estimate 2% for storage
-      summary.totalStorage += storageCost;
+    } else if (record.doc_type_name === 'Возврат') {
+      totalReturns += record.ppvz_for_pay || 0;
+      totalReturnCount += 1;
       
-    } else if (saleId.startsWith('R')) {
-      // It's a return
-      summary.totalReturns += Math.abs(sale.priceWithDisc);
-      
-      // Track returns by product
-      if (sale.supplierArticle) {
-        const productName = sale.supplierArticle;
+      if (record.sa_name) {
+        const productName = record.sa_name;
+        if (!productProfitability[productName]) {
+          productProfitability[productName] = { 
+            name: productName,
+            price: record.retail_price || 0,
+            sales: 0,
+            costs: 0,
+            profit: 0,
+            image: record.pic_url || '',
+            count: 0,
+            returnCount: 0
+          };
+        }
+        
+        productProfitability[productName].sales += record.ppvz_for_pay || 0;
+        
         if (!returnsByProduct[productName]) {
           returnsByProduct[productName] = { value: 0, count: 0 };
         }
-        returnsByProduct[productName].value += Math.abs(sale.priceWithDisc);
+        returnsByProduct[productName].value += Math.abs(record.ppvz_for_pay || 0);
         returnsByProduct[productName].count += 1;
       }
     }
-  });
-  
-  // Calculate net profit
-  const netProfit = summary.totalSales - summary.totalLogistics - summary.totalStorage - summary.totalPenalties - summary.totalReturns;
-  
-  // Prepare daily sales data
-  const dailySales = Object.entries(salesByDay).map(([date, sales]) => ({
-    date,
-    sales,
-    previousSales: 0 // For now, we don't have previous period data
-  })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  
-  // Prepare product sales data
-  const productSales = Object.entries(productQuantities)
-    .map(([subject_name, quantity]) => ({ subject_name, quantity }))
-    .sort((a, b) => b.quantity - a.quantity)
-    .slice(0, 10);
-  
-  // Prepare returns data
+    
+    if (record.penalty && record.penalty > 0) {
+      const reason = record.penalty_reason || 'Другие причины';
+      if (!penaltiesByReason[reason]) {
+        penaltiesByReason[reason] = 0;
+      }
+      penaltiesByReason[reason] += record.penalty;
+    }
+    
+    totalDeliveryRub += record.delivery_rub || 0;
+    totalRebillLogisticCost += record.rebill_logistic_cost || 0;
+    totalStorageFee += record.storage_fee || 0;
+    totalPenalty += record.penalty || 0;
+    totalDeduction += record.deduction || 0;
+  }
+
+  const penaltiesData = Object.entries(penaltiesByReason).map(([name, value]) => ({
+    name,
+    value: Math.round(value * 100) / 100
+  })).sort((a, b) => b.value - a.value);
+
+  const totalAcceptance = paidAcceptanceData.reduce((sum, record) => sum + (record.total || 0), 0);
+
+  totalToPay = totalForPay - totalDeliveryRub - totalStorageFee - totalReturns - totalPenalty - totalDeduction - totalAcceptance;
+
+  for (const key in productProfitability) {
+    productProfitability[key].profit = productProfitability[key].sales - productProfitability[key].costs;
+  }
+
+  const productProfitabilityArray = Object.values(productProfitability);
+
+  const sortedByProfit = [...productProfitabilityArray].sort((a, b) => b.profit - a.profit);
+
+  const topProfitableProducts = sortedByProfit.slice(0, 3).map(item => ({
+    name: item.name,
+    price: item.price.toString(),
+    profit: item.profit.toString(),
+    image: item.image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg",
+    quantitySold: item.count || 0,
+    margin: Math.round((item.profit / item.sales) * 100) || 0,
+    returnCount: item.returnCount || 0,
+    category: "Одежда"
+  }));
+
+  const sortedByLoss = [...productProfitabilityArray].sort((a, b) => a.profit - b.profit);
+
+  const topUnprofitableProducts = sortedByLoss.slice(0, 3).map(item => ({
+    name: item.name,
+    price: item.price.toString(),
+    profit: item.profit.toString(),
+    image: item.image || "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg",
+    quantitySold: item.count || 0,
+    margin: Math.round((item.profit / item.sales) * 100) || 0,
+    returnCount: item.returnCount || 0,
+    category: "Одежда"
+  }));
+
   const productReturns = Object.entries(returnsByProduct)
     .map(([name, { value, count }]) => ({ name, value, count }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 5);
-  
-  // Prepare penalties data (simplified for demo)
-  const penaltiesData = Object.entries(penaltiesByReason)
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value);
-  
-  // Create WildberriesResponse object
-  const response: WildberriesResponse = {
-    currentPeriod: {
-      sales: summary.totalSales,
-      transferred: summary.totalTransferred,
-      orders: summary.totalOrders,
-      returns: summary.totalReturns,
-      cancellations: summary.totalCancellations,
-      expenses: {
-        total: summary.totalLogistics + summary.totalStorage + summary.totalPenalties + summary.totalAcceptance,
-        logistics: summary.totalLogistics,
-        storage: summary.totalStorage,
-        penalties: summary.totalPenalties,
-        acceptance: summary.totalAcceptance,
-        advertising: 0
-      },
-      netProfit: netProfit,
-      acceptance: summary.totalAcceptance
+
+  console.log(`Received and processed data. Total returns: ${Math.abs(totalReturns)}, Returned items count: ${totalReturnCount}, Returned products count: ${productReturns.length}`);
+  console.log(`Calculated top profitable products: ${topProfitableProducts.length}, Top unprofitable products: ${topUnprofitableProducts.length}`);
+
+  return {
+    metrics: {
+      total_sales: Math.round(totalSales * 100) / 100,
+      total_for_pay: Math.round(totalForPay * 100) / 100,
+      total_delivery_rub: Math.round(totalDeliveryRub * 100) / 100,
+      total_rebill_logistic_cost: Math.round(totalRebillLogisticCost * 100) / 100,
+      total_storage_fee: Math.round(totalStorageFee * 100) / 100,
+      total_returns: Math.round(Math.abs(totalReturns) * 100) / 100,
+      total_penalty: Math.round(totalPenalty * 100) / 100,
+      total_deduction: Math.round(totalDeduction * 100) / 100,
+      total_to_pay: Math.round(totalToPay * 100) / 100,
+      total_acceptance: Math.round(totalAcceptance * 100) / 100,
+      total_return_count: totalReturnCount
     },
-    dailySales,
-    productSales,
-    productReturns,
     penaltiesData,
-    ordersByWarehouse,
-    ordersByRegion,
-    salesByDay,
-    returnsData: {
-      count: Object.values(returnsByProduct).reduce((sum, { count }) => sum + count, 0),
-      amount: Object.values(returnsByProduct).reduce((sum, { value }) => sum + value, 0),
-      byReason: {} // In a real implementation, we would track returns by reason
-    },
-    // Add placeholder data for product profitability (would be calculated from real data)
-    topProfitableProducts: getDemoData().topProfitableProducts,
-    topUnprofitableProducts: getDemoData().topUnprofitableProducts
+    productReturns,
+    topProfitableProducts,
+    topUnprofitableProducts,
+    dailySales: []
   };
-  
-  return response;
 };
 
 export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
@@ -416,160 +308,84 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       return getDemoData();
     }
     
-    // Fetch both orders and sales data
-    const orders = await fetchWildberriesOrders(apiKey, dateFrom);
-    const sales = await fetchWildberriesSales(apiKey, dateFrom);
+    const reportData = await fetchReportDetail(apiKey, dateFrom, dateTo);
     
-    if (orders.length === 0 && sales.length === 0) {
+    const paidAcceptanceData = await fetchPaidAcceptanceReport(apiKey, dateFrom, dateTo);
+    
+    if (!reportData || reportData.length === 0) {
       console.log('No data received from Wildberries API, using demo data');
       return getDemoData();
     }
     
-    // Process data to get insights
-    const result = processWildberriesData(orders, sales, dateFrom, dateTo);
+    const result = calculateMetrics(reportData, paidAcceptanceData);
     
-    console.log(`Processed data from Wildberries API. Orders: ${orders.length}, Sales: ${sales.length}`);
+    if (!result || !result.metrics) {
+      console.log('Failed to calculate metrics, using demo data');
+      return getDemoData();
+    }
     
-    return result;
+    const { metrics, productReturns, penaltiesData } = result;
+    
+    const salesByCategory: Record<string, number> = {};
+    for (const record of reportData) {
+      if (record.doc_type_name === 'Продажа' && record.subject_name) {
+        if (!salesByCategory[record.subject_name]) {
+          salesByCategory[record.subject_name] = 0;
+        }
+        salesByCategory[record.subject_name]++;
+      }
+    }
+    
+    const productSales = Object.entries(salesByCategory)
+      .map(([subject_name, quantity]) => ({ subject_name, quantity }))
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 10);
+    
+    const salesByDay: Record<string, { sales: number, previousSales: number }> = {};
+    for (const record of reportData) {
+      if (record.doc_type_name === 'Продажа' && record.rr_dt) {
+        const date = record.rr_dt.split('T')[0];
+        if (!salesByDay[date]) {
+          salesByDay[date] = { sales: 0, previousSales: 0 };
+        }
+        salesByDay[date].sales += record.retail_price_withdisc_rub || 0;
+      }
+    }
+    
+    const dailySales = Object.entries(salesByDay)
+      .map(([date, { sales, previousSales }]) => ({ date, sales, previousSales }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    const response: WildberriesResponse = {
+      currentPeriod: {
+        sales: metrics.total_sales,
+        transferred: metrics.total_to_pay,
+        expenses: {
+          total: metrics.total_delivery_rub + metrics.total_storage_fee + metrics.total_penalty + metrics.total_acceptance,
+          logistics: metrics.total_delivery_rub,
+          storage: metrics.total_storage_fee,
+          penalties: metrics.total_penalty,
+          acceptance: metrics.total_acceptance,
+          advertising: 0
+        },
+        netProfit: metrics.total_to_pay,
+        acceptance: metrics.total_acceptance
+      },
+      dailySales,
+      productSales,
+      productReturns,
+      penaltiesData,
+      topProfitableProducts: result.topProfitableProducts || [],
+      topUnprofitableProducts: result.topUnprofitableProducts || []
+    };
+    
+    console.log(`Received and processed data from Wildberries API. Total returns: ${metrics.total_returns}, Return count: ${metrics.total_return_count}`);
+    
+    return response;
   } catch (error) {
     console.error("Error fetching Wildberries stats:", error);
     return getDemoData();
   }
-};
-
-// Demo data functions
-const getDemoOrders = (): WildberriesOrder[] => {
-  return [
-    {
-      date: "2025-03-04T18:08:31",
-      lastChangeDate: "2025-03-06T10:11:07",
-      warehouseName: "Подольск",
-      warehouseType: "Склад продавца",
-      countryName: "Россия",
-      oblastOkrugName: "Центральный федеральный округ",
-      regionName: "Московская",
-      supplierArticle: "12345",
-      nmId: 1234567,
-      barcode: "123453559000",
-      category: "Бытовая техника",
-      subject: "Мультистайлеры",
-      brand: "Тест",
-      techSize: "0",
-      incomeID: 56735459,
-      isSupply: false,
-      isRealization: true,
-      totalPrice: 1887,
-      discountPercent: 18,
-      spp: 26,
-      finishedPrice: 1145,
-      priceWithDisc: 1547,
-      isCancel: false,
-      cancelDate: "0001-01-01T00:00:00",
-      orderType: "Клиентский",
-      sticker: "926912515",
-      gNumber: "34343462218572569531",
-      srid: "11.rf9ef11fce1684117b0nhj96222982382.3.0"
-    },
-    // Add more demo orders as needed
-    {
-      date: "2025-03-05T10:15:22",
-      lastChangeDate: "2025-03-06T12:30:45",
-      warehouseName: "Москва",
-      warehouseType: "Склад WB",
-      countryName: "Россия",
-      oblastOkrugName: "Центральный федеральный округ",
-      regionName: "Москва",
-      supplierArticle: "67890",
-      nmId: 7654321,
-      barcode: "987654321000",
-      category: "Одежда",
-      subject: "Платья",
-      brand: "МодаТест",
-      techSize: "44",
-      incomeID: 56735460,
-      isSupply: false,
-      isRealization: true,
-      totalPrice: 2500,
-      discountPercent: 20,
-      spp: 15,
-      finishedPrice: 1700,
-      priceWithDisc: 2000,
-      isCancel: false,
-      cancelDate: "0001-01-01T00:00:00",
-      orderType: "Клиентский",
-      sticker: "926912516",
-      gNumber: "34343462218572569532",
-      srid: "11.rf9ef11fce1684117b0nhj96222982383.3.0"
-    }
-  ];
-};
-
-const getDemoSales = (): WildberriesSale[] => {
-  return [
-    {
-      date: "2025-03-04T18:08:31",
-      lastChangeDate: "2025-03-06T10:11:07",
-      warehouseName: "Подольск",
-      warehouseType: "Склад продавца",
-      countryName: "Россия",
-      oblastOkrugName: "Центральный федеральный округ",
-      regionName: "Московская",
-      supplierArticle: "12345",
-      nmId: 1234567,
-      barcode: "123453559000",
-      category: "Бытовая техника",
-      subject: "Мультистайлеры",
-      brand: "Тест",
-      techSize: "0",
-      incomeID: 56735459,
-      isSupply: false,
-      isRealization: true,
-      totalPrice: 1887,
-      discountPercent: 18,
-      spp: 20,
-      paymentSaleAmount: 93,
-      forPay: 1284.01,
-      finishedPrice: 1145,
-      priceWithDisc: 1547,
-      saleID: "S9993700024",
-      orderType: "Клиентский",
-      sticker: "926912515",
-      gNumber: "34343462218572569531",
-      srid: "11.rf9ef11fce1684117b0nhj96222982382.3.0"
-    },
-    // Add more demo sales
-    {
-      date: "2025-03-05T10:15:22",
-      lastChangeDate: "2025-03-06T12:30:45",
-      warehouseName: "Москва",
-      warehouseType: "Склад WB",
-      countryName: "Россия",
-      oblastOkrugName: "Центральный федеральный округ",
-      regionName: "Москва",
-      supplierArticle: "67890",
-      nmId: 7654321,
-      barcode: "987654321000",
-      category: "Одежда",
-      subject: "Платья",
-      brand: "МодаТест",
-      techSize: "44",
-      incomeID: 56735460,
-      isSupply: false,
-      isRealization: true,
-      totalPrice: 2500,
-      discountPercent: 20,
-      spp: 15,
-      paymentSaleAmount: 120,
-      forPay: 1700,
-      finishedPrice: 1700,
-      priceWithDisc: 2000,
-      saleID: "S9993700025",
-      orderType: "Клиентский",
-      sticker: "926912516",
-      gNumber: "34343462218572569532",
-      srid: "11.rf9ef11fce1684117b0nhj96222982383.3.0"
-    }
-  ];
 };
 
 const getDemoData = (): WildberriesResponse => {
@@ -577,9 +393,6 @@ const getDemoData = (): WildberriesResponse => {
     currentPeriod: {
       sales: 294290.6,
       transferred: 218227.70,
-      orders: 156,
-      returns: 12500,
-      cancellations: 8,
       expenses: {
         total: 58794.94,
         logistics: 35669.16,
@@ -620,12 +433,10 @@ const getDemoData = (): WildberriesResponse => {
     ],
     productSales: [
       { subject_name: "Костюмы", quantity: 48 },
-      { subject_name: "Платья", quantity: 36 },
-      { subject_name: "Свитшоты", quantity: 24 },
-      { subject_name: "Лонгсливы", quantity: 18 },
-      { subject_name: "Костюмы спортивные", quantity: 15 },
-      { subject_name: "Куртки", quantity: 8 },
-      { subject_name: "Джинсы", quantity: 7 }
+      { subject_name: "Платья", quantity: 6 },
+      { subject_name: "Свитшоты", quantity: 4 },
+      { subject_name: "Лонгсливы", quantity: 3 },
+      { subject_name: "Костюмы спортивные", quantity: 1 }
     ],
     productReturns: [
       { name: "Костюм женский спортивный", value: 12000, count: 3 },
@@ -698,37 +509,6 @@ const getDemoData = (): WildberriesResponse => {
         returnCount: 10,
         category: "Аксессуары" 
       }
-    ],
-    ordersByWarehouse: {
-      "Подольск": 45,
-      "Казань": 38,
-      "Коледино": 35,
-      "Краснодар": 24,
-      "Электросталь": 14
-    },
-    ordersByRegion: {
-      "Москва": 48,
-      "Московская": 35,
-      "Санкт-Петербург": 27,
-      "Татарстан": 18,
-      "Краснодарский край": 15,
-      "Свердловская": 13
-    },
-    salesByDay: {
-      "2025-02-26": 36652.93,
-      "2025-02-27": 79814.5,
-      "2025-02-28": 37899.9,
-      "2025-03-01": 62596.15,
-      "2025-03-02": 77327.11
-    },
-    returnsData: {
-      count: 11,
-      amount: 34000,
-      byReason: {
-        "Брак": 18000,
-        "Не подошел размер": 9500,
-        "Не соответствует описанию": 6500
-      }
-    }
+    ]
   };
 };

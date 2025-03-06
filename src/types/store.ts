@@ -22,35 +22,3 @@ export const marketplaces: Marketplace[] = ["Wildberries", "Ozon", "Yandexmarket
 
 // Re-export the WildberriesResponse from the API to avoid duplicate definitions
 export type WildberriesResponse = ApiWildberriesResponse;
-
-// Interface for Wildberries order
-export interface WildberriesOrder {
-  date: string;
-  lastChangeDate: string;
-  warehouseName: string;
-  supplierArticle: string;
-  nmId: number;
-  barcode: string;
-  brand: string;
-  category: string;
-  subject: string;
-  techSize: string;
-  totalPrice: number;
-  discountPercent: number;
-  isCancel: boolean;
-  orderType: string;
-  regionName: string;
-  srid: string;
-}
-
-// Interface for Wildberries sale
-export interface WildberriesSale {
-  date: string;
-  lastChangeDate: string;
-  supplierArticle: string;
-  forPay: number;
-  finishedPrice: number;
-  saleID: string;
-  regionName: string;
-  srid: string;
-}
