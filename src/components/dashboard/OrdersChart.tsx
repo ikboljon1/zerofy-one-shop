@@ -1,3 +1,4 @@
+
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WildberriesOrder, WildberriesSale } from "@/types/store";
@@ -114,15 +115,18 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders, sales = [] }) => {
   const productSalesDistribution = useMemo(() => {
     if (!sales || sales.length === 0) return [];
 
+    // Группируем продажи по названию товара и подсчитываем количество
     const productCounts: Record<string, number> = {};
     let totalProducts = 0;
 
-    sales.forEach(sale => {
+    // Учитываем только положительные продажи (исключаем возвраты)
+    sales.filter(sale => sale.priceWithDisc > 0).forEach(sale => {
       const productName = sale.subject || "Неизвестный товар";
       productCounts[productName] = (productCounts[productName] || 0) + 1;
       totalProducts += 1;
     });
 
+    // Преобразуем в формат для диаграммы и сортируем по количеству (больше сверху)
     return Object.entries(productCounts)
       .map(([name, count]) => ({
         name,
@@ -130,7 +134,7 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders, sales = [] }) => {
         percentage: (count / totalProducts) * 100
       }))
       .sort((a, b) => b.value - a.value)
-      .slice(0, 5);
+      .slice(0, 5); // Берем только топ-5 товаров для наглядности
   }, [sales]);
 
   const orderConfig = {
@@ -268,58 +272,69 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders, sales = [] }) => {
         </CardHeader>
         <CardContent className="flex justify-center">
           <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <defs>
-                  {productSalesDistribution.map((entry, index) => (
-                    <linearGradient key={`pieGradient-${index}`} id={`pieGradient-${index}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={PRODUCT_COLORS[index % PRODUCT_COLORS.length]} stopOpacity={0.9}/>
-                      <stop offset="100%" stopColor={PRODUCT_COLORS[index % PRODUCT_COLORS.length]} stopOpacity={0.7}/>
-                    </linearGradient>
-                  ))}
-                </defs>
-                <Pie
-                  data={productSalesDistribution}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={4}
-                  dataKey="value"
-                  nameKey="name"
-                  labelLine={false}
-                  label={({ name, percentage }) => `${name.substring(0, 15)}${name.length > 15 ? '...' : ''}: ${percentage.toFixed(0)}%`}
-                >
-                  {productSalesDistribution.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={`url(#pieGradient-${index})`} 
-                      stroke="rgba(255,255,255,0.3)"
-                      strokeWidth={2}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value) => [`${value} шт.`, ""]}
-                  contentStyle={{ 
-                    backgroundColor: "rgba(255, 255, 255, 0.97)", 
-                    borderRadius: "8px", 
-                    border: "1px solid var(--border)",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
-                  }}
-                />
-                <Legend 
-                  verticalAlign="bottom"
-                  iconType="circle"
-                  iconSize={10}
-                  formatter={(value, entry) => (
-                    <span className="text-sm font-medium text-ellipsis overflow-hidden" style={{ maxWidth: '120px', display: 'inline-block' }}>
-                      {value.length > 20 ? value.substring(0, 20) + '...' : value}
-                    </span>
-                  )}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            {productSalesDistribution.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <defs>
+                    {productSalesDistribution.map((entry, index) => (
+                      <linearGradient key={`pieGradient-${index}`} id={`pieGradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={PRODUCT_COLORS[index % PRODUCT_COLORS.length]} stopOpacity={0.9}/>
+                        <stop offset="100%" stopColor={PRODUCT_COLORS[index % PRODUCT_COLORS.length]} stopOpacity={0.7}/>
+                      </linearGradient>
+                    ))}
+                  </defs>
+                  <Pie
+                    data={productSalesDistribution}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={4}
+                    dataKey="value"
+                    nameKey="name"
+                    labelLine={false}
+                    label={({ name, percentage }) => 
+                      `${name.substring(0, 15)}${name.length > 15 ? '...' : ''}: ${percentage.toFixed(0)}%`
+                    }
+                  >
+                    {productSalesDistribution.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={`url(#pieGradient-${index})`} 
+                        stroke="rgba(255,255,255,0.3)"
+                        strokeWidth={2}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value) => [`${value} шт.`, ""]}
+                    contentStyle={{ 
+                      backgroundColor: "rgba(255, 255, 255, 0.97)", 
+                      borderRadius: "8px", 
+                      border: "1px solid var(--border)",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
+                    }}
+                  />
+                  <Legend 
+                    verticalAlign="bottom"
+                    iconType="circle"
+                    iconSize={10}
+                    formatter={(value, entry) => (
+                      <span className="text-sm font-medium text-ellipsis overflow-hidden" style={{ maxWidth: '120px', display: 'inline-block' }}>
+                        {value.length > 20 ? value.substring(0, 20) + '...' : value}
+                      </span>
+                    )}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full w-full flex items-center justify-center">
+                <div className="text-center">
+                  <ShoppingBag className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                  <p className="mt-2 text-muted-foreground">Нет данных о продажах за выбранный период</p>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
