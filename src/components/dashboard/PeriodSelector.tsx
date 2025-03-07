@@ -17,18 +17,20 @@ interface PeriodSelectorProps {
 
 const PeriodSelector = ({ value, onChange }: PeriodSelectorProps) => {
   return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-[180px] min-w-[180px]">
-        <SelectValue placeholder="Выберите период" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="today">Сегодня</SelectItem>
-        <SelectItem value="yesterday">Вчера</SelectItem>
-        <SelectItem value="week">Неделя</SelectItem>
-        <SelectItem value="2weeks">2 недели</SelectItem>
-        <SelectItem value="4weeks">4 недели</SelectItem>
-      </SelectContent>
-    </Select>
+    <div className="w-[180px] flex-shrink-0">
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder="Выберите период" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="today">Сегодня</SelectItem>
+          <SelectItem value="yesterday">Вчера</SelectItem>
+          <SelectItem value="week">Неделя</SelectItem>
+          <SelectItem value="2weeks">2 недели</SelectItem>
+          <SelectItem value="4weeks">4 недели</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
   );
 };
 
