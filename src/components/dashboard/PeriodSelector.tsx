@@ -16,14 +16,6 @@ interface PeriodSelectorProps {
   onChange: (value: Period) => void;
 }
 
-const PERIOD_LABELS = {
-  today: "Сегодня",
-  yesterday: "Вчера",
-  week: "Неделя",
-  "2weeks": "2 недели",
-  "4weeks": "4 недели",
-};
-
 const PeriodSelector = ({ value, onChange }: PeriodSelectorProps) => {
   const isMobile = useIsMobile();
   
@@ -34,11 +26,11 @@ const PeriodSelector = ({ value, onChange }: PeriodSelectorProps) => {
           <SelectValue placeholder="Выберите период" />
         </SelectTrigger>
         <SelectContent position="popper" className={isMobile ? "w-[calc(100vw-32px)]" : "w-[180px]"} align="start">
-          {Object.entries(PERIOD_LABELS).map(([periodKey, label]) => (
-            <SelectItem key={periodKey} value={periodKey}>
-              {label}
-            </SelectItem>
-          ))}
+          <SelectItem value="today">Сегодня</SelectItem>
+          <SelectItem value="yesterday">Вчера</SelectItem>
+          <SelectItem value="week">Неделя</SelectItem>
+          <SelectItem value="2weeks">2 недели</SelectItem>
+          <SelectItem value="4weeks">4 недели</SelectItem>
         </SelectContent>
       </Select>
     </div>

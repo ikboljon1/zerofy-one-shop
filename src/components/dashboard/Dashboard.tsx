@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Calendar } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { 
@@ -15,49 +15,23 @@ import SalesTable from "./SalesTable";
 import GeographySection from "./GeographySection";
 import Stats from "@/components/Stats";
 import PeriodSelector, { Period } from "./PeriodSelector";
-import FinancialPeriodSelector, { FinancialPeriod } from "./FinancialPeriodSelector";
 import { WildberriesOrder, WildberriesSale } from "@/types/store";
 import OrderMetrics from "./OrderMetrics";
 import SalesMetrics from "./SalesMetrics";
 import OrdersChart from "./OrdersChart";
 import SalesChart from "./SalesChart";
-import FinancialReport from "./FinancialReport";
-import { fetchReportDetailByPeriod } from "@/services/wildberriesApi";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
 
 const Dashboard = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState("overview");
   const [period, setPeriod] = useState<Period>("today");
-  const [financialPeriod, setFinancialPeriod] = useState<FinancialPeriod>("week");
   const [isLoading, setIsLoading] = useState(false);
   
   const [orders, setOrders] = useState<WildberriesOrder[]>([]);
   const [sales, setSales] = useState<WildberriesSale[]>([]);
-  const [reportDetails, setReportDetails] = useState<any[]>([]);
   const [warehouseDistribution, setWarehouseDistribution] = useState<any[]>([]);
   const [regionDistribution, setRegionDistribution] = useState<any[]>([]);
-  
-  const [customStartDate, setCustomStartDate] = useState<Date>(new Date());
-  const [customEndDate, setCustomEndDate] = useState<Date>(new Date());
-  const [startDateOpen, setStartDateOpen] = useState(false);
-  const [endDateOpen, setEndDateOpen] = useState(false);
-
-  const getPeriodLabel = (period: Period): string => {
-    switch (period) {
-      case "today": return "Сегодня";
-      case "yesterday": return "Вчера";
-      case "week": return "Неделя";
-      case "2weeks": return "2 недели";
-      case "4weeks": return "4 недели";
-      default: return "";
-    }
-  };
 
   const filterDataByPeriod = (date: string, period: Period) => {
     const now = new Date();
@@ -133,61 +107,13 @@ const Dashboard = () => {
     return sales.filter(sale => filterDataByPeriod(sale.date, period));
   };
 
-  const getFinancialPeriodDates = (period: FinancialPeriod): { startDate: Date, endDate: Date } => {
-    const now = new Date();
-    let startDate = new Date();
-    
-    switch (period) {
-      case "week":
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-        break;
-      case "2weeks":
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 14);
-        break;
-      case "month":
-        startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-        break;
-      case "quarter":
-        startDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
-        break;
-      case "year":
-        startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-        break;
-      case "custom":
-        return { startDate: customStartDate, endDate: customEndDate };
-      default:
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+  useEffect(() => {
+    if (orders.length > 0) {
+      const { orders: filteredOrders, warehouseDistribution: newWarehouseDistribution, regionDistribution: newRegionDistribution } = getFilteredOrders(orders);
+      setWarehouseDistribution(newWarehouseDistribution);
+      setRegionDistribution(newRegionDistribution);
     }
-    
-    return { startDate, endDate: now };
-  };
-
-  const getFinancialPeriodLabel = (period: FinancialPeriod): string => {
-    switch (period) {
-      case "week": return "Неделя";
-      case "2weeks": return "2 недели";
-      case "month": return "Месяц";
-      case "quarter": return "Квартал";
-      case "year": return "Год";
-      default: return "";
-    }
-  };
-
-  const fetchFinancialReportDetails = async (selectedStore: any) => {
-    try {
-      const { startDate, endDate } = getFinancialPeriodDates(financialPeriod);
-      
-      const reportData = await fetchReportDetailByPeriod(selectedStore.apiKey, startDate, endDate);
-      setReportDetails(reportData);
-    } catch (error) {
-      console.error('Error fetching financial report details:', error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось загрузить данные финансового отчета",
-        variant: "destructive"
-      });
-    }
-  };
+  }, [period, orders]);
 
   const fetchData = async () => {
     try {
@@ -228,8 +154,6 @@ const Dashboard = () => {
         }
       }
 
-      await fetchFinancialReportDetails(selectedStore);
-
       toast({
         title: "Успех",
         description: "Данные успешно обновлены",
@@ -265,8 +189,6 @@ const Dashboard = () => {
 
       if (!savedOrdersData || !savedSalesData) {
         fetchData();
-      } else {
-        fetchFinancialReportDetails(selectedStore);
       }
     }
 
@@ -277,96 +199,6 @@ const Dashboard = () => {
 
     return () => clearInterval(refreshInterval);
   }, []);
-
-  useEffect(() => {
-    const stores = loadStores();
-    const selectedStore = stores.find(s => s.isSelected);
-    
-    if (selectedStore) {
-      fetchFinancialReportDetails(selectedStore);
-    }
-  }, [financialPeriod]);
-
-  const handleCustomPeriodApply = () => {
-    if (financialPeriod === "custom") {
-      const stores = loadStores();
-      const selectedStore = stores.find(s => s.isSelected);
-      
-      if (selectedStore) {
-        fetchFinancialReportDetails(selectedStore);
-      }
-    }
-  };
-
-  const renderDatePickers = () => {
-    if (financialPeriod !== "custom") return null;
-    
-    return (
-      <div className={`mt-2 ${isMobile ? 'space-y-2' : 'flex items-center gap-2'}`}>
-        <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full sm:w-auto justify-start text-left font-normal",
-                !customStartDate && "text-muted-foreground"
-              )}
-            >
-              <Calendar className="mr-2 h-4 w-4" />
-              {customStartDate ? format(customStartDate, 'PPP') : <span>Начальная дата</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <CalendarComponent
-              mode="single"
-              selected={customStartDate}
-              onSelect={(date) => {
-                if (date) {
-                  setCustomStartDate(date);
-                  setStartDateOpen(false);
-                }
-              }}
-              initialFocus
-              className="p-3 pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-        
-        <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full sm:w-auto justify-start text-left font-normal",
-                !customEndDate && "text-muted-foreground"
-              )}
-            >
-              <Calendar className="mr-2 h-4 w-4" />
-              {customEndDate ? format(customEndDate, 'PPP') : <span>Конечная дата</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <CalendarComponent
-              mode="single"
-              selected={customEndDate}
-              onSelect={(date) => {
-                if (date) {
-                  setCustomEndDate(date);
-                  setEndDateOpen(false);
-                }
-              }}
-              initialFocus
-              className="p-3 pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-        
-        <Button onClick={handleCustomPeriodApply} className={isMobile ? "w-full" : ""}>
-          Применить
-        </Button>
-      </div>
-    );
-  };
 
   return (
     <div className="space-y-4">
@@ -381,12 +213,11 @@ const Dashboard = () => {
       </div>
 
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className={`${isMobile ? 'w-full grid grid-cols-5 gap-1' : ''}`}>
+        <TabsList className={`${isMobile ? 'w-full grid grid-cols-4 gap-1' : ''}`}>
           <TabsTrigger value="overview" className={isMobile ? 'text-xs py-1 px-1' : ''}>Обзор</TabsTrigger>
           <TabsTrigger value="orders" className={isMobile ? 'text-xs py-1 px-1' : ''}>Заказы</TabsTrigger>
           <TabsTrigger value="sales" className={isMobile ? 'text-xs py-1 px-1' : ''}>Продажи</TabsTrigger>
           <TabsTrigger value="geography" className={isMobile ? 'text-xs py-1 px-1' : ''}>География</TabsTrigger>
-          <TabsTrigger value="finance" className={isMobile ? 'text-xs py-1 px-1' : ''}>Финансы</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -437,23 +268,6 @@ const Dashboard = () => {
             warehouseDistribution={warehouseDistribution} 
             regionDistribution={regionDistribution}
             sales={getFilteredSales(sales)}
-          />
-        </TabsContent>
-
-        <TabsContent value="finance" className="space-y-4">
-          <div className={`mb-4 ${isMobile ? 'space-y-2' : ''}`}>
-            <div className={isMobile ? 'w-full' : 'flex items-center gap-4'}>
-              <FinancialPeriodSelector value={financialPeriod} onChange={setFinancialPeriod} />
-              <div className="flex-grow"></div>
-            </div>
-            {renderDatePickers()}
-          </div>
-          <FinancialReport 
-            data={reportDetails} 
-            isLoading={isLoading} 
-            period={financialPeriod === "custom" 
-              ? `${format(customStartDate, 'dd.MM.yyyy')} - ${format(customEndDate, 'dd.MM.yyyy')}` 
-              : getFinancialPeriodLabel(financialPeriod)}
           />
         </TabsContent>
       </Tabs>
