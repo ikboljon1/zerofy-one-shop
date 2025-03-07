@@ -1,9 +1,6 @@
 
-import React, { useMemo } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { WildberriesSale } from "@/types/store";
-import { format, subDays, eachDayOfInterval, startOfDay, endOfDay, eachHourOfInterval, addHours, isToday, isYesterday } from "date-fns";
-import { ru } from "date-fns/locale";
 import { 
   AreaChart, 
   Area, 
@@ -11,345 +8,104 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer, 
-  PieChart, 
-  Pie, 
-  Cell, 
-  Legend, 
-  ReferenceLine 
+  ResponsiveContainer 
 } from 'recharts';
-import { formatCurrency } from "@/utils/formatCurrency";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { format } from "date-fns";
+import { ru } from "date-fns/locale";
+import { DollarSign } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { CreditCard, ShoppingCart } from "lucide-react";
 
 interface SalesChartProps {
-  sales: WildberriesSale[];
+  data: Array<{
+    date: string;
+    sales: number;
+    orders: number;
+  }>;
 }
 
-const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088fe', '#00C49F', '#FFBB28', '#FF8042'];
-
-const SalesChart: React.FC<SalesChartProps> = ({ sales }) => {
+const SalesChart: React.FC<SalesChartProps> = ({ data }) => {
   const isMobile = useIsMobile();
   
-  const shouldDisplayHourly = useMemo(() => {
-    if (sales.length === 0) return false;
-    
-    // Check if all sales are from today or yesterday
-    const firstSaleDate = new Date(sales[0].date);
-    return isToday(firstSaleDate) || isYesterday(firstSaleDate);
-  }, [sales]);
-
-  const dailySalesData = useMemo(() => {
-    if (sales.length === 0) return [];
-    
-    if (shouldDisplayHourly) {
-      // Get the date of the first sale (assuming all sales are from the same day - today or yesterday)
-      const saleDate = new Date(sales[0].date);
-      const dayStart = startOfDay(saleDate);
-      const dayEnd = endOfDay(saleDate);
-      
-      // Generate array of all hours in the day
-      const hoursInterval = eachHourOfInterval({
-        start: dayStart,
-        end: dayEnd,
-      });
-      
-      // Sum sales per hour
-      return hoursInterval.map(hour => {
-        const hourEnd = addHours(hour, 1);
-        
-        const salesInHour = sales.filter(sale => {
-          const saleTime = new Date(sale.date);
-          return saleTime >= hour && saleTime < hourEnd;
-        });
-        
-        const totalRevenue = salesInHour.reduce((sum, sale) => sum + sale.priceWithDisc, 0);
-        const totalProfit = salesInHour.reduce((sum, sale) => sum + sale.forPay, 0);
-        const totalReturns = salesInHour.filter(sale => sale.isReturn).reduce((sum, sale) => sum + sale.priceWithDisc, 0);
-        
-        return {
-          date: format(hour, 'HH:00', { locale: ru }),
-          revenue: totalRevenue,
-          profit: totalProfit,
-          returns: totalReturns,
-        };
-      });
-    } else {
-      // Get date range for the last 7 days
-      const today = new Date();
-      const sevenDaysAgo = subDays(today, 6); // 7 days including today
-      
-      // Generate array of all days
-      const daysInterval = eachDayOfInterval({
-        start: sevenDaysAgo,
-        end: today,
-      });
-      
-      // Sum sales per day
-      return daysInterval.map(day => {
-        const dayStart = startOfDay(day);
-        const dayEnd = endOfDay(day);
-        
-        const salesOnDay = sales.filter(sale => {
-          const saleDate = new Date(sale.date);
-          return saleDate >= dayStart && saleDate <= dayEnd;
-        });
-        
-        const totalRevenue = salesOnDay.reduce((sum, sale) => sum + sale.priceWithDisc, 0);
-        const totalProfit = salesOnDay.reduce((sum, sale) => sum + sale.forPay, 0);
-        const totalReturns = salesOnDay.filter(sale => sale.isReturn).reduce((sum, sale) => sum + sale.priceWithDisc, 0);
-        
-        return {
-          date: format(day, 'dd.MM', { locale: ru }),
-          revenue: totalRevenue,
-          profit: totalProfit,
-          returns: totalReturns,
-        };
-      });
-    }
-  }, [sales, shouldDisplayHourly]);
-
-  const categorySalesData = useMemo(() => {
-    if (sales.length === 0) return [];
-    
-    const categoryCounts: Record<string, { count: number, amount: number }> = {};
-    
-    sales.forEach(sale => {
-      if (!sale.category) return;
-      if (!categoryCounts[sale.category]) {
-        categoryCounts[sale.category] = { count: 0, amount: 0 };
-      }
-      categoryCounts[sale.category].count += 1;
-      categoryCounts[sale.category].amount += sale.priceWithDisc;
-    });
-    
-    return Object.entries(categoryCounts)
-      .map(([name, data]) => ({ 
-        name, 
-        value: data.count,
-        amount: data.amount,
-      }))
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 5);
-  }, [sales]);
-
-  const salesConfig = {
-    revenue: {
-      label: "Выручка",
-      theme: {
-        light: "#6366f1",
-        dark: "#4f46e5",
-      },
-    },
-    profit: {
-      label: "К получению",
-      theme: {
-        light: "#10b981",
-        dark: "#059669",
-      },
-    },
-    returns: {
-      label: "Возвраты",
-      theme: {
-        light: "#ef4444",
-        dark: "#dc2626",
-      },
-    },
-  };
-
-  // Calculate total revenue for the pie chart percentage
-  const totalRevenue = categorySalesData.reduce((sum, category) => sum + category.amount, 0);
-
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-      <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-white to-indigo-50/30 dark:from-gray-900 dark:to-indigo-950/30">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-indigo-500" />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-700 dark:from-indigo-400 dark:to-blue-400">
-                {shouldDisplayHourly ? 'Продажи по часам' : 'Динамика продаж'}
-              </span>
-            </CardTitle>
-            <div className="text-xs text-muted-foreground bg-background/80 dark:bg-gray-800/80 px-2 py-1 rounded-full">
-              {shouldDisplayHourly ? 'Почасовая статистика' : 'Ежедневная статистика'}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[300px]">
-            <ChartContainer
-              config={salesConfig}
-              className="h-full"
+    <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-white to-purple-50/30 dark:from-gray-900 dark:to-purple-950/30">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-purple-500" />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-700 to-indigo-700 dark:from-purple-400 dark:to-indigo-400">
+              Динамика продаж
+            </span>
+          </CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={data}
+              margin={{ top: 20, right: 20, left: 0, bottom: 10 }}
             >
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={dailySalesData}
-                  margin={{ top: 20, right: 20, left: 0, bottom: 10 }}
-                >
-                  <defs>
-                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0.1}/>
-                    </linearGradient>
-                    <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-profit)" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="var(--color-profit)" stopOpacity={0.1}/>
-                    </linearGradient>
-                    <linearGradient id="colorReturns" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-returns)" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="var(--color-returns)" stopOpacity={0.1}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.3} />
-                  <XAxis 
-                    dataKey="date" 
-                    tick={{ fontSize: 12 }}
-                    tickLine={{ stroke: 'var(--border)' }}
-                    axisLine={{ stroke: 'var(--border)' }}
-                  />
-                  <YAxis 
-                    tickFormatter={(value) => `${formatCurrency(value)}`}
-                    tick={{ fontSize: 12 }}
-                    tickLine={{ stroke: 'var(--border)' }}
-                    axisLine={{ stroke: 'var(--border)' }}
-                  />
-                  <ChartTooltip 
-                    content={<ChartTooltipContent />}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="revenue" 
-                    name="Выручка"
-                    stroke="var(--color-revenue)" 
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorRevenue)"
-                    activeDot={{ r: 6, strokeWidth: 0 }}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="profit" 
-                    name="К получению"
-                    stroke="var(--color-profit)" 
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorProfit)"
-                    activeDot={{ r: 6, strokeWidth: 0 }}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="returns" 
-                    name="Возвраты"
-                    stroke="var(--color-returns)" 
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorReturns)"
-                    activeDot={{ r: 6, strokeWidth: 0 }}
-                  />
-                  {!isMobile && !shouldDisplayHourly && (
-                    <ReferenceLine
-                      y={dailySalesData.reduce((sum, day) => sum + day.revenue, 0) / dailySalesData.length}
-                      stroke="var(--color-revenue)"
-                      strokeDasharray="3 3"
-                      label={{ 
-                        value: "Средняя выручка", 
-                        position: "insideTopLeft",
-                        fill: "var(--color-revenue)",
-                        fontSize: 12
-                      }}
-                    />
-                  )}
-                </AreaChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-white to-indigo-50/30 dark:from-gray-900 dark:to-indigo-950/30">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5 text-indigo-500" />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-700 dark:from-indigo-400 dark:to-blue-400">
-                Продажи по категориям
-              </span>
-            </CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="flex justify-center">
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <defs>
-                  {categorySalesData.map((entry, index) => (
-                    <linearGradient key={`catGradient-${index}`} id={`catGradient-${index}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.9}/>
-                      <stop offset="100%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.7}/>
-                    </linearGradient>
-                  ))}
-                </defs>
-                <Pie
-                  data={categorySalesData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={4}
-                  dataKey="amount"
-                  nameKey="name"
-                  labelLine={false}
-                  label={({ name, percent }) => {
-                    if (typeof percent === 'number') {
-                      return name.length > 12 
-                        ? `${name.slice(0, 12)}...: ${(percent * 100).toFixed(0)}%` 
-                        : `${name}: ${(percent * 100).toFixed(0)}%`;
-                    }
-                    return '';
-                  }}
-                >
-                  {categorySalesData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={`url(#catGradient-${index})`} 
-                      stroke="rgba(255,255,255,0.3)"
-                      strokeWidth={2}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value, name) => {
-                    // Make sure value is treated as a number
-                    const numValue = typeof value === 'number' ? value : 0;
-                    const percentage = totalRevenue > 0 ? ((numValue / totalRevenue) * 100).toFixed(1) : '0';
-                    return [
-                      `${formatCurrency(numValue)} ₽ (${percentage}%)`,
-                      name
-                    ];
-                  }}
-                  contentStyle={{ 
-                    backgroundColor: "rgba(255, 255, 255, 0.97)", 
-                    borderRadius: "8px", 
-                    border: "1px solid var(--border)",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
-                  }}
-                />
-                <Legend 
-                  verticalAlign="bottom"
-                  iconType="circle"
-                  iconSize={10}
-                  formatter={(value) => (
-                    <span className="text-sm font-medium">{value}</span>
-                  )}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+              <defs>
+                <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.1}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+              <XAxis 
+                dataKey="date" 
+                tickFormatter={(value) => {
+                  try {
+                    const date = new Date(value);
+                    return format(date, 'dd.MM', { locale: ru });
+                  } catch (e) {
+                    return value;
+                  }
+                }}
+                stroke="#9ca3af"
+                tick={{ fontSize: 12 }}
+                tickLine={{ stroke: '#e5e7eb' }}
+                axisLine={{ stroke: '#e5e7eb' }}
+              />
+              <YAxis 
+                stroke="#9ca3af"
+                tickFormatter={(value) => value >= 1000 ? `${value/1000}k` : value}
+                tick={{ fontSize: 12 }}
+                tickLine={{ stroke: '#e5e7eb' }}
+                axisLine={{ stroke: '#e5e7eb' }}
+              />
+              <Tooltip 
+                formatter={(value: any) => [`${value.toLocaleString()} ₽`, 'Продажи']}
+                labelFormatter={(label) => {
+                  try {
+                    const date = new Date(label);
+                    return format(date, 'dd.MM.yyyy', { locale: ru });
+                  } catch (e) {
+                    return label;
+                  }
+                }}
+                contentStyle={{ 
+                  background: 'rgba(255, 255, 255, 0.95)', 
+                  borderRadius: '8px', 
+                  border: '1px solid #e5e7eb',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="sales"
+                stroke="#8B5CF6"
+                strokeWidth={2}
+                fillOpacity={1}
+                fill="url(#colorSales)"
+                name="Продажи"
+                activeDot={{ r: 6, strokeWidth: 0, fill: "#8B5CF6" }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

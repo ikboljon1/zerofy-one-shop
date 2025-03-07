@@ -1,8 +1,7 @@
-
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WildberriesOrder } from "@/types/store";
-import { format, subDays, eachDayOfInterval, startOfDay, endOfDay, eachHourOfInterval, addHours, isSameDay, isToday, isYesterday } from "date-fns";
+import { format, subDays, eachDayOfInterval, startOfDay, endOfDay, eachHourOfInterval, addHours, isToday, isYesterday } from "date-fns";
 import { ru } from "date-fns/locale";
 import { 
   AreaChart, 
@@ -15,11 +14,8 @@ import {
   PieChart, 
   Pie, 
   Cell, 
-  Legend, 
-  BarChart, 
-  Bar
+  Legend
 } from 'recharts';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ShoppingBag, TrendingUp } from "lucide-react";
 
@@ -27,7 +23,7 @@ interface OrdersChartProps {
   orders: WildberriesOrder[];
 }
 
-const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088fe', '#00C49F', '#FFBB28', '#FF8042', '#ff0000'];
+const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1', '#EF4444', '#14B8A6', '#8B5CF6', '#D946EF'];
 
 const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
   const isMobile = useIsMobile();
@@ -140,45 +136,14 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
       .slice(0, 5);
   }, [orders]);
 
-  const orderConfig = {
-    active: {
-      label: "Активные заказы",
-      theme: {
-        light: "#10b981",
-        dark: "#059669",
-      },
-    },
-    cancelled: {
-      label: "Отмененные заказы",
-      theme: {
-        light: "#ef4444",
-        dark: "#dc2626",
-      },
-    },
-    returned: {
-      label: "Возвраты",
-      theme: {
-        light: "#f59e0b",
-        dark: "#d97706",
-      },
-    },
-    total: {
-      label: "Всего заказов",
-      theme: {
-        light: "#6366f1",
-        dark: "#4f46e5",
-      },
-    },
-  };
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-      <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-white to-indigo-50/30 dark:from-gray-900 dark:to-indigo-950/30">
+      <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-white to-purple-50/30 dark:from-gray-900 dark:to-purple-950/30">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-indigo-500" />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-700 dark:from-indigo-400 dark:to-blue-400">
+              <TrendingUp className="h-5 w-5 text-purple-500" />
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-700 to-indigo-700 dark:from-purple-400 dark:to-indigo-400">
                 {shouldDisplayHourly ? 'Заказы по часам' : 'Заказы по дням'}
               </span>
             </CardTitle>
@@ -189,85 +154,96 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
         </CardHeader>
         <CardContent>
           <div className="h-[300px]">
-            <ChartContainer 
-              config={orderConfig}
-              className="h-full"
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={dailyOrdersData}
-                  margin={{ top: 20, right: 20, left: 0, bottom: 10 }}
-                >
-                  <defs>
-                    <linearGradient id="colorActive" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-active)" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="var(--color-active)" stopOpacity={0.1}/>
-                    </linearGradient>
-                    <linearGradient id="colorCancelled" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-cancelled)" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="var(--color-cancelled)" stopOpacity={0.1}/>
-                    </linearGradient>
-                    <linearGradient id="colorReturned" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-returned)" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="var(--color-returned)" stopOpacity={0.1}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.3} />
-                  <XAxis 
-                    dataKey="date" 
-                    tick={{ fontSize: 12 }}
-                    tickLine={{ stroke: 'var(--border)' }}
-                    axisLine={{ stroke: 'var(--border)' }}
-                  />
-                  <YAxis 
-                    tickFormatter={(value) => value === 0 ? '0' : value}
-                    tick={{ fontSize: 12 }}
-                    tickLine={{ stroke: 'var(--border)' }}
-                    axisLine={{ stroke: 'var(--border)' }}
-                  />
-                  <ChartTooltip
-                    content={<ChartTooltipContent />}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="active" 
-                    stroke="var(--color-active)" 
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorActive)"
-                    activeDot={{ r: 6, strokeWidth: 0 }}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="cancelled" 
-                    stroke="var(--color-cancelled)" 
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorCancelled)"
-                    activeDot={{ r: 6, strokeWidth: 0 }}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="returned" 
-                    stroke="var(--color-returned)" 
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorReturned)"
-                    activeDot={{ r: 6, strokeWidth: 0 }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </ChartContainer>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={dailyOrdersData}
+                margin={{ top: 20, right: 20, left: 0, bottom: 10 }}
+              >
+                <defs>
+                  <linearGradient id="colorActive" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
+                  </linearGradient>
+                  <linearGradient id="colorCancelled" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
+                  </linearGradient>
+                  <linearGradient id="colorReturned" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.1}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fontSize: 12 }}
+                  stroke="#9ca3af"
+                  tickLine={{ stroke: '#e5e7eb' }}
+                  axisLine={{ stroke: '#e5e7eb' }}
+                />
+                <YAxis 
+                  tickFormatter={(value) => value === 0 ? '0' : value}
+                  tick={{ fontSize: 12 }}
+                  stroke="#9ca3af"
+                  tickLine={{ stroke: '#e5e7eb' }}
+                  axisLine={{ stroke: '#e5e7eb' }}
+                />
+                <Tooltip
+                  formatter={(value: any, name: any) => {
+                    const labels = {
+                      active: 'Активные',
+                      cancelled: 'Отменённые',
+                      returned: 'Возвраты',
+                      total: 'Всего'
+                    };
+                    return [value, labels[name as keyof typeof labels] || name];
+                  }}
+                  contentStyle={{ 
+                    background: 'rgba(255, 255, 255, 0.95)', 
+                    borderRadius: '8px', 
+                    border: '1px solid #e5e7eb',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                  }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="active" 
+                  stroke="#10b981" 
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorActive)"
+                  activeDot={{ r: 6, strokeWidth: 0, fill: "#10b981" }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="cancelled" 
+                  stroke="#ef4444" 
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorCancelled)"
+                  activeDot={{ r: 6, strokeWidth: 0, fill: "#ef4444" }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="returned" 
+                  stroke="#f59e0b" 
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorReturned)"
+                  activeDot={{ r: 6, strokeWidth: 0, fill: "#f59e0b" }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-white to-indigo-50/30 dark:from-gray-900 dark:to-indigo-950/30">
+      <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-white to-purple-50/30 dark:from-gray-900 dark:to-purple-950/30">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg flex items-center gap-2">
-              <ShoppingBag className="h-5 w-5 text-indigo-500" />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-700 dark:from-indigo-400 dark:to-blue-400">
+              <ShoppingBag className="h-5 w-5 text-purple-500" />
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-700 to-indigo-700 dark:from-purple-400 dark:to-indigo-400">
                 Распределение заказов
               </span>
             </CardTitle>
@@ -280,8 +256,8 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
                 <defs>
                   {cancelledVsActiveData.map((entry, index) => (
                     <linearGradient key={`pieGradient-${index}`} id={`pieGradient-${index}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={index === 0 ? "#10b981" : index === 1 ? "#ef4444" : "#f59e0b"} stopOpacity={0.9}/>
-                      <stop offset="100%" stopColor={index === 0 ? "#059669" : index === 1 ? "#dc2626" : "#d97706"} stopOpacity={0.9}/>
+                      <stop offset="0%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.9}/>
+                      <stop offset="100%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.7}/>
                     </linearGradient>
                   ))}
                 </defs>
@@ -289,8 +265,8 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
                   data={cancelledVsActiveData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
+                  innerRadius={70}
+                  outerRadius={110}
                   paddingAngle={4}
                   dataKey="value"
                   labelLine={false}
@@ -310,7 +286,7 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
                   contentStyle={{ 
                     backgroundColor: "rgba(255, 255, 255, 0.97)", 
                     borderRadius: "8px", 
-                    border: "1px solid var(--border)",
+                    border: "1px solid #e5e7eb",
                     boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
                   }}
                 />
