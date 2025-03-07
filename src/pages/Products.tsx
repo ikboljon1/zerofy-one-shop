@@ -33,6 +33,8 @@ const Products = ({ selectedStore }: ProductsProps) => {
   useEffect(() => {
     if (selectedStore) {
       loadProductProfitabilityData();
+      // Auto-sync products when store is selected
+      handleSync();
     } else {
       setProfitableProducts([]);
       setUnprofitableProducts([]);

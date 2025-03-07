@@ -73,18 +73,26 @@ const Products = ({
               : 'bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-950/30 dark:to-rose-950/30 border border-red-100 dark:border-red-800/30 rounded-lg'}`}
           >
             <div className="flex items-start">
-              <img
-                src={product.image || "/placeholder.svg"}
-                alt={product.name}
-                className={`rounded-lg object-cover ${
+              {product.image ? (
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  className={`rounded-lg object-cover ${
+                    isMobile ? 'h-16 w-16' : 'h-20 w-20'
+                  } mr-3`}
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.onerror = null;
+                    target.src = "/placeholder.svg";
+                  }}
+                />
+              ) : (
+                <div className={`rounded-lg flex items-center justify-center bg-gray-100 dark:bg-gray-800 ${
                   isMobile ? 'h-16 w-16' : 'h-20 w-20'
-                } mr-3`}
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.onerror = null;
-                  target.src = "/placeholder.svg";
-                }}
-              />
+                } mr-3`}>
+                  <span className="text-xs text-center text-gray-500 dark:text-gray-400 px-1">Нет фото</span>
+                </div>
+              )}
               <div className="flex-1">
                 <div className="flex justify-between items-start">
                   <h4 className={`font-semibold ${isMobile ? 'text-sm' : 'text-base'}`}>
