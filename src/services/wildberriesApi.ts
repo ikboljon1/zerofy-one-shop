@@ -439,34 +439,6 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   };
 };
 
-/**
- * Загружает отчет о платной приемке с Wildberries API
- * Реализация в соответствии с функцией fetch_paid_acceptance_report из Python-скрипта
- */
-const fetchPaidAcceptanceReport = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
-  try {
-    const formattedDateFrom = formatDate(dateFrom);
-    const formattedDateTo = formatDate(dateTo);
-    const url = "https://seller-analytics-api.wildberries.ru/api/v1/analytics/acceptance-report";
-    
-    const headers = {
-      "Authorization": apiKey,
-    };
-    
-    const params = {
-      "dateFrom": formattedDateFrom,
-      "dateTo": formattedDateTo,
-    };
-    
-    console.log("Fetching paid acceptance report from Wildberries API...");
-    const response = await axios.get(url, { headers, params });
-    return response.data.report || [];
-  } catch (error) {
-    console.error("Error fetching paid acceptance report:", error);
-    return [];
-  }
-};
-
 export const fetchWildberriesOrders = async (apiKey: string, dateFrom: Date): Promise<WildberriesOrder[]> => {
   try {
     const formattedDate = formatDateRFC3339(dateFrom);
@@ -766,4 +738,27 @@ const getDemoData = (): WildberriesResponse => {
         price: "1200", 
         profit: "18000", 
         image: "https://images.wbstatic.net/big/new/22270000/22271973-1.jpg",
-        quantitySold:
+        quantitySold: 45,
+        margin: 38,
+        returnCount: 2,
+        category: "Женская одежда"
+      },
+      { 
+        name: "Джинсы мужские", 
+        price: "2500", 
+        profit: "12500", 
+        image: "https://images.wbstatic.net/big/new/21810000/21816586-1.jpg",
+        quantitySold: 30,
+        margin: 35,
+        returnCount: 1,
+        category: "Мужская одежда"
+      }
+    ],
+    topUnprofitableProducts: [
+      { 
+        name: "Футболка мужская", 
+        price: "900", 
+        profit: "-3500", 
+        image: "https://images.wbstatic.net/big/new/19520000/19521004-1.jpg",
+        quantitySold: 25,
+        margin:
