@@ -93,7 +93,8 @@ const getLastWeekDateRange = () => {
   };
 };
 
-const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
+// Function to fetch report details with pagination support
+const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date, rrdId: number = 0) => {
   try {
     const formattedDateFrom = formatDate(dateFrom);
     const formattedDateTo = formatDate(dateTo);
@@ -106,16 +107,54 @@ const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date) =
     const params = {
       "dateFrom": formattedDateFrom,
       "dateTo": formattedDateTo,
-      "rrdid": 0,
+      "rrdid": rrdId,
       "limit": 100000,
     };
     
-    console.log("Fetching report detail from Wildberries API...");
+    console.log(`Fetching report detail from Wildberries API. Page with rrdId: ${rrdId}`);
     const response = await axios.get(url, { headers, params });
-    return response.data;
+    
+    const data = response.data;
+    let nextRrdId = 0;
+    
+    if (data && data.length > 0) {
+      const lastRecord = data[data.length - 1];
+      nextRrdId = lastRecord.rrd_id || 0;
+    }
+    
+    return { data, nextRrdId };
   } catch (error) {
     console.error("Error fetching report detail:", error);
-    return null;
+    return { data: [], nextRrdId: 0 };
+  }
+};
+
+// Function to fetch all report details with pagination
+const fetchAllReportDetails = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
+  let allData = [];
+  let nextRrdId = 0;
+  
+  try {
+    do {
+      const { data, nextRrdId: newRrdId } = await fetchReportDetail(apiKey, dateFrom, dateTo, nextRrdId);
+      
+      if (!data || data.length === 0) {
+        break;
+      }
+      
+      allData = [...allData, ...data];
+      nextRrdId = newRrdId;
+      
+      if (nextRrdId === 0) {
+        break;
+      }
+      
+    } while (nextRrdId > 0);
+    
+    return allData;
+  } catch (error) {
+    console.error("Error fetching all report details:", error);
+    return [];
   }
 };
 
@@ -234,6 +273,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       }
     }
     
+    // Process penalties
     if (record.penalty && record.penalty > 0) {
       const reason = record.penalty_reason || record.bonus_type_name || 'Другие причины';
       if (!penaltiesByReason[reason]) {
@@ -242,7 +282,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       penaltiesByReason[reason] += record.penalty;
     }
     
-    // Обработка удержаний (deduction) - отдельно от штрафов
+    // Process deductions
     if (record.deduction && record.deduction > 0) {
       const reason = record.bonus_type_name || 'Прочие удержания';
       if (!deductionsByReason[reason]) {
@@ -263,7 +303,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     value: Math.round(value * 100) / 100
   })).sort((a, b) => b.value - a.value);
 
-  // Создаем отдельный массив для удержаний
+  // Create separate array for deductions
   const deductionsData = Object.entries(deductionsByReason).map(([name, value]) => ({
     name,
     value: Math.round(value * 100) / 100
@@ -390,7 +430,8 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       return getDemoData();
     }
     
-    const reportData = await fetchReportDetail(apiKey, dateFrom, dateTo);
+    // Use the paginated function to get all report data
+    const reportData = await fetchAllReportDetails(apiKey, dateFrom, dateTo);
     
     const paidAcceptanceData = await fetchPaidAcceptanceReport(apiKey, dateFrom, dateTo);
     
