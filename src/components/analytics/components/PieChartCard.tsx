@@ -17,6 +17,7 @@ interface PieChartCardProps {
     name: string;
     value: number;
     count?: number; // Поле для количества
+    isNegative?: boolean; // Флаг для отрицательных значений
   }>;
   valueLabel?: string;
   showCount?: boolean; // Флаг для отображения количества
@@ -31,8 +32,29 @@ const PieChartCard = ({
   showCount = false,
   emptyMessage = "Нет данных за выбранный период" 
 }: PieChartCardProps) => {
-  // Проверяем, что данные не пустые и содержат значения больше нуля
-  const hasData = data && data.length > 0 && data.some(item => item.value > 0);
+  // Отфильтровываем данные с нулевыми значениями
+  const filteredData = data && data.filter(item => item.value !== 0);
+  
+  // Проверяем, что данные не пустые и содержат значения
+  const hasData = filteredData && filteredData.length > 0;
+
+  // Преобразуем данные для корректного отображения в диаграмме
+  // Для диаграммы используем абсолютные значения, чтобы все сегменты были положительными
+  const chartData = hasData ? filteredData.map(item => ({
+    ...item,
+    value: Math.abs(item.value)
+  })) : [];
+
+  // Функция для форматирования числа с сохранением десятичных знаков
+  const formatDecimal = (value: number) => {
+    // Если значение целое, показываем без десятичных знаков
+    if (value % 1 === 0) {
+      return formatCurrency(value);
+    }
+    
+    // Иначе показываем с двумя десятичными знаками
+    return formatCurrency(Math.round(value * 100) / 100);
+  };
 
   return (
     <Card className="p-6">
@@ -48,7 +70,7 @@ const PieChartCard = ({
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={data}
+                  data={chartData}
                   cx="50%"
                   cy="50%"
                   innerRadius={40}
@@ -56,19 +78,19 @@ const PieChartCard = ({
                   paddingAngle={2}
                   dataKey="value"
                 >
-                  {data.map((entry, index) => (
+                  {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: any) => [`${formatCurrency(value)} ${valueLabel}`, '']}
+                  formatter={(value: any) => [`${formatDecimal(value)} ${valueLabel}`, '']}
                   contentStyle={{ background: '#ffffff', borderRadius: '4px', border: '1px solid #e5e7eb' }}
                 />
               </PieChart>
             </ResponsiveContainer>
           </div>
           <div className="space-y-4">
-            {data.map((item, index) => (
+            {filteredData.map((item, index) => (
               <div key={index} className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div 
@@ -78,7 +100,9 @@ const PieChartCard = ({
                   <span className="text-sm">{item.name}</span>
                 </div>
                 <div className="text-right">
-                  <span className="font-medium">{formatCurrency(item.value)} {valueLabel}</span>
+                  <span className={`font-medium ${item.isNegative || item.value < 0 ? 'text-red-500' : ''}`}>
+                    {item.isNegative || item.value < 0 ? '-' : ''}{formatDecimal(Math.abs(item.value))} {valueLabel}
+                  </span>
                   {showCount && item.count !== undefined && (
                     <div className="text-xs text-muted-foreground">
                       Кол-во: {item.count}

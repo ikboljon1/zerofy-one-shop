@@ -326,12 +326,22 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   console.log("Total deduction amount:", totalDeduction);
 
   // Преобразуем данные об удержаниях для отображения
-  const deductionsData = Object.entries(deductionsByReason).map(([name, data]) => ({
-    name,
-    value: Math.round(Math.abs(data.total) * 100) / 100, // Всегда положительное значение для отображения
-    count: data.items.length,
-    isNegative: data.total < 0 // Добавляем флаг для отрицательных значений
-  })).sort((a, b) => Math.abs(b.value) - Math.abs(a.value)); // Сортируем по абсолютной величине
+  const deductionsData = Object.entries(deductionsByReason)
+    .map(([name, data]) => {
+      // Проверяем имеет ли значение
+      if (data.total === 0) {
+        return null; // Пропускаем нулевые значения
+      }
+      
+      return {
+        name,
+        value: Math.round(data.total * 100) / 100, // Сохраняем знак для отображения
+        count: data.items.length,
+        isNegative: data.total < 0 // Добавляем флаг для отрицательных значений
+      };
+    })
+    .filter(item => item !== null) // Удаляем null записи
+    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value)); // Сортируем по абсолютной величине
 
   console.log("Deductions data processed:", deductionsData);
 
@@ -679,12 +689,11 @@ const getDemoData = (): WildberriesResponse => {
       { name: "Другие причины", value: 2500 }
     ],
     deductionsData: [ 
-      { name: "Прочие удержания", value: 2000 },
-      { name: "Логистика", value: 1500 },
-      { name: "Компенсация клиенту", value: 1200 },
-      { name: "Недостача", value: 1000 },
-      { name: "Брак", value: 800 },
-      { name: "Возврат", value: 500 }
+      { name: "Услуги доставки транзитных поставок", value: 17265.33 },
+      { name: "Штраф за перенос поставки", value: -1079.00, isNegative: true },
+      { name: "Штраф за недопоставку", value: -2345.67, isNegative: true },
+      { name: "Компенсация клиенту за брак", value: -1587.45, isNegative: true },
+      { name: "Недостача товара", value: -3254.89, isNegative: true }
     ],
     topProfitableProducts: [
       { 

@@ -1,3 +1,4 @@
+
 // Demo data for analytics dashboard
 export const penaltiesData = [
   { name: "Брак товара", value: 5000 },
@@ -509,3 +510,13 @@ export const warehouseAnalyticsData = {
     { name: "Московский", ordersPerDay: 1250, accuracy: 97.5, processingCost: 108 }
   ]
 };
+
+// Обновленные данные об удержаниях - теперь только ненулевые значения с отрицательными значениями, где нужно
+export const deductionsData = [
+  { name: "Услуги доставки транзитных поставок", value: 17265.33 },
+  { name: "Штраф за перенос поставки", value: -1079.00 },
+  { name: "Штраф за недопоставку", value: -2345.67 },
+  { name: "Компенсация клиенту за брак", value: -1587.45 },
+  { name: "Недостача товара", value: -3254.89 }
+];
+
