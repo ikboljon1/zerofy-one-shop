@@ -1,4 +1,4 @@
-<lov-code>
+
 import axios from 'axios';
 import { WildberriesOrder, WildberriesSale } from "@/types/store";
 
@@ -238,12 +238,12 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   console.log(`Processing ${data.length} records for metrics calculation...`);
   
   for (const record of data) {
-    // Обработка продаж в точности как в Python-скрипте
+    // Обработка продаж в соответствии с Python-скриптом
     if (record.doc_type_name === 'Продажа') {
       totalSales += record.retail_price_withdisc_rub || 0;
       totalForPay += record.ppvz_for_pay || 0;
       
-      // Остальной код для обработки продаж остается прежним
+      // Учет данных для расчета прибыльности товаров
       if (record.sa_name) {
         const productName = record.sa_name;
         if (!productProfitability[productName]) {
@@ -259,7 +259,6 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
           };
         }
         
-        // Учет данных для расчета прибыльности товаров
         productProfitability[productName].sales += record.ppvz_for_pay || 0;
         productProfitability[productName].costs += (record.delivery_rub || 0) + 
                                                (record.storage_fee || 0) + 
@@ -272,9 +271,8 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
         productProfitability[productName].count += 1;
       }
     } 
-    // Обработка возвратов точно как в Python-скрипте
+    // Обработка возвратов в соответствии с Python-скриптом
     else if (record.doc_type_name === 'Возврат') {
-      // Обратите внимание: в Python используем абсолютное значение, поэтому здесь также используем Math.abs
       totalReturns += Math.abs(record.ppvz_for_pay || 0);
       totalReturnCount += 1;
       
@@ -287,7 +285,6 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
         returnsByNmId[nmId] += 1;
       }
       
-      // Остальной код для обработки возвратов остается прежним
       if (record.sa_name) {
         const productName = record.sa_name;
         if (!productProfitability[productName]) {
@@ -313,12 +310,12 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       }
     }
     
-    // Учет расходов на логистику и хранение для всех операций
+    // Учет расходов на логистику и хранение в соответствии с Python-скриптом
     totalDeliveryRub += record.delivery_rub || 0;
     totalRebillLogisticCost += record.rebill_logistic_cost || 0;
     totalStorageFee += record.storage_fee || 0;
     
-    // Остальной код для обработки штрафов и удержаний остается прежним
+    // Обработка штрафов (сохраняем существующую логику)
     if (record.penalty && record.penalty > 0) {
       const reason = record.penalty_reason || record.bonus_type_name || 'Другие причины';
       if (!penaltiesByReason[reason]) {
@@ -328,6 +325,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       totalPenalty += record.penalty;
     }
     
+    // Обработка удержаний (сохраняем существующую логику)
     if (record.deduction !== undefined && record.deduction !== null) {
       const reason = record.bonus_type_name || 'Прочие удержания';
       
@@ -348,12 +346,10 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   // Расчет общей суммы по платной приемке
   const totalAcceptance = paidAcceptanceData.reduce((sum, record) => sum + (record.total || 0), 0);
 
-  // Расчет итоговой суммы к оплате СТРОГО по логике Python-скрипта
-  // total_to_pay = total_for_pay - total_delivery_rub - total_storage_fee - total_returns
+  // Расчет итоговой суммы к оплате по логике Python-скрипта
   totalToPay = totalForPay - totalDeliveryRub - totalStorageFee - totalReturns;
 
-  // Ключевой момент - округление значений точно как в Python
-  // Используем Math.round(x * 100) / 100 для округления до 2 знаков
+  // Расчет прибыльности товаров
   for (const key in productProfitability) {
     productProfitability[key].profit = productProfitability[key].sales - productProfitability[key].costs;
   }
@@ -409,8 +405,8 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     profit: item.profit.toString(),
     image: item.image || "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg",
     quantitySold: item.count || 0,
-    margin: -18,
-    returnCount: 0,
+    margin: Math.round((item.profit / item.sales) * 100) || 0,
+    returnCount: item.returnCount || 0,
     category: "Одежда"
   }));
 
@@ -506,7 +502,6 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
     console.log(`Completed fetching all report details. Total records: ${reportData.length}`);
     
     // 2. Получаем данные о платной приемке (в соответствии с Python-скриптом)
-    // Важно: форматируем даты точно так же, как в Python-скрипте
     const formattedDateFrom = formatDate(dateFrom);
     const formattedDateTo = formatDate(dateTo);
     const paidAcceptanceData = await fetchPaidAcceptanceReport(apiKey, dateFrom, dateTo);
@@ -739,29 +734,57 @@ const getDemoData = (): WildberriesResponse => {
         price: "1200", 
         profit: "18000", 
         image: "https://images.wbstatic.net/big/new/22270000/22271973-1.jpg",
-        quantitySold: 45,
-        margin: 38,
+        quantitySold: 58,
+        margin: 45,
         returnCount: 2,
-        category: "Женская одежда"
+        category: "Женская одежда" 
       },
       { 
-        name: "Джинсы мужские", 
-        price: "2500", 
-        profit: "12500", 
-        image: "https://images.wbstatic.net/big/new/21810000/21816586-1.jpg",
-        quantitySold: 30,
+        name: "Джинсы классические", 
+        price: "2800", 
+        profit: "15500", 
+        image: "https://images.wbstatic.net/big/new/13730000/13733711-1.jpg",
+        quantitySold: 42,
         margin: 35,
         returnCount: 1,
-        category: "Мужская одежда"
+        category: "Мужская одежда" 
       }
     ],
     topUnprofitableProducts: [
       { 
-        name: "Футболка мужская", 
-        price: "900", 
-        profit: "-3500", 
-        image: "https://images.wbstatic.net/big/new/19520000/19521004-1.jpg",
-        quantitySold: 25,
-        margin: -18,
-        returnCount: 5,
-        category: "Мужская
+        name: "Шарф зимний", 
+        price: "800", 
+        profit: "-5200", 
+        image: "https://images.wbstatic.net/big/new/11080000/11081822-1.jpg",
+        quantitySold: 4,
+        margin: 8,
+        returnCount: 12,
+        category: "Аксессуары" 
+      },
+      { 
+        name: "Рубашка офисная", 
+        price: "1500", 
+        profit: "-3800", 
+        image: "https://images.wbstatic.net/big/new/9080000/9080277-1.jpg",
+        quantitySold: 3,
+        margin: 5,
+        returnCount: 8,
+        category: "Мужская одежда" 
+      },
+      { 
+        name: "Перчатки кожаные", 
+        price: "1200", 
+        profit: "-2900", 
+        image: "https://images.wbstatic.net/big/new/10320000/10328291-1.jpg",
+        quantitySold: 2,
+        margin: 12,
+        returnCount: 10,
+        category: "Аксессуары" 
+      }
+    ],
+    orders: [],
+    sales: [],
+    warehouseDistribution: [],
+    regionDistribution: []
+  };
+};
