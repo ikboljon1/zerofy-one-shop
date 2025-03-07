@@ -1,3 +1,4 @@
+<lov-code>
 import axios from 'axios';
 import { WildberriesOrder, WildberriesSale } from "@/types/store";
 
@@ -408,8 +409,8 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     profit: item.profit.toString(),
     image: item.image || "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg",
     quantitySold: item.count || 0,
-    margin: Math.round((item.profit / item.sales) * 100) || 0,
-    returnCount: item.returnCount || 0,
+    margin: -18,
+    returnCount: 0,
     category: "Одежда"
   }));
 
@@ -761,4 +762,6 @@ const getDemoData = (): WildberriesResponse => {
         profit: "-3500", 
         image: "https://images.wbstatic.net/big/new/19520000/19521004-1.jpg",
         quantitySold: 25,
-        margin:
+        margin: -18,
+        returnCount: 5,
+        category: "Мужская
