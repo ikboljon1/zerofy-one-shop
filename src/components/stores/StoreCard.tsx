@@ -75,6 +75,17 @@ export function StoreCard({
                   {displayValue(store.stats.currentPeriod.netProfit)}
                 </span>
               </div>
+              {/* Отобразим удержания, если они присутствуют */}
+              {store.stats.currentPeriod.expenses.deductions !== undefined && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    {store.stats.currentPeriod.expenses.deductions < 0 ? 'Компенсации:' : 'Удержания:'}
+                  </span>
+                  <span className={`font-medium ${store.stats.currentPeriod.expenses.deductions < 0 ? 'text-green-600' : 'text-amber-600'}`}>
+                    {displayValue(Math.abs(store.stats.currentPeriod.expenses.deductions))}
+                  </span>
+                </div>
+              )}
             </>
           )}
           <Button 

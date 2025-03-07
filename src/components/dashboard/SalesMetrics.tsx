@@ -8,20 +8,37 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { WildberriesSale } from "@/types/store";
-import { ShoppingCart, CreditCard, BarChart3, Tag, PackageX } from "lucide-react";
+import { ShoppingCart, CreditCard, BarChart3, Tag, PackageX, BadgePercent } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 interface SalesMetricsProps {
   sales: WildberriesSale[];
+  deductions?: number;
 }
 
-const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales }) => {
+const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales, deductions = 0 }) => {
   // Calculate metrics
   const totalSales = sales.length;
   const totalAmount = sales.reduce((sum, sale) => sum + Math.abs(sale.priceWithDisc), 0);
   const totalProfit = sales.reduce((sum, sale) => sum + sale.forPay, 0);
   const avgSaleValue = totalSales > 0 ? totalAmount / totalSales : 0;
   const returnedItems = sales.filter(sale => sale.priceWithDisc < 0).length; // Возвраты имеют отрицательную цену
+  
+  // Определение типа удержаний (компенсации или удержания)
+  const isDeductionsNegative = deductions < 0;
+  const deductionsTitle = isDeductionsNegative ? "Компенсации" : "Удержания";
+  const deductionsColor = isDeductionsNegative ? 
+    "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/40 dark:to-green-900/20 border-green-200 dark:border-green-800" : 
+    "bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/40 dark:to-orange-900/20 border-orange-200 dark:border-orange-800";
+  const deductionsTextColor = isDeductionsNegative ? 
+    "text-green-700 dark:text-green-400" : 
+    "text-orange-700 dark:text-orange-400";
+  const deductionsDescColor = isDeductionsNegative ? 
+    "text-green-600/70 dark:text-green-400/70" : 
+    "text-orange-600/70 dark:text-orange-400/70";
+  const deductionsValueColor = isDeductionsNegative ? 
+    "text-green-700 dark:text-green-300" : 
+    "text-orange-700 dark:text-orange-300";
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
@@ -57,36 +74,36 @@ const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales }) => {
         </CardContent>
       </Card>
 
-      <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/40 dark:to-green-900/20 border-green-200 dark:border-green-800">
+      <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/40 dark:to-blue-900/20 border-blue-200 dark:border-blue-800">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base font-medium flex items-center text-green-700 dark:text-green-400">
+          <CardTitle className="text-base font-medium flex items-center text-blue-700 dark:text-blue-400">
             <CreditCard className="mr-2 h-4 w-4" />
             К получению
           </CardTitle>
-          <CardDescription className="text-green-600/70 dark:text-green-400/70">
+          <CardDescription className="text-blue-600/70 dark:text-blue-400/70">
             После вычета комиссий
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-green-700 dark:text-green-300">
+          <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
             {formatCurrency(totalProfit)} ₽
           </div>
         </CardContent>
       </Card>
 
-      <Card className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-950/40 dark:to-cyan-900/20 border-cyan-200 dark:border-cyan-800">
+      <Card className={deductionsColor}>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base font-medium flex items-center text-cyan-700 dark:text-cyan-400">
-            <Tag className="mr-2 h-4 w-4" />
-            Средний чек
+          <CardTitle className={`text-base font-medium flex items-center ${deductionsTextColor}`}>
+            <BadgePercent className="mr-2 h-4 w-4" />
+            {deductionsTitle}
           </CardTitle>
-          <CardDescription className="text-cyan-600/70 dark:text-cyan-400/70">
-            Средняя стоимость
+          <CardDescription className={deductionsDescColor}>
+            {isDeductionsNegative ? "Компенсации от WB" : "Прочие удержания"}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-cyan-700 dark:text-cyan-300">
-            {formatCurrency(avgSaleValue)} ₽
+          <div className={`text-2xl font-bold ${deductionsValueColor}`}>
+            {formatCurrency(Math.abs(deductions))} ₽
           </div>
         </CardContent>
       </Card>

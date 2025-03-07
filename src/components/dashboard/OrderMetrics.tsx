@@ -8,14 +8,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { WildberriesOrder } from "@/types/store";
-import { Package, PackageX, BarChart3, TrendingUp } from "lucide-react";
+import { Package, PackageX, BarChart3, TrendingUp, BadgePercent } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 interface OrderMetricsProps {
   orders: WildberriesOrder[];
+  deductions?: number;
 }
 
-const OrderMetrics: React.FC<OrderMetricsProps> = ({ orders }) => {
+const OrderMetrics: React.FC<OrderMetricsProps> = ({ orders, deductions = 0 }) => {
   // Calculate metrics
   const totalOrders = orders.length;
   const canceledOrders = orders.filter(order => order.isCancel).length;
@@ -24,8 +25,24 @@ const OrderMetrics: React.FC<OrderMetricsProps> = ({ orders }) => {
   const totalAmount = orders.reduce((sum, order) => sum + Math.abs(order.priceWithDisc), 0);
   const cancelRate = totalOrders > 0 ? (canceledOrders / totalOrders) * 100 : 0;
   
+  // Определение типа удержаний (компенсации или удержания)
+  const isDeductionsNegative = deductions < 0;
+  const deductionsTitle = isDeductionsNegative ? "Компенсации" : "Удержания";
+  const deductionsColor = isDeductionsNegative ? 
+    "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/40 dark:to-green-900/20 border-green-200 dark:border-green-800" : 
+    "bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/40 dark:to-orange-900/20 border-orange-200 dark:border-orange-800";
+  const deductionsTextColor = isDeductionsNegative ? 
+    "text-green-700 dark:text-green-400" : 
+    "text-orange-700 dark:text-orange-400";
+  const deductionsDescColor = isDeductionsNegative ? 
+    "text-green-600/70 dark:text-green-400/70" : 
+    "text-orange-600/70 dark:text-orange-400/70";
+  const deductionsValueColor = isDeductionsNegative ? 
+    "text-green-700 dark:text-green-300" : 
+    "text-orange-700 dark:text-orange-300";
+  
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
       <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/40 dark:to-blue-900/20 border-blue-200 dark:border-blue-800">
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-medium flex items-center text-blue-700 dark:text-blue-400">
@@ -87,6 +104,25 @@ const OrderMetrics: React.FC<OrderMetricsProps> = ({ orders }) => {
           </div>
         </CardContent>
       </Card>
+
+      {deductions !== 0 && (
+        <Card className={deductionsColor}>
+          <CardHeader className="pb-2">
+            <CardTitle className={`text-base font-medium flex items-center ${deductionsTextColor}`}>
+              <BadgePercent className="mr-2 h-4 w-4" />
+              {deductionsTitle}
+            </CardTitle>
+            <CardDescription className={deductionsDescColor}>
+              {isDeductionsNegative ? "Компенсации от WB" : "Прочие удержания"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${deductionsValueColor}`}>
+              {formatCurrency(Math.abs(deductions))} ₽
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
