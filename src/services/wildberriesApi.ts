@@ -129,8 +129,9 @@ const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date, r
 /**
  * Загружает все данные отчета с поддержкой пагинации
  * Реализация в соответствии с циклом while из Python-скрипта
+ * Экспортируем эту функцию для использования в компоненте FinancialReports
  */
-const fetchAllReportDetails = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
+export const fetchAllReportDetails = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
   let allData: any[] = [];
   let nextRrdid = 0;
   let hasMoreData = true;
