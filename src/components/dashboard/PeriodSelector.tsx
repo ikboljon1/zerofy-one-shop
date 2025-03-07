@@ -18,7 +18,7 @@ interface PeriodSelectorProps {
 const PeriodSelector = ({ value, onChange }: PeriodSelectorProps) => {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-[180px]">
+      <SelectTrigger className="w-[180px] min-w-[180px]">
         <SelectValue placeholder="Выберите период" />
       </SelectTrigger>
       <SelectContent>
