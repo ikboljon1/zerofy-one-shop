@@ -1,4 +1,3 @@
-
 import { AxiosError } from 'axios';
 import axios from 'axios';
 import { getStatusString, getTypeString } from '@/components/analytics/data/productAdvertisingData';
