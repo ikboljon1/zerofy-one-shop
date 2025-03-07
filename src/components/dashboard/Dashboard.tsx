@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   loadStores,
   getOrdersData, 
@@ -22,6 +23,7 @@ import SalesChart from "./SalesChart";
 
 const Dashboard = () => {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState("overview");
   const [period, setPeriod] = useState<Period>("today");
   const [isLoading, setIsLoading] = useState(false);
@@ -201,7 +203,7 @@ const Dashboard = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold">Дашборд</h2>
+        <h2 className={`${isMobile ? 'text-xl' : 'text-3xl'} font-bold`}>Дашборд</h2>
         {isLoading && (
           <div className="flex items-center text-sm text-muted-foreground">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -211,11 +213,11 @@ const Dashboard = () => {
       </div>
 
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Обзор</TabsTrigger>
-          <TabsTrigger value="orders">Заказы</TabsTrigger>
-          <TabsTrigger value="sales">Продажи</TabsTrigger>
-          <TabsTrigger value="geography">География</TabsTrigger>
+        <TabsList className={`${isMobile ? 'w-full grid grid-cols-4 gap-1' : ''}`}>
+          <TabsTrigger value="overview" className={isMobile ? 'text-xs py-1 px-1' : ''}>Обзор</TabsTrigger>
+          <TabsTrigger value="orders" className={isMobile ? 'text-xs py-1 px-1' : ''}>Заказы</TabsTrigger>
+          <TabsTrigger value="sales" className={isMobile ? 'text-xs py-1 px-1' : ''}>Продажи</TabsTrigger>
+          <TabsTrigger value="geography" className={isMobile ? 'text-xs py-1 px-1' : ''}>География</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -223,9 +225,9 @@ const Dashboard = () => {
         </TabsContent>
 
         <TabsContent value="orders" className="space-y-4">
-          <div className="mb-4 flex items-center gap-4">
+          <div className={`mb-4 ${isMobile ? 'w-full' : 'flex items-center gap-4'}`}>
             <PeriodSelector value={period} onChange={setPeriod} />
-            <div className="flex-grow"></div> {/* This helps maintain layout stability */}
+            <div className="flex-grow"></div>
           </div>
           
           {orders.length > 0 && (
@@ -242,9 +244,9 @@ const Dashboard = () => {
         </TabsContent>
 
         <TabsContent value="sales" className="space-y-4">
-          <div className="mb-4 flex items-center gap-4">
+          <div className={`mb-4 ${isMobile ? 'w-full' : 'flex items-center gap-4'}`}>
             <PeriodSelector value={period} onChange={setPeriod} />
-            <div className="flex-grow"></div> {/* This helps maintain layout stability */}
+            <div className="flex-grow"></div>
           </div>
           
           {sales.length > 0 && (
@@ -258,9 +260,9 @@ const Dashboard = () => {
         </TabsContent>
 
         <TabsContent value="geography" className="space-y-4">
-          <div className="mb-4 flex items-center gap-4">
+          <div className={`mb-4 ${isMobile ? 'w-full' : 'flex items-center gap-4'}`}>
             <PeriodSelector value={period} onChange={setPeriod} />
-            <div className="flex-grow"></div> {/* This helps maintain layout stability */}
+            <div className="flex-grow"></div>
           </div>
           <GeographySection 
             warehouseDistribution={warehouseDistribution} 
