@@ -1,4 +1,3 @@
-
 /**
  * Получает статистику по ключевым словам для рекламной кампании
  */
@@ -132,7 +131,7 @@ export const setExcludedKeywords = async (
     // Определяем URL в зависимости от типа кампании
     // В данной реализации мы будем использовать эндпоинт для кампаний Аукцион
     // Если нужно будет различать типы кампаний, то эту логику можно доработать
-    const url = `https://advert-api.wildberries.ru/adv/v1/search/set-excluded`;
+    const url = `https://advert-api.wildberries.ru/adv/v1/search/set-excluded?id=${campaignId}`;
     
     const response = await fetch(url, {
       method: 'POST',
@@ -191,7 +190,7 @@ export const getAllCampaigns = async (apiKey: string): Promise<Campaign[]> => {
  * @param dateFrom Начальная дата
  * @param dateTo Конечная дата
  * @param apiKey API ключ
- * @returns Promise<any[]>
+ * @returns Promise<any[]> 
  */
 export const getAdvertCosts = async (
   dateFrom: Date,
