@@ -1,4 +1,3 @@
-
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
@@ -84,30 +83,14 @@ TableHead.displayName = "TableHead"
 
 const TableCell = React.forwardRef<
   HTMLTableCellElement,
-  React.TdHTMLAttributes<HTMLTableCellElement> & { 
-    negative?: boolean,
-    positive?: boolean,
-    highlight?: boolean 
-  }
->(({ className, negative, positive, highlight, ...props }, ref) => {
-  let colorClass = "";
-  
-  if (negative) {
-    colorClass = "text-red-600 dark:text-red-400 font-medium";
-  } else if (positive) {
-    colorClass = "text-green-600 dark:text-green-400 font-medium";
-  } else if (highlight) {
-    colorClass = "text-primary font-medium";
-  }
-
-  return (
-    <td
-      ref={ref}
-      className={cn("p-4 align-middle [&:has([role=checkbox])]:pr-0", colorClass, className)}
-      {...props}
-    />
-  );
-})
+  React.TdHTMLAttributes<HTMLTableCellElement>
+>(({ className, ...props }, ref) => (
+  <td
+    ref={ref}
+    className={cn("p-4 align-middle [&:has([role=checkbox])]:pr-0", className)}
+    {...props}
+  />
+))
 TableCell.displayName = "TableCell"
 
 const TableCaption = React.forwardRef<
