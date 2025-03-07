@@ -21,7 +21,7 @@ const PeriodSelector = ({ value, onChange }: PeriodSelectorProps) => {
   
   return (
     <div className={`${isMobile ? 'w-full' : 'w-[180px]'} flex-shrink-0`}>
-      <Select value={value} onValueChange={(newValue) => onChange(newValue as Period)}>
+      <Select value={value} onValueChange={onChange}>
         <SelectTrigger className="w-full h-10">
           <SelectValue placeholder="Выберите период" />
         </SelectTrigger>

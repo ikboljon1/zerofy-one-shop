@@ -129,9 +129,8 @@ const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date, r
 /**
  * Загружает все данные отчета с поддержкой пагинации
  * Реализация в соответствии с циклом while из Python-скрипта
- * Экспортируем эту функцию для использования в компоненте FinancialReports
  */
-export const fetchAllReportDetails = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
+const fetchAllReportDetails = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
   let allData: any[] = [];
   let nextRrdid = 0;
   let hasMoreData = true;
@@ -735,109 +734,57 @@ const getDemoData = (): WildberriesResponse => {
         price: "1200", 
         profit: "18000", 
         image: "https://images.wbstatic.net/big/new/22270000/22271973-1.jpg",
-        quantitySold: 45,
-        margin: 38,
+        quantitySold: 58,
+        margin: 45,
         returnCount: 2,
-        category: "Женская одежда"
+        category: "Женская одежда" 
       },
       { 
-        name: "Джинсы мужские", 
-        price: "2500", 
-        profit: "12500", 
-        image: "https://images.wbstatic.net/big/new/21810000/21816586-1.jpg",
-        quantitySold: 30,
+        name: "Джинсы классические", 
+        price: "2800", 
+        profit: "15500", 
+        image: "https://images.wbstatic.net/big/new/13730000/13733711-1.jpg",
+        quantitySold: 42,
         margin: 35,
         returnCount: 1,
-        category: "Мужская одежда"
+        category: "Мужская одежда" 
       }
     ],
     topUnprofitableProducts: [
       { 
-        name: "Футболка мужская", 
-        price: "900", 
-        profit: "-3500", 
-        image: "https://images.wbstatic.net/big/new/19520000/19521004-1.jpg",
-        quantitySold: 25,
-        margin: 15,
-        returnCount: 8,
-        category: "Мужская одежда"
-      },
-      { 
         name: "Шарф зимний", 
         price: "800", 
-        profit: "-2800", 
+        profit: "-5200", 
         image: "https://images.wbstatic.net/big/new/11080000/11081822-1.jpg",
-        quantitySold: 12,
-        margin: 10,
-        returnCount: 5,
-        category: "Аксессуары"
+        quantitySold: 4,
+        margin: 8,
+        returnCount: 12,
+        category: "Аксессуары" 
+      },
+      { 
+        name: "Рубашка офисная", 
+        price: "1500", 
+        profit: "-3800", 
+        image: "https://images.wbstatic.net/big/new/9080000/9080277-1.jpg",
+        quantitySold: 3,
+        margin: 5,
+        returnCount: 8,
+        category: "Мужская одежда" 
       },
       { 
         name: "Перчатки кожаные", 
         price: "1200", 
-        profit: "-1500", 
+        profit: "-2900", 
         image: "https://images.wbstatic.net/big/new/10320000/10328291-1.jpg",
-        quantitySold: 8,
+        quantitySold: 2,
         margin: 12,
-        returnCount: 4,
-        category: "Аксессуары"
+        returnCount: 10,
+        category: "Аксессуары" 
       }
     ],
     orders: [],
     sales: [],
-    warehouseDistribution: [
-      {
-        name: "Коледино",
-        count: 125,
-        percentage: 45.8
-      },
-      {
-        name: "Электросталь",
-        count: 89,
-        percentage: 32.6
-      },
-      {
-        name: "Казань",
-        count: 38,
-        percentage: 13.9
-      },
-      {
-        name: "Санкт-Петербург",
-        count: 15,
-        percentage: 5.5
-      },
-      {
-        name: "Краснодар",
-        count: 6,
-        percentage: 2.2
-      }
-    ],
-    regionDistribution: [
-      {
-        name: "Москва",
-        count: 95,
-        percentage: 34.8
-      },
-      {
-        name: "Московская область",
-        count: 45,
-        percentage: 16.5
-      },
-      {
-        name: "Санкт-Петербург",
-        count: 38,
-        percentage: 13.9
-      },
-      {
-        name: "Краснодарский край",
-        count: 21,
-        percentage: 7.7
-      },
-      {
-        name: "Республика Татарстан",
-        count: 15,
-        percentage: 5.5
-      }
-    ]
+    warehouseDistribution: [],
+    regionDistribution: []
   };
 };
