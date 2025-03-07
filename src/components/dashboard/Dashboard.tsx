@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
@@ -16,6 +15,7 @@ import SalesTable from "./SalesTable";
 import GeographySection from "./GeographySection";
 import Stats from "@/components/Stats";
 import PeriodSelector, { Period } from "./PeriodSelector";
+import FinancialPeriodSelector, { FinancialPeriod } from "./FinancialPeriodSelector";
 import { WildberriesOrder, WildberriesSale } from "@/types/store";
 import OrderMetrics from "./OrderMetrics";
 import SalesMetrics from "./SalesMetrics";
@@ -29,6 +29,7 @@ const Dashboard = () => {
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState("overview");
   const [period, setPeriod] = useState<Period>("today");
+  const [financialPeriod, setFinancialPeriod] = useState<FinancialPeriod>("week");
   const [isLoading, setIsLoading] = useState(false);
   
   const [orders, setOrders] = useState<WildberriesOrder[]>([]);
@@ -122,42 +123,47 @@ const Dashboard = () => {
     return sales.filter(sale => filterDataByPeriod(sale.date, period));
   };
 
-  useEffect(() => {
-    if (orders.length > 0) {
-      const { orders: filteredOrders, warehouseDistribution: newWarehouseDistribution, regionDistribution: newRegionDistribution } = getFilteredOrders(orders);
-      setWarehouseDistribution(newWarehouseDistribution);
-      setRegionDistribution(newRegionDistribution);
+  const getFinancialPeriodDates = (period: FinancialPeriod): { startDate: Date, endDate: Date } => {
+    const now = new Date();
+    let startDate = new Date();
+    
+    switch (period) {
+      case "week":
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+        break;
+      case "2weeks":
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 14);
+        break;
+      case "month":
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+        break;
+      case "quarter":
+        startDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+        break;
+      case "year":
+        startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+        break;
     }
-  }, [period, orders]);
+    
+    return { startDate, endDate: now };
+  };
+
+  const getFinancialPeriodLabel = (period: FinancialPeriod): string => {
+    switch (period) {
+      case "week": return "Неделя";
+      case "2weeks": return "2 недели";
+      case "month": return "Месяц";
+      case "quarter": return "Квартал";
+      case "year": return "Год";
+      default: return "";
+    }
+  };
 
   const fetchFinancialReportDetails = async (selectedStore: any) => {
     try {
-      const now = new Date();
-      let startDate = new Date();
+      const { startDate, endDate } = getFinancialPeriodDates(financialPeriod);
       
-      switch (period) {
-        case "today":
-          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-          break;
-        case "yesterday":
-          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-          startDate.setDate(startDate.getDate() - 1);
-          break;
-        case "week":
-          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-          startDate.setDate(startDate.getDate() - 7);
-          break;
-        case "2weeks":
-          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-          startDate.setDate(startDate.getDate() - 14);
-          break;
-        case "4weeks":
-          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-          startDate.setDate(startDate.getDate() - 28);
-          break;
-      }
-      
-      const reportData = await fetchReportDetailByPeriod(selectedStore.apiKey, startDate, now);
+      const reportData = await fetchReportDetailByPeriod(selectedStore.apiKey, startDate, endDate);
       setReportDetails(reportData);
     } catch (error) {
       console.error('Error fetching financial report details:', error);
@@ -208,7 +214,6 @@ const Dashboard = () => {
         }
       }
 
-      // Получаем данные финансового отчета
       await fetchFinancialReportDetails(selectedStore);
 
       toast({
@@ -247,7 +252,6 @@ const Dashboard = () => {
       if (!savedOrdersData || !savedSalesData) {
         fetchData();
       } else {
-        // Получаем финансовые данные даже если остальные данные уже загружены
         fetchFinancialReportDetails(selectedStore);
       }
     }
@@ -260,7 +264,6 @@ const Dashboard = () => {
     return () => clearInterval(refreshInterval);
   }, []);
 
-  // Обновляем финансовые данные при изменении периода
   useEffect(() => {
     const stores = loadStores();
     const selectedStore = stores.find(s => s.isSelected);
@@ -268,7 +271,7 @@ const Dashboard = () => {
     if (selectedStore) {
       fetchFinancialReportDetails(selectedStore);
     }
-  }, [period]);
+  }, [financialPeriod]);
 
   return (
     <div className="space-y-4">
@@ -344,13 +347,13 @@ const Dashboard = () => {
 
         <TabsContent value="finance" className="space-y-4">
           <div className={`mb-4 ${isMobile ? 'w-full' : 'flex items-center gap-4'}`}>
-            <PeriodSelector value={period} onChange={setPeriod} />
+            <FinancialPeriodSelector value={financialPeriod} onChange={setFinancialPeriod} />
             <div className="flex-grow"></div>
           </div>
           <FinancialReport 
             data={reportDetails} 
             isLoading={isLoading} 
-            period={getPeriodLabel(period)}
+            period={getFinancialPeriodLabel(financialPeriod)}
           />
         </TabsContent>
       </Tabs>
