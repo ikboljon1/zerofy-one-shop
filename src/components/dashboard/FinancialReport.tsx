@@ -108,6 +108,7 @@ const FinancialReport: React.FC<FinancialReportProps> = ({ data, isLoading, peri
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("detailed");
   const [docTypeFilter, setDocTypeFilter] = useState<string>("all");
+  const [operationFilter, setOperationFilter] = useState<string>("all");
   
   const itemsPerPage = 10;
   
@@ -122,10 +123,26 @@ const FinancialReport: React.FC<FinancialReportProps> = ({ data, isLoading, peri
     return Array.from(types);
   }, [data]);
   
+  // Get unique supplier_oper_name values for the filter dropdown
+  const operationTypes = useMemo(() => {
+    const types = new Set<string>();
+    data.forEach(item => {
+      if (item.supplier_oper_name) {
+        types.add(item.supplier_oper_name);
+      }
+    });
+    return Array.from(types);
+  }, [data]);
+  
   const filteredData = useMemo(() => {
     return data.filter(item => {
       // Filter by doc_type
       if (docTypeFilter !== "all" && item.doc_type_name !== docTypeFilter) {
+        return false;
+      }
+      
+      // Filter by operation type
+      if (operationFilter !== "all" && item.supplier_oper_name !== operationFilter) {
         return false;
       }
       
@@ -138,10 +155,11 @@ const FinancialReport: React.FC<FinancialReportProps> = ({ data, isLoading, peri
         item.doc_type_name?.toLowerCase().includes(searchLower) ||
         item.subject_name?.toLowerCase().includes(searchLower) ||
         item.brand_name?.toLowerCase().includes(searchLower) ||
-        item.office_name?.toLowerCase().includes(searchLower)
+        item.office_name?.toLowerCase().includes(searchLower) ||
+        item.supplier_oper_name?.toLowerCase().includes(searchLower)
       );
     });
-  }, [data, docTypeFilter, search]);
+  }, [data, docTypeFilter, operationFilter, search]);
   
   const totalItems = filteredData.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -154,7 +172,7 @@ const FinancialReport: React.FC<FinancialReportProps> = ({ data, isLoading, peri
   // Reset pagination when filters change
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [docTypeFilter, search]);
+  }, [docTypeFilter, operationFilter, search]);
   
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -311,7 +329,7 @@ const FinancialReport: React.FC<FinancialReportProps> = ({ data, isLoading, peri
           </TabsContent>
           
           <TabsContent value="detailed">
-            <div className={`mb-4 ${isMobile ? 'space-y-2' : 'flex items-center gap-4'}`}>
+            <div className={`mb-4 ${isMobile ? 'space-y-2' : 'flex flex-wrap items-center gap-4'}`}>
               <Input 
                 placeholder="Поиск по отчету..."
                 value={search}
@@ -334,6 +352,22 @@ const FinancialReport: React.FC<FinancialReportProps> = ({ data, isLoading, peri
                   </SelectContent>
                 </Select>
               </div>
+              
+              <div className={isMobile ? "w-full" : "w-[220px]"}>
+                <Select value={operationFilter} onValueChange={setOperationFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Тип операции" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все операции</SelectItem>
+                    {operationTypes.map(type => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
             <div className={`overflow-x-auto ${isMobile ? "-mx-4 px-4" : ""}`}>
@@ -342,6 +376,7 @@ const FinancialReport: React.FC<FinancialReportProps> = ({ data, isLoading, peri
                   <TableRow>
                     <TableHead>Дата</TableHead>
                     <TableHead>Тип</TableHead>
+                    <TableHead>Операция</TableHead>
                     <TableHead>Артикул</TableHead>
                     <TableHead>Бренд</TableHead>
                     <TableHead>Товар</TableHead>
@@ -359,6 +394,7 @@ const FinancialReport: React.FC<FinancialReportProps> = ({ data, isLoading, peri
                       <TableRow key={index}>
                         <TableCell>{item.rr_dt}</TableCell>
                         <TableCell>{item.doc_type_name}</TableCell>
+                        <TableCell>{item.supplier_oper_name}</TableCell>
                         <TableCell>{item.sa_name}</TableCell>
                         <TableCell>{item.brand_name}</TableCell>
                         <TableCell>{item.subject_name}</TableCell>
@@ -372,7 +408,7 @@ const FinancialReport: React.FC<FinancialReportProps> = ({ data, isLoading, peri
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center py-4">
+                      <TableCell colSpan={12} className="text-center py-4">
                         Нет данных для отображения
                       </TableCell>
                     </TableRow>
