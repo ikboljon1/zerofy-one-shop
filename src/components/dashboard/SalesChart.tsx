@@ -14,17 +14,36 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { DollarSign } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { WildberriesSale } from "@/types/store";
 
 interface SalesChartProps {
   data: Array<{
     date: string;
     sales: number;
-    orders: number;
   }>;
 }
 
-const SalesChart: React.FC<SalesChartProps> = ({ data }) => {
+// This function will process sales data into the format needed for the chart
+const processSalesDataForChart = (sales: WildberriesSale[]) => {
+  // Group sales by date
+  const salesByDate = sales.reduce((acc: Record<string, number>, sale) => {
+    const date = sale.date.split('T')[0]; // Get only the date part
+    acc[date] = (acc[date] || 0) + sale.priceWithDisc;
+    return acc;
+  }, {});
+
+  // Convert to array format for the chart
+  return Object.entries(salesByDate).map(([date, sales]) => ({
+    date,
+    sales,
+  })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+};
+
+const SalesChart: React.FC<{ sales: WildberriesSale[] }> = ({ sales }) => {
   const isMobile = useIsMobile();
+  
+  // Process the sales data for the chart
+  const chartData = processSalesDataForChart(sales);
   
   return (
     <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-white to-purple-50/30 dark:from-gray-900 dark:to-purple-950/30">
@@ -42,7 +61,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ data }) => {
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
-              data={data}
+              data={chartData}
               margin={{ top: 20, right: 20, left: 0, bottom: 10 }}
             >
               <defs>
