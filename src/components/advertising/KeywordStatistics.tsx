@@ -3,10 +3,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { KeywordStatistics, KeywordStat, getKeywordStatistics } from "@/services/advertisingApi";
-import { useToast } from "@/hooks/use-toast";
+import { KeywordStatistics, KeywordStat, getKeywordStatistics, setExcludedKeywords } from "@/services/advertisingApi";
+import { useToast } from "@/components/ui/use-toast";
 import { format, differenceInDays, subDays } from "date-fns";
-import { Search, Tag, TrendingUp, Eye, MousePointerClick, DollarSign, PercentIcon, Filter, AlertCircle, PlusCircle, MinusCircle } from "lucide-react";
+import { Search, Tag, TrendingUp, Eye, MousePointerClick, DollarSign, PercentIcon, Filter, AlertCircle, PlusCircle, MinusCircle, X, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -40,6 +40,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
   const [dateWarning, setDateWarning] = useState<string | null>(null);
   const [excludedKeywords, setExcludedKeywords] = useState<Set<string>>(new Set());
+  const [excludingKeywords, setExcludingKeywords] = useState(false);
 
   const processedKeywords = useMemo(() => {
     if (!keywordStats) return [];
@@ -98,6 +99,43 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
       }
       return newSet;
     });
+  };
+
+  const handleExcludeKeywords = async () => {
+    if (excludingKeywords || !campaignId) return;
+    
+    setExcludingKeywords(true);
+    
+    try {
+      const keywordsArray = Array.from(excludedKeywords);
+      
+      await setExcludedKeywords(apiKey, campaignId, keywordsArray)
+        .then(success => {
+          if (success) {
+            toast({
+              title: "Успешно",
+              description: keywordsArray.length === 0 
+                ? "Все минус-фразы удалены из кампании" 
+                : `${keywordsArray.length} минус-фраз установлено для кампании`,
+            });
+          }
+        });
+      
+      fetchData();
+    } catch (error) {
+      console.error("Error excluding keywords:", error);
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: error instanceof Error ? error.message : "Не удалось установить минус-фразы",
+      });
+    } finally {
+      setExcludingKeywords(false);
+    }
+  };
+
+  const clearExcludedKeywords = () => {
+    setExcludedKeywords(new Set());
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -357,7 +395,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
   const KeywordTable = () => {
     return (
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="relative w-full max-w-md">
             <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
             <Input
@@ -367,17 +405,56 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
               className="pl-8 pr-2 py-1 h-8 text-sm"
             />
           </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={fetchData}
-            disabled={loading}
-            className="h-8 px-2 text-xs"
-          >
-            <Filter className="h-3.5 w-3.5 mr-1" />
-            Обновить
-          </Button>
+          <div className="flex gap-2">
+            {excludedKeywords.size > 0 && (
+              <div className="flex gap-2">
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={handleExcludeKeywords}
+                  disabled={excludingKeywords}
+                  className="h-8 px-2 text-xs"
+                >
+                  {excludingKeywords ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                  ) : (
+                    <MinusCircle className="h-3.5 w-3.5 mr-1" />
+                  )}
+                  Исключить ({excludedKeywords.size})
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={clearExcludedKeywords}
+                  disabled={excludingKeywords}
+                  className="h-8 px-2 text-xs"
+                >
+                  <X className="h-3.5 w-3.5 mr-1" />
+                  Отменить
+                </Button>
+              </div>
+            )}
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={fetchData}
+              disabled={loading}
+              className="h-8 px-2 text-xs"
+            >
+              <Filter className="h-3.5 w-3.5 mr-1" />
+              Обновить
+            </Button>
+          </div>
         </div>
+
+        {excludedKeywords.size === 0 && (
+          <div className="bg-gray-50 dark:bg-gray-900/30 border border-gray-200 dark:border-gray-800 rounded-lg p-3 mb-3">
+            <p className="text-xs text-gray-500 flex items-center gap-1">
+              <Tag className="h-3.5 w-3.5" />
+              Выберите ключевые слова, чтобы добавить их в минус-фразы кампании
+            </p>
+          </div>
+        )}
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
           <div className="overflow-x-auto">

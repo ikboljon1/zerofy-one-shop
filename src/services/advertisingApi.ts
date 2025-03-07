@@ -375,12 +375,48 @@ export const getAllCampaigns = async (apiKey: string): Promise<Campaign[]> => {
   }
 };
 
-export interface Campaign {
-  advertId: number;
-  campName: string;
-  status: 'active' | 'paused' | 'archived' | 'ready' | 'completed';
-  type: 'auction' | 'automatic';
-  numericStatus?: number;
-  numericType?: number;
-  changeTime?: string;
-}
+/**
+ * Set excluded keywords (minus phrases) for an automatic campaign
+ * @param apiKey API key for authorization
+ * @param campaignId Campaign ID
+ * @param excludedKeywords Array of keywords to exclude (max 1000)
+ * @returns Promise resolving to boolean indicating success
+ */
+export const setExcludedKeywords = async (
+  apiKey: string,
+  campaignId: number,
+  excludedKeywords: string[]
+): Promise<boolean> => {
+  try {
+    const api = createApiInstance(apiKey);
+    
+    // Limit to 1000 keywords as per API documentation
+    const limitedKeywords = excludedKeywords.slice(0, 1000);
+    
+    // API endpoint expects a query parameter for campaign ID and a JSON body with the excluded array
+    const params = {
+      id: campaignId
+    };
+    
+    const payload = {
+      excluded: limitedKeywords
+    };
+    
+    console.log(`Setting ${limitedKeywords.length} excluded keywords for campaign ${campaignId}`);
+    
+    const response = await api.post('/v1/auto/set-excluded', payload, { params });
+    
+    console.log('Excluded keywords set successfully');
+    return true;
+  } catch (error) {
+    console.error('Error setting excluded keywords:', error);
+    
+    if (error instanceof AxiosError) {
+      if (error.response?.status === 429) {
+        throw new Error("Превышен лимит запросов к API (макс. 1 запрос в 6 секунд)");
+      }
+    }
+    
+    throw error;
+  }
+};
