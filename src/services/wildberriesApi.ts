@@ -30,15 +30,18 @@ export interface WildberriesResponse {
     name: string;
     value: number;
     count?: number;
+    isNegative?: boolean; // Флаг для отрицательных значений
   }>;
   penaltiesData?: Array<{
     name: string;
     value: number;
+    isNegative?: boolean; // Флаг для отрицательных значений
   }>;
   deductionsData?: Array<{  // Отдельное поле для данных по удержаниям
     name: string;
     value: number;
     nm_id?: string | number;
+    isNegative?: boolean; // Флаг для отрицательных значений
   }>;
   topProfitableProducts?: Array<{
     name: string;
