@@ -1,10 +1,11 @@
+
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { KeywordStatistics, KeywordStat, getKeywordStatistics, setExcludedKeywords } from "@/services/advertisingApi";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { format, differenceInDays, subDays } from "date-fns";
 import { Search, Tag, TrendingUp, Eye, MousePointerClick, DollarSign, PercentIcon, Filter, AlertCircle, PlusCircle, MinusCircle, Ban, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -112,16 +113,17 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
     try {
       setExcludingKeywords(true);
       
-      const success = await setExcludedKeywords(apiKey, campaignId, excludedKeywords);
-      
-      if (success) {
-        toast({
-          title: "Успех",
-          description: `Исключено ключевых слов: ${excludedKeywords.length}`,
+      await setExcludedKeywords(apiKey, campaignId, excludedKeywords)
+        .then((success) => {
+          if (success) {
+            toast({
+              title: "Успех",
+              description: `Исключено ключевых слов: ${excludedKeywords.length}`,
+            });
+          } else {
+            throw new Error("Не удалось исключить ключевые слова");
+          }
         });
-      } else {
-        throw new Error("Не удалось исключить ключевые слова");
-      }
     } catch (error) {
       console.error("Error excluding keywords:", error);
       toast({

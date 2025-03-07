@@ -404,6 +404,6 @@ export const setExcludedKeywords = async (
     return response.status === 200;
   } catch (error) {
     console.error('Error setting excluded keywords:', error);
-    throw error;
+    throw new Error('Не удалось исключить ключевые слова');
   }
 };
