@@ -202,6 +202,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   const returnsByProduct: Record<string, { value: number; count: number }> = {};
   const penaltiesByReason: Record<string, number> = {};
   
+  // Измененная структура для хранения данных об удержаниях
   const deductionsByReason: Record<string, { total: number; items: Array<{nm_id?: string | number; value: number}> }> = {};
 
   const productProfitability: Record<string, { 
@@ -289,22 +290,27 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       totalPenalty += record.penalty;
     }
     
-    if (record.deduction && record.deduction > 0) {
+    // Улучшенная обработка удержаний - теперь проверяем наличие поля deduction, а не его значение > 0
+    if (record.deduction !== undefined && record.deduction !== null) {
       deductionRecordsCount++;
       
+      // Используем значащее название для удержания или дефолтное значение
       const reason = record.bonus_type_name || 'Прочие удержания';
       
       if (!deductionsByReason[reason]) {
         deductionsByReason[reason] = { total: 0, items: [] };
       }
       
+      // Добавляем значение (как положительное, так и отрицательное)
       deductionsByReason[reason].total += record.deduction;
       
+      // Добавляем детали записи для анализа
       deductionsByReason[reason].items.push({
         nm_id: record.nm_id || record.shk || '',
         value: record.deduction
       });
       
+      // Суммируем общее значение удержаний
       totalDeduction += record.deduction;
       
       console.log(`Deduction record: bonus_type_name=${reason}, nm_id=${record.nm_id || 'N/A'}, value=${record.deduction}`);
@@ -319,11 +325,13 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   console.log("Deduction types detected:", Object.keys(deductionsByReason));
   console.log("Total deduction amount:", totalDeduction);
 
+  // Преобразуем данные об удержаниях для отображения
   const deductionsData = Object.entries(deductionsByReason).map(([name, data]) => ({
     name,
-    value: Math.round(data.total * 100) / 100,
-    count: data.items.length
-  })).sort((a, b) => b.value - a.value);
+    value: Math.round(Math.abs(data.total) * 100) / 100, // Всегда положительное значение для отображения
+    count: data.items.length,
+    isNegative: data.total < 0 // Добавляем флаг для отрицательных значений
+  })).sort((a, b) => Math.abs(b.value) - Math.abs(a.value)); // Сортируем по абсолютной величине
 
   console.log("Deductions data processed:", deductionsData);
 
@@ -386,7 +394,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       total_storage_fee: Math.round(totalStorageFee * 100) / 100,
       total_returns: Math.round(Math.abs(totalReturns) * 100) / 100,
       total_penalty: Math.round(totalPenalty * 100) / 100,
-      total_deduction: Math.round(totalDeduction * 100) / 100,
+      total_deduction: Math.round(Math.abs(totalDeduction) * 100) / 100, // Используем абсолютное значение
       total_to_pay: Math.round(totalToPay * 100) / 100,
       total_acceptance: Math.round(totalAcceptance * 100) / 100,
       total_return_count: totalReturnCount
@@ -467,7 +475,8 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       return getDemoData();
     }
     
-    const deductionRecords = reportData.filter(r => r.deduction && r.deduction > 0);
+    // Расширенная проверка наличия записей с удержаниями
+    const deductionRecords = reportData.filter(r => r.deduction !== undefined && r.deduction !== null);
     console.log(`Found ${deductionRecords.length} deduction records out of ${reportData.length} total records`);
     
     if (deductionRecords.length > 0) {

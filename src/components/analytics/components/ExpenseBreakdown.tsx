@@ -33,7 +33,6 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
 
   // Рассчитываем штрафы и удержания для отображения
   const penaltiesAmount = data.currentPeriod.expenses.penalties;
-  const penaltiesAndDeductionsTotal = penaltiesAmount + deductionsAmount;
 
   return (
     <Card className="p-6">
