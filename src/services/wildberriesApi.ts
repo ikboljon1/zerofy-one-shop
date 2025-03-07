@@ -1,3 +1,4 @@
+
 import { demoData, demoReportData, demoOrdersData, demoSalesData } from "./demoData";
 
 // Export WildberriesResponse type for use in other files
@@ -341,7 +342,7 @@ const processReportData = (reportData: any[]): WildberriesResponse => {
     items: data.items.map(item => ({
       nm_id: item.nm_id,
       bonus_type_name: item.bonus_type_name,
-      value: Math.round(item.value * 100) / 100
+      value: Math.round(Math.abs(item.value) * 100) / 100
     }))
   })).sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
 
@@ -423,7 +424,11 @@ const processReportData = (reportData: any[]): WildberriesResponse => {
     topProfitableProducts: topProfitable,
     topUnprofitableProducts: topUnprofitable,
     penaltiesData: penaltiesData,
-    deductionsData: deductionsData
+    deductionsData: deductionsData,
+    orders: [],
+    sales: [],
+    warehouseDistribution: [],
+    regionDistribution: []
   };
 };
 

@@ -10,7 +10,8 @@ export const demoData = {
       storage: 35000,
       penalties: 15000,
       advertising: 30000,
-      acceptance: 30000
+      acceptance: 30000,
+      deductions: 12500 // Added deductions field
     },
     netProfit: 875000,
     acceptance: 30000
@@ -33,6 +34,35 @@ export const demoData = {
     { name: "Футболка мужская", value: 6300, count: 4 },
     { name: "Джинсы классические", value: 4200, count: 1 },
     { name: "Куртка зимняя", value: 3000, count: 1 }
+  ],
+  // Added deductions data specifically for display in UI
+  deductionsData: [
+    { 
+      name: "Логистика возврата", 
+      value: 5000, 
+      count: 8,
+      items: [
+        { nm_id: "12345", bonus_type_name: "Логистика возврата", value: 3500 },
+        { nm_id: "67890", bonus_type_name: "Логистика возврата", value: 1500 }
+      ]
+    },
+    { 
+      name: "Штраф за брак", 
+      value: 4500, 
+      count: 3,
+      items: [
+        { nm_id: "23456", bonus_type_name: "Штраф за брак", value: 2500 },
+        { nm_id: "78901", bonus_type_name: "Штраф за брак", value: 2000 }
+      ]
+    },
+    { 
+      name: "Утилизация", 
+      value: 3000, 
+      count: 5,
+      items: [
+        { nm_id: "34567", bonus_type_name: "Утилизация", value: 3000 }
+      ]
+    }
   ],
   topProfitableProducts: [
     { 
