@@ -116,7 +116,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
       setExcludingKeywords(true);
       const keywordsToExclude = Array.from(excludedKeywords);
       
-      // Исправляем вызов функции setExcludedKeywords и обработку результата
+      // Вызываем API для исключения ключевых слов
       const success = await setExcludedKeywords(apiKey, campaignId, keywordsToExclude);
       
       if (success) {
