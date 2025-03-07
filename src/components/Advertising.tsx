@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card } from "./ui/card";
 import { getAdvertCosts, getAdvertBalance, getAllCampaigns, Campaign } from "@/services/advertisingApi";
@@ -39,22 +40,27 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
   const [selectedStore, setSelectedStore] = useState(propSelectedStore);
 
+  // Загрузка выбранного магазина из localStorage
   useEffect(() => {
     const savedSelectedStore = localStorage.getItem(SELECTED_STORE_KEY);
     
+    // Если есть selectedStore из пропсов, используем его и сохраняем
     if (propSelectedStore) {
       setSelectedStore(propSelectedStore);
       localStorage.setItem(SELECTED_STORE_KEY, JSON.stringify(propSelectedStore));
     } 
+    // Иначе пробуем загрузить из localStorage
     else if (savedSelectedStore) {
       setSelectedStore(JSON.parse(savedSelectedStore));
     }
   }, [propSelectedStore]);
 
+  // Загрузка кэшированных данных при изменении selectedStore
   useEffect(() => {
     if (selectedStore) {
       loadCachedData();
       
+      // Сохраняем выбранный магазин для последующих визитов
       localStorage.setItem(SELECTED_STORE_KEY, JSON.stringify(selectedStore));
     }
   }, [selectedStore]);
@@ -126,6 +132,7 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
 
     setLoading(true);
     try {
+      // Get all campaigns using the new API endpoint
       const allCampaigns = await getAllCampaigns(selectedStore.apiKey);
       
       if (allCampaigns.length === 0) {
@@ -138,13 +145,16 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
         return;
       }
 
+      // Get campaign details if we have IDs
       if (allCampaigns.length > 0) {
         const dateTo = new Date();
         const dateFrom = new Date();
         dateFrom.setDate(dateFrom.getDate() - 30);
         
+        // Get costs data to fetch campaign names
         const costsData = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
         
+        // Update campaign names from costs data where available
         const updatedCampaigns = allCampaigns.map(campaign => {
           const costInfo = costsData.find(cost => cost.advertId === campaign.advertId);
           if (costInfo) {
@@ -159,9 +169,11 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
         setCampaigns(updatedCampaigns);
       }
       
+      // Get account balance
       const balanceData = await getAdvertBalance(selectedStore.apiKey);
       setBalance(balanceData.balance);
 
+      // Cache the data
       cacheData(allCampaigns, balanceData.balance);
 
       toast({
@@ -275,11 +287,13 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
     return `${updateDate.toLocaleDateString('ru-RU')} ${updateDate.toLocaleTimeString('ru-RU')}`;
   };
 
+  // Get original status value for display in debug
   const getOriginalStatusValueLabel = (campaign: Campaign) => {
     if (campaign.numericStatus === undefined) return '';
     return `${campaign.numericStatus} - ${campaignStatusMap[campaign.numericStatus.toString()] || 'Unknown'}`;
   };
-
+  
+  // Get original type value for display in debug
   const getOriginalTypeValueLabel = (campaign: Campaign) => {
     if (campaign.numericType === undefined) return '';
     return `${campaign.numericType} - ${campaignTypeMap[campaign.numericType.toString()] || 'Unknown'}`;
@@ -410,6 +424,7 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
                           Просмотреть
                         </Button>
                       </div>
+                      {/* Debug info if available - can be commented out in production */}
                       {(campaign.numericStatus !== undefined || campaign.numericType !== undefined) && (
                         <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
                           <div className="text-xs text-muted-foreground">

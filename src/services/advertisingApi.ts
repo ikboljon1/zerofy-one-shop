@@ -4,16 +4,6 @@ import { getStatusString, getTypeString } from '@/components/analytics/data/prod
 
 const BASE_URL = "https://advert-api.wildberries.ru/adv";
 
-export interface Campaign {
-  advertId: number;
-  campName: string;
-  status: 'active' | 'paused' | 'archived' | 'ready' | 'completed';
-  type: 'auction' | 'automatic';
-  numericStatus?: number;
-  numericType?: number;
-  changeTime: string;
-}
-
 interface AdvertCost {
   updNum: string;
   updTime: string;
@@ -385,13 +375,16 @@ export const getAllCampaigns = async (apiKey: string): Promise<Campaign[]> => {
   }
 };
 
-/**
- * Set excluded keywords (minus phrases) for an automatic campaign
- * @param apiKey API key for authorization
- * @param campaignId Campaign ID
- * @param excludedKeywords Array of keywords to exclude (max 1000)
- * @returns Promise resolving to boolean indicating success
- */
+export interface Campaign {
+  advertId: number;
+  campName: string;
+  status: 'active' | 'paused' | 'archived' | 'ready' | 'completed';
+  type: 'auction' | 'automatic';
+  numericStatus?: number;
+  numericType?: number;
+  changeTime?: string;
+}
+
 export const setExcludedKeywords = async (
   apiKey: string,
   campaignId: number,
@@ -399,34 +392,18 @@ export const setExcludedKeywords = async (
 ): Promise<boolean> => {
   try {
     const api = createApiInstance(apiKey);
-    
-    // Limit to 1000 keywords as per API documentation
-    const limitedKeywords = excludedKeywords.slice(0, 1000);
-    
-    // API endpoint expects a query parameter for campaign ID and a JSON body with the excluded array
-    const params = {
-      id: campaignId
-    };
+    const url = `/v1/auto/set-excluded?id=${campaignId}`;
     
     const payload = {
-      excluded: limitedKeywords
+      excluded: excludedKeywords
     };
     
-    console.log(`Setting ${limitedKeywords.length} excluded keywords for campaign ${campaignId}`);
+    console.log(`Setting excluded keywords for campaign ${campaignId}:`, excludedKeywords);
     
-    const response = await api.post('/v1/auto/set-excluded', payload, { params });
-    
-    console.log('Excluded keywords set successfully');
-    return true;
+    const response = await api.post(url, payload);
+    return response.status === 200;
   } catch (error) {
     console.error('Error setting excluded keywords:', error);
-    
-    if (error instanceof AxiosError) {
-      if (error.response?.status === 429) {
-        throw new Error("Превышен лимит запросов к API (макс. 1 запрос в 6 секунд)");
-      }
-    }
-    
     throw error;
   }
 };
