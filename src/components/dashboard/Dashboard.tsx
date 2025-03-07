@@ -1,8 +1,6 @@
-
 import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { 
   loadStores,
@@ -65,7 +63,6 @@ const Dashboard = () => {
   const getFilteredOrders = (orders: WildberriesOrder[]) => {
     const filteredOrders = orders.filter(order => filterDataByPeriod(order.date, period));
 
-    // Recalculate distributions based on filtered orders
     const warehouseCounts: Record<string, number> = {};
     const regionCounts: Record<string, number> = {};
     const totalOrders = filteredOrders.length;
@@ -192,29 +189,25 @@ const Dashboard = () => {
         fetchData();
       }
     }
+
+    const refreshInterval = setInterval(() => {
+      console.log('Auto-refreshing data...');
+      fetchData();
+    }, 60000);
+
+    return () => clearInterval(refreshInterval);
   }, []);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold">Дашборд</h2>
-        <Button 
-          onClick={fetchData} 
-          disabled={isLoading}
-          variant="default"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Загрузка...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Обновить данные
-            </>
-          )}
-        </Button>
+        {isLoading && (
+          <div className="flex items-center text-sm text-muted-foreground">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Обновление данных...
+          </div>
+        )}
       </div>
 
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
