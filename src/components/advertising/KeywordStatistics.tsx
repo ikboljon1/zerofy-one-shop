@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -41,7 +40,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
   const { toast } = useToast();
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
   const [dateWarning, setDateWarning] = useState<string | null>(null);
-  const [excludedKeywords, setExcludedKeywords] = useState<Set<string>>(new Set());
+  const [excludedKeywords, setExcludedKeywords] = useState<string[]>([]);
 
   const processedKeywords = useMemo(() => {
     if (!keywordStats) return [];
@@ -50,7 +49,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
       day.stats.map(stat => ({
         ...stat,
         date: day.date,
-        excluded: excludedKeywords.has(stat.keyword),
+        excluded: excludedKeywords.includes(stat.keyword),
         performance: calculatePerformance(stat)
       }))
     );
@@ -92,18 +91,16 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
 
   const toggleKeywordExclusion = (keyword: string) => {
     setExcludedKeywords(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(keyword)) {
-        newSet.delete(keyword);
+      if (prev.includes(keyword)) {
+        return prev.filter(k => k !== keyword);
       } else {
-        newSet.add(keyword);
+        return [...prev, keyword];
       }
-      return newSet;
     });
   };
 
   const handleExcludeKeywords = async () => {
-    if (excludedKeywords.size === 0) {
+    if (excludedKeywords.length === 0) {
       toast({
         title: "Предупреждение",
         description: "Нет выбранных ключевых слов для исключения",
@@ -114,14 +111,13 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
 
     try {
       setExcludingKeywords(true);
-      const keywordsToExclude = Array.from(excludedKeywords);
       
-      const success = await setExcludedKeywords(apiKey, campaignId, keywordsToExclude);
+      const success = await setExcludedKeywords(apiKey, campaignId, excludedKeywords);
       
       if (success) {
         toast({
           title: "Успех",
-          description: `Исключено ключевых слов: ${keywordsToExclude.length}`,
+          description: `Исключено ключевых слов: ${excludedKeywords.length}`,
         });
       } else {
         throw new Error("Не удалось исключить ключевые слова");
@@ -420,7 +416,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
               variant="destructive"
               size="sm"
               onClick={handleExcludeKeywords}
-              disabled={excludingKeywords || excludedKeywords.size === 0}
+              disabled={excludingKeywords || excludedKeywords.length === 0}
               className="h-8 px-2 text-xs"
             >
               {excludingKeywords ? (
@@ -428,7 +424,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
               ) : (
                 <Ban className="h-3.5 w-3.5 mr-1" />
               )}
-              Исключить ({excludedKeywords.size})
+              Исключить ({excludedKeywords.length})
             </Button>
           </div>
         </div>
