@@ -148,8 +148,7 @@ const fetchAllReportDetails = async (apiKey: string, dateFrom: Date, dateTo: Dat
       console.log(`Page ${pageCount} returned no data, ending pagination.`);
       hasMoreData = false;
       continue;
-    }
-    
+    }\n    
     allData = [...allData, ...data];
     
     // Получаем идентификатор для следующего запроса
