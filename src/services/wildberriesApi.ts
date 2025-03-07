@@ -1,6 +1,8 @@
+
 import axios from 'axios';
 import { WildberriesOrder, WildberriesSale } from "@/types/store";
 
+// Поддерживаем текущую структуру для совместимости с другими частями приложения
 export interface WildberriesResponse {
   currentPeriod: {
     sales: number;
@@ -12,7 +14,7 @@ export interface WildberriesResponse {
       penalties: number;
       acceptance: number;
       advertising: number;
-      deductions?: number; // Поле для удержаний
+      deductions?: number;
     };
     netProfit: number;
     acceptance: number;
@@ -30,38 +32,38 @@ export interface WildberriesResponse {
     name: string;
     value: number;
     count?: number;
-    isNegative?: boolean; // Флаг для отрицательных значений
+    isNegative?: boolean;
   }>;
   penaltiesData?: Array<{
     name: string;
     value: number;
-    isNegative?: boolean; // Флаг для отрицательных значений
+    isNegative?: boolean;
   }>;
-  deductionsData?: Array<{  // Отдельное поле для данных по удержаниям
+  deductionsData?: Array<{
     name: string;
     value: number;
     nm_id?: string | number;
-    isNegative?: boolean; // Флаг для отрицательных значений
+    isNegative?: boolean;
   }>;
   topProfitableProducts?: Array<{
     name: string;
     price: string;
     profit: string;
     image: string;
-    quantitySold: number;
-    margin: number;
-    returnCount: number;
-    category: string;
+    quantitySold?: number;
+    margin?: number;
+    returnCount?: number;
+    category?: string;
   }>;
   topUnprofitableProducts?: Array<{
     name: string;
     price: string;
     profit: string;
     image: string;
-    quantitySold: number;
-    margin: number;
-    returnCount: number;
-    category: string;
+    quantitySold?: number;
+    margin?: number;
+    returnCount?: number;
+    category?: string;
   }>;
   orders?: WildberriesOrder[];
   sales?: WildberriesSale[];
@@ -86,16 +88,15 @@ const formatDateRFC3339 = (date: Date, isEnd: boolean = false): string => {
   return isEnd ? `${formattedDate}T23:59:59` : `${formattedDate}T00:00:00`;
 };
 
-const getLastWeekDateRange = () => {
-  const today = new Date();
-  const lastWeek = new Date(today);
-  lastWeek.setDate(today.getDate() - 7);
-  return {
-    dateFrom: lastWeek,
-    dateTo: today
-  };
-};
-
+/**
+ * Загружает детальный отчет с Wildberries API с поддержкой пагинации
+ * @param apiKey Ключ API
+ * @param dateFrom Начальная дата
+ * @param dateTo Конечная дата
+ * @param rrdid ID для пагинации
+ * @param limit Максимальное количество записей
+ * @returns Данные отчета и ID для следующего запроса
+ */
 const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date, rrdid = 0, limit = 100000) => {
   try {
     const formattedDateFrom = formatDate(dateFrom);
@@ -115,13 +116,28 @@ const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date, r
     
     console.log(`Fetching report detail from Wildberries API with rrdid ${rrdid}...`);
     const response = await axios.get(url, { headers, params });
-    return response.data;
+    
+    // Определяем ID для следующего запроса
+    let nextRrdid = 0;
+    if (response.data && response.data.length > 0) {
+      const lastRecord = response.data[response.data.length - 1];
+      nextRrdid = lastRecord.rrd_id || 0;
+    }
+    
+    return { data: response.data, nextRrdid };
   } catch (error) {
     console.error("Error fetching report detail:", error);
-    return null;
+    return { data: null, nextRrdid: 0 };
   }
 };
 
+/**
+ * Загружает все данные отчета с поддержкой пагинации
+ * @param apiKey Ключ API
+ * @param dateFrom Начальная дата
+ * @param dateTo Конечная дата
+ * @returns Полные данные отчета
+ */
 const fetchAllReportDetails = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
   let allData: any[] = [];
   let nextRrdid = 0;
@@ -134,7 +150,8 @@ const fetchAllReportDetails = async (apiKey: string, dateFrom: Date, dateTo: Dat
     pageCount++;
     console.log(`Fetching page ${pageCount} with rrdid ${nextRrdid}...`);
     
-    const data = await fetchReportDetail(apiKey, dateFrom, dateTo, nextRrdid);
+    const result = await fetchReportDetail(apiKey, dateFrom, dateTo, nextRrdid);
+    const data = result.data;
     
     if (!data || data.length === 0) {
       console.log(`Page ${pageCount} returned no data, ending pagination.`);
@@ -144,10 +161,9 @@ const fetchAllReportDetails = async (apiKey: string, dateFrom: Date, dateTo: Dat
     
     allData = [...allData, ...data];
     
-    // Получаем идентификатор последней записи для следующего запроса
-    const lastRecord = data[data.length - 1];
+    // Получаем идентификатор для следующего запроса
     const prevRrdid = nextRrdid;
-    nextRrdid = lastRecord?.rrd_id || 0;
+    nextRrdid = result.nextRrdid;
     
     console.log(`Page ${pageCount} received ${data.length} records, last rrdid: ${nextRrdid}`);
     
@@ -162,6 +178,13 @@ const fetchAllReportDetails = async (apiKey: string, dateFrom: Date, dateTo: Dat
   return allData;
 };
 
+/**
+ * Загружает отчет о платной приемке с Wildberries API
+ * @param apiKey Ключ API
+ * @param dateFrom Начальная дата
+ * @param dateTo Конечная дата
+ * @returns Данные о платной приемке
+ */
 const fetchPaidAcceptanceReport = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
   try {
     const formattedDateFrom = formatDate(dateFrom);
@@ -186,28 +209,33 @@ const fetchPaidAcceptanceReport = async (apiKey: string, dateFrom: Date, dateTo:
   }
 };
 
+/**
+ * Рассчитывает метрики на основе данных отчета
+ * @param data Данные отчета
+ * @param paidAcceptanceData Данные о платной приемке
+ * @returns Рассчитанные метрики
+ */
 const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   if (!data || data.length === 0) {
     return null;
   }
 
-  let totalSales = 0;
-  let totalForPay = 0;
-  let totalDeliveryRub = 0;
-  let totalRebillLogisticCost = 0;
-  let totalStorageFee = 0;
-  let totalReturns = 0;
-  let totalPenalty = 0;
-  let totalDeduction = 0;
-  let totalToPay = 0;
-  let totalReturnCount = 0;
+  let totalSales = 0;           // Продажа (retail_price_withdisc_rub)
+  let totalForPay = 0;          // К перечислению за товар (ppvz_for_pay)
+  let totalDeliveryRub = 0;     // Стоимость логистики (delivery_rub)
+  let totalRebillLogisticCost = 0; // Логистика возмещение издержек (rebill_logistic_cost)
+  let totalStorageFee = 0;      // Стоимость хранения (storage_fee)
+  let totalReturns = 0;         // Возврат (отрицательные ppvz_for_pay)
+  let totalPenalty = 0;         // Штрафы (penalty)
+  let totalDeduction = 0;       // Удержания (deduction)
+  let totalToPay = 0;           // Итого к оплате
+  let totalReturnCount = 0;     // Количество возвратов
 
   const returnsByProduct: Record<string, { value: number; count: number }> = {};
   const penaltiesByReason: Record<string, number> = {};
-  
-  // Измененная структура для хранения данных об удержаниях
   const deductionsByReason: Record<string, { total: number; items: Array<{nm_id?: string | number; value: number}> }> = {};
-
+  
+  // Метрики для расчета прибыльности товаров
   const productProfitability: Record<string, { 
     name: string;
     price: number;
@@ -221,13 +249,13 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
 
   console.log(`Processing ${data.length} records for metrics calculation...`);
   
-  let deductionRecordsCount = 0;
-
   for (const record of data) {
+    // Обработка продаж
     if (record.doc_type_name === 'Продажа') {
       totalSales += record.retail_price_withdisc_rub || 0;
       totalForPay += record.ppvz_for_pay || 0;
       
+      // Учет данных для расчета прибыльности товаров
       if (record.sa_name) {
         const productName = record.sa_name;
         if (!productProfitability[productName]) {
@@ -254,8 +282,9 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
         }
         productProfitability[productName].count += 1;
       }
-      
-    } else if (record.doc_type_name === 'Возврат') {
+    } 
+    // Обработка возвратов
+    else if (record.doc_type_name === 'Возврат') {
       totalReturns += record.ppvz_for_pay || 0;
       totalReturnCount += 1;
       
@@ -275,6 +304,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
         }
         
         productProfitability[productName].sales += record.ppvz_for_pay || 0;
+        productProfitability[productName].returnCount += 1;
         
         if (!returnsByProduct[productName]) {
           returnsByProduct[productName] = { value: 0, count: 0 };
@@ -284,6 +314,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       }
     }
     
+    // Обработка штрафов
     if (record.penalty && record.penalty > 0) {
       const reason = record.penalty_reason || record.bonus_type_name || 'Другие причины';
       if (!penaltiesByReason[reason]) {
@@ -293,78 +324,73 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       totalPenalty += record.penalty;
     }
     
-    // Улучшенная обработка удержаний - теперь проверяем наличие поля deduction, а не его значение > 0
+    // Обработка удержаний
     if (record.deduction !== undefined && record.deduction !== null) {
-      deductionRecordsCount++;
-      
-      // Используем значащее название для удержания или дефолтное значение
       const reason = record.bonus_type_name || 'Прочие удержания';
       
       if (!deductionsByReason[reason]) {
         deductionsByReason[reason] = { total: 0, items: [] };
       }
       
-      // Добавляем значение (как положительное, так и отрицательное)
       deductionsByReason[reason].total += record.deduction;
-      
-      // Добавляем детали записи для анализа
       deductionsByReason[reason].items.push({
         nm_id: record.nm_id || record.shk || '',
         value: record.deduction
       });
       
-      // Суммируем общее значение удержаний
       totalDeduction += record.deduction;
-      
-      console.log(`Deduction record: bonus_type_name=${reason}, nm_id=${record.nm_id || 'N/A'}, value=${record.deduction}`);
     }
     
+    // Учет расходов на логистику и хранение
     totalDeliveryRub += record.delivery_rub || 0;
     totalRebillLogisticCost += record.rebill_logistic_cost || 0;
     totalStorageFee += record.storage_fee || 0;
   }
 
-  console.log(`Total deduction records found: ${deductionRecordsCount}`);
-  console.log("Deduction types detected:", Object.keys(deductionsByReason));
-  console.log("Total deduction amount:", totalDeduction);
-
-  // Преобразуем данные об удержаниях для отображения
-  const deductionsData = Object.entries(deductionsByReason)
-    .map(([name, data]) => {
-      // Проверяем имеет ли значение
-      if (data.total === 0) {
-        return null; // Пропускаем нулевые значения
-      }
-      
-      return {
-        name,
-        value: Math.round(data.total * 100) / 100, // Сохраняем знак для отображения
-        count: data.items.length,
-        isNegative: data.total < 0 // Добавляем флаг для отрицательных значений
-      };
-    })
-    .filter(item => item !== null) // Удаляем null записи
-    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value)); // Сортируем по абсолютной величине
-
-  console.log("Deductions data processed:", deductionsData);
-
-  const penaltiesData = Object.entries(penaltiesByReason).map(([name, value]) => ({
-    name,
-    value: Math.round(value * 100) / 100
-  })).sort((a, b) => b.value - a.value);
-
+  // Расчет общей суммы по платной приемке
   const totalAcceptance = paidAcceptanceData.reduce((sum, record) => sum + (record.total || 0), 0);
 
-  totalToPay = totalForPay - totalDeliveryRub - totalStorageFee - totalReturns - totalPenalty - totalDeduction - totalAcceptance;
+  // Расчет итоговой суммы к оплате по логике Python-скрипта
+  totalToPay = totalForPay - totalDeliveryRub - totalStorageFee - totalReturns;
 
+  // Расчет прибыльности товаров
   for (const key in productProfitability) {
     productProfitability[key].profit = productProfitability[key].sales - productProfitability[key].costs;
   }
 
+  // Подготовка данных о возвратах по товарам
+  const productReturns = Object.entries(returnsByProduct)
+    .map(([name, { value, count }]) => ({ name, value, count }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5);
+
+  // Подготовка данных о штрафах
+  const penaltiesData = Object.entries(penaltiesByReason)
+    .map(([name, value]) => ({
+      name,
+      value: Math.round(value * 100) / 100
+    }))
+    .sort((a, b) => b.value - a.value);
+
+  // Подготовка данных об удержаниях
+  const deductionsData = Object.entries(deductionsByReason)
+    .map(([name, data]) => {
+      if (data.total === 0) return null;
+      
+      return {
+        name,
+        value: Math.round(data.total * 100) / 100,
+        count: data.items.length,
+        isNegative: data.total < 0
+      };
+    })
+    .filter(item => item !== null)
+    .sort((a, b) => Math.abs((b?.value || 0)) - Math.abs((a?.value || 0)));
+
+  // Подготовка данных о самых прибыльных и убыточных товарах
   const productProfitabilityArray = Object.values(productProfitability);
 
   const sortedByProfit = [...productProfitabilityArray].sort((a, b) => b.profit - a.profit);
-
   const topProfitableProducts = sortedByProfit.slice(0, 3).map(item => ({
     name: item.name,
     price: item.price.toString(),
@@ -377,7 +403,6 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   }));
 
   const sortedByLoss = [...productProfitabilityArray].sort((a, b) => a.profit - b.profit);
-
   const topUnprofitableProducts = sortedByLoss.slice(0, 3).map(item => ({
     name: item.name,
     price: item.price.toString(),
@@ -389,14 +414,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     category: "Одежда"
   }));
 
-  const productReturns = Object.entries(returnsByProduct)
-    .map(([name, { value, count }]) => ({ name, value, count }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 5);
-
-  console.log(`Received and processed data. Total returns: ${Math.abs(totalReturns)}, Returned items count: ${totalReturnCount}, Returned products count: ${productReturns.length}`);
-  console.log(`Calculated top profitable products: ${topProfitableProducts.length}, Top unprofitable products: ${topUnprofitableProducts.length}`);
-  console.log(`Total deductions: ${totalDeduction}, Deduction reasons count: ${Object.keys(deductionsByReason).length}`);
+  console.log(`Calculated metrics: Total sales: ${totalSales}, Total for pay: ${totalForPay}, Logistics: ${totalDeliveryRub}, Storage: ${totalStorageFee}, Returns: ${totalReturns}, Total to pay: ${totalToPay}`);
 
   return {
     metrics: {
@@ -407,7 +425,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       total_storage_fee: Math.round(totalStorageFee * 100) / 100,
       total_returns: Math.round(Math.abs(totalReturns) * 100) / 100,
       total_penalty: Math.round(totalPenalty * 100) / 100,
-      total_deduction: Math.round(Math.abs(totalDeduction) * 100) / 100, // Используем абсолютное значение
+      total_deduction: Math.round(Math.abs(totalDeduction) * 100) / 100,
       total_to_pay: Math.round(totalToPay * 100) / 100,
       total_acceptance: Math.round(totalAcceptance * 100) / 100,
       total_return_count: totalReturnCount
@@ -465,6 +483,13 @@ export const fetchWildberriesSales = async (apiKey: string, dateFrom: Date): Pro
   }
 };
 
+/**
+ * Загружает статистику с Wildberries API
+ * @param apiKey Ключ API
+ * @param dateFrom Начальная дата
+ * @param dateTo Конечная дата
+ * @returns Статистика Wildberries
+ */
 export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
   try {
     console.log(`Fetching Wildberries stats from ${dateFrom.toISOString()} to ${dateTo.toISOString()}`);
@@ -474,43 +499,25 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       return getDemoData();
     }
     
+    // 1. Получаем детальный отчет через пагинацию
     console.log("Starting to fetch all report details with pagination...");
     const reportData = await fetchAllReportDetails(apiKey, dateFrom, dateTo);
     console.log(`Completed fetching all report details. Total records: ${reportData.length}`);
     
+    // 2. Получаем данные о платной приемке
     const paidAcceptanceData = await fetchPaidAcceptanceReport(apiKey, dateFrom, dateTo);
     
+    // 3. Получаем данные о заказах и продажах
     const ordersData = await fetchWildberriesOrders(apiKey, dateFrom);
     const salesData = await fetchWildberriesSales(apiKey, dateFrom);
     
+    // 4. Если данных нет, возвращаем демо-данные
     if (!reportData || reportData.length === 0) {
       console.log('No data received from Wildberries API, using demo data');
       return getDemoData();
     }
     
-    // Расширенная проверка наличия записей с удержаниями
-    const deductionRecords = reportData.filter(r => r.deduction !== undefined && r.deduction !== null);
-    console.log(`Found ${deductionRecords.length} deduction records out of ${reportData.length} total records`);
-    
-    if (deductionRecords.length > 0) {
-      console.log("Sample deduction records:");
-      deductionRecords.slice(0, 5).forEach((record, idx) => {
-        console.log(`Record ${idx + 1}:`, {
-          bonus_type_name: record.bonus_type_name,
-          deduction: record.deduction,
-          nm_id: record.nm_id,
-          doc_type_name: record.doc_type_name
-        });
-      });
-      
-      const deductionTypes = {};
-      deductionRecords.forEach(record => {
-        const type = record.bonus_type_name || 'Unknown';
-        deductionTypes[type] = (deductionTypes[type] || 0) + 1;
-      });
-      console.log("Deduction types distribution:", deductionTypes);
-    }
-    
+    // 5. Рассчитываем метрики на основе полученных данных
     console.log("Calculating metrics from report data...");
     const result = calculateMetrics(reportData, paidAcceptanceData);
     
@@ -519,8 +526,9 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       return getDemoData();
     }
     
-    const { metrics, productReturns, penaltiesData, deductionsData } = result;
+    const { metrics, productReturns, penaltiesData, deductionsData, topProfitableProducts, topUnprofitableProducts } = result;
     
+    // 6. Группируем продажи по категориям
     const salesByCategory: Record<string, number> = {};
     for (const record of reportData) {
       if (record.doc_type_name === 'Продажа' && record.subject_name) {
@@ -536,6 +544,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 10);
     
+    // 7. Группируем продажи по дням
     const salesByDay: Record<string, { sales: number, previousSales: number }> = {};
     for (const record of reportData) {
       if (record.doc_type_name === 'Продажа' && record.rr_dt) {
@@ -551,6 +560,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       .map(([date, { sales, previousSales }]) => ({ date, sales, previousSales }))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
+    // 8. Рассчитываем распределение по складам
     const warehouseCounts: Record<string, number> = {};
     const totalOrders = ordersData.length;
     
@@ -569,6 +579,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
     
+    // 9. Рассчитываем распределение по регионам
     const regionCounts: Record<string, number> = {};
     
     ordersData.forEach(order => {
@@ -586,22 +597,21 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
     
-    console.log("Deductions data to be included in response:", deductionsData);
-    
+    // 10. Формируем итоговый ответ
     const response: WildberriesResponse = {
       currentPeriod: {
         sales: metrics.total_sales,
-        transferred: metrics.total_to_pay,
+        transferred: metrics.total_for_pay, // По логике Python-скрипта используем total_for_pay как transferred
         expenses: {
-          total: metrics.total_delivery_rub + metrics.total_storage_fee + metrics.total_penalty + metrics.total_acceptance + metrics.total_deduction,
+          total: metrics.total_delivery_rub + metrics.total_storage_fee + metrics.total_penalty + metrics.total_acceptance,
           logistics: metrics.total_delivery_rub,
           storage: metrics.total_storage_fee,
           penalties: metrics.total_penalty,
           acceptance: metrics.total_acceptance,
-          advertising: 0,
+          advertising: 0,  // Рекламные расходы в скрипте не учитываются
           deductions: metrics.total_deduction
         },
-        netProfit: metrics.total_to_pay,
+        netProfit: metrics.total_to_pay, // По логике Python-скрипта используем total_to_pay как netProfit
         acceptance: metrics.total_acceptance
       },
       dailySales,
@@ -609,16 +619,15 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       productReturns,
       penaltiesData,
       deductionsData,
-      topProfitableProducts: result.topProfitableProducts || [],
-      topUnprofitableProducts: result.topUnprofitableProducts || [],
+      topProfitableProducts,
+      topUnprofitableProducts,
       orders: ordersData,
       sales: salesData,
       warehouseDistribution,
       regionDistribution
     };
     
-    console.log(`Received and processed data from Wildberries API. Total returns: ${metrics.total_returns}, Return count: ${metrics.total_return_count}, Deductions: ${metrics.total_deduction}`);
-    console.log(`Deduction data count in response: ${response.deductionsData?.length || 0}`);
+    console.log(`Successfully processed data from Wildberries API. Net profit (total_to_pay): ${metrics.total_to_pay}`);
     
     return response;
   } catch (error) {
@@ -627,6 +636,10 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
   }
 };
 
+/**
+ * Возвращает демо-данные для тестирования и отладки
+ * @returns Демо-данные для Wildberries
+ */
 const getDemoData = (): WildberriesResponse => {
   return {
     currentPeriod: {
