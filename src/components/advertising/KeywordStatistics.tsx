@@ -109,17 +109,16 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
     try {
       const keywordsArray = Array.from(excludedKeywords);
       
-      await setExcludedKeywords(apiKey, campaignId, keywordsArray)
-        .then(success => {
-          if (success) {
-            toast({
-              title: "Успешно",
-              description: keywordsArray.length === 0 
-                ? "Все минус-фразы удалены из кампании" 
-                : `${keywordsArray.length} минус-фраз установлено для кампании`,
-            });
-          }
+      const success = await setExcludedKeywords(apiKey, campaignId, keywordsArray);
+      
+      if (success) {
+        toast({
+          title: "Успешно",
+          description: keywordsArray.length === 0 
+            ? "Все минус-фразы удалены из кампании" 
+            : `${keywordsArray.length} минус-фраз установлено для кампании`,
         });
+      }
       
       fetchData();
     } catch (error) {

@@ -1,8 +1,19 @@
+
 import { AxiosError } from 'axios';
 import axios from 'axios';
 import { getStatusString, getTypeString } from '@/components/analytics/data/productAdvertisingData';
 
 const BASE_URL = "https://advert-api.wildberries.ru/adv";
+
+export interface Campaign {
+  advertId: number;
+  campName: string;
+  status: 'active' | 'paused' | 'archived' | 'ready' | 'completed';
+  type: 'auction' | 'automatic';
+  numericStatus?: number;
+  numericType?: number;
+  changeTime: string;
+}
 
 interface AdvertCost {
   updNum: string;
