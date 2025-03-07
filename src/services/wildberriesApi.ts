@@ -12,6 +12,7 @@ export interface WildberriesResponse {
       penalties: number;
       acceptance: number;
       advertising: number;
+      deductions?: number; // Добавляем поле для удержаний
     };
     netProfit: number;
     acceptance: number;
@@ -155,6 +156,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
 
   const returnsByProduct: Record<string, { value: number; count: number }> = {};
   const penaltiesByReason: Record<string, number> = {};
+  const deductionsByReason: Record<string, number> = {}; // Добавляем учет удержаний
   const productProfitability: Record<string, { 
     name: string;
     price: number;
@@ -189,7 +191,8 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
         productProfitability[productName].sales += record.ppvz_for_pay || 0;
         productProfitability[productName].costs += (record.delivery_rub || 0) + 
                                                   (record.storage_fee || 0) + 
-                                                  (record.penalty || 0);
+                                                  (record.penalty || 0) +
+                                                  (record.deduction || 0);
         productProfitability[productName].price = record.retail_price || productProfitability[productName].price;
         if (record.pic_url && !productProfitability[productName].image) {
           productProfitability[productName].image = record.pic_url;
@@ -227,11 +230,26 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     }
     
     if (record.penalty && record.penalty > 0) {
-      const reason = record.penalty_reason || 'Другие причины';
+      const reason = record.penalty_reason || record.bonus_type_name || 'Другие причины';
       if (!penaltiesByReason[reason]) {
         penaltiesByReason[reason] = 0;
       }
       penaltiesByReason[reason] += record.penalty;
+    }
+    
+    // Обработка удержаний (deduction)
+    if (record.deduction && record.deduction > 0) {
+      const reason = record.bonus_type_name || 'Прочие удержания';
+      if (!deductionsByReason[reason]) {
+        deductionsByReason[reason] = 0;
+      }
+      deductionsByReason[reason] += record.deduction;
+      
+      // Добавляем запись в таблицу штрафов для отображения удержаний
+      if (!penaltiesByReason[reason]) {
+        penaltiesByReason[reason] = 0;
+      }
+      penaltiesByReason[reason] += record.deduction;
     }
     
     totalDeliveryRub += record.delivery_rub || 0;
@@ -289,6 +307,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
 
   console.log(`Received and processed data. Total returns: ${Math.abs(totalReturns)}, Returned items count: ${totalReturnCount}, Returned products count: ${productReturns.length}`);
   console.log(`Calculated top profitable products: ${topProfitableProducts.length}, Top unprofitable products: ${topUnprofitableProducts.length}`);
+  console.log(`Total deductions: ${totalDeduction}, Deduction reasons count: ${Object.keys(deductionsByReason).length}`);
 
   return {
     metrics: {
@@ -456,12 +475,13 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
         sales: metrics.total_sales,
         transferred: metrics.total_to_pay,
         expenses: {
-          total: metrics.total_delivery_rub + metrics.total_storage_fee + metrics.total_penalty + metrics.total_acceptance,
+          total: metrics.total_delivery_rub + metrics.total_storage_fee + metrics.total_penalty + metrics.total_acceptance + metrics.total_deduction,
           logistics: metrics.total_delivery_rub,
           storage: metrics.total_storage_fee,
           penalties: metrics.total_penalty,
           acceptance: metrics.total_acceptance,
-          advertising: 0
+          advertising: 0,
+          deductions: metrics.total_deduction // Добавляем общую сумму удержаний
         },
         netProfit: metrics.total_to_pay,
         acceptance: metrics.total_acceptance
@@ -478,7 +498,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       regionDistribution
     };
     
-    console.log(`Received and processed data from Wildberries API. Total returns: ${metrics.total_returns}, Return count: ${metrics.total_return_count}`);
+    console.log(`Received and processed data from Wildberries API. Total returns: ${metrics.total_returns}, Return count: ${metrics.total_return_count}, Deductions: ${metrics.total_deduction}`);
     
     return response;
   } catch (error) {
@@ -493,12 +513,13 @@ const getDemoData = (): WildberriesResponse => {
       sales: 294290.6,
       transferred: 218227.70,
       expenses: {
-        total: 58794.94,
+        total: 65794.94, // Updated to include deductions
         logistics: 35669.16,
         storage: 23125.78,
         penalties: 0,
         acceptance: 0,
-        advertising: 0
+        advertising: 0,
+        deductions: 7000 // Added deductions
       },
       netProfit: 147037.23,
       acceptance: 0
@@ -544,7 +565,13 @@ const getDemoData = (): WildberriesResponse => {
       { name: "Джинсы классические", value: 4200, count: 1 },
       { name: "Куртка зимняя", value: 3000, count: 1 }
     ],
-    penaltiesData: [],
+    penaltiesData: [
+      { name: "Недопоставка", value: 3500 },
+      { name: "Нарушение упаковки", value: 2800 },
+      { name: "Нарушение маркировки", value: 1200 },
+      { name: "Прочие удержания", value: 7000 }, // Added deductions to penalties data
+      { name: "Другие причины", value: 2500 }
+    ],
     topProfitableProducts: [
       { 
         name: "Костюм женский спортивный", 
@@ -735,18 +762,4 @@ const getDemoData = (): WildberriesResponse => {
       }
     ],
     warehouseDistribution: [
-      { name: "Подольск", count: 150, percentage: 30 },
-      { name: "Коледино", count: 120, percentage: 24 },
-      { name: "Электросталь", count: 95, percentage: 19 },
-      { name: "Казань", count: 75, percentage: 15 },
-      { name: "Санкт-Петербург", count: 60, percentage: 12 }
-    ],
-    regionDistribution: [
-      { name: "Московская", count: 180, percentage: 36 },
-      { name: "Санкт-Петербург", count: 110, percentage: 22 },
-      { name: "Краснодарский край", count: 85, percentage: 17 },
-      { name: "Татарстан", count: 75, percentage: 15 },
-      { name: "Свердловская", count: 50, percentage: 10 }
-    ]
-  };
-};
+      {

@@ -13,6 +13,7 @@ interface ExpenseBreakdownProps {
         penalties: number;
         advertising: number;
         acceptance: number;
+        deductions?: number; // Add deductions to the interface
       };
     };
   };
@@ -25,9 +26,14 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
   // Используем общую сумму расходов на рекламу без разбивки
   const advertisingAmount = data.currentPeriod.expenses.advertising || 0;
   const acceptanceAmount = data.currentPeriod.expenses.acceptance || 0;
+  const deductionsAmount = data.currentPeriod.expenses.deductions || 0;
   
   // Общая сумма расходов для расчета процентов
   const totalExpenses = data.currentPeriod.expenses.total;
+
+  // Рассчитываем штрафы и удержания для отображения
+  const penaltiesAmount = data.currentPeriod.expenses.penalties;
+  const penaltiesAndDeductionsTotal = penaltiesAmount + deductionsAmount;
 
   return (
     <Card className="p-6">
@@ -86,23 +92,23 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
               <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
             </div>
           </div>
-          <p className="text-2xl font-bold">{formatCurrency(data.currentPeriod.expenses.penalties)}</p>
+          <p className="text-2xl font-bold">{formatCurrency(penaltiesAndDeductionsTotal)}</p>
           <span className="text-xs text-muted-foreground mt-1">
-            {totalExpenses > 0 ? ((data.currentPeriod.expenses.penalties / totalExpenses) * 100).toFixed(1) : '0'}% от общих расходов
+            {totalExpenses > 0 ? ((penaltiesAndDeductionsTotal / totalExpenses) * 100).toFixed(1) : '0'}% от общих расходов
           </span>
           <div className="mt-4 pt-4 border-t border-red-200 dark:border-red-800/50">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Брак и повреждения</span>
-                <span className="font-medium">{formatCurrency(data.currentPeriod.expenses.penalties * 0.35)}</span>
+                <span className="font-medium">{formatCurrency(penaltiesAmount * 0.35)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Прочие удержания</span>
-                <span className="font-medium">{formatCurrency(data.currentPeriod.expenses.penalties * 0.30)}</span>
+                <span className="font-medium">{formatCurrency(deductionsAmount)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Нарушение правил</span>
-                <span className="font-medium">{formatCurrency(data.currentPeriod.expenses.penalties * 0.35)}</span>
+                <span className="font-medium">{formatCurrency(penaltiesAmount * 0.35)}</span>
               </div>
             </div>
           </div>

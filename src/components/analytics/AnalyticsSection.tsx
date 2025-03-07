@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag, Loader2 } from "lucide-react";
@@ -36,6 +35,7 @@ interface AnalyticsData {
       penalties: number;
       advertising: number;
       acceptance: number;
+      deductions?: number; // Добавляем удержания
     };
     netProfit: number;
     acceptance: number;
@@ -52,6 +52,7 @@ interface AnalyticsData {
   productReturns: Array<{
     name: string;
     value: number;
+    count?: number;
   }>;
   topProfitableProducts?: Array<{
     name: string;
@@ -93,10 +94,11 @@ interface StoredAnalyticsData {
     penalties: number;
     acceptance: number;
     advertising: number;
+    deductions?: number; // Добавляем удержания
   }>;
   productAdvertisingData: Array<{name: string, value: number}>;
   advertisingBreakdown: AdvertisingBreakdown;
-  timestamp: number; // Добавляем timestamp для отслеживания обновлений
+  timestamp: number;
 }
 
 interface DeductionsTimelineItem {
@@ -106,6 +108,7 @@ interface DeductionsTimelineItem {
   penalties: number;
   acceptance: number;
   advertising: number;
+  deductions?: number; // Добавляем удержания
 }
 
 const AnalyticsSection = () => {
@@ -266,7 +269,8 @@ const AnalyticsSection = () => {
             expenses: {
               ...statsData.currentPeriod.expenses,
               advertising: totalAdvertisingCost,
-              acceptance: statsData.currentPeriod.expenses.acceptance || 0
+              acceptance: statsData.currentPeriod.expenses.acceptance || 0,
+              deductions: statsData.currentPeriod.expenses.deductions
             }
           },
           dailySales: statsData.dailySales,
@@ -281,7 +285,8 @@ const AnalyticsSection = () => {
           modifiedData.currentPeriod.expenses.storage +
           modifiedData.currentPeriod.expenses.penalties +
           modifiedData.currentPeriod.expenses.advertising +
-          (modifiedData.currentPeriod.expenses.acceptance || 0);
+          (modifiedData.currentPeriod.expenses.acceptance || 0) +
+          (modifiedData.currentPeriod.expenses.deductions || 0);
         
         setData(modifiedData);
         
@@ -309,6 +314,7 @@ const AnalyticsSection = () => {
             const penalties = modifiedData.currentPeriod.expenses.penalties / daysCount;
             const acceptance = modifiedData.currentPeriod.expenses.acceptance / daysCount || 0;
             const advertising = modifiedData.currentPeriod.expenses.advertising / daysCount || 0;
+            const deductions = modifiedData.currentPeriod.expenses.deductions / daysCount || 0;
             
             return {
               date: typeof day.date === 'string' ? day.date.split('T')[0] : new Date().toISOString().split('T')[0],
@@ -316,7 +322,8 @@ const AnalyticsSection = () => {
               storage,
               penalties,
               acceptance,
-              advertising
+              advertising,
+              deductions
             };
           });
         } else {
@@ -327,7 +334,8 @@ const AnalyticsSection = () => {
             storage: modifiedData.currentPeriod.expenses.storage / 7, 
             penalties: modifiedData.currentPeriod.expenses.penalties / 7,
             acceptance: modifiedData.currentPeriod.expenses.acceptance / 7 || 0,
-            advertising: modifiedData.currentPeriod.expenses.advertising / 7 || 0
+            advertising: modifiedData.currentPeriod.expenses.advertising / 7 || 0,
+            deductions: modifiedData.currentPeriod.expenses.deductions / 7 || 0
           }));
         }
         
@@ -356,7 +364,8 @@ const AnalyticsSection = () => {
         storage: 0, 
         penalties: 0,
         acceptance: 0,
-        advertising: 0
+        advertising: 0,
+        deductions: 0
       })));
       
       setPenalties([]);
@@ -389,7 +398,8 @@ const AnalyticsSection = () => {
         storage: 0, 
         penalties: 0,
         acceptance: 0,
-        advertising: 0
+        advertising: 0,
+        deductions: 0
       })));
       
       setPenalties([]);
