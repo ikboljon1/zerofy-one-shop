@@ -1,6 +1,6 @@
 
 import { Card } from "@/components/ui/card";
-import { Truck, AlertCircle, WarehouseIcon, Target, Inbox } from "lucide-react";
+import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, BadgePercent } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 interface ExpenseBreakdownProps {
@@ -81,7 +81,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
 
         <div className="flex flex-col bg-gradient-to-br from-red-50 to-white dark:from-red-950/20 dark:to-background border border-red-200 dark:border-red-800 rounded-xl p-6">
           <div className="flex justify-between items-center mb-2">
-            <h4 className="text-base font-medium">Штрафы</h4>
+            <h4 className="text-base font-medium">Штрафы и удержания</h4>
             <div className="bg-red-100 dark:bg-red-900/60 p-2 rounded-md">
               <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
             </div>
@@ -94,11 +94,15 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Брак и повреждения</span>
-                <span className="font-medium">{formatCurrency(data.currentPeriod.expenses.penalties * 0.45)}</span>
+                <span className="font-medium">{formatCurrency(data.currentPeriod.expenses.penalties * 0.35)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Прочие удержания</span>
+                <span className="font-medium">{formatCurrency(data.currentPeriod.expenses.penalties * 0.30)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Нарушение правил</span>
-                <span className="font-medium">{formatCurrency(data.currentPeriod.expenses.penalties * 0.55)}</span>
+                <span className="font-medium">{formatCurrency(data.currentPeriod.expenses.penalties * 0.35)}</span>
               </div>
             </div>
           </div>

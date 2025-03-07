@@ -4,6 +4,7 @@ export const penaltiesData = [
   { name: "Недопоставка", value: 3500 },
   { name: "Нарушение упаковки", value: 2800 },
   { name: "Нарушение маркировки", value: 1200 },
+  { name: "Прочие удержания", value: 3200 },
   { name: "Другие причины", value: 2500 }
 ];
 
