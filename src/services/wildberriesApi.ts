@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import { WildberriesOrder, WildberriesSale } from "@/types/store";
 
@@ -516,7 +515,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       return getDemoData();
     }
     
-    // 5. Рассчитываем метрики на основе полученных данных (в соответствии с Python-скриптом)
+    // 5. Рассчитываем метрики на основе получ��нных данных (в соответствии с Python-скриптом)
     console.log("Calculating metrics from report data...");
     const result = calculateMetrics(reportData, paidAcceptanceData);
     
@@ -615,7 +614,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
           storage: metrics.total_storage_fee,
           penalties: metrics.total_penalty,
           acceptance: metrics.total_acceptance,
-          advertising: 0,  // Рекламные расходы в скрипте не учитываются
+          advertising: 0,  // Рекламные расходы в скрипте не учитываем
           deductions: metrics.total_deduction
         },
         netProfit: metrics.total_to_pay, // По логике Python-скрипта используем total_to_pay как netProfit
@@ -640,6 +639,27 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
   } catch (error) {
     console.error("Error fetching Wildberries stats:", error);
     return getDemoData();
+  }
+};
+
+/**
+ * Возвращает детальный отчет от Wildberries API
+ * @param apiKey Ключ API
+ * @param dateFrom Начальная дата
+ * @param dateTo Конечная дата
+ */
+export const fetchReportDetailByPeriod = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
+  try {
+    if (process.env.NODE_ENV === 'development' && !apiKey.startsWith('eyJ')) {
+      console.log('Using demo report detail data in development mode');
+      return getDemoReportDetailData();
+    }
+    
+    console.log(`Fetching report detail from ${dateFrom.toISOString()} to ${dateTo.toISOString()}`);
+    return await fetchAllReportDetails(apiKey, dateFrom, dateTo);
+  } catch (error) {
+    console.error("Error fetching report detail:", error);
+    return getDemoReportDetailData();
   }
 };
 
@@ -787,4 +807,239 @@ const getDemoData = (): WildberriesResponse => {
     warehouseDistribution: [],
     regionDistribution: []
   };
+};
+
+/**
+ * Возвращает демо-данные детального отчета для тестирования и отладки
+ * @returns Демо-данные детального отчета Wildberries
+ */
+const getDemoReportDetailData = () => {
+  return [
+    {
+      "realizationreport_id": 1234567,
+      "date_from": "2022-10-17",
+      "date_to": "2022-10-23",
+      "create_dt": "2022-10-24",
+      "currency_name": "руб",
+      "suppliercontract_code": null,
+      "rrd_id": 1232610467,
+      "gi_id": 123456,
+      "dlv_prc": 1.8,
+      "fix_tariff_date_from": "2024-10-23",
+      "fix_tariff_date_to": "2024-11-18",
+      "subject_name": "Мини-печи",
+      "nm_id": 1234567,
+      "brand_name": "BlahBlah",
+      "sa_name": "MAB123",
+      "ts_name": "0",
+      "barcode": "1231312352310",
+      "doc_type_name": "Продажа",
+      "quantity": 1,
+      "retail_price": 1249,
+      "retail_amount": 367,
+      "sale_percent": 68,
+      "commission_percent": 0.1324,
+      "office_name": "Коледино",
+      "supplier_oper_name": "Продажа",
+      "order_dt": "2022-10-13T00:00:00Z",
+      "sale_dt": "2022-10-20T00:00:00Z",
+      "rr_dt": "2022-10-20",
+      "shk_id": 1239159661,
+      "retail_price_withdisc_rub": 399.68,
+      "delivery_amount": 0,
+      "return_amount": 0,
+      "delivery_rub": 0,
+      "gi_box_type_name": "Монопаллета",
+      "product_discount_for_report": 399.68,
+      "supplier_promo": 0,
+      "rid": 123722249253,
+      "ppvz_spp_prc": 0.1581,
+      "ppvz_kvw_prc_base": 0.15,
+      "ppvz_kvw_prc": -0.0081,
+      "sup_rating_prc_up": 0,
+      "is_kgvp_v2": 0,
+      "ppvz_sales_commission": -3.74,
+      "ppvz_for_pay": 376.99,
+      "ppvz_reward": 0,
+      "acquiring_fee": 14.89,
+      "acquiring_percent": 4.06,
+      "payment_processing": "Комиссия за организацию платежа с НДС",
+      "acquiring_bank": "Тинькофф",
+      "ppvz_vw": -3.74,
+      "ppvz_vw_nds": -0.75,
+      "ppvz_office_name": "Пункт самовывоза (ПВЗ)",
+      "ppvz_office_id": 105383,
+      "ppvz_supplier_id": 186465,
+      "ppvz_supplier_name": "ИП Жасмин",
+      "ppvz_inn": "010101010101",
+      "declaration_number": "",
+      "bonus_type_name": "Штраф МП. Невыполненный заказ (отмена клиентом после недовоза)",
+      "sticker_id": "1964038895",
+      "site_country": "Россия",
+      "srv_dbs": true,
+      "penalty": 231.35,
+      "additional_payment": 0,
+      "rebill_logistic_cost": 1.349,
+      "rebill_logistic_org": "ИП Иванов Иван Иванович(123456789012)",
+      "storage_fee": 12647.29,
+      "deduction": 6354,
+      "acceptance": 865,
+      "assembly_id": 2816993144,
+      "kiz": "0102900000376311210G2CIS?ehge)S\u001d91002A\u001d92F9Qof4FDo/31Icm14kmtuVYQzLypxm3HWkC1vQ/+pVVjm1dNAth1laFMoAGn7yEMWlTjxIe7lQnJqZ7TRZhlHQ==",
+      "srid": "0f1c3999172603062979867564654dac5b702849",
+      "report_type": 1,
+      "is_legal_entity": false,
+      "trbx_id": "WB-TRBX-1234567"
+    },
+    {
+      "realizationreport_id": 1234568,
+      "date_from": "2022-10-17",
+      "date_to": "2022-10-23",
+      "create_dt": "2022-10-24",
+      "currency_name": "руб",
+      "suppliercontract_code": null,
+      "rrd_id": 1232610468,
+      "gi_id": 123457,
+      "dlv_prc": 1.8,
+      "fix_tariff_date_from": "2024-10-23",
+      "fix_tariff_date_to": "2024-11-18",
+      "subject_name": "Пылесосы",
+      "nm_id": 7654321,
+      "brand_name": "CleanTech",
+      "sa_name": "CT5000",
+      "ts_name": "0",
+      "barcode": "7890123456789",
+      "doc_type_name": "Продажа",
+      "quantity": 1,
+      "retail_price": 5499,
+      "retail_amount": 4999,
+      "sale_percent": 10,
+      "commission_percent": 0.15,
+      "office_name": "Коледино",
+      "supplier_oper_name": "Продажа",
+      "order_dt": "2022-10-15T00:00:00Z",
+      "sale_dt": "2022-10-21T00:00:00Z",
+      "rr_dt": "2022-10-21",
+      "shk_id": 1239159662,
+      "retail_price_withdisc_rub": 4999,
+      "delivery_amount": 0,
+      "return_amount": 0,
+      "delivery_rub": 350,
+      "gi_box_type_name": "Монопаллета",
+      "product_discount_for_report": 4999,
+      "supplier_promo": 0,
+      "rid": 123722249254,
+      "ppvz_spp_prc": 0.16,
+      "ppvz_kvw_prc_base": 0.15,
+      "ppvz_kvw_prc": -0.01,
+      "sup_rating_prc_up": 0,
+      "is_kgvp_v2": 0,
+      "ppvz_sales_commission": -749.85,
+      "ppvz_for_pay": 4249.15,
+      "ppvz_reward": 0,
+      "acquiring_fee": 199.96,
+      "acquiring_percent": 4,
+      "payment_processing": "Комиссия за организацию платежа с НДС",
+      "acquiring_bank": "Тинькофф",
+      "ppvz_vw": -749.85,
+      "ppvz_vw_nds": -149.97,
+      "ppvz_office_name": "Склад",
+      "ppvz_office_id": 105384,
+      "ppvz_supplier_id": 186466,
+      "ppvz_supplier_name": "ООО Техника",
+      "ppvz_inn": "7123456789",
+      "declaration_number": "",
+      "bonus_type_name": "",
+      "sticker_id": "1964038896",
+      "site_country": "Россия",
+      "srv_dbs": true,
+      "penalty": 0,
+      "additional_payment": 0,
+      "rebill_logistic_cost": 0,
+      "rebill_logistic_org": "",
+      "storage_fee": 120,
+      "deduction": 0,
+      "acceptance": 150,
+      "assembly_id": 2816993145,
+      "srid": "1f2c3999172603062979867564654dac5b702850",
+      "report_type": 1,
+      "is_legal_entity": true,
+      "trbx_id": "WB-TRBX-1234568"
+    },
+    {
+      "realizationreport_id": 1234569,
+      "date_from": "2022-10-17",
+      "date_to": "2022-10-23",
+      "create_dt": "2022-10-24",
+      "currency_name": "руб",
+      "suppliercontract_code": null,
+      "rrd_id": 1232610469,
+      "gi_id": 123458,
+      "dlv_prc": 1.8,
+      "fix_tariff_date_from": "2024-10-23",
+      "fix_tariff_date_to": "2024-11-18",
+      "subject_name": "Костюмы женские",
+      "nm_id": 8765432,
+      "brand_name": "FashionStyle",
+      "sa_name": "FS2022",
+      "ts_name": "44",
+      "barcode": "3456789012345",
+      "doc_type_name": "Возврат",
+      "quantity": 1,
+      "retail_price": 3200,
+      "retail_amount": 2880,
+      "sale_percent": 10,
+      "commission_percent": 0.18,
+      "office_name": "Подольск",
+      "supplier_oper_name": "Возврат",
+      "order_dt": "2022-10-12T00:00:00Z",
+      "sale_dt": "2022-10-18T00:00:00Z",
+      "rr_dt": "2022-10-22",
+      "shk_id": 1239159663,
+      "retail_price_withdisc_rub": -2880,
+      "delivery_amount": 0,
+      "return_amount": 2880,
+      "delivery_rub": 250,
+      "gi_box_type_name": "Монопаллета",
+      "product_discount_for_report": -2880,
+      "supplier_promo": 0,
+      "rid": 123722249255,
+      "ppvz_spp_prc": 0.18,
+      "ppvz_kvw_prc_base": 0.18,
+      "ppvz_kvw_prc": 0,
+      "sup_rating_prc_up": 0,
+      "is_kgvp_v2": 0,
+      "ppvz_sales_commission": 518.4,
+      "ppvz_for_pay": -2361.6,
+      "ppvz_reward": 0,
+      "acquiring_fee": 115.2,
+      "acquiring_percent": 4,
+      "payment_processing": "Комиссия за организацию платежа с НДС",
+      "acquiring_bank": "Тинькофф",
+      "ppvz_vw": 518.4,
+      "ppvz_vw_nds": 103.68,
+      "ppvz_office_name": "Пункт самовывоза (ПВЗ)",
+      "ppvz_office_id": 105385,
+      "ppvz_supplier_id": 186467,
+      "ppvz_supplier_name": "ИП Стиль",
+      "ppvz_inn": "6123456789",
+      "declaration_number": "",
+      "bonus_type_name": "Штраф за отмену поставки",
+      "sticker_id": "1964038897",
+      "site_country": "Россия",
+      "srv_dbs": true,
+      "penalty": 500,
+      "additional_payment": 0,
+      "rebill_logistic_cost": 0,
+      "rebill_logistic_org": "",
+      "storage_fee": 80,
+      "deduction": 200,
+      "acceptance": 0,
+      "assembly_id": 2816993146,
+      "srid": "2f3c3999172603062979867564654dac5b702851",
+      "report_type": 1,
+      "is_legal_entity": false,
+      "trbx_id": "WB-TRBX-1234569"
+    }
+  ];
 };
