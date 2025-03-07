@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 import { WildberriesOrder, WildberriesSale } from "@/types/store";
 
@@ -92,70 +93,29 @@ const getLastWeekDateRange = () => {
   };
 };
 
-// Function to fetch report details with pagination support
-const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date, rrdId: number = 0) => {
+const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
   try {
     const formattedDateFrom = formatDate(dateFrom);
     const formattedDateTo = formatDate(dateTo);
-    
     const url = "https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod";
     
     const headers = {
       "Authorization": apiKey,
-      "Content-Type": "application/json"
     };
     
     const params = {
       "dateFrom": formattedDateFrom,
       "dateTo": formattedDateTo,
-      "rrdid": rrdId,
+      "rrdid": 0,
       "limit": 100000,
     };
     
-    console.log(`Fetching report detail from Wildberries API. Page with rrdId: ${rrdId}`);
+    console.log("Fetching report detail from Wildberries API...");
     const response = await axios.get(url, { headers, params });
-    
-    const data = response.data;
-    let nextRrdId = 0;
-    
-    if (data && data.length > 0) {
-      const lastRecord = data[data.length - 1];
-      nextRrdId = lastRecord.rrd_id || 0;
-    }
-    
-    return { data, nextRrdId };
+    return response.data;
   } catch (error) {
     console.error("Error fetching report detail:", error);
-    return { data: [], nextRrdId: 0 };
-  }
-};
-
-// Function to fetch all report details with pagination
-const fetchAllReportDetails = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
-  let allData = [];
-  let nextRrdId = 0;
-  
-  try {
-    do {
-      const { data, nextRrdId: newRrdId } = await fetchReportDetail(apiKey, dateFrom, dateTo, nextRrdId);
-      
-      if (!data || data.length === 0) {
-        break;
-      }
-      
-      allData = [...allData, ...data];
-      nextRrdId = newRrdId;
-      
-      if (nextRrdId === 0) {
-        break;
-      }
-      
-    } while (nextRrdId > 0);
-    
-    return allData;
-  } catch (error) {
-    console.error("Error fetching all report details:", error);
-    return [];
+    return null;
   }
 };
 
@@ -181,6 +141,200 @@ const fetchPaidAcceptanceReport = async (apiKey: string, dateFrom: Date, dateTo:
     console.error("Error fetching paid acceptance report:", error);
     return [];
   }
+};
+
+const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
+  if (!data || data.length === 0) {
+    return null;
+  }
+
+  let totalSales = 0;
+  let totalForPay = 0;
+  let totalDeliveryRub = 0;
+  let totalRebillLogisticCost = 0;
+  let totalStorageFee = 0;
+  let totalReturns = 0;
+  let totalPenalty = 0;
+  let totalDeduction = 0;
+  let totalToPay = 0;
+  let totalReturnCount = 0;
+
+  const returnsByProduct: Record<string, { value: number; count: number }> = {};
+  const penaltiesByReason: Record<string, number> = {};
+  const deductionsByReason: Record<string, number> = {}; // Добавляем учет удержаний
+  const productProfitability: Record<string, { 
+    name: string;
+    price: number;
+    sales: number;
+    costs: number;
+    profit: number;
+    image: string;
+    count: number;
+    returnCount: number;
+  }> = {};
+
+  for (const record of data) {
+    if (record.doc_type_name === 'Продажа') {
+      totalSales += record.retail_price_withdisc_rub || 0;
+      totalForPay += record.ppvz_for_pay || 0;
+      
+      if (record.sa_name) {
+        const productName = record.sa_name;
+        if (!productProfitability[productName]) {
+          productProfitability[productName] = { 
+            name: productName,
+            price: record.retail_price || 0,
+            sales: 0,
+            costs: 0,
+            profit: 0,
+            image: record.pic_url || '',
+            count: 0,
+            returnCount: 0
+          };
+        }
+        
+        productProfitability[productName].sales += record.ppvz_for_pay || 0;
+        productProfitability[productName].costs += (record.delivery_rub || 0) + 
+                                                  (record.storage_fee || 0) + 
+                                                  (record.penalty || 0) +
+                                                  (record.deduction || 0);
+        productProfitability[productName].price = record.retail_price || productProfitability[productName].price;
+        if (record.pic_url && !productProfitability[productName].image) {
+          productProfitability[productName].image = record.pic_url;
+        }
+        productProfitability[productName].count += 1;
+      }
+      
+    } else if (record.doc_type_name === 'Возврат') {
+      totalReturns += record.ppvz_for_pay || 0;
+      totalReturnCount += 1;
+      
+      if (record.sa_name) {
+        const productName = record.sa_name;
+        if (!productProfitability[productName]) {
+          productProfitability[productName] = { 
+            name: productName,
+            price: record.retail_price || 0,
+            sales: 0,
+            costs: 0,
+            profit: 0,
+            image: record.pic_url || '',
+            count: 0,
+            returnCount: 0
+          };
+        }
+        
+        productProfitability[productName].sales += record.ppvz_for_pay || 0;
+        
+        if (!returnsByProduct[productName]) {
+          returnsByProduct[productName] = { value: 0, count: 0 };
+        }
+        returnsByProduct[productName].value += Math.abs(record.ppvz_for_pay || 0);
+        returnsByProduct[productName].count += 1;
+      }
+    }
+    
+    if (record.penalty && record.penalty > 0) {
+      const reason = record.penalty_reason || record.bonus_type_name || 'Другие причины';
+      if (!penaltiesByReason[reason]) {
+        penaltiesByReason[reason] = 0;
+      }
+      penaltiesByReason[reason] += record.penalty;
+    }
+    
+    // Обработка удержаний (deduction) - отдельно от штрафов
+    if (record.deduction && record.deduction > 0) {
+      const reason = record.bonus_type_name || 'Прочие удержания';
+      if (!deductionsByReason[reason]) {
+        deductionsByReason[reason] = 0;
+      }
+      deductionsByReason[reason] += record.deduction;
+    }
+    
+    totalDeliveryRub += record.delivery_rub || 0;
+    totalRebillLogisticCost += record.rebill_logistic_cost || 0;
+    totalStorageFee += record.storage_fee || 0;
+    totalPenalty += record.penalty || 0;
+    totalDeduction += record.deduction || 0;
+  }
+
+  const penaltiesData = Object.entries(penaltiesByReason).map(([name, value]) => ({
+    name,
+    value: Math.round(value * 100) / 100
+  })).sort((a, b) => b.value - a.value);
+
+  // Создаем отдельный массив для удержаний
+  const deductionsData = Object.entries(deductionsByReason).map(([name, value]) => ({
+    name,
+    value: Math.round(value * 100) / 100
+  })).sort((a, b) => b.value - a.value);
+
+  const totalAcceptance = paidAcceptanceData.reduce((sum, record) => sum + (record.total || 0), 0);
+
+  totalToPay = totalForPay - totalDeliveryRub - totalStorageFee - totalReturns - totalPenalty - totalDeduction - totalAcceptance;
+
+  for (const key in productProfitability) {
+    productProfitability[key].profit = productProfitability[key].sales - productProfitability[key].costs;
+  }
+
+  const productProfitabilityArray = Object.values(productProfitability);
+
+  const sortedByProfit = [...productProfitabilityArray].sort((a, b) => b.profit - a.profit);
+
+  const topProfitableProducts = sortedByProfit.slice(0, 3).map(item => ({
+    name: item.name,
+    price: item.price.toString(),
+    profit: item.profit.toString(),
+    image: item.image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg",
+    quantitySold: item.count || 0,
+    margin: Math.round((item.profit / item.sales) * 100) || 0,
+    returnCount: item.returnCount || 0,
+    category: "Одежда"
+  }));
+
+  const sortedByLoss = [...productProfitabilityArray].sort((a, b) => a.profit - b.profit);
+
+  const topUnprofitableProducts = sortedByLoss.slice(0, 3).map(item => ({
+    name: item.name,
+    price: item.price.toString(),
+    profit: item.profit.toString(),
+    image: item.image || "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg",
+    quantitySold: item.count || 0,
+    margin: Math.round((item.profit / item.sales) * 100) || 0,
+    returnCount: item.returnCount || 0,
+    category: "Одежда"
+  }));
+
+  const productReturns = Object.entries(returnsByProduct)
+    .map(([name, { value, count }]) => ({ name, value, count }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5);
+
+  console.log(`Received and processed data. Total returns: ${Math.abs(totalReturns)}, Returned items count: ${totalReturnCount}, Returned products count: ${productReturns.length}`);
+  console.log(`Calculated top profitable products: ${topProfitableProducts.length}, Top unprofitable products: ${topUnprofitableProducts.length}`);
+  console.log(`Total deductions: ${totalDeduction}, Deduction reasons count: ${Object.keys(deductionsByReason).length}`);
+
+  return {
+    metrics: {
+      total_sales: Math.round(totalSales * 100) / 100,
+      total_for_pay: Math.round(totalForPay * 100) / 100,
+      total_delivery_rub: Math.round(totalDeliveryRub * 100) / 100,
+      total_rebill_logistic_cost: Math.round(totalRebillLogisticCost * 100) / 100,
+      total_storage_fee: Math.round(totalStorageFee * 100) / 100,
+      total_returns: Math.round(Math.abs(totalReturns) * 100) / 100,
+      total_penalty: Math.round(totalPenalty * 100) / 100,
+      total_deduction: Math.round(totalDeduction * 100) / 100,
+      total_to_pay: Math.round(totalToPay * 100) / 100,
+      total_acceptance: Math.round(totalAcceptance * 100) / 100,
+      total_return_count: totalReturnCount
+    },
+    penaltiesData,
+    deductionsData, // Добавляем отдельное поле для данных по удержаниям
+    productReturns,
+    topProfitableProducts,
+    topUnprofitableProducts,
+    dailySales: []
+  };
 };
 
 export const fetchWildberriesOrders = async (apiKey: string, dateFrom: Date): Promise<WildberriesOrder[]> => {
@@ -227,176 +381,137 @@ export const fetchWildberriesSales = async (apiKey: string, dateFrom: Date): Pro
   }
 };
 
-const calculateMetrics = (reportData: any[], paidAcceptanceData: any[] = []) => {
-  if (!reportData || reportData.length === 0) {
-    return null;
-  }
-  
-  let totalSales = 0;
-  let totalTransferred = 0;
-  let totalLogistics = 0;
-  let totalStorage = 0;
-  let totalPenalties = 0;
-  let totalAcceptance = 0;
-  let totalAdvertising = 0;
-  let totalDeductions = 0; // Добавляем учет удержаний
-  const dailySales = [];
-  const productSales = {};
-  const returnedProducts = {};
-  const penaltiesByReason = {};
-  const deductionsByReason = {}; // Словарь для учета удержаний по причинам
-  
-  console.log("Processing reportData:", reportData.length);
-  
-  // Process the reportData
-  for (const record of reportData) {
-    // Skip invalid data
-    if (!record.date) continue;
+export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
+  try {
+    console.log(`Fetching Wildberries stats from ${dateFrom.toISOString()} to ${dateTo.toISOString()}`);
     
-    // Convert the date to a consistent format
-    const date = record.date.split('T')[0];
-    
-    // Track daily sales
-    if (!dailySales[date]) {
-      dailySales[date] = 0;
+    if (process.env.NODE_ENV === 'development' && !apiKey.startsWith('eyJ')) {
+      console.log('Using demo data in development mode');
+      return getDemoData();
     }
     
-    // Process sales and transferred amounts
-    if (record.doc_type_name === "Продажа" || record.order_type === "Продажа") {
-      const saleAmount = record.ppvz_for_pay !== undefined ? record.ppvz_for_pay : 
-                        (record.price_with_disc !== undefined ? record.price_with_disc : 0);
-      
-      totalSales += saleAmount;
-      dailySales[date] += saleAmount;
-      totalTransferred += record.supplier_reward !== undefined ? record.supplier_reward : 
-                          (record.ppvz_for_pay !== undefined ? record.ppvz_for_pay : 0);
-      
-      // Track product sales
-      if (record.subject_name) {
-        if (!productSales[record.subject_name]) {
-          productSales[record.subject_name] = 0;
+    const reportData = await fetchReportDetail(apiKey, dateFrom, dateTo);
+    
+    const paidAcceptanceData = await fetchPaidAcceptanceReport(apiKey, dateFrom, dateTo);
+    
+    const ordersData = await fetchWildberriesOrders(apiKey, dateFrom);
+    const salesData = await fetchWildberriesSales(apiKey, dateFrom);
+    
+    if (!reportData || reportData.length === 0) {
+      console.log('No data received from Wildberries API, using demo data');
+      return getDemoData();
+    }
+    
+    const result = calculateMetrics(reportData, paidAcceptanceData);
+    
+    if (!result || !result.metrics) {
+      console.log('Failed to calculate metrics, using demo data');
+      return getDemoData();
+    }
+    
+    const { metrics, productReturns, penaltiesData, deductionsData } = result;
+    
+    const salesByCategory: Record<string, number> = {};
+    for (const record of reportData) {
+      if (record.doc_type_name === 'Продажа' && record.subject_name) {
+        if (!salesByCategory[record.subject_name]) {
+          salesByCategory[record.subject_name] = 0;
         }
-        productSales[record.subject_name] += 1;
+        salesByCategory[record.subject_name]++;
       }
     }
     
-    // Process returns
-    if (record.doc_type_name === "Возврат" || record.order_type === "Возврат" || record.is_return) {
-      const productName = record.product_name || record.subject_name || "Неизвестный товар";
-      const returnAmount = record.ppvz_for_pay !== undefined ? record.ppvz_for_pay : 
-                          (record.price_with_disc !== undefined ? record.price_with_disc : 0);
-      
-      if (!returnedProducts[productName]) {
-        returnedProducts[productName] = { value: 0, count: 0 };
+    const productSales = Object.entries(salesByCategory)
+      .map(([subject_name, quantity]) => ({ subject_name, quantity }))
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 10);
+    
+    const salesByDay: Record<string, { sales: number, previousSales: number }> = {};
+    for (const record of reportData) {
+      if (record.doc_type_name === 'Продажа' && record.rr_dt) {
+        const date = record.rr_dt.split('T')[0];
+        if (!salesByDay[date]) {
+          salesByDay[date] = { sales: 0, previousSales: 0 };
+        }
+        salesByDay[date].sales += record.retail_price_withdisc_rub || 0;
       }
-      returnedProducts[productName].value += Math.abs(returnAmount);
-      returnedProducts[productName].count += 1;
     }
     
-    // Process expenses
-    if (record.delivery_rub) {
-      totalLogistics += record.delivery_rub;
-    }
+    const dailySales = Object.entries(salesByDay)
+      .map(([date, { sales, previousSales }]) => ({ date, sales, previousSales }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
-    if (record.storage_fee) {
-      totalStorage += record.storage_fee;
-    }
+    const warehouseCounts: Record<string, number> = {};
+    const totalOrders = ordersData.length;
     
-    if (record.acceptance) {
-      totalAcceptance += record.acceptance;
-    }
-    
-    if (record.surcharge) {
-      totalAdvertising += record.surcharge;
-    }
-    
-    // Process penalties
-    if (record.penalty && record.penalty > 0) {
-      const reason = record.penalty_reason || record.bonus_type_name || 'Другие причины';
-      if (!penaltiesByReason[reason]) {
-        penaltiesByReason[reason] = 0;
+    ordersData.forEach(order => {
+      if (order.warehouseName) {
+        warehouseCounts[order.warehouseName] = (warehouseCounts[order.warehouseName] || 0) + 1;
       }
-      penaltiesByReason[reason] += record.penalty;
-    }
+    });
     
-    // Process deductions
-    if (record.deduction && record.deduction > 0) {
-      const reason = record.bonus_type_name || 'Прочие удержания';
-      if (!deductionsByReason[reason]) {
-        deductionsByReason[reason] = 0;
+    const warehouseDistribution = Object.entries(warehouseCounts)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: (count / totalOrders) * 100
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+    
+    const regionCounts: Record<string, number> = {};
+    
+    ordersData.forEach(order => {
+      if (order.regionName) {
+        regionCounts[order.regionName] = (regionCounts[order.regionName] || 0) + 1;
       }
-      deductionsByReason[reason] += record.deduction;
-      totalDeductions += record.deduction;
-    }
-  }
-  
-  // Process paid acceptance data
-  for (const record of paidAcceptanceData || []) {
-    if (record.finishedPrice) {
-      totalAcceptance += record.finishedPrice;
-    }
-  }
-  
-  // Create penalties data array
-  const penaltiesData = Object.entries(penaltiesByReason).map(([name, value]) => ({
-    name,
-    value: Math.round(value * 100) / 100
-  })).sort((a, b) => b.value - a.value);
-
-  // Create separate array for deductions
-  const deductionsData = Object.entries(deductionsByReason).map(([name, value]) => ({
-    name,
-    value: Math.round(value * 100) / 100
-  })).sort((a, b) => b.value - a.value);
-  
-  // Format daily sales for chart
-  const formattedDailySales = Object.entries(dailySales).map(([date, sales]) => ({
-    date,
-    sales,
-    previousSales: sales * 0.8 + Math.random() * sales * 0.4 // Dummy data for comparison
-  })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  
-  // Format product sales for chart
-  const formattedProductSales = Object.entries(productSales).map(([subject_name, quantity]) => ({
-    subject_name,
-    quantity
-  })).sort((a, b) => b.quantity - a.quantity);
-  
-  // Format returned products for chart
-  const formattedReturns = Object.entries(returnedProducts).map(([name, data]) => ({
-    name,
-    value: Math.round(data.value * 100) / 100,
-    count: data.count
-  })).sort((a, b) => b.value - a.value);
-  
-  // Calculate total expenses
-  const totalExpenses = totalLogistics + totalStorage + totalPenalties + totalAcceptance + totalAdvertising + totalDeductions;
-  
-  // Calculate net profit
-  const netProfit = totalTransferred - totalExpenses;
-  
-  return {
-    currentPeriod: {
-      sales: Math.round(totalSales * 100) / 100,
-      transferred: Math.round(totalTransferred * 100) / 100,
-      expenses: {
-        total: Math.round(totalExpenses * 100) / 100,
-        logistics: Math.round(totalLogistics * 100) / 100,
-        storage: Math.round(totalStorage * 100) / 100,
-        penalties: Math.round(totalPenalties * 100) / 100,
-        acceptance: Math.round(totalAcceptance * 100) / 100,
-        advertising: Math.round(totalAdvertising * 100) / 100,
-        deductions: Math.round(totalDeductions * 100) / 100 // Добавляем сумму удержаний
+    });
+    
+    const regionDistribution = Object.entries(regionCounts)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: (count / totalOrders) * 100
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+    
+    const response: WildberriesResponse = {
+      currentPeriod: {
+        sales: metrics.total_sales,
+        transferred: metrics.total_to_pay,
+        expenses: {
+          total: metrics.total_delivery_rub + metrics.total_storage_fee + metrics.total_penalty + metrics.total_acceptance + metrics.total_deduction,
+          logistics: metrics.total_delivery_rub,
+          storage: metrics.total_storage_fee,
+          penalties: metrics.total_penalty,
+          acceptance: metrics.total_acceptance,
+          advertising: 0,
+          deductions: metrics.total_deduction // Добавляем общую сумму удержаний
+        },
+        netProfit: metrics.total_to_pay,
+        acceptance: metrics.total_acceptance
       },
-      netProfit: Math.round(netProfit * 100) / 100,
-      acceptance: Math.round(totalAcceptance * 100) / 100
-    },
-    dailySales: formattedDailySales,
-    productSales: formattedProductSales,
-    productReturns: formattedReturns,
-    penaltiesData: penaltiesData,
-    deductionsData: deductionsData // Добавляем массив данных по удержаниям
-  };
+      dailySales,
+      productSales,
+      productReturns,
+      penaltiesData,
+      deductionsData, // Добавляем данные по удержаниям в ответ
+      topProfitableProducts: result.topProfitableProducts || [],
+      topUnprofitableProducts: result.topUnprofitableProducts || [],
+      orders: ordersData,
+      sales: salesData,
+      warehouseDistribution,
+      regionDistribution
+    };
+    
+    console.log(`Received and processed data from Wildberries API. Total returns: ${metrics.total_returns}, Return count: ${metrics.total_return_count}, Deductions: ${metrics.total_deduction}`);
+    
+    return response;
+  } catch (error) {
+    console.error("Error fetching Wildberries stats:", error);
+    return getDemoData();
+  }
 };
 
 const getDemoData = (): WildberriesResponse => {
@@ -535,64 +650,4 @@ const getDemoData = (): WildberriesResponse => {
     warehouseDistribution: [],
     regionDistribution: []
   };
-};
-
-const fetchTransactions = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
-  try {
-    const formattedDateFrom = formatDate(dateFrom);
-    const formattedDateTo = formatDate(dateTo);
-    const url = "https://seller-analytics-api.wildberries.ru/api/v1/analytics/financial-transactions";
-    
-    const headers = {
-      "Authorization": apiKey,
-    };
-    
-    const params = {
-      "dateFrom": formattedDateFrom,
-      "dateTo": formattedDateTo,
-    };
-    
-    console.log("Fetching financial transactions from Wildberries API...");
-    const response = await axios.get(url, { headers, params });
-    return response.data.transactions || [];
-  } catch (error) {
-    console.error("Error fetching financial transactions:", error);
-    return [];
-  }
-};
-
-export const fetchWildberriesData = async (apiKey: string, dateFrom: Date, dateTo: Date): Promise<WildberriesResponse> => {
-  try {
-    if (!apiKey) {
-      console.log("No API key provided, returning demo data");
-      return getDemoData();
-    }
-    
-    // Use the paginated function to get all report data
-    const reportData = await fetchAllReportDetails(apiKey, dateFrom, dateTo);
-    
-    const paidAcceptanceData = await fetchPaidAcceptanceReport(apiKey, dateFrom, dateTo);
-    
-    const ordersData = await fetchWildberriesOrders(apiKey, dateFrom);
-    const salesData = await fetchWildberriesSales(apiKey, dateFrom);
-    
-    // Calculate metrics from the report data
-    const metrics = calculateMetrics(reportData, paidAcceptanceData);
-    
-    // In case of metrics calculation failure, fallback to demo data
-    if (!metrics) {
-      console.log("Failed to calculate metrics, returning demo data");
-      return getDemoData();
-    }
-    
-    // Add orders and sales to the result
-    return {
-      ...metrics,
-      orders: ordersData,
-      sales: salesData
-    };
-  } catch (error) {
-    console.error("Error fetching Wildberries data:", error);
-    return getDemoData();
-  }
 };
