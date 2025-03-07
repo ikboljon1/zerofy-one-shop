@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 import { WildberriesOrder, WildberriesSale } from "@/types/store";
 
@@ -32,6 +33,10 @@ export interface WildberriesResponse {
     count?: number;
   }>;
   penaltiesData?: Array<{
+    name: string;
+    value: number;
+  }>;
+  deductionsData?: Array<{  // Добавляем отдельное поле для данных по удержаниям
     name: string;
     value: number;
   }>;
@@ -237,19 +242,13 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       penaltiesByReason[reason] += record.penalty;
     }
     
-    // Обработка удержаний (deduction)
+    // Обработка удержаний (deduction) - отдельно от штрафов
     if (record.deduction && record.deduction > 0) {
       const reason = record.bonus_type_name || 'Прочие удержания';
       if (!deductionsByReason[reason]) {
         deductionsByReason[reason] = 0;
       }
       deductionsByReason[reason] += record.deduction;
-      
-      // Добавляем запись в таблицу штрафов для отображения удержаний
-      if (!penaltiesByReason[reason]) {
-        penaltiesByReason[reason] = 0;
-      }
-      penaltiesByReason[reason] += record.deduction;
     }
     
     totalDeliveryRub += record.delivery_rub || 0;
@@ -260,6 +259,12 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   }
 
   const penaltiesData = Object.entries(penaltiesByReason).map(([name, value]) => ({
+    name,
+    value: Math.round(value * 100) / 100
+  })).sort((a, b) => b.value - a.value);
+
+  // Создаем отдельный массив для удержаний
+  const deductionsData = Object.entries(deductionsByReason).map(([name, value]) => ({
     name,
     value: Math.round(value * 100) / 100
   })).sort((a, b) => b.value - a.value);
@@ -324,6 +329,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       total_return_count: totalReturnCount
     },
     penaltiesData,
+    deductionsData, // Добавляем отдельное поле для данных по удержаниям
     productReturns,
     topProfitableProducts,
     topUnprofitableProducts,
@@ -403,7 +409,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       return getDemoData();
     }
     
-    const { metrics, productReturns, penaltiesData } = result;
+    const { metrics, productReturns, penaltiesData, deductionsData } = result;
     
     const salesByCategory: Record<string, number> = {};
     for (const record of reportData) {
@@ -490,6 +496,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       productSales,
       productReturns,
       penaltiesData,
+      deductionsData, // Добавляем данные по удержаниям в ответ
       topProfitableProducts: result.topProfitableProducts || [],
       topUnprofitableProducts: result.topUnprofitableProducts || [],
       orders: ordersData,
@@ -569,8 +576,10 @@ const getDemoData = (): WildberriesResponse => {
       { name: "Недопоставка", value: 3500 },
       { name: "Нарушение упаковки", value: 2800 },
       { name: "Нарушение маркировки", value: 1200 },
-      { name: "Прочие удержания", value: 7000 }, // Added deductions to penalties data
       { name: "Другие причины", value: 2500 }
+    ],
+    deductionsData: [ // Добавляем отдельные демо-данные для удержаний
+      { name: "Прочие удержания", value: 7000 }
     ],
     topProfitableProducts: [
       { 
@@ -636,130 +645,9 @@ const getDemoData = (): WildberriesResponse => {
         category: "Аксессуары" 
       }
     ],
-    orders: [
-      {
-        date: "2025-03-04T18:08:31",
-        lastChangeDate: "2025-03-06T10:11:07",
-        warehouseName: "Подольск",
-        warehouseType: "Склад продавца",
-        countryName: "Россия",
-        oblastOkrugName: "Центральный федеральный округ",
-        regionName: "Московская",
-        supplierArticle: "12345",
-        nmId: 1234567,
-        barcode: "123453559000",
-        category: "Бытовая техника",
-        subject: "Мультистайлеры",
-        brand: "Тест",
-        techSize: "0",
-        incomeID: 56735459,
-        isSupply: false,
-        isRealization: true,
-        totalPrice: 1887,
-        discountPercent: 18,
-        spp: 26,
-        finishedPrice: 1145,
-        priceWithDisc: 1547,
-        isCancel: false,
-        cancelDate: "0001-01-01T00:00:00",
-        orderType: "Клиентский",
-        sticker: "926912515",
-        gNumber: "34343462218572569531",
-        srid: "11.rf9ef11fce1684117b0nhj96222982382.3.0"
-      },
-      {
-        date: "2025-03-03T14:22:45",
-        lastChangeDate: "2025-03-05T09:43:21",
-        warehouseName: "Коледино",
-        warehouseType: "Склад WB",
-        countryName: "Россия",
-        oblastOkrugName: "Центральный федеральный округ",
-        regionName: "Московская",
-        supplierArticle: "67890",
-        nmId: 7654321,
-        barcode: "765432112000",
-        category: "Одежда",
-        subject: "Платья",
-        brand: "Тест",
-        techSize: "44",
-        incomeID: 56735460,
-        isSupply: false,
-        isRealization: true,
-        totalPrice: 2500,
-        discountPercent: 15,
-        spp: 20,
-        finishedPrice: 1700,
-        priceWithDisc: 2125,
-        isCancel: false,
-        cancelDate: "0001-01-01T00:00:00",
-        orderType: "Клиентский",
-        sticker: "926912516",
-        gNumber: "34343462218572569532",
-        srid: "11.rf9ef11fce1684117b0nhj96222982383.3.0"
-      },
-      {
-        date: "2025-03-02T10:15:33",
-        lastChangeDate: "2025-03-04T11:22:18",
-        warehouseName: "Электросталь",
-        warehouseType: "Склад WB",
-        countryName: "Россия",
-        oblastOkrugName: "Центральный федеральный округ",
-        regionName: "Московская",
-        supplierArticle: "11122",
-        nmId: 2233445,
-        barcode: "223344556000",
-        category: "Аксессуары",
-        subject: "Сумки",
-        brand: "Тест",
-        techSize: "0",
-        incomeID: 56735461,
-        isSupply: false,
-        isRealization: true,
-        totalPrice: 3200,
-        discountPercent: 10,
-        spp: 15,
-        finishedPrice: 2448,
-        priceWithDisc: 2880,
-        isCancel: false,
-        cancelDate: "0001-01-01T00:00:00",
-        orderType: "Клиентский",
-        sticker: "926912517",
-        gNumber: "34343462218572569533",
-        srid: "11.rf9ef11fce1684117b0nhj96222982384.3.0"
-      }
-    ],
-    sales: [
-      {
-        date: "2025-03-04T18:08:31",
-        lastChangeDate: "2025-03-06T10:11:07",
-        warehouseName: "Подольск",
-        warehouseType: "Склад продавца",
-        countryName: "Россия",
-        oblastOkrugName: "Центральный федеральный округ",
-        regionName: "Московская",
-        supplierArticle: "12345",
-        nmId: 1234567,
-        barcode: "123453559000",
-        category: "Бытовая техника",
-        subject: "Мультистайлеры",
-        brand: "Тест",
-        techSize: "0",
-        incomeID: 56735459,
-        isSupply: false,
-        isRealization: true,
-        totalPrice: 1887,
-        discountPercent: 18,
-        spp: 20,
-        paymentSaleAmount: 93,
-        forPay: 1284.01,
-        finishedPrice: 1145,
-        priceWithDisc: 1547,
-        saleID: "S9993700024",
-        orderType: "Клиентский",
-        sticker: "926912515",
-        gNumber: "34343462218572569531",
-        srid: "11.rf9ef11fce1684117b0nhj96222982382.3.0"
-      }
-    ],
-    warehouseDistribution: [
-      {
+    orders: [],
+    sales: [],
+    warehouseDistribution: [],
+    regionDistribution: []
+  };
+};

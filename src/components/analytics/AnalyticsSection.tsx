@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
-import { AlertCircle, Target, PackageX, Tag, Loader2 } from "lucide-react";
+import { AlertCircle, Target, PackageX, Tag, Loader2, BadgePercent } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 import DateRangePicker from "./components/DateRangePicker";
@@ -86,6 +87,7 @@ interface StoredAnalyticsData {
   dateTo: string;
   data: AnalyticsData;
   penalties: Array<{name: string, value: number}>;
+  deductions: Array<{name: string, value: number}>; // Добавляем отдельное поле для удержаний
   returns: Array<{name: string, value: number}>;
   deductionsTimeline: Array<{
     date: string; 
@@ -117,6 +119,7 @@ const AnalyticsSection = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState<AnalyticsData>(demoData);
   const [penalties, setPenalties] = useState<Array<{name: string, value: number}>>([]);
+  const [deductions, setDeductions] = useState<Array<{name: string, value: number}>>([]);  // Добавляем состояние для удержаний
   const [returns, setReturns] = useState<Array<{name: string, value: number}>>([]);
   const [deductionsTimeline, setDeductionsTimeline] = useState<DeductionsTimelineItem[]>(deductionsTimelineData);
   const [productAdvertisingData, setProductAdvertisingData] = useState<Array<{name: string, value: number}>>([]);
@@ -143,6 +146,7 @@ const AnalyticsSection = () => {
       dateTo: dateTo.toISOString(),
       data,
       penalties,
+      deductions,  // Сохраняем данные по удержаниям
       returns,
       deductionsTimeline,
       productAdvertisingData,
@@ -170,6 +174,7 @@ const AnalyticsSection = () => {
         
         // Используем проверенные данные
         setPenalties(analyticsData.penalties || []);
+        setDeductions(analyticsData.deductions || []); // Загружаем данные по удержаниям
         setReturns(analyticsData.returns || []);
         setDeductionsTimeline(analyticsData.deductionsTimeline || []);
         setProductAdvertisingData(analyticsData.productAdvertisingData || []);
@@ -298,6 +303,14 @@ const AnalyticsSection = () => {
           setPenalties([]);
         }
         
+        // Set real deductions data if available
+        if (statsData.deductionsData && statsData.deductionsData.length > 0) {
+          setDeductions(statsData.deductionsData);
+        } else {
+          // Clear deductions if none exist
+          setDeductions([]);
+        }
+        
         if (statsData.productReturns && statsData.productReturns.length > 0) {
           setReturns(statsData.productReturns);
         } else {
@@ -369,6 +382,7 @@ const AnalyticsSection = () => {
       })));
       
       setPenalties([]);
+      setDeductions([]);
       setReturns([]);
     } finally {
       setIsLoading(false);
@@ -383,6 +397,7 @@ const AnalyticsSection = () => {
       
       if (!hasStoredData) {
         setPenalties([]);
+        setDeductions([]);
         setProductAdvertisingData([]);
         setReturns([]);
         // Если нет сохраненных данных, загружаем новые
@@ -403,6 +418,7 @@ const AnalyticsSection = () => {
       })));
       
       setPenalties([]);
+      setDeductions([]);
       setProductAdvertisingData([]);
       setReturns([]);
       setIsLoading(false);
@@ -411,6 +427,7 @@ const AnalyticsSection = () => {
 
   const hasAdvertisingData = productAdvertisingData && productAdvertisingData.length > 0;
   const hasPenaltiesData = penalties && penalties.length > 0;
+  const hasDeductionsData = deductions && deductions.length > 0;
 
   const handleDateChange = () => {
     fetchData();
@@ -456,24 +473,32 @@ const AnalyticsSection = () => {
             emptyMessage="Штрафы отсутствуют"
           />
           <PieChartCard 
+            title="Прочие удержания"
+            icon={<BadgePercent className="h-4 w-4 text-orange-600 dark:text-orange-400" />}
+            data={deductions}
+            emptyMessage="Удержания отсутствуют"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <PieChartCard 
             title="Возврат товаров"
             icon={<PackageX className="h-4 w-4 text-red-600 dark:text-red-400" />}
             data={returns}
             showCount={true}
             emptyMessage="Возвраты отсутствуют"
           />
+          {hasAdvertisingData && (
+            <PieChartCard 
+              title="Расходы на рекламу по товарам"
+              icon={<Tag className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
+              data={productAdvertisingData}
+              emptyMessage="Нет данных о расходах на рекламу"
+            />
+          )}
         </div>
 
         <ExpenseBreakdown data={data} advertisingBreakdown={advertisingBreakdown} />
-
-        {hasAdvertisingData && (
-          <PieChartCard 
-            title="Расходы на рекламу по товарам"
-            icon={<Tag className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
-            data={productAdvertisingData}
-            emptyMessage="Нет данных о расходах на рекламу"
-          />
-        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <ProductList 
