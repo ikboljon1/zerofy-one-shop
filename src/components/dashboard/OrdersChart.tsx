@@ -117,24 +117,26 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders, sales = [] }) => {
 
     // Группируем продажи по названию товара и подсчитываем количество
     const productCounts: Record<string, number> = {};
-    let totalProducts = 0;
-
+    
     // Учитываем только положительные продажи (исключаем возвраты)
-    sales.filter(sale => sale.priceWithDisc > 0).forEach(sale => {
+    const validSales = sales.filter(sale => !sale.isReturn && sale.priceWithDisc > 0);
+    let totalProducts = validSales.length;
+
+    validSales.forEach(sale => {
       const productName = sale.subject || "Неизвестный товар";
       productCounts[productName] = (productCounts[productName] || 0) + 1;
-      totalProducts += 1;
     });
 
     // Преобразуем в формат для диаграммы и сортируем по количеству (больше сверху)
-    return Object.entries(productCounts)
+    const productsData = Object.entries(productCounts)
       .map(([name, count]) => ({
         name,
         value: count,
-        percentage: (count / totalProducts) * 100
+        percentage: totalProducts > 0 ? (count / totalProducts) * 100 : 0
       }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5); // Берем только топ-5 товаров для наглядности
+      .sort((a, b) => b.value - a.value);
+    
+    return productsData; // Возвращаем все товары, без ограничения топ-5
   }, [sales]);
 
   const orderConfig = {
@@ -294,20 +296,20 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders, sales = [] }) => {
                     nameKey="name"
                     labelLine={false}
                     label={({ name, percentage }) => 
-                      `${name.substring(0, 15)}${name.length > 15 ? '...' : ''}: ${percentage.toFixed(0)}%`
+                      percentage >= 3 ? `${name.substring(0, 15)}${name.length > 15 ? '...' : ''}: ${percentage.toFixed(1)}%` : ''
                     }
                   >
                     {productSalesDistribution.map((entry, index) => (
                       <Cell 
                         key={`cell-${index}`} 
-                        fill={`url(#pieGradient-${index})`} 
+                        fill={`url(#pieGradient-${index % PRODUCT_COLORS.length})`} 
                         stroke="rgba(255,255,255,0.3)"
                         strokeWidth={2}
                       />
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value) => [`${value} шт.`, ""]}
+                    formatter={(value, name) => [`${value} шт. (${(productSalesDistribution.find(p => p.name === name)?.percentage || 0).toFixed(1)}%)`, name]}
                     contentStyle={{ 
                       backgroundColor: "rgba(255, 255, 255, 0.97)", 
                       borderRadius: "8px", 
@@ -316,14 +318,19 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders, sales = [] }) => {
                     }}
                   />
                   <Legend 
-                    verticalAlign="bottom"
-                    iconType="circle"
+                    layout={isMobile ? "horizontal" : "vertical"}
+                    align={isMobile ? "center" : "right"}
+                    verticalAlign={isMobile ? "bottom" : "middle"}
                     iconSize={10}
-                    formatter={(value, entry) => (
-                      <span className="text-sm font-medium text-ellipsis overflow-hidden" style={{ maxWidth: '120px', display: 'inline-block' }}>
-                        {value.length > 20 ? value.substring(0, 20) + '...' : value}
-                      </span>
-                    )}
+                    wrapperStyle={isMobile ? { paddingTop: "10px" } : {}}
+                    formatter={(value, entry) => {
+                      const item = productSalesDistribution.find(p => p.name === value);
+                      return (
+                        <span className="text-sm font-medium text-ellipsis overflow-hidden" style={{ maxWidth: isMobile ? '80px' : '120px', display: 'inline-block' }}>
+                          {value.length > (isMobile ? 10 : 20) ? value.substring(0, isMobile ? 10 : 20) + '...' : value}
+                        </span>
+                      );
+                    }}
                   />
                 </PieChart>
               </ResponsiveContainer>
