@@ -74,11 +74,16 @@ const Products = ({
           >
             <div className="flex items-start">
               <img
-                src={product.image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"}
+                src={product.image || "/placeholder.svg"}
                 alt={product.name}
                 className={`rounded-lg object-cover ${
                   isMobile ? 'h-16 w-16' : 'h-20 w-20'
                 } mr-3`}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null;
+                  target.src = "/placeholder.svg";
+                }}
               />
               <div className="flex-1">
                 <div className="flex justify-between items-start">
