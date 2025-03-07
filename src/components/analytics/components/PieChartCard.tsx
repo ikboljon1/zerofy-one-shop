@@ -1,116 +1,99 @@
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
+import { Card } from "@/components/ui/card";
+import { COLORS } from "../data/demoData";
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip
+} from "recharts";
 import { formatCurrency } from "@/utils/formatCurrency";
-import React, { ReactNode } from "react";
 
 interface PieChartCardProps {
   title: string;
-  data: Array<{ name: string; value: number; count?: number; }>;
-  icon?: ReactNode;
-  emptyMessage?: string;
-  showCount?: boolean;
+  icon: React.ReactNode;
+  data: Array<{
+    name: string;
+    value: number;
+    count?: number; // Поле для количества
+  }>;
+  valueLabel?: string;
+  showCount?: boolean; // Флаг для отображения количества
+  emptyMessage?: string; // Сообщение при отсутствии данных
 }
 
-const COLORS = [
-  "#8B5CF6", "#EC4899", "#10B981", "#F59E0B", "#3B82F6", "#6366F1", 
-  "#D97706", "#059669", "#DC2626", "#7C3AED", "#2563EB", "#4F46E5"
-];
-
-const PieChartCard: React.FC<PieChartCardProps> = ({ 
+const PieChartCard = ({ 
   title, 
-  data = [], 
-  icon,
-  emptyMessage = "Нет данных",
-  showCount = false
-}) => {
-  // Обработаем данные для правильного отображения отрицательных значений
-  const processedData = data.map(item => ({
-    ...item,
-    displayValue: Math.abs(item.value),
-    isNegative: item.value < 0
-  }));
-
-  const totalValue = processedData.reduce((sum, item) => sum + Math.abs(item.value), 0);
-  const totalCount = processedData.reduce((sum, item) => sum + (item.count || 0), 0);
-
-  const formatTooltip = (value: number, name: string, props: any) => {
-    const item = processedData.find(d => d.name === name);
-    if (item && item.isNegative) {
-      return [`${formatCurrency(value)} ₽ (компенсация)`, name];
-    }
-    return [`${formatCurrency(value)} ₽`, name];
-  };
+  icon, 
+  data, 
+  valueLabel = "", 
+  showCount = false,
+  emptyMessage = "Нет данных за выбранный период" 
+}: PieChartCardProps) => {
+  // Проверяем, что данные не пустые и содержат значения больше нуля
+  const hasData = data && data.length > 0 && data.some(item => item.value > 0);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center text-lg font-medium">
-          {icon && <span className="mr-2">{icon}</span>}
-          {title}
-        </CardTitle>
-        <CardDescription>
-          {totalValue > 0 
-            ? `Всего: ${formatCurrency(totalValue)} ₽${showCount && totalCount > 0 ? ` (${totalCount} шт.)` : ''}` 
-            : emptyMessage}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {processedData.length > 0 && totalValue > 0 ? (
-          <div className="h-60">
+    <Card className="p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-semibold">{title}</h3>
+        <div className="bg-primary/10 dark:bg-primary/20 p-2 rounded-md">
+          {icon}
+        </div>
+      </div>
+      {hasData ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={processedData}
-                  dataKey="displayValue"
-                  nameKey="name"
+                  data={data}
                   cx="50%"
                   cy="50%"
+                  innerRadius={40}
                   outerRadius={80}
-                  fill="#8884d8"
-                  labelLine={false}
-                  label={({ name, value, percent }) => {
-                    const displayText = `${name}: ${(percent * 100).toFixed(0)}%`;
-                    return displayText.length > 20 ? `${displayText.slice(0, 17)}...` : displayText;
-                  }}
+                  paddingAngle={2}
+                  dataKey="value"
                 >
-                  {processedData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={entry.isNegative ? "#10B981" : COLORS[index % COLORS.length]} 
-                      className={entry.isNegative ? "opacity-70" : ""}
-                    />
+                  {data.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={formatTooltip} />
-                <Legend 
-                  layout="vertical" 
-                  verticalAlign="middle" 
-                  align="right"
-                  formatter={(value, entry, index) => {
-                    const item = processedData[index];
-                    let displayName = value;
-                    
-                    if (displayName.length > 20) {
-                      displayName = `${displayName.slice(0, 17)}...`;
-                    }
-                    
-                    if (item && item.isNegative) {
-                      return <span style={{ color: '#10B981' }}>{displayName} (компенсация)</span>;
-                    }
-                    
-                    return displayName;
-                  }}
+                <Tooltip
+                  formatter={(value: any) => [`${formatCurrency(value)} ${valueLabel}`, '']}
+                  contentStyle={{ background: '#ffffff', borderRadius: '4px', border: '1px solid #e5e7eb' }}
                 />
               </PieChart>
             </ResponsiveContainer>
           </div>
-        ) : (
-          <div className="flex items-center justify-center h-60 text-muted-foreground">
-            {emptyMessage}
+          <div className="space-y-4">
+            {data.map((item, index) => (
+              <div key={index} className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div 
+                    className="w-3 h-3 rounded-full mr-2" 
+                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                  ></div>
+                  <span className="text-sm">{item.name}</span>
+                </div>
+                <div className="text-right">
+                  <span className="font-medium">{formatCurrency(item.value)} {valueLabel}</span>
+                  {showCount && item.count !== undefined && (
+                    <div className="text-xs text-muted-foreground">
+                      Кол-во: {item.count}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
-        )}
-      </CardContent>
+        </div>
+      ) : (
+        <div className="py-8 text-center text-muted-foreground">
+          <p>{emptyMessage}</p>
+        </div>
+      )}
     </Card>
   );
 };
