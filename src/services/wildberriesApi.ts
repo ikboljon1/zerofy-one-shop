@@ -1,3 +1,4 @@
+
 import { demoData, demoReportData, demoOrdersData, demoSalesData } from "./demoData";
 
 // Export WildberriesResponse type for use in other files
@@ -65,18 +66,6 @@ export interface WildberriesResponse {
     margin?: number;
     returnCount?: number;
     category?: string;
-  }>;
-  orders?: Array<any>;
-  sales?: Array<any>;
-  warehouseDistribution?: Array<{
-    name: string;
-    count: number;
-    percentage: number;
-  }>;
-  regionDistribution?: Array<{
-    name: string;
-    count: number;
-    percentage: number;
   }>;
 }
 
@@ -423,7 +412,19 @@ const processReportData = (reportData: any[]): WildberriesResponse => {
     topProfitableProducts: topProfitable,
     topUnprofitableProducts: topUnprofitable,
     penaltiesData: penaltiesData,
-    deductionsData: deductionsData
+    deductionsData: deductionsData,
+    metadata: {
+      total_sales: Math.round(totalSales * 100) / 100,
+      total_delivery: Math.round(totalDelivery * 100) / 100,
+      total_commission: Math.round(totalCommission * 100) / 100,
+      total_storage_fee: Math.round(totalStorageFee * 100) / 100,
+      total_returns: Math.round(Math.abs(totalReturns) * 100) / 100,
+      total_penalty: Math.round(totalPenalty * 100) / 100,
+      total_deduction: Math.round(Math.abs(totalDeduction) * 100) / 100,
+      total_to_pay: Math.round(totalToPay * 100) / 100,
+      total_acceptance: Math.round(totalAcceptance * 100) / 100,
+      total_return_count: totalReturnCount
+    }
   };
 };
 

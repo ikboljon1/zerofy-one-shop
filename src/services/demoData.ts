@@ -91,12 +91,7 @@ export const demoData = {
       margin: 15,
       returnCount: 25
     }
-  ],
-  // Add properties for orders, sales, and distributions to match the interface
-  orders: [],
-  sales: [],
-  warehouseDistribution: [],
-  regionDistribution: []
+  ]
 };
 
 export const demoReportData = [
