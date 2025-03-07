@@ -1,8 +1,7 @@
-
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { WildberriesOrder } from "@/types/store";
-import { format, subDays, eachDayOfInterval, startOfDay, endOfDay, eachHourOfInterval, addHours, isSameDay, isToday, isYesterday } from "date-fns";
+import { WildberriesOrder, WildberriesSale } from "@/types/store";
+import { format, subDays, eachDayOfInterval, startOfDay, endOfDay, eachHourOfInterval, addHours, isToday, isYesterday } from "date-fns";
 import { ru } from "date-fns/locale";
 import { 
   AreaChart, 
@@ -15,9 +14,7 @@ import {
   PieChart, 
   Pie, 
   Cell, 
-  Legend, 
-  BarChart, 
-  Bar
+  Legend
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -25,11 +22,13 @@ import { ShoppingBag, TrendingUp } from "lucide-react";
 
 interface OrdersChartProps {
   orders: WildberriesOrder[];
+  sales?: WildberriesSale[];
 }
 
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088fe', '#00C49F', '#FFBB28', '#FF8042', '#ff0000'];
+const PRODUCT_COLORS = ["#8B5CF6", "#EC4899", "#10B981", "#FF8042", "#A86EE7"];
 
-const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
+const OrdersChart: React.FC<OrdersChartProps> = ({ orders, sales = [] }) => {
   const isMobile = useIsMobile();
   
   const shouldDisplayHourly = useMemo(() => {
@@ -112,33 +111,27 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
     }
   }, [orders, shouldDisplayHourly]);
 
-  const cancelledVsActiveData = useMemo(() => {
-    const active = orders.filter(order => !order.isCancel && !order.isReturn).length;
-    const cancelled = orders.filter(order => order.isCancel).length;
-    const returned = orders.filter(order => order.isReturn).length;
-    
-    return [
-      { name: 'Активные', value: active },
-      { name: 'Отменённые', value: cancelled },
-      { name: 'Возвраты', value: returned },
-    ];
-  }, [orders]);
+  const productSalesDistribution = useMemo(() => {
+    if (!sales || sales.length === 0) return [];
 
-  const warehouseData = useMemo(() => {
-    if (orders.length === 0) return [];
-    
-    const warehouseCounts: Record<string, number> = {};
-    
-    orders.forEach(order => {
-      if (!order.warehouseName) return;
-      warehouseCounts[order.warehouseName] = (warehouseCounts[order.warehouseName] || 0) + 1;
+    const productCounts: Record<string, number> = {};
+    let totalProducts = 0;
+
+    sales.forEach(sale => {
+      const productName = sale.subject || "Неизвестный товар";
+      productCounts[productName] = (productCounts[productName] || 0) + 1;
+      totalProducts += 1;
     });
-    
-    return Object.entries(warehouseCounts)
-      .map(([name, value]) => ({ name, value }))
+
+    return Object.entries(productCounts)
+      .map(([name, count]) => ({
+        name,
+        value: count,
+        percentage: (count / totalProducts) * 100
+      }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 5);
-  }, [orders]);
+  }, [sales]);
 
   const orderConfig = {
     active: {
@@ -149,7 +142,7 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
       },
     },
     cancelled: {
-      label: "Отмененные заказы",
+      label: "Отменённые заказы",
       theme: {
         light: "#ef4444",
         dark: "#dc2626",
@@ -268,7 +261,7 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
             <CardTitle className="text-lg flex items-center gap-2">
               <ShoppingBag className="h-5 w-5 text-indigo-500" />
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-700 dark:from-indigo-400 dark:to-blue-400">
-                Распределение заказов
+                Количество проданных товаров
               </span>
             </CardTitle>
           </div>
@@ -278,25 +271,26 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <defs>
-                  {cancelledVsActiveData.map((entry, index) => (
+                  {productSalesDistribution.map((entry, index) => (
                     <linearGradient key={`pieGradient-${index}`} id={`pieGradient-${index}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={index === 0 ? "#10b981" : index === 1 ? "#ef4444" : "#f59e0b"} stopOpacity={0.9}/>
-                      <stop offset="100%" stopColor={index === 0 ? "#059669" : index === 1 ? "#dc2626" : "#d97706"} stopOpacity={0.9}/>
+                      <stop offset="0%" stopColor={PRODUCT_COLORS[index % PRODUCT_COLORS.length]} stopOpacity={0.9}/>
+                      <stop offset="100%" stopColor={PRODUCT_COLORS[index % PRODUCT_COLORS.length]} stopOpacity={0.7}/>
                     </linearGradient>
                   ))}
                 </defs>
                 <Pie
-                  data={cancelledVsActiveData}
+                  data={productSalesDistribution}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
                   outerRadius={100}
                   paddingAngle={4}
                   dataKey="value"
+                  nameKey="name"
                   labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percentage }) => `${name.substring(0, 15)}${name.length > 15 ? '...' : ''}: ${percentage.toFixed(0)}%`}
                 >
-                  {cancelledVsActiveData.map((entry, index) => (
+                  {productSalesDistribution.map((entry, index) => (
                     <Cell 
                       key={`cell-${index}`} 
                       fill={`url(#pieGradient-${index})`} 
@@ -306,7 +300,7 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value) => [`${value} заказов`, ""]}
+                  formatter={(value) => [`${value} шт.`, ""]}
                   contentStyle={{ 
                     backgroundColor: "rgba(255, 255, 255, 0.97)", 
                     borderRadius: "8px", 
@@ -319,7 +313,9 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders }) => {
                   iconType="circle"
                   iconSize={10}
                   formatter={(value, entry) => (
-                    <span className="text-sm font-medium">{value}</span>
+                    <span className="text-sm font-medium text-ellipsis overflow-hidden" style={{ maxWidth: '120px', display: 'inline-block' }}>
+                      {value.length > 20 ? value.substring(0, 20) + '...' : value}
+                    </span>
                   )}
                 />
               </PieChart>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
@@ -231,7 +230,10 @@ const Dashboard = () => {
           {orders.length > 0 && (
             <>
               <OrderMetrics orders={getFilteredOrders(orders).orders} />
-              <OrdersChart orders={getFilteredOrders(orders).orders} />
+              <OrdersChart 
+                orders={getFilteredOrders(orders).orders} 
+                sales={getFilteredSales(sales)}
+              />
             </>
           )}
           
