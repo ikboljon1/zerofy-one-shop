@@ -25,6 +25,11 @@ export const marketplaces: Marketplace[] = ["Wildberries", "Ozon", "Yandexmarket
 // Re-export the WildberriesResponse from the API to avoid duplicate definitions
 export type WildberriesResponse = ApiWildberriesResponse;
 
+// Интерфейс для возвратов по nmId, используемый в Python-скрипте
+export interface ReturnsByNmId {
+  [nmId: string]: number;
+}
+
 // Wildberries Order based on API structure
 export interface WildberriesOrder {
   date: string;

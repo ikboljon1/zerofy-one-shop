@@ -90,12 +90,7 @@ const formatDateRFC3339 = (date: Date, isEnd: boolean = false): string => {
 
 /**
  * Загружает детальный отчет с Wildberries API с поддержкой пагинации
- * @param apiKey Ключ API
- * @param dateFrom Начальная дата
- * @param dateTo Конечная дата
- * @param rrdid ID для пагинации
- * @param limit Максимальное количество записей
- * @returns Данные отчета и ID для следующего запроса
+ * Реализация в соответствии с функцией fetch_wb_report_detail из Python-скрипта
  */
 const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date, rrdid = 0, limit = 100000) => {
   try {
@@ -117,7 +112,7 @@ const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date, r
     console.log(`Fetching report detail from Wildberries API with rrdid ${rrdid}...`);
     const response = await axios.get(url, { headers, params });
     
-    // Определяем ID для следующего запроса
+    // Определяем ID для следующего запроса в соответствии с Python-скриптом
     let nextRrdid = 0;
     if (response.data && response.data.length > 0) {
       const lastRecord = response.data[response.data.length - 1];
@@ -133,10 +128,7 @@ const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date, r
 
 /**
  * Загружает все данные отчета с поддержкой пагинации
- * @param apiKey Ключ API
- * @param dateFrom Начальная дата
- * @param dateTo Конечная дата
- * @returns Полные данные отчета
+ * Реализация в соответствии с циклом while из Python-скрипта
  */
 const fetchAllReportDetails = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
   let allData: any[] = [];
@@ -180,10 +172,7 @@ const fetchAllReportDetails = async (apiKey: string, dateFrom: Date, dateTo: Dat
 
 /**
  * Загружает отчет о платной приемке с Wildberries API
- * @param apiKey Ключ API
- * @param dateFrom Начальная дата
- * @param dateTo Конечная дата
- * @returns Данные о платной приемке
+ * Реализация в соответствии с функцией fetch_paid_acceptance_report из Python-скрипта
  */
 const fetchPaidAcceptanceReport = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
   try {
@@ -211,9 +200,7 @@ const fetchPaidAcceptanceReport = async (apiKey: string, dateFrom: Date, dateTo:
 
 /**
  * Рассчитывает метрики на основе данных отчета
- * @param data Данные отчета
- * @param paidAcceptanceData Данные о платной приемке
- * @returns Рассчитанные метрики
+ * Реализация в соответствии с функцией calculate_metrics из Python-скрипта
  */
 const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   if (!data || data.length === 0) {
@@ -228,10 +215,11 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   let totalReturns = 0;         // Возврат (отрицательные ppvz_for_pay)
   let totalPenalty = 0;         // Штрафы (penalty)
   let totalDeduction = 0;       // Удержания (deduction)
-  let totalToPay = 0;           // Итого к оплате
   let totalReturnCount = 0;     // Количество возвратов
+  let totalToPay = 0;           // Итого к оплате
 
   const returnsByProduct: Record<string, { value: number; count: number }> = {};
+  const returnsByNmId: Record<string, number> = {}; // Словарь для хранения информации о возвратах по nmId
   const penaltiesByReason: Record<string, number> = {};
   const deductionsByReason: Record<string, { total: number; items: Array<{nm_id?: string | number; value: number}> }> = {};
   
@@ -250,7 +238,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   console.log(`Processing ${data.length} records for metrics calculation...`);
   
   for (const record of data) {
-    // Обработка продаж
+    // Обработка продаж в соответствии с Python-скриптом
     if (record.doc_type_name === 'Продажа') {
       totalSales += record.retail_price_withdisc_rub || 0;
       totalForPay += record.ppvz_for_pay || 0;
@@ -273,9 +261,9 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
         
         productProfitability[productName].sales += record.ppvz_for_pay || 0;
         productProfitability[productName].costs += (record.delivery_rub || 0) + 
-                                                 (record.storage_fee || 0) + 
-                                                 (record.penalty || 0) +
-                                                 (record.deduction || 0);
+                                               (record.storage_fee || 0) + 
+                                               (record.penalty || 0) +
+                                               (record.deduction || 0);
         productProfitability[productName].price = record.retail_price || productProfitability[productName].price;
         if (record.pic_url && !productProfitability[productName].image) {
           productProfitability[productName].image = record.pic_url;
@@ -283,10 +271,19 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
         productProfitability[productName].count += 1;
       }
     } 
-    // Обработка возвратов
+    // Обработка возвратов в соответствии с Python-скриптом
     else if (record.doc_type_name === 'Возврат') {
-      totalReturns += record.ppvz_for_pay || 0;
+      totalReturns += Math.abs(record.ppvz_for_pay || 0);
       totalReturnCount += 1;
+      
+      // Учет возвратов по nmId в соответствии с Python-скриптом
+      if (record.nm_id) {
+        const nmId = record.nm_id.toString();
+        if (!returnsByNmId[nmId]) {
+          returnsByNmId[nmId] = 0;
+        }
+        returnsByNmId[nmId] += 1;
+      }
       
       if (record.sa_name) {
         const productName = record.sa_name;
@@ -303,7 +300,6 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
           };
         }
         
-        productProfitability[productName].sales += record.ppvz_for_pay || 0;
         productProfitability[productName].returnCount += 1;
         
         if (!returnsByProduct[productName]) {
@@ -314,7 +310,12 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       }
     }
     
-    // Обработка штрафов
+    // Учет расходов на логистику и хранение в соответствии с Python-скриптом
+    totalDeliveryRub += record.delivery_rub || 0;
+    totalRebillLogisticCost += record.rebill_logistic_cost || 0;
+    totalStorageFee += record.storage_fee || 0;
+    
+    // Обработка штрафов (сохраняем существующую логику)
     if (record.penalty && record.penalty > 0) {
       const reason = record.penalty_reason || record.bonus_type_name || 'Другие причины';
       if (!penaltiesByReason[reason]) {
@@ -324,7 +325,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       totalPenalty += record.penalty;
     }
     
-    // Обработка удержаний
+    // Обработка удержаний (сохраняем существующую логику)
     if (record.deduction !== undefined && record.deduction !== null) {
       const reason = record.bonus_type_name || 'Прочие удержания';
       
@@ -340,11 +341,6 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       
       totalDeduction += record.deduction;
     }
-    
-    // Учет расходов на логистику и хранение
-    totalDeliveryRub += record.delivery_rub || 0;
-    totalRebillLogisticCost += record.rebill_logistic_cost || 0;
-    totalStorageFee += record.storage_fee || 0;
   }
 
   // Расчет общей суммы по платной приемке
@@ -435,6 +431,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     productReturns,
     topProfitableProducts,
     topUnprofitableProducts,
+    returnsByNmId,
     dailySales: []
   };
 };
@@ -499,12 +496,14 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       return getDemoData();
     }
     
-    // 1. Получаем детальный отчет через пагинацию
+    // 1. Получаем детальный отчет через пагинацию (в соответствии с Python-скриптом)
     console.log("Starting to fetch all report details with pagination...");
     const reportData = await fetchAllReportDetails(apiKey, dateFrom, dateTo);
     console.log(`Completed fetching all report details. Total records: ${reportData.length}`);
     
-    // 2. Получаем данные о платной приемке
+    // 2. Получаем данные о платной приемке (в соответствии с Python-скриптом)
+    const formattedDateFrom = formatDate(dateFrom);
+    const formattedDateTo = formatDate(dateTo);
     const paidAcceptanceData = await fetchPaidAcceptanceReport(apiKey, dateFrom, dateTo);
     
     // 3. Получаем данные о заказах и продажах
@@ -517,7 +516,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       return getDemoData();
     }
     
-    // 5. Рассчитываем метрики на основе полученных данных
+    // 5. Рассчитываем метрики на основе полученных данных (в соответствии с Python-скриптом)
     console.log("Calculating metrics from report data...");
     const result = calculateMetrics(reportData, paidAcceptanceData);
     
@@ -526,7 +525,15 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       return getDemoData();
     }
     
-    const { metrics, productReturns, penaltiesData, deductionsData, topProfitableProducts, topUnprofitableProducts } = result;
+    const { 
+      metrics, 
+      productReturns, 
+      penaltiesData, 
+      deductionsData, 
+      topProfitableProducts, 
+      topUnprofitableProducts, 
+      returnsByNmId 
+    } = result;
     
     // 6. Группируем продажи по категориям
     const salesByCategory: Record<string, number> = {};
@@ -597,7 +604,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
     
-    // 10. Формируем итоговый ответ
+    // 10. Формируем итоговый ответ с использованием метрик из Python-скрипта
     const response: WildberriesResponse = {
       currentPeriod: {
         sales: metrics.total_sales,
