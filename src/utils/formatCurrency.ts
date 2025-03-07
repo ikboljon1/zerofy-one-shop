@@ -9,8 +9,8 @@ export const formatCurrency = (value: number): string => {
   
   return new Intl.NumberFormat('ru-RU', {
     style: 'decimal',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   }).format(value);
 };
 

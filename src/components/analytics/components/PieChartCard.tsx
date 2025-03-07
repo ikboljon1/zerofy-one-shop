@@ -46,15 +46,14 @@ const PieChartCard = ({
     value: Math.abs(item.value)
   })) : [];
 
-  // Функция для форматирования числа с сохранением десятичных знаков
+  // Функция для форматирования числа с отображением десятичных знаков
   const formatDecimal = (value: number) => {
-    // Если значение целое, показываем без десятичных знаков
-    if (value % 1 === 0) {
-      return formatCurrency(value);
-    }
-    
-    // Иначе показываем с двумя десятичными знаками
-    return formatCurrency(Math.round(value * 100) / 100);
+    // Всегда показываем два десятичных знака
+    return new Intl.NumberFormat('ru-RU', {
+      style: 'decimal',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
   };
 
   // Определяем, нужно ли делать список скроллируемым (если больше 5 элементов)
