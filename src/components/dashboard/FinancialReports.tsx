@@ -122,7 +122,7 @@ const FinancialReports = () => {
         ];
         setExpensesData(expenses);
         
-        // Данные по удержаниям
+        // Данные по удержаниям и компенсациям
         if (result.deductionsData && result.deductionsData.length > 0) {
           const deductions = result.deductionsData.map(item => ({
             category: item.name,
@@ -154,6 +154,11 @@ const FinancialReports = () => {
   useEffect(() => {
     fetchData();
   }, [period]);
+
+  // Расчет суммы по всем удержаниям и компенсациям, включая отрицательные значения
+  const calculateDeductionsTotal = () => {
+    return deductionsData.reduce((sum, item) => sum + item.amount, 0);
+  };
 
   return (
     <div className="space-y-4">
@@ -261,8 +266,8 @@ const FinancialReports = () => {
                 ))}
                 <TableRow className="bg-gray-50 dark:bg-gray-800/50">
                   <TableCell className="font-bold">Итого</TableCell>
-                  <TableCell className={`text-right font-bold ${deductionsData.reduce((sum, item) => sum + item.amount, 0) < 0 ? 'text-red-500' : ''}`}>
-                    {formatCurrency(deductionsData.reduce((sum, item) => sum + item.amount, 0))}
+                  <TableCell className={`text-right font-bold ${calculateDeductionsTotal() < 0 ? 'text-red-500' : ''}`}>
+                    {formatCurrency(calculateDeductionsTotal())}
                   </TableCell>
                   <TableCell className="hidden md:table-cell">Общий баланс удержаний и компенсаций</TableCell>
                 </TableRow>
