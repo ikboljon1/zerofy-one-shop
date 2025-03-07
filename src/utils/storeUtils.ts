@@ -1,3 +1,4 @@
+
 import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY, ORDERS_STORAGE_KEY, SALES_STORAGE_KEY, WildberriesOrder, WildberriesSale } from "@/types/store";
 import { fetchWildberriesStats, fetchWildberriesOrders, fetchWildberriesSales } from "@/services/wildberriesApi";
 
@@ -248,7 +249,14 @@ export const getProductProfitabilityData = (storeId: string) => {
   try {
     const storedData = localStorage.getItem(`products_detailed_${storeId}`);
     if (storedData) {
-      return JSON.parse(storedData);
+      const parsedData = JSON.parse(storedData);
+      
+      // Ensure we're only returning the top profitable and unprofitable products
+      return {
+        profitableProducts: parsedData.profitableProducts?.slice(0, 3) || [],
+        unprofitableProducts: parsedData.unprofitableProducts?.slice(0, 3) || [],
+        updateDate: parsedData.updateDate
+      };
     }
     
     // Также пробуем загрузить из аналитики, если специальные данные не найдены
@@ -256,8 +264,8 @@ export const getProductProfitabilityData = (storeId: string) => {
     if (analyticsData) {
       const parsedData = JSON.parse(analyticsData);
       return {
-        profitableProducts: parsedData.data.topProfitableProducts || [],
-        unprofitableProducts: parsedData.data.topUnprofitableProducts || [],
+        profitableProducts: (parsedData.data.topProfitableProducts || []).slice(0, 3),
+        unprofitableProducts: (parsedData.data.topUnprofitableProducts || []).slice(0, 3),
         updateDate: parsedData.dateTo
       };
     }

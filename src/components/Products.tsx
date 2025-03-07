@@ -152,7 +152,7 @@ const Products = ({
             <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
           </div>
         </div>
-        <ProductList products={topProfitableProducts} isProfitable={true} />
+        <ProductList products={topProfitableProducts.slice(0, 3)} isProfitable={true} />
       </Card>
       
       <Card className={`mt-6 ${isMobile ? 'p-3' : 'p-4'}`}>
@@ -164,7 +164,7 @@ const Products = ({
             <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-400" />
           </div>
         </div>
-        <ProductList products={topUnprofitableProducts} isProfitable={false} />
+        <ProductList products={topUnprofitableProducts.slice(0, 3)} isProfitable={false} />
       </Card>
     </div>
   );

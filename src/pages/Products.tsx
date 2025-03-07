@@ -46,8 +46,9 @@ const Products = ({ selectedStore }: ProductsProps) => {
     const profitabilityData = getProductProfitabilityData(selectedStore.id);
     
     if (profitabilityData) {
-      setProfitableProducts(profitabilityData.profitableProducts || []);
-      setUnprofitableProducts(profitabilityData.unprofitableProducts || []);
+      // Ensure we're only taking the top profitable and unprofitable products
+      setProfitableProducts(profitabilityData.profitableProducts?.slice(0, 3) || []);
+      setUnprofitableProducts(profitabilityData.unprofitableProducts?.slice(0, 3) || []);
       setLastUpdateDate(profitabilityData.updateDate);
     }
   };
