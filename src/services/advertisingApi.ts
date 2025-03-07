@@ -128,9 +128,6 @@ export const setExcludedKeywords = async (
   excludedKeywords: string[]
 ): Promise<boolean> => {
   try {
-    // Определяем URL в зависимости от типа кампании
-    // В данной реализации мы будем использовать эндпоинт для кампаний Аукцион
-    // Если нужно будет различать типы кампаний, то эту логику можно доработать
     const url = `https://advert-api.wildberries.ru/adv/v1/search/set-excluded?id=${campaignId}`;
     
     const response = await fetch(url, {
