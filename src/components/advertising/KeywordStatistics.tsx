@@ -39,7 +39,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
   const { toast } = useToast();
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
   const [dateWarning, setDateWarning] = useState<string | null>(null);
-  const [excludedKeywords, setExcludedKeywords] = useState<Set<string>>(new Set());
+  const [excludedKeywords, setExcludedKeywords] = useState<string[]>([]);
   const [excludingKeywords, setExcludingKeywords] = useState(false);
 
   const processedKeywords = useMemo(() => {
@@ -49,7 +49,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
       day.stats.map(stat => ({
         ...stat,
         date: day.date,
-        excluded: excludedKeywords.has(stat.keyword),
+        excluded: excludedKeywords.includes(stat.keyword),
         performance: calculatePerformance(stat)
       }))
     );
@@ -91,13 +91,11 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
 
   const toggleKeywordExclusion = (keyword: string) => {
     setExcludedKeywords(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(keyword)) {
-        newSet.delete(keyword);
+      if (prev.includes(keyword)) {
+        return prev.filter(k => k !== keyword);
       } else {
-        newSet.add(keyword);
+        return [...prev, keyword];
       }
-      return newSet;
     });
   };
 
@@ -107,16 +105,14 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
     setExcludingKeywords(true);
     
     try {
-      const keywordsArray = Array.from(excludedKeywords);
-      
-      const success = await setExcludedKeywords(apiKey, campaignId, keywordsArray);
+      const success = await setExcludedKeywords(apiKey, campaignId, excludedKeywords);
       
       if (success) {
         toast({
           title: "Успешно",
-          description: keywordsArray.length === 0 
+          description: excludedKeywords.length === 0 
             ? "Все минус-фразы удалены из кампании" 
-            : `${keywordsArray.length} минус-фраз установлено для кампании`,
+            : `${excludedKeywords.length} минус-фраз установлено для кампании`,
         });
       }
       
@@ -134,7 +130,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
   };
 
   const clearExcludedKeywords = () => {
-    setExcludedKeywords(new Set());
+    setExcludedKeywords([]);
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -405,7 +401,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
             />
           </div>
           <div className="flex gap-2">
-            {excludedKeywords.size > 0 && (
+            {excludedKeywords.length > 0 && (
               <div className="flex gap-2">
                 <Button 
                   variant="destructive" 
@@ -419,7 +415,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
                   ) : (
                     <MinusCircle className="h-3.5 w-3.5 mr-1" />
                   )}
-                  Исключить ({excludedKeywords.size})
+                  Исключить ({excludedKeywords.length})
                 </Button>
                 <Button 
                   variant="outline" 
@@ -446,7 +442,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
           </div>
         </div>
 
-        {excludedKeywords.size === 0 && (
+        {excludedKeywords.length === 0 && (
           <div className="bg-gray-50 dark:bg-gray-900/30 border border-gray-200 dark:border-gray-800 rounded-lg p-3 mb-3">
             <p className="text-xs text-gray-500 flex items-center gap-1">
               <Tag className="h-3.5 w-3.5" />
