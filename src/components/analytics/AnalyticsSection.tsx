@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag, Loader2, BadgePercent } from "lucide-react";
@@ -16,6 +15,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
 import { getAdvertCosts, getAdvertBalance, getAdvertPayments } from "@/services/advertisingApi";
 import { getAnalyticsData } from "@/utils/storeUtils";
+import { formatCurrency, roundToTwoDecimals } from "@/utils/formatCurrency";
 
 import { 
   demoData, 
@@ -220,6 +220,7 @@ const AnalyticsSection = () => {
         
         if (advertCosts && advertCosts.length > 0) {
           totalAdvertisingCost = advertCosts.reduce((sum, cost) => sum + cost.updSum, 0);
+          totalAdvertisingCost = roundToTwoDecimals(totalAdvertisingCost);
           
           setAdvertisingBreakdown({
             search: totalAdvertisingCost
@@ -235,14 +236,14 @@ const AnalyticsSection = () => {
           });
           
           const advertisingDataArray = Object.entries(campaignCosts)
-            .map(([name, value]) => ({ name, value }))
+            .map(([name, value]) => ({ name, value: roundToTwoDecimals(value) }))
             .sort((a, b) => b.value - a.value);
           
           let topProducts = advertisingDataArray.slice(0, 4);
           const otherProducts = advertisingDataArray.slice(4);
           
           if (otherProducts.length > 0) {
-            const otherSum = otherProducts.reduce((sum, item) => sum + item.value, 0);
+            const otherSum = roundToTwoDecimals(otherProducts.reduce((sum, item) => sum + item.value, 0));
             topProducts.push({ name: "Другие товары", value: otherSum });
           }
           
@@ -253,29 +254,52 @@ const AnalyticsSection = () => {
           }
           
           setAdvertisingBreakdown({
-            search: demoData.currentPeriod.expenses.advertising
+            search: roundToTwoDecimals(demoData.currentPeriod.expenses.advertising)
           });
-          totalAdvertisingCost = demoData.currentPeriod.expenses.advertising;
+          totalAdvertisingCost = roundToTwoDecimals(demoData.currentPeriod.expenses.advertising);
         }
       } catch (error) {
         console.error('Error fetching advertising data:', error);
         // If advertising API fails, use demo data for advertising
         setProductAdvertisingData(advertisingData);
         setAdvertisingBreakdown({
-          search: demoData.currentPeriod.expenses.advertising
+          search: roundToTwoDecimals(demoData.currentPeriod.expenses.advertising)
         });
-        totalAdvertisingCost = demoData.currentPeriod.expenses.advertising;
+        totalAdvertisingCost = roundToTwoDecimals(demoData.currentPeriod.expenses.advertising);
       }
       
       if (statsData) {
+        // Применяем новый алгоритм расчета чистой прибыли из Python-скрипта
+        const sales = roundToTwoDecimals(statsData.currentPeriod.sales);
+        const logistics = roundToTwoDecimals(statsData.currentPeriod.expenses.logistics);
+        const storage = roundToTwoDecimals(statsData.currentPeriod.expenses.storage);
+        const penalties = roundToTwoDecimals(statsData.currentPeriod.expenses.penalties);
+        const acceptance = roundToTwoDecimals(statsData.currentPeriod.expenses.acceptance || 0);
+        const deductionsValue = roundToTwoDecimals(statsData.currentPeriod.expenses.deductions || 0);
+        const returns = statsData.productReturns ? 
+          roundToTwoDecimals(statsData.productReturns.reduce((sum, item) => sum + item.value, 0)) : 0;
+        
+        // Расчет чистой прибыли на основе алгоритма из Python
+        // total_to_pay = total_for_pay - total_delivery_rub - total_storage_fee - total_returns
+        const forPay = roundToTwoDecimals(statsData.currentPeriod.transferred || 0);
+        const netProfit = roundToTwoDecimals(
+          forPay - logistics - storage - penalties - totalAdvertisingCost - acceptance - deductionsValue - returns
+        );
+        
         const modifiedData: AnalyticsData = {
           currentPeriod: {
             ...statsData.currentPeriod,
+            sales: sales,
+            transferred: roundToTwoDecimals(statsData.currentPeriod.transferred),
+            netProfit: netProfit,
             expenses: {
               ...statsData.currentPeriod.expenses,
+              logistics: logistics,
+              storage: storage,
+              penalties: penalties,
               advertising: totalAdvertisingCost,
-              acceptance: statsData.currentPeriod.expenses.acceptance || 0,
-              deductions: statsData.currentPeriod.expenses.deductions
+              acceptance: acceptance,
+              deductions: deductionsValue
             }
           },
           dailySales: statsData.dailySales,
@@ -285,19 +309,21 @@ const AnalyticsSection = () => {
           topUnprofitableProducts: statsData.topUnprofitableProducts
         };
         
-        modifiedData.currentPeriod.expenses.total =
-          modifiedData.currentPeriod.expenses.logistics +
-          modifiedData.currentPeriod.expenses.storage +
-          modifiedData.currentPeriod.expenses.penalties +
-          modifiedData.currentPeriod.expenses.advertising +
-          (modifiedData.currentPeriod.expenses.acceptance || 0) +
-          (modifiedData.currentPeriod.expenses.deductions || 0);
+        // Пересчитываем общую сумму расходов
+        modifiedData.currentPeriod.expenses.total = roundToTwoDecimals(
+          logistics + storage + penalties + totalAdvertisingCost + acceptance + deductionsValue
+        );
         
         setData(modifiedData);
         
         // Set real penalties data if available
         if (statsData.penaltiesData && statsData.penaltiesData.length > 0) {
-          setPenalties(statsData.penaltiesData);
+          // Округляем все значения до двух знаков
+          const roundedPenalties = statsData.penaltiesData.map(item => ({
+            ...item,
+            value: roundToTwoDecimals(item.value)
+          }));
+          setPenalties(roundedPenalties);
         } else {
           // Clear penalties if none exist (don't use demo data)
           setPenalties([]);
@@ -305,14 +331,24 @@ const AnalyticsSection = () => {
         
         // Set real deductions data if available
         if (statsData.deductionsData && statsData.deductionsData.length > 0) {
-          setDeductions(statsData.deductionsData);
+          // Округляем все значения до двух знаков
+          const roundedDeductions = statsData.deductionsData.map(item => ({
+            ...item,
+            value: roundToTwoDecimals(item.value)
+          }));
+          setDeductions(roundedDeductions);
         } else {
           // Clear deductions if none exist
           setDeductions([]);
         }
         
         if (statsData.productReturns && statsData.productReturns.length > 0) {
-          setReturns(statsData.productReturns);
+          // Округляем все значения до двух знаков
+          const roundedReturns = statsData.productReturns.map(item => ({
+            ...item,
+            value: roundToTwoDecimals(item.value)
+          }));
+          setReturns(roundedReturns);
         } else {
           setReturns([]);
         }
@@ -322,12 +358,12 @@ const AnalyticsSection = () => {
         if (statsData.dailySales && statsData.dailySales.length > 0) {
           const daysCount = statsData.dailySales.length;
           newDeductionsTimeline = statsData.dailySales.map((day: any) => {
-            const logistic = modifiedData.currentPeriod.expenses.logistics / daysCount;
-            const storage = modifiedData.currentPeriod.expenses.storage / daysCount;
-            const penalties = modifiedData.currentPeriod.expenses.penalties / daysCount;
-            const acceptance = modifiedData.currentPeriod.expenses.acceptance / daysCount || 0;
-            const advertising = modifiedData.currentPeriod.expenses.advertising / daysCount || 0;
-            const deductions = modifiedData.currentPeriod.expenses.deductions / daysCount || 0;
+            const logistic = roundToTwoDecimals(modifiedData.currentPeriod.expenses.logistics / daysCount);
+            const storage = roundToTwoDecimals(modifiedData.currentPeriod.expenses.storage / daysCount);
+            const penalties = roundToTwoDecimals(modifiedData.currentPeriod.expenses.penalties / daysCount);
+            const acceptance = roundToTwoDecimals(modifiedData.currentPeriod.expenses.acceptance / daysCount || 0);
+            const advertising = roundToTwoDecimals(modifiedData.currentPeriod.expenses.advertising / daysCount || 0);
+            const deductions = roundToTwoDecimals(modifiedData.currentPeriod.expenses.deductions / daysCount || 0);
             
             return {
               date: typeof day.date === 'string' ? day.date.split('T')[0] : new Date().toISOString().split('T')[0],
@@ -343,12 +379,12 @@ const AnalyticsSection = () => {
           // Создаем базовые данные для графика, если нет ежедневных данных
           newDeductionsTimeline = Array.from({ length: 7 }, (_, i) => ({
             date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            logistic: modifiedData.currentPeriod.expenses.logistics / 7,
-            storage: modifiedData.currentPeriod.expenses.storage / 7, 
-            penalties: modifiedData.currentPeriod.expenses.penalties / 7,
-            acceptance: modifiedData.currentPeriod.expenses.acceptance / 7 || 0,
-            advertising: modifiedData.currentPeriod.expenses.advertising / 7 || 0,
-            deductions: modifiedData.currentPeriod.expenses.deductions / 7 || 0
+            logistic: roundToTwoDecimals(modifiedData.currentPeriod.expenses.logistics / 7),
+            storage: roundToTwoDecimals(modifiedData.currentPeriod.expenses.storage / 7), 
+            penalties: roundToTwoDecimals(modifiedData.currentPeriod.expenses.penalties / 7),
+            acceptance: roundToTwoDecimals(modifiedData.currentPeriod.expenses.acceptance / 7 || 0),
+            advertising: roundToTwoDecimals(modifiedData.currentPeriod.expenses.advertising / 7 || 0),
+            deductions: roundToTwoDecimals(modifiedData.currentPeriod.expenses.deductions / 7 || 0)
           }));
         }
         
@@ -406,7 +442,7 @@ const AnalyticsSection = () => {
         setIsLoading(false);
       }
     } else {
-      // Устанавливаем базовые данные для графика удержаний, если нет выбранного магазина
+      // Устанавливаем базовые ��анные для графика удержаний, если нет выбранного магазина
       setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
         date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         logistic: 0, 

@@ -5,7 +5,7 @@
  * @returns Отформатированная строка
  */
 export const formatCurrency = (value: number): string => {
-  if (isNaN(value)) return "0";
+  if (isNaN(value)) return "0,00";
   
   return new Intl.NumberFormat('ru-RU', {
     style: 'decimal',
@@ -23,4 +23,13 @@ export const parseCurrencyString = (value: string): number => {
   if (!value) return 0;
   const numericValue = value.replace(/[^\d.-]/g, '');
   return parseFloat(numericValue) || 0;
+};
+
+/**
+ * Округляет число до двух знаков после запятой
+ * @param value Число для округления
+ * @returns Округленное число
+ */
+export const roundToTwoDecimals = (value: number): number => {
+  return Math.round(value * 100) / 100;
 };

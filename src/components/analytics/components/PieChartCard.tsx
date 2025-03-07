@@ -8,7 +8,7 @@ import {
   Cell,
   Tooltip
 } from "recharts";
-import { formatCurrency } from "@/utils/formatCurrency";
+import { formatCurrency, roundToTwoDecimals } from "@/utils/formatCurrency";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface PieChartCardProps {
@@ -46,16 +46,6 @@ const PieChartCard = ({
     value: Math.abs(item.value)
   })) : [];
 
-  // Функция для форматирования числа с отображением десятичных знаков
-  const formatDecimal = (value: number) => {
-    // Всегда показываем два десятичных знака
-    return new Intl.NumberFormat('ru-RU', {
-      style: 'decimal',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(value);
-  };
-
   // Определяем, нужно ли делать список скроллируемым (если больше 5 элементов)
   const needScroll = filteredData && filteredData.length > 5;
 
@@ -86,7 +76,7 @@ const PieChartCard = ({
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: any) => [`${formatDecimal(value)} ${valueLabel}`, '']}
+                  formatter={(value: any) => [`${formatCurrency(value)} ${valueLabel}`, '']}
                   contentStyle={{ background: '#ffffff', borderRadius: '4px', border: '1px solid #e5e7eb' }}
                 />
               </PieChart>
@@ -107,7 +97,7 @@ const PieChartCard = ({
                       </div>
                       <div className="text-right">
                         <span className={`font-medium ${item.isNegative || item.value < 0 ? 'text-red-500' : ''}`}>
-                          {item.isNegative || item.value < 0 ? '-' : ''}{formatDecimal(Math.abs(item.value))} {valueLabel}
+                          {item.isNegative || item.value < 0 ? '-' : ''}{formatCurrency(roundToTwoDecimals(Math.abs(item.value)))} {valueLabel}
                         </span>
                         {showCount && item.count !== undefined && (
                           <div className="text-xs text-muted-foreground">
@@ -132,7 +122,7 @@ const PieChartCard = ({
                     </div>
                     <div className="text-right">
                       <span className={`font-medium ${item.isNegative || item.value < 0 ? 'text-red-500' : ''}`}>
-                        {item.isNegative || item.value < 0 ? '-' : ''}{formatDecimal(Math.abs(item.value))} {valueLabel}
+                        {item.isNegative || item.value < 0 ? '-' : ''}{formatCurrency(roundToTwoDecimals(Math.abs(item.value)))} {valueLabel}
                       </span>
                       {showCount && item.count !== undefined && (
                         <div className="text-xs text-muted-foreground">
