@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -115,6 +116,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
       setExcludingKeywords(true);
       const keywordsToExclude = Array.from(excludedKeywords);
       
+      // Исправляем вызов функции setExcludedKeywords и обработку результата
       const success = await setExcludedKeywords(apiKey, campaignId, keywordsToExclude);
       
       if (success) {
