@@ -20,7 +20,8 @@ const OrderMetrics: React.FC<OrderMetricsProps> = ({ orders }) => {
   const totalOrders = orders.length;
   const canceledOrders = orders.filter(order => order.isCancel).length;
   const activeOrders = totalOrders - canceledOrders;
-  const totalAmount = orders.reduce((sum, order) => sum + order.priceWithDisc, 0);
+  // Use Math.abs to ensure we're adding absolute values for the total amount
+  const totalAmount = orders.reduce((sum, order) => sum + Math.abs(order.priceWithDisc), 0);
   const cancelRate = totalOrders > 0 ? (canceledOrders / totalOrders) * 100 : 0;
   
   return (

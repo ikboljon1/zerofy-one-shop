@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   Card,
@@ -17,7 +18,7 @@ interface SalesMetricsProps {
 const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales }) => {
   // Calculate metrics
   const totalSales = sales.length;
-  const totalAmount = sales.reduce((sum, sale) => sum + sale.priceWithDisc, 0);
+  const totalAmount = sales.reduce((sum, sale) => sum + Math.abs(sale.priceWithDisc), 0);
   const totalProfit = sales.reduce((sum, sale) => sum + sale.forPay, 0);
   const avgSaleValue = totalSales > 0 ? totalAmount / totalSales : 0;
   const returnedItems = sales.filter(sale => sale.priceWithDisc < 0).length; // Возвраты имеют отрицательную цену

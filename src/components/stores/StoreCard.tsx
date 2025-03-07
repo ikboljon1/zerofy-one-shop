@@ -21,6 +21,12 @@ export function StoreCard({
   onRefreshStats,
   isLoading 
 }: StoreCardProps) {
+  // Helper function to safely display values that might be negative
+  const displayValue = (value: number) => {
+    // For display purposes, we're showing the absolute value with a sign
+    return formatCurrency(value);
+  };
+
   return (
     <Card className={store.isSelected ? "border-primary" : ""}>
       <CardHeader className="pb-2">
@@ -53,19 +59,21 @@ export function StoreCard({
             <>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Продажи:</span>
-                <span className="font-medium">{formatCurrency(store.stats.currentPeriod.sales)}</span>
+                <span className="font-medium">{displayValue(store.stats.currentPeriod.sales)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Перечислено:</span>
-                <span className="font-medium">{formatCurrency(store.stats.currentPeriod.transferred)}</span>
+                <span className="font-medium">{displayValue(store.stats.currentPeriod.transferred)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Расходы:</span>
-                <span className="font-medium">{formatCurrency(store.stats.currentPeriod.expenses.total)}</span>
+                <span className="font-medium">{displayValue(store.stats.currentPeriod.expenses.total)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Чистая прибыль:</span>
-                <span className="font-medium">{formatCurrency(store.stats.currentPeriod.netProfit)}</span>
+                <span className={`font-medium ${store.stats.currentPeriod.netProfit < 0 ? 'text-destructive' : ''}`}>
+                  {displayValue(store.stats.currentPeriod.netProfit)}
+                </span>
               </div>
             </>
           )}

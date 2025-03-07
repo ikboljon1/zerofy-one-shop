@@ -33,7 +33,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
 
   // Рассчитываем штрафы и удержания для отображения
   const penaltiesAmount = data.currentPeriod.expenses.penalties;
-  const penaltiesAndDeductionsTotal = penaltiesAmount + deductionsAmount;
+  const penaltiesAndDeductionsTotal = Math.abs(penaltiesAmount) + Math.abs(deductionsAmount);
 
   return (
     <Card className="p-6">
@@ -100,15 +100,15 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Брак и повреждения</span>
-                <span className="font-medium">{formatCurrency(penaltiesAmount * 0.35)}</span>
+                <span className="font-medium">{formatCurrency(Math.abs(penaltiesAmount) * 0.35)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Прочие удержания</span>
-                <span className="font-medium">{formatCurrency(deductionsAmount)}</span>
+                <span className="font-medium">{formatCurrency(Math.abs(deductionsAmount))}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Нарушение правил</span>
-                <span className="font-medium">{formatCurrency(penaltiesAmount * 0.35)}</span>
+                <span className="font-medium">{formatCurrency(Math.abs(penaltiesAmount) * 0.35)}</span>
               </div>
             </div>
           </div>
