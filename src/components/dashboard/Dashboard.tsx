@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
@@ -224,8 +223,9 @@ const Dashboard = () => {
         </TabsContent>
 
         <TabsContent value="orders" className="space-y-4">
-          <div className="mb-4 flex justify-between items-center flex-wrap gap-2">
+          <div className="mb-4 flex items-center gap-4">
             <PeriodSelector value={period} onChange={setPeriod} />
+            <div className="flex-grow"></div> {/* This helps maintain layout stability */}
           </div>
           
           {orders.length > 0 && (
@@ -242,8 +242,9 @@ const Dashboard = () => {
         </TabsContent>
 
         <TabsContent value="sales" className="space-y-4">
-          <div className="mb-4 flex justify-between items-center flex-wrap gap-2">
+          <div className="mb-4 flex items-center gap-4">
             <PeriodSelector value={period} onChange={setPeriod} />
+            <div className="flex-grow"></div> {/* This helps maintain layout stability */}
           </div>
           
           {sales.length > 0 && (
@@ -257,8 +258,9 @@ const Dashboard = () => {
         </TabsContent>
 
         <TabsContent value="geography" className="space-y-4">
-          <div className="mb-4 flex items-center flex-wrap gap-2">
+          <div className="mb-4 flex items-center gap-4">
             <PeriodSelector value={period} onChange={setPeriod} />
+            <div className="flex-grow"></div> {/* This helps maintain layout stability */}
           </div>
           <GeographySection 
             warehouseDistribution={warehouseDistribution} 

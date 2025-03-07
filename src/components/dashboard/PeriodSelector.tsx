@@ -19,10 +19,10 @@ const PeriodSelector = ({ value, onChange }: PeriodSelectorProps) => {
   return (
     <div className="w-[180px] flex-shrink-0">
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="w-full">
+        <SelectTrigger className="w-full h-10">
           <SelectValue placeholder="Выберите период" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent position="popper" className="w-[180px]">
           <SelectItem value="today">Сегодня</SelectItem>
           <SelectItem value="yesterday">Вчера</SelectItem>
           <SelectItem value="week">Неделя</SelectItem>
