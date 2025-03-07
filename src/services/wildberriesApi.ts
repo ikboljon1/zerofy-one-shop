@@ -13,7 +13,7 @@ export interface WildberriesResponse {
       penalties: number;
       acceptance: number;
       advertising: number;
-      deductions?: number; // Добавляем поле для удержаний
+      deductions?: number; // Поле для удержаний
     };
     netProfit: number;
     acceptance: number;
@@ -36,7 +36,7 @@ export interface WildberriesResponse {
     name: string;
     value: number;
   }>;
-  deductionsData?: Array<{  // Добавляем отдельное поле для данных по удержаниям
+  deductionsData?: Array<{  // Отдельное поле для данных по удержаниям
     name: string;
     value: number;
   }>;
@@ -93,7 +93,7 @@ const getLastWeekDateRange = () => {
   };
 };
 
-const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
+const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date, rrdid = 0, limit = 100000) => {
   try {
     const formattedDateFrom = formatDate(dateFrom);
     const formattedDateTo = formatDate(dateTo);
@@ -106,17 +106,48 @@ const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date) =
     const params = {
       "dateFrom": formattedDateFrom,
       "dateTo": formattedDateTo,
-      "rrdid": 0,
-      "limit": 100000,
+      "rrdid": rrdid,
+      "limit": limit,
     };
     
-    console.log("Fetching report detail from Wildberries API...");
+    console.log(`Fetching report detail from Wildberries API with rrdid ${rrdid}...`);
     const response = await axios.get(url, { headers, params });
     return response.data;
   } catch (error) {
     console.error("Error fetching report detail:", error);
     return null;
   }
+};
+
+// Добавляем новую функцию для загрузки всех страниц отчета
+const fetchAllReportDetails = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
+  let allData: any[] = [];
+  let nextRrdid = 0;
+  let hasMoreData = true;
+  
+  while (hasMoreData) {
+    const data = await fetchReportDetail(apiKey, dateFrom, dateTo, nextRrdid);
+    
+    if (!data || data.length === 0) {
+      hasMoreData = false;
+      continue;
+    }
+    
+    allData = [...allData, ...data];
+    
+    // Получаем идентификатор последней записи для следующего запроса
+    const lastRecord = data[data.length - 1];
+    nextRrdid = lastRecord?.rrd_id || 0;
+    
+    // Если вернулось меньше записей, чем размер страницы, значит данных больше нет
+    if (data.length < 100000 || nextRrdid === 0) {
+      hasMoreData = false;
+    }
+    
+    console.log(`Fetched ${data.length} report records, next rrdid: ${nextRrdid}, total records so far: ${allData.length}`);
+  }
+  
+  return allData;
 };
 
 const fetchPaidAcceptanceReport = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
@@ -161,7 +192,7 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
 
   const returnsByProduct: Record<string, { value: number; count: number }> = {};
   const penaltiesByReason: Record<string, number> = {};
-  const deductionsByReason: Record<string, number> = {}; // Добавляем учет удержаний
+  const deductionsByReason: Record<string, number> = {}; // Учет удержаний
   const productProfitability: Record<string, { 
     name: string;
     price: number;
@@ -195,9 +226,9 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
         
         productProfitability[productName].sales += record.ppvz_for_pay || 0;
         productProfitability[productName].costs += (record.delivery_rub || 0) + 
-                                                  (record.storage_fee || 0) + 
-                                                  (record.penalty || 0) +
-                                                  (record.deduction || 0);
+                                                 (record.storage_fee || 0) + 
+                                                 (record.penalty || 0) +
+                                                 (record.deduction || 0);
         productProfitability[productName].price = record.retail_price || productProfitability[productName].price;
         if (record.pic_url && !productProfitability[productName].image) {
           productProfitability[productName].image = record.pic_url;
@@ -240,23 +271,27 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
         penaltiesByReason[reason] = 0;
       }
       penaltiesByReason[reason] += record.penalty;
+      totalPenalty += record.penalty;
     }
     
-    // Обработка удержаний (deduction) - отдельно от штрафов
+    // Особая обработка удержаний (deduction) - отдельно от штрафов
     if (record.deduction && record.deduction > 0) {
+      // Используем bonus_type_name для группировки удержаний или более конкретный тип, если доступен
       const reason = record.bonus_type_name || 'Прочие удержания';
       if (!deductionsByReason[reason]) {
         deductionsByReason[reason] = 0;
       }
       deductionsByReason[reason] += record.deduction;
+      totalDeduction += record.deduction;
     }
     
     totalDeliveryRub += record.delivery_rub || 0;
     totalRebillLogisticCost += record.rebill_logistic_cost || 0;
     totalStorageFee += record.storage_fee || 0;
-    totalPenalty += record.penalty || 0;
-    totalDeduction += record.deduction || 0;
   }
+
+  console.log("Deductions by reason:", deductionsByReason);
+  console.log("Total deduction amount:", totalDeduction);
 
   const penaltiesData = Object.entries(penaltiesByReason).map(([name, value]) => ({
     name,
@@ -268,6 +303,8 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     name,
     value: Math.round(value * 100) / 100
   })).sort((a, b) => b.value - a.value);
+
+  console.log("Deductions data:", deductionsData);
 
   const totalAcceptance = paidAcceptanceData.reduce((sum, record) => sum + (record.total || 0), 0);
 
@@ -390,7 +427,8 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       return getDemoData();
     }
     
-    const reportData = await fetchReportDetail(apiKey, dateFrom, dateTo);
+    // Используем улучшенную функцию для получения всех страниц отчета
+    const reportData = await fetchAllReportDetails(apiKey, dateFrom, dateTo);
     
     const paidAcceptanceData = await fetchPaidAcceptanceReport(apiKey, dateFrom, dateTo);
     
@@ -520,13 +558,13 @@ const getDemoData = (): WildberriesResponse => {
       sales: 294290.6,
       transferred: 218227.70,
       expenses: {
-        total: 65794.94, // Updated to include deductions
+        total: 65794.94, 
         logistics: 35669.16,
         storage: 23125.78,
         penalties: 0,
         acceptance: 0,
         advertising: 0,
-        deductions: 7000 // Added deductions
+        deductions: 7000 
       },
       netProfit: 147037.23,
       acceptance: 0
@@ -578,8 +616,13 @@ const getDemoData = (): WildberriesResponse => {
       { name: "Нарушение маркировки", value: 1200 },
       { name: "Другие причины", value: 2500 }
     ],
-    deductionsData: [ // Добавляем отдельные демо-данные для удержаний
-      { name: "Прочие удержания", value: 7000 }
+    deductionsData: [ 
+      { name: "Прочие удержания", value: 2000 },
+      { name: "Логистика", value: 1500 },
+      { name: "Компенсация клиенту", value: 1200 },
+      { name: "Недостача", value: 1000 },
+      { name: "Брак", value: 800 },
+      { name: "Возврат", value: 500 }
     ],
     topProfitableProducts: [
       { 
