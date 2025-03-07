@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import {
   LineChart,
@@ -77,63 +78,97 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
 
   return (
     <div className={`grid ${isMobile ? 'grid-cols-1 gap-6' : 'grid-cols-2 gap-4'}`}>
-      <Card className="p-4">
-        <div className="flex items-center justify-between mb-4">
+      <Card className="p-4 overflow-hidden relative border-indigo-200/40 dark:border-indigo-800/40 bg-gradient-to-br from-white/80 to-indigo-50/50 dark:from-gray-900/90 dark:to-indigo-950/50 backdrop-blur-[1px]">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-200/20 via-transparent to-transparent dark:from-indigo-900/20 pointer-events-none"></div>
+        
+        <div className="flex items-center justify-between mb-4 relative z-10">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <TrendingUp className="text-indigo-500" size={20} />
-            Динамика продаж по дням
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-700 dark:from-indigo-400 dark:to-blue-400">
+              Динамика продаж по дням
+            </span>
           </h3>
         </div>
-        <div className="h-[400px] w-full">
+        
+        <div className="h-[400px] w-full relative">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={salesTrend}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+            <LineChart data={salesTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorCurrentSales" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366F1" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#6366F1" stopOpacity={0.1}/>
+                </linearGradient>
+                <linearGradient id="colorPreviousSales" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#EC4899" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#EC4899" stopOpacity={0.1}/>
+                </linearGradient>
+                <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#000" floodOpacity="0.2"/>
+                </filter>
+              </defs>
+              
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.15} />
               <XAxis 
                 dataKey="date" 
                 stroke="#6B7280" 
                 fontSize={12}
-                tickFormatter={(value) => {
-                  const date = new Date(value);
-                  return `${date.getDate()}.${date.getMonth() + 1}`;
-                }}
+                tick={{ fill: '#6B7280' }}
+                tickLine={{ stroke: 'rgba(107, 114, 128, 0.3)' }}
+                axisLine={{ stroke: 'rgba(107, 114, 128, 0.3)' }}
               />
               <YAxis 
                 stroke="#6B7280" 
                 fontSize={12}
+                tick={{ fill: '#6B7280' }}
                 tickFormatter={(value) => value.toLocaleString()}
+                tickLine={{ stroke: 'rgba(107, 114, 128, 0.3)' }}
+                axisLine={{ stroke: 'rgba(107, 114, 128, 0.3)' }}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#1F2937",
+                  backgroundColor: "rgba(31, 41, 55, 0.98)",
                   border: "none",
                   borderRadius: "8px",
-                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)",
+                  color: "#F9FAFB"
                 }}
                 formatter={(value: number) => [value.toLocaleString() + " ₽", '']}
                 labelFormatter={(label) => {
                   const date = new Date(label);
                   return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}`;
                 }}
+                itemStyle={{ color: "#F9FAFB" }}
               />
-              <Legend />
+              <Legend 
+                verticalAlign="top" 
+                height={36}
+                wrapperStyle={{ paddingTop: "10px" }}
+                formatter={(value) => {
+                  return <span className="text-sm font-medium">{
+                    value === "sales" ? "Текущий период" : "Предыдущий период"
+                  }</span>
+                }}
+              />
               <Line
                 type="monotone"
                 dataKey="sales"
                 name="Текущий период"
-                stroke="#8B5CF6"
-                strokeWidth={2}
+                stroke="#6366F1"
+                strokeWidth={3}
                 dot={false}
-                activeDot={{ r: 6, strokeWidth: 0, fill: "#8B5CF6" }}
+                activeDot={{ r: 8, strokeWidth: 0, fill: "#6366F1", style: { filter: 'url(#shadow)' } }}
+                style={{ filter: 'drop-shadow(0px 1px 2px rgba(99, 102, 241, 0.4))' }}
               />
               <Line
                 type="monotone"
                 dataKey="previousSales"
                 name="Предыдущий период"
                 stroke="#EC4899"
-                strokeWidth={2}
+                strokeWidth={3}
                 dot={false}
                 strokeDasharray="5 5"
-                activeDot={{ r: 6, strokeWidth: 0, fill: "#EC4899" }}
+                activeDot={{ r: 8, strokeWidth: 0, fill: "#EC4899", style: { filter: 'url(#shadow)' } }}
+                style={{ filter: 'drop-shadow(0px 1px 2px rgba(236, 72, 153, 0.4))' }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -146,7 +181,9 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
         <div className="flex items-center justify-between mb-4 relative z-10">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <ShoppingBag className="text-indigo-500" size={20} />
-            Количество проданных товаров
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-700 dark:from-indigo-400 dark:to-blue-400">
+              Количество проданных товаров
+            </span>
           </h3>
         </div>
         
@@ -193,15 +230,16 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
               
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#1F2937",
+                  backgroundColor: "rgba(31, 41, 55, 0.98)",
                   border: "none",
                   borderRadius: "8px",
-                  boxShadow: "0 4px 12px -1px rgba(0, 0, 0, 0.2), 0 2px 6px -1px rgba(0, 0, 0, 0.1)"
+                  boxShadow: "0 4px 12px -1px rgba(0, 0, 0, 0.3), 0 2px 6px -1px rgba(0, 0, 0, 0.2)",
+                  color: "#F9FAFB"
                 }}
                 formatter={(value: number, name: string) => {
                   return [`${value.toLocaleString()} шт.`, name];
                 }}
-                itemStyle={{ padding: "4px 0" }}
+                itemStyle={{ padding: "4px 0", color: "#F9FAFB" }}
               />
               
               <Legend 
@@ -221,7 +259,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                   <Package className="text-white h-6 w-6" />
                 </div>
                 
-                <div className="text-3xl font-bold text-gray-800 dark:text-gray-200">
+                <div className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-purple-700 dark:from-indigo-400 dark:to-purple-400">
                   {totalSales.toLocaleString()}
                 </div>
                 

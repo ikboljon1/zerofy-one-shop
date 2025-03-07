@@ -172,7 +172,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ sales }) => {
                 {shouldDisplayHourly ? 'Продажи по часам' : 'Динамика продаж'}
               </span>
             </CardTitle>
-            <div className="text-xs text-muted-foreground bg-background/80 dark:bg-gray-800/80 px-2 py-1 rounded-full">
+            <div className="text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 dark:bg-indigo-900/50 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-800/60 shadow-sm">
               {shouldDisplayHourly ? 'Почасовая статистика' : 'Ежедневная статистика'}
             </div>
           </div>
@@ -201,6 +201,10 @@ const SalesChart: React.FC<SalesChartProps> = ({ sales }) => {
                       <stop offset="5%" stopColor="var(--color-returns)" stopOpacity={0.8}/>
                       <stop offset="95%" stopColor="var(--color-returns)" stopOpacity={0.1}/>
                     </linearGradient>
+                    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feGaussianBlur stdDeviation="4" result="blur" />
+                      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.3} />
                   <XAxis 
@@ -226,7 +230,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ sales }) => {
                     strokeWidth={2}
                     fillOpacity={1}
                     fill="url(#colorRevenue)"
-                    activeDot={{ r: 6, strokeWidth: 0 }}
+                    activeDot={{ r: 8, strokeWidth: 0, style: { filter: 'drop-shadow(0 0 4px var(--color-revenue))' } }}
                   />
                   <Area 
                     type="monotone" 
@@ -236,7 +240,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ sales }) => {
                     strokeWidth={2}
                     fillOpacity={1}
                     fill="url(#colorProfit)"
-                    activeDot={{ r: 6, strokeWidth: 0 }}
+                    activeDot={{ r: 8, strokeWidth: 0, style: { filter: 'drop-shadow(0 0 4px var(--color-profit))' } }}
                   />
                   <Area 
                     type="monotone" 
@@ -246,7 +250,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ sales }) => {
                     strokeWidth={2}
                     fillOpacity={1}
                     fill="url(#colorReturns)"
-                    activeDot={{ r: 6, strokeWidth: 0 }}
+                    activeDot={{ r: 8, strokeWidth: 0, style: { filter: 'drop-shadow(0 0 4px var(--color-returns))' } }}
                   />
                   {!isMobile && !shouldDisplayHourly && (
                     <ReferenceLine
@@ -290,13 +294,17 @@ const SalesChart: React.FC<SalesChartProps> = ({ sales }) => {
                       <stop offset="100%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.7}/>
                     </linearGradient>
                   ))}
+                  <filter id="glow">
+                    <feGaussianBlur stdDeviation="3.5" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                  </filter>
                 </defs>
                 <Pie
                   data={categorySalesData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
+                  innerRadius={70}
+                  outerRadius={110}
                   paddingAngle={4}
                   dataKey="amount"
                   nameKey="name"
@@ -316,6 +324,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ sales }) => {
                       fill={`url(#catGradient-${index})`} 
                       stroke="rgba(255,255,255,0.3)"
                       strokeWidth={2}
+                      style={{ filter: 'url(#glow)' }}
                     />
                   ))}
                 </Pie>
