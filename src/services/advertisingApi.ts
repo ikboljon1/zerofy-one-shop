@@ -375,16 +375,6 @@ export const getAllCampaigns = async (apiKey: string): Promise<Campaign[]> => {
   }
 };
 
-export interface Campaign {
-  advertId: number;
-  campName: string;
-  status: 'active' | 'paused' | 'archived' | 'ready' | 'completed';
-  type: 'auction' | 'automatic';
-  numericStatus?: number;
-  numericType?: number;
-  changeTime?: string;
-}
-
 export const setExcludedKeywords = async (
   apiKey: string,
   campaignId: number,
