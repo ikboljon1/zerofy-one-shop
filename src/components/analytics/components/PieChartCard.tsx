@@ -9,6 +9,7 @@ import {
   Tooltip
 } from "recharts";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface PieChartCardProps {
   title: string;
@@ -56,6 +57,9 @@ const PieChartCard = ({
     return formatCurrency(Math.round(value * 100) / 100);
   };
 
+  // Определяем, нужно ли делать список скроллируемым (если больше 5 элементов)
+  const needScroll = filteredData && filteredData.length > 5;
+
   return (
     <Card className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -89,28 +93,58 @@ const PieChartCard = ({
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="space-y-4">
-            {filteredData.map((item, index) => (
-              <div key={index} className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div 
-                    className="w-3 h-3 rounded-full mr-2" 
-                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                  ></div>
-                  <span className="text-sm">{item.name}</span>
-                </div>
-                <div className="text-right">
-                  <span className={`font-medium ${item.isNegative || item.value < 0 ? 'text-red-500' : ''}`}>
-                    {item.isNegative || item.value < 0 ? '-' : ''}{formatDecimal(Math.abs(item.value))} {valueLabel}
-                  </span>
-                  {showCount && item.count !== undefined && (
-                    <div className="text-xs text-muted-foreground">
-                      Кол-во: {item.count}
+          <div className={needScroll ? "relative" : "space-y-4"}>
+            {needScroll ? (
+              <ScrollArea className="h-[200px] pr-4">
+                <div className="space-y-4 pr-2">
+                  {filteredData.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div 
+                          className="w-3 h-3 rounded-full mr-2" 
+                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                        ></div>
+                        <span className="text-sm">{item.name}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className={`font-medium ${item.isNegative || item.value < 0 ? 'text-red-500' : ''}`}>
+                          {item.isNegative || item.value < 0 ? '-' : ''}{formatDecimal(Math.abs(item.value))} {valueLabel}
+                        </span>
+                        {showCount && item.count !== undefined && (
+                          <div className="text-xs text-muted-foreground">
+                            Кол-во: {item.count}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
+                  ))}
                 </div>
-              </div>
-            ))}
+              </ScrollArea>
+            ) : (
+              <>
+                {filteredData.map((item, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div 
+                        className="w-3 h-3 rounded-full mr-2" 
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      ></div>
+                      <span className="text-sm">{item.name}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className={`font-medium ${item.isNegative || item.value < 0 ? 'text-red-500' : ''}`}>
+                        {item.isNegative || item.value < 0 ? '-' : ''}{formatDecimal(Math.abs(item.value))} {valueLabel}
+                      </span>
+                      {showCount && item.count !== undefined && (
+                        <div className="text-xs text-muted-foreground">
+                          Кол-во: {item.count}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         </div>
       ) : (
