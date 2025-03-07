@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -14,6 +14,13 @@ import {
 } from "@/components/ui/pagination";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ReportDetail {
   realizationreport_id: number;
@@ -100,21 +107,41 @@ const FinancialReport: React.FC<FinancialReportProps> = ({ data, isLoading, peri
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("detailed");
+  const [docTypeFilter, setDocTypeFilter] = useState<string>("all");
   
   const itemsPerPage = 10;
   
-  const filteredData = data.filter(item => {
-    if (search === "") return true;
-    
-    const searchLower = search.toLowerCase();
-    return (
-      item.sa_name?.toLowerCase().includes(searchLower) ||
-      item.doc_type_name?.toLowerCase().includes(searchLower) ||
-      item.subject_name?.toLowerCase().includes(searchLower) ||
-      item.brand_name?.toLowerCase().includes(searchLower) ||
-      item.office_name?.toLowerCase().includes(searchLower)
-    );
-  });
+  // Get unique doc_type_name values for the filter dropdown
+  const docTypes = useMemo(() => {
+    const types = new Set<string>();
+    data.forEach(item => {
+      if (item.doc_type_name) {
+        types.add(item.doc_type_name);
+      }
+    });
+    return Array.from(types);
+  }, [data]);
+  
+  const filteredData = useMemo(() => {
+    return data.filter(item => {
+      // Filter by doc_type
+      if (docTypeFilter !== "all" && item.doc_type_name !== docTypeFilter) {
+        return false;
+      }
+      
+      // Filter by search
+      if (search === "") return true;
+      
+      const searchLower = search.toLowerCase();
+      return (
+        item.sa_name?.toLowerCase().includes(searchLower) ||
+        item.doc_type_name?.toLowerCase().includes(searchLower) ||
+        item.subject_name?.toLowerCase().includes(searchLower) ||
+        item.brand_name?.toLowerCase().includes(searchLower) ||
+        item.office_name?.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [data, docTypeFilter, search]);
   
   const totalItems = filteredData.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -123,6 +150,11 @@ const FinancialReport: React.FC<FinancialReportProps> = ({ data, isLoading, peri
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+  
+  // Reset pagination when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [docTypeFilter, search]);
   
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -279,13 +311,29 @@ const FinancialReport: React.FC<FinancialReportProps> = ({ data, isLoading, peri
           </TabsContent>
           
           <TabsContent value="detailed">
-            <div className="mb-4">
+            <div className={`mb-4 ${isMobile ? 'space-y-2' : 'flex items-center gap-4'}`}>
               <Input 
                 placeholder="Поиск по отчету..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="max-w-sm"
+                className={isMobile ? "w-full" : "max-w-sm"}
               />
+              
+              <div className={isMobile ? "w-full" : "w-[180px]"}>
+                <Select value={docTypeFilter} onValueChange={setDocTypeFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Тип документа" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все типы</SelectItem>
+                    {docTypes.map(type => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
             <div className={`overflow-x-auto ${isMobile ? "-mx-4 px-4" : ""}`}>

@@ -14,6 +14,7 @@ export type FinancialPeriod = "week" | "2weeks" | "month" | "quarter" | "year";
 interface FinancialPeriodSelectorProps {
   value: FinancialPeriod;
   onChange: (value: FinancialPeriod) => void;
+  className?: string;
 }
 
 const FINANCIAL_PERIOD_LABELS = {
@@ -24,11 +25,11 @@ const FINANCIAL_PERIOD_LABELS = {
   year: "Год",
 };
 
-const FinancialPeriodSelector = ({ value, onChange }: FinancialPeriodSelectorProps) => {
+const FinancialPeriodSelector = ({ value, onChange, className }: FinancialPeriodSelectorProps) => {
   const isMobile = useIsMobile();
   
   return (
-    <div className={`${isMobile ? 'w-full' : 'w-[180px]'} flex-shrink-0`}>
+    <div className={`${isMobile ? 'w-full' : 'w-[180px]'} flex-shrink-0 ${className || ''}`}>
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger className="w-full h-10">
           <SelectValue placeholder="Выберите период" />
