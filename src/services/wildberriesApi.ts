@@ -1,8 +1,76 @@
 
-import { demoData, demoReportData } from "./demoData";
+import { demoData, demoReportData, demoOrdersData, demoSalesData } from "./demoData";
+
+// Export WildberriesResponse type for use in other files
+export interface WildberriesResponse {
+  currentPeriod: {
+    sales: number;
+    transferred: number;
+    expenses: {
+      total: number;
+      logistics: number;
+      storage: number;
+      penalties: number;
+      advertising: number;
+      acceptance: number;
+      deductions?: number;
+    };
+    netProfit: number;
+    acceptance: number;
+  };
+  dailySales: Array<{
+    date: string;
+    sales: number;
+    previousSales: number;
+  }>;
+  productSales: Array<{
+    subject_name: string;
+    quantity: number;
+  }>;
+  productReturns: Array<{
+    name: string;
+    value: number;
+    count?: number;
+  }>;
+  penaltiesData?: Array<{
+    name: string;
+    value: number;
+  }>;
+  deductionsData?: Array<{
+    name: string;
+    value: number;
+    count?: number;
+    isNegative?: boolean;
+    items?: Array<{
+      nm_id?: string | number;
+      bonus_type_name?: string;
+      value: number;
+    }>;
+  }>;
+  topProfitableProducts?: Array<{
+    name: string;
+    price: string;
+    profit: string;
+    image: string;
+    quantitySold?: number;
+    margin?: number;
+    returnCount?: number;
+    category?: string;
+  }>;
+  topUnprofitableProducts?: Array<{
+    name: string;
+    price: string;
+    profit: string;
+    image: string;
+    quantitySold?: number;
+    margin?: number;
+    returnCount?: number;
+    category?: string;
+  }>;
+}
 
 // Fetch Wildberries statistics
-export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
+export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, dateTo: Date): Promise<WildberriesResponse> => {
   console.log('Fetching Wildberries statistics for period:', { 
     dateFrom: dateFrom.toISOString(), 
     dateTo: dateTo.toISOString() 
@@ -79,7 +147,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
 };
 
 // Process report data to extract useful statistics
-const processReportData = (reportData: any[]) => {
+const processReportData = (reportData: any[]): WildberriesResponse => {
   console.log(`Processing ${reportData.length} records from Wildberries API`);
   
   // Initialize metrics
@@ -221,7 +289,7 @@ const processReportData = (reportData: any[]) => {
       totalPenalty += record.penalty;
     }
     
-    // Process deductions - following the Python logic
+    // Process deductions - improved to match Python example
     if (record.deduction !== undefined && record.deduction !== null) {
       deductionRecordsCount++;
       
@@ -360,8 +428,34 @@ const processReportData = (reportData: any[]) => {
   };
 };
 
+// Fetch Wildberries Orders
+export const fetchWildberriesOrders = async (apiKey: string, dateFrom: Date): Promise<any[]> => {
+  console.log('Fetching Wildberries orders for period starting:', dateFrom.toISOString());
+  try {
+    // Implementation would be similar to fetchWildberriesStats
+    // For now, return demo data
+    return demoOrdersData;
+  } catch (error) {
+    console.error('Error fetching Wildberries orders:', error);
+    return demoOrdersData;
+  }
+};
+
+// Fetch Wildberries Sales
+export const fetchWildberriesSales = async (apiKey: string, dateFrom: Date): Promise<any[]> => {
+  console.log('Fetching Wildberries sales for period starting:', dateFrom.toISOString());
+  try {
+    // Implementation would be similar to fetchWildberriesStats
+    // For now, return demo data
+    return demoSalesData;
+  } catch (error) {
+    console.error('Error fetching Wildberries sales:', error);
+    return demoSalesData;
+  }
+};
+
 // Dummy function to get demo data
-const getDemoData = () => {
+const getDemoData = (): WildberriesResponse => {
   console.log('Using demo data');
   return demoData;
 };
