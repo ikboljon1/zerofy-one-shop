@@ -1,6 +1,6 @@
 
 import { Card } from "@/components/ui/card";
-import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, BadgePercent } from "lucide-react";
+import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, BadgePercent, CoinsIcon } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 interface ExpenseBreakdownProps {
@@ -28,17 +28,26 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
   const acceptanceAmount = data.currentPeriod.expenses.acceptance || 0;
   const deductionsAmount = data.currentPeriod.expenses.deductions || 0;
   
-  // Общая сумма расходов для расчета процентов
+  // Determine if deductions are positive or negative for UI representation
+  const isDeductionsPositive = deductionsAmount >= 0;
+  const deductionsLabel = isDeductionsPositive ? "Прочие удержания" : "Компенсации";
+  const deductionsColor = isDeductionsPositive ? 
+    "from-orange-50 to-white dark:from-orange-950/20 dark:to-background border-orange-200 dark:border-orange-800" : 
+    "from-green-50 to-white dark:from-green-950/20 dark:to-background border-green-200 dark:border-green-800";
+  const deductionsIconColor = isDeductionsPositive ? 
+    "bg-orange-100 dark:bg-orange-900/60 text-orange-600 dark:text-orange-400" : 
+    "bg-green-100 dark:bg-green-900/60 text-green-600 dark:text-green-400";
+  
+  // Общая сумма расходов для расчета процентов (используем абсолютные значения для процентов)
   const totalExpenses = data.currentPeriod.expenses.total;
 
-  // Рассчитываем штрафы и удержания для отображения
+  // Рассчитываем штрафы для отображения
   const penaltiesAmount = data.currentPeriod.expenses.penalties;
-  const penaltiesAndDeductionsTotal = penaltiesAmount + deductionsAmount;
 
   return (
     <Card className="p-6">
       <h3 className="text-lg font-semibold mb-6">Структура расходов</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
         <div className="flex flex-col bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background border border-purple-200 dark:border-purple-800 rounded-xl p-6">
           <div className="flex justify-between items-center mb-2">
             <h4 className="text-base font-medium">Логистика</h4>
@@ -48,7 +57,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           </div>
           <p className="text-2xl font-bold">{formatCurrency(data.currentPeriod.expenses.logistics)}</p>
           <span className="text-xs text-muted-foreground mt-1">
-            {totalExpenses > 0 ? ((data.currentPeriod.expenses.logistics / totalExpenses) * 100).toFixed(1) : '0'}% от общих расходов
+            {totalExpenses > 0 ? ((Math.abs(data.currentPeriod.expenses.logistics) / Math.abs(totalExpenses)) * 100).toFixed(1) : '0'}% от общих расходов
           </span>
           <div className="mt-4 pt-4 border-t border-purple-200 dark:border-purple-800/50">
             <div className="space-y-2">
@@ -73,7 +82,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           </div>
           <p className="text-2xl font-bold">{formatCurrency(data.currentPeriod.expenses.storage)}</p>
           <span className="text-xs text-muted-foreground mt-1">
-            {totalExpenses > 0 ? ((data.currentPeriod.expenses.storage / totalExpenses) * 100).toFixed(1) : '0'}% от общих расходов
+            {totalExpenses > 0 ? ((Math.abs(data.currentPeriod.expenses.storage) / Math.abs(totalExpenses)) * 100).toFixed(1) : '0'}% от общих расходов
           </span>
           <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-800/50">
             <div className="space-y-2">
@@ -87,14 +96,14 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
 
         <div className="flex flex-col bg-gradient-to-br from-red-50 to-white dark:from-red-950/20 dark:to-background border border-red-200 dark:border-red-800 rounded-xl p-6">
           <div className="flex justify-between items-center mb-2">
-            <h4 className="text-base font-medium">Штрафы и удержания</h4>
+            <h4 className="text-base font-medium">Штрафы</h4>
             <div className="bg-red-100 dark:bg-red-900/60 p-2 rounded-md">
               <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
             </div>
           </div>
-          <p className="text-2xl font-bold">{formatCurrency(penaltiesAndDeductionsTotal)}</p>
+          <p className="text-2xl font-bold">{formatCurrency(penaltiesAmount)}</p>
           <span className="text-xs text-muted-foreground mt-1">
-            {totalExpenses > 0 ? ((penaltiesAndDeductionsTotal / totalExpenses) * 100).toFixed(1) : '0'}% от общих расходов
+            {totalExpenses > 0 ? ((Math.abs(penaltiesAmount) / Math.abs(totalExpenses)) * 100).toFixed(1) : '0'}% от общих расходов
           </span>
           <div className="mt-4 pt-4 border-t border-red-200 dark:border-red-800/50">
             <div className="space-y-2">
@@ -103,12 +112,8 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
                 <span className="font-medium">{formatCurrency(penaltiesAmount * 0.35)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span>Прочие удержания</span>
-                <span className="font-medium">{formatCurrency(deductionsAmount)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
                 <span>Нарушение правил</span>
-                <span className="font-medium">{formatCurrency(penaltiesAmount * 0.35)}</span>
+                <span className="font-medium">{formatCurrency(penaltiesAmount * 0.65)}</span>
               </div>
             </div>
           </div>
@@ -123,7 +128,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           </div>
           <p className="text-2xl font-bold">{formatCurrency(advertisingAmount)}</p>
           <span className="text-xs text-muted-foreground mt-1">
-            {totalExpenses > 0 ? ((advertisingAmount / totalExpenses) * 100).toFixed(1) : '0'}% от общих расходов
+            {totalExpenses > 0 ? ((Math.abs(advertisingAmount) / Math.abs(totalExpenses)) * 100).toFixed(1) : '0'}% от общих расходов
           </span>
           <div className="mt-4 pt-4 border-t border-amber-200 dark:border-amber-800/50">
             <div className="space-y-2">
@@ -144,13 +149,35 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           </div>
           <p className="text-2xl font-bold">{formatCurrency(acceptanceAmount)}</p>
           <span className="text-xs text-muted-foreground mt-1">
-            {totalExpenses > 0 ? ((acceptanceAmount / totalExpenses) * 100).toFixed(1) : '0'}% от общих расходов
+            {totalExpenses > 0 ? ((Math.abs(acceptanceAmount) / Math.abs(totalExpenses)) * 100).toFixed(1) : '0'}% от общих расходов
           </span>
           <div className="mt-4 pt-4 border-t border-green-200 dark:border-green-800/50">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Платная приемка</span>
                 <span className="font-medium">{formatCurrency(acceptanceAmount)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* New card for deductions with dynamic styling based on value */}
+        <div className={`flex flex-col bg-gradient-to-br ${deductionsColor} rounded-xl p-6`}>
+          <div className="flex justify-between items-center mb-2">
+            <h4 className="text-base font-medium">{deductionsLabel}</h4>
+            <div className={`${deductionsIconColor.split(" ")[0]} p-2 rounded-md`}>
+              <CoinsIcon className={`h-4 w-4 ${deductionsIconColor.split(" ")[2]}`} />
+            </div>
+          </div>
+          <p className="text-2xl font-bold">{formatCurrency(deductionsAmount)}</p>
+          <span className="text-xs text-muted-foreground mt-1">
+            {totalExpenses > 0 ? ((Math.abs(deductionsAmount) / Math.abs(totalExpenses)) * 100).toFixed(1) : '0'}% от общих расходов
+          </span>
+          <div className="mt-4 pt-4 border-t border-orange-200 dark:border-orange-800/50">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>{isDeductionsPositive ? "Прочие удержания" : "Компенсации платформы"}</span>
+                <span className="font-medium">{formatCurrency(deductionsAmount)}</span>
               </div>
             </div>
           </div>

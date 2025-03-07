@@ -21,6 +21,15 @@ export function StoreCard({
   onRefreshStats,
   isLoading 
 }: StoreCardProps) {
+  // Calculate net profit correctly considering deductions might be positive or negative
+  const netProfit = store.stats?.currentPeriod.netProfit || 0;
+  
+  // Check if there are deductions to display
+  const hasDeductions = store.stats?.currentPeriod.expenses.deductions !== undefined;
+  const deductionsAmount = store.stats?.currentPeriod.expenses.deductions || 0;
+  const isDeductionsPositive = deductionsAmount >= 0;
+  const deductionsLabel = isDeductionsPositive ? "Удержания:" : "Компенсации:";
+  
   return (
     <Card className={store.isSelected ? "border-primary" : ""}>
       <CardHeader className="pb-2">
@@ -63,9 +72,19 @@ export function StoreCard({
                 <span className="text-muted-foreground">Расходы:</span>
                 <span className="font-medium">{formatCurrency(store.stats.currentPeriod.expenses.total)}</span>
               </div>
+              {hasDeductions && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{deductionsLabel}</span>
+                  <span className={`font-medium ${isDeductionsPositive ? "" : "text-green-600"}`}>
+                    {formatCurrency(Math.abs(deductionsAmount))}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Чистая прибыль:</span>
-                <span className="font-medium">{formatCurrency(store.stats.currentPeriod.netProfit)}</span>
+                <span className={`font-medium ${netProfit >= 0 ? "" : "text-destructive"}`}>
+                  {formatCurrency(netProfit)}
+                </span>
               </div>
             </>
           )}
