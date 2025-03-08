@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   name: string;
@@ -203,10 +204,10 @@ export const registerUser = async (
     name,
     email,
     password,
-    tariffId: '3',
+    tariffId: '3', // During trial, user gets Premium tariff
     isSubscriptionActive: false,
     isInTrial: true,
-    trialEndDate: new Date(new Date().setDate(new Date().getDate() + 3)).toISOString(),
+    trialEndDate: new Date(new Date().setDate(new Date().getDate() + 3)).toISOString(), // 3 days trial
     avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name.replace(/\s+/g, '')}`,
     role: 'user',
     status: 'active',
@@ -256,13 +257,24 @@ export const activateSubscription = async (
     ...user,
     tariffId,
     isSubscriptionActive: true,
-    isInTrial: false,
+    isInTrial: false, // Deactivate trial when subscription is activated
     trialEndDate: undefined,
     subscriptionEndDate: endDate.toISOString()
   };
   
   users[userIndex] = updatedUser;
   localStorage.setItem('users', JSON.stringify(users));
+  
+  // Add payment record
+  const tariffPrices: Record<string, number> = {
+    '1': 990,
+    '2': 1990,
+    '3': 4990,
+    '4': 9990
+  };
+  
+  const amount = tariffPrices[tariffId] * months;
+  await addPaymentRecord(userId, tariffId, amount, months);
   
   return { 
     success: true, 
@@ -320,7 +332,7 @@ export const getSubscriptionStatus = (user: User): SubscriptionData => {
       status: 'trial',
       endDate: user.trialEndDate,
       daysRemaining: getTrialDaysRemaining(user),
-      tariffId: '3'
+      tariffId: '3'  // Always Premium during trial
     };
   }
   
