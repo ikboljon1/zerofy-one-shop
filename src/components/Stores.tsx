@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { ShoppingBag, Store } from "lucide-react";
+import { ShoppingBag, Store, Package2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Store as StoreType, NewStore, STATS_STORAGE_KEY } from "@/types/store";
@@ -8,6 +8,7 @@ import { loadStores, saveStores, refreshStoreStats } from "@/utils/storeUtils";
 import { AddStoreDialog } from "./stores/AddStoreDialog";
 import { StoreCard } from "./stores/StoreCard";
 import { getSubscriptionStatus } from "@/services/userService";
+import { Badge } from "@/components/ui/badge";
 
 interface StoresProps {
   onStoreSelect?: (store: { id: string; apiKey: string }) => void;
@@ -18,6 +19,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [canDeleteStores, setCanDeleteStores] = useState(false);
+  const [storeLimit, setStoreLimit] = useState<number>(1); // Default to 1
   const { toast } = useToast();
 
   useEffect(() => {
@@ -25,6 +27,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       const savedStores = loadStores();
       setStores(savedStores);
       checkDeletePermissions();
+      getStoreLimitFromTariff();
     } catch (error) {
       console.error("Ошибка загрузки магазинов:", error);
       toast({
@@ -34,6 +37,37 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       });
     }
   }, []);
+
+  const getStoreLimitFromTariff = () => {
+    // Get user data from localStorage
+    const userData = localStorage.getItem('user');
+    if (!userData) return;
+    
+    try {
+      const user = JSON.parse(userData);
+      
+      // Set store limit based on tariff
+      switch (user.tariffId) {
+        case "1": // Базовый
+          setStoreLimit(1);
+          break;
+        case "2": // Профессиональный
+          setStoreLimit(3);
+          break;
+        case "3": // Бизнес
+          setStoreLimit(10);
+          break;
+        case "4": // Корпоративный
+          setStoreLimit(999); // Practically unlimited
+          break;
+        default:
+          setStoreLimit(1); // Default to basic plan
+      }
+    } catch (error) {
+      console.error("Ошибка при получении лимита магазинов:", error);
+      setStoreLimit(1); // Default to basic plan on error
+    }
+  };
 
   const checkDeletePermissions = async () => {
     // Get current user from localStorage
@@ -68,6 +102,16 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       toast({
         title: "Ошибка",
         description: "Пожалуйста, заполните все поля",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if store limit has been reached
+    if (stores.length >= storeLimit) {
+      toast({
+        title: "Ограничение тарифа",
+        description: `Ваш тариф позволяет добавить максимум ${storeLimit} ${storeLimit === 1 ? 'магазин' : storeLimit < 5 ? 'магазина' : 'магазинов'}. Перейдите на более высокий тариф для добавления большего количества магазинов.`,
         variant: "destructive",
       });
       return;
@@ -219,12 +263,20 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         <div className="flex items-center gap-2">
           <ShoppingBag className="h-5 w-5" />
           <h2 className="text-xl font-semibold">Магазины</h2>
+          
+          {/* Store count indicator */}
+          <Badge variant="outline" className="flex items-center gap-1.5 ml-2 bg-blue-950/30 text-blue-400 border-blue-800">
+            <Package2 className="h-3.5 w-3.5" />
+            <span>{stores.length}/{storeLimit}</span>
+          </Badge>
         </div>
         <AddStoreDialog
           isOpen={isOpen}
           isLoading={isLoading}
           onOpenChange={setIsOpen}
           onAddStore={handleAddStore}
+          storeCount={stores.length}
+          storeLimit={storeLimit}
         />
       </div>
 
@@ -233,6 +285,11 @@ export default function Stores({ onStoreSelect }: StoresProps) {
           <CardContent className="flex flex-col items-center justify-center py-8 text-center">
             <Store className="h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-muted-foreground">У вас пока нет добавленных магазинов</p>
+            {storeLimit > 0 && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Ваш текущий тариф позволяет добавить до {storeLimit} {storeLimit === 1 ? 'магазина' : storeLimit < 5 ? 'магазина' : 'магазинов'}
+              </p>
+            )}
           </CardContent>
         </Card>
       ) : (

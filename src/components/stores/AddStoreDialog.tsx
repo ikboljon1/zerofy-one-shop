@@ -1,269 +1,151 @@
-import { useState } from "react";
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
+import React, { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { NewStore, marketplaces, Marketplace } from "@/types/store";
-import { useToast } from "@/hooks/use-toast";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
-import { canAddStore, incrementStoreCount, getSubscriptionStatus } from "@/services/userService";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NewStore, marketplaces } from "@/types/store";
+import { PlusCircle, ShoppingBag, AlertTriangle, Package2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 
 interface AddStoreDialogProps {
   isOpen: boolean;
   isLoading: boolean;
   onOpenChange: (open: boolean) => void;
   onAddStore: (store: NewStore) => void;
+  storeCount: number;
+  storeLimit: number;
 }
 
-export function AddStoreDialog({ isOpen, isLoading, onOpenChange, onAddStore }: AddStoreDialogProps) {
-  const [newStore, setNewStore] = useState<NewStore>({});
-  const [isCheckingLimit, setIsCheckingLimit] = useState(false);
-  const [limitError, setLimitError] = useState<string | null>(null);
-  const [subscriptionInfo, setSubscriptionInfo] = useState<{
-    isActive: boolean;
-    daysRemaining: number;
-    endDate?: string;
-    tariffId?: string;
-  } | null>(null);
-  const { toast } = useToast();
+export function AddStoreDialog({ 
+  isOpen, 
+  isLoading, 
+  onOpenChange, 
+  onAddStore,
+  storeCount,
+  storeLimit
+}: AddStoreDialogProps) {
+  const [storeName, setStoreName] = useState("");
+  const [marketplace, setMarketplace] = useState<string>("");
+  const [apiKey, setApiKey] = useState("");
 
-  const getCurrentUserId = (): string | null => {
-    const userData = localStorage.getItem('user');
-    if (!userData) return null;
-    
-    try {
-      const user = JSON.parse(userData);
-      return user.id;
-    } catch (e) {
-      return null;
-    }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onAddStore({
+      name: storeName,
+      marketplace: marketplace as any,
+      apiKey,
+    });
+  };
+
+  const resetForm = () => {
+    setStoreName("");
+    setMarketplace("");
+    setApiKey("");
   };
 
   const handleOpenChange = (open: boolean) => {
-    if (open) {
-      checkStoreLimit();
-    } else {
-      setNewStore({});
-      setLimitError(null);
+    if (!open) {
+      resetForm();
     }
     onOpenChange(open);
   };
 
-  const checkStoreLimit = async () => {
-    const userId = getCurrentUserId();
-    
-    if (!userId) {
-      setLimitError("Пользователь не авторизован");
-      return;
-    }
-
-    setIsCheckingLimit(true);
-    try {
-      const subscription = await getSubscriptionStatus(userId);
-      setSubscriptionInfo(subscription);
-      
-      const result = await canAddStore(userId);
-      
-      if (!result.allowed) {
-        setLimitError(result.message || "Достигнут лимит магазинов для вашего тарифа");
-      } else {
-        setLimitError(null);
-      }
-    } catch (error) {
-      console.error("Error checking store limit:", error);
-      setLimitError("Не удалось проверить лимит магазинов");
-    } finally {
-      setIsCheckingLimit(false);
-    }
-  };
-
-  const handleSubmit = async () => {
-    const userId = getCurrentUserId();
-    
-    if (!userId) {
-      toast({
-        title: "Ошибка",
-        description: "Пользователь не авторизован",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const limitCheck = await canAddStore(userId);
-      
-      if (!limitCheck.allowed) {
-        setLimitError(limitCheck.message || "Достигнут лимит магазинов для вашего тарифа");
-        return;
-      }
-
-      const subscription = await getSubscriptionStatus(userId);
-      if (!subscription.isActive) {
-        setLimitError("Подписка неактивна. Пожалуйста, обновите тариф");
-        return;
-      }
-
-      await incrementStoreCount(userId);
-      
-      onAddStore(newStore);
-      
-      toast({
-        title: "Магазин добавлен",
-        description: "Магазин успешно добавлен в вашу учетную запись",
-      });
-    } catch (error) {
-      toast({
-        title: "Ошибка",
-        description: "Не удалось добавить магазин",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const hasMinimumSubscriptionPeriodPassed = (): boolean => {
-    if (!subscriptionInfo || !subscriptionInfo.endDate) return false;
-    
-    const subscriptionEndDate = new Date(subscriptionInfo.endDate);
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-    
-    return subscriptionEndDate.getTime() - oneMonthAgo.getTime() < 0;
-  };
-
-  const getSubscriptionPeriodErrorText = (): string => {
-    if (!subscriptionInfo || !subscriptionInfo.endDate) return "Информация о подписке недоступна";
-
-    const endDate = new Date(subscriptionInfo.endDate);
-    const formattedDate = endDate.toLocaleDateString('ru-RU');
-    return `Вы не можете удалить магазин до истечения минимального срока подписки. Подписка действует до ${formattedDate}`;
-  };
+  const isAtStoreLimit = storeCount >= storeLimit;
 
   return (
-    <Dialog 
-      open={isOpen} 
-      onOpenChange={handleOpenChange}
-    >
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button disabled={isLoading}>
-          <Plus className="h-4 w-4 mr-2" />
-          Добавить магазин
+        <Button className="gap-2" disabled={isAtStoreLimit}>
+          <PlusCircle className="h-4 w-4" />
+          <span>Добавить магазин</span>
+          {storeCount > 0 && (
+            <Badge variant="outline" className="ml-1 bg-blue-950/30 text-blue-400 border-blue-800">
+              <span>{storeCount}/{storeLimit}</span>
+            </Badge>
+          )}
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Добавить новый магазин</DialogTitle>
-          <DialogDescription>
-            Заполните информацию о магазине ниже.
-          </DialogDescription>
+          <div className="flex items-center gap-2">
+            <ShoppingBag className="h-5 w-5" />
+            <DialogTitle>Добавить новый магазин</DialogTitle>
+          </div>
         </DialogHeader>
         
-        {limitError && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Ограничение тарифа</AlertTitle>
+        {isAtStoreLimit && (
+          <Alert className="bg-yellow-900/20 border-yellow-800/30 text-yellow-300">
+            <AlertTriangle className="h-4 w-4 text-yellow-500" />
             <AlertDescription>
-              {limitError}
-              <div className="mt-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="mt-1"
-                  onClick={() => window.location.href = '/admin#tariffs'}
-                >
-                  Обновить тариф
-                </Button>
-              </div>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {subscriptionInfo && !hasMinimumSubscriptionPeriodPassed() && (
-          <Alert variant="default" className="mb-4 bg-yellow-900/30 border-yellow-800/30 text-yellow-300">
-            <AlertCircle className="h-4 w-4 text-yellow-500" />
-            <AlertTitle>Важная информация</AlertTitle>
-            <AlertDescription>
-              Удаление магазинов будет доступно только через 1 месяц после активации тарифа.
+              Вы достигли лимита магазинов ({storeLimit}) для вашего тарифа. Перейдите на более высокий тариф, чтобы добавить больше магазинов.
             </AlertDescription>
           </Alert>
         )}
         
-        <div className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label htmlFor="marketplace">Маркетплейс</Label>
-            <Select
-              value={newStore.marketplace}
-              onValueChange={(value: Marketplace) =>
-                setNewStore(prev => ({ ...prev, marketplace: value }))
-              }
-              disabled={!!limitError}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Выберите маркетплейс" />
-              </SelectTrigger>
-              <SelectContent>
-                {marketplaces.map((marketplace) => (
-                  <SelectItem key={marketplace} value={marketplace}>
-                    {marketplace}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="name">Название магазина</Label>
-            <Input
-              id="name"
-              value={newStore.name || ""}
-              onChange={(e) => setNewStore(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="Введите название магазина"
-              disabled={!!limitError}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="apiKey">API ключ</Label>
-            <Input
-              id="apiKey"
-              value={newStore.apiKey || ""}
-              onChange={(e) => setNewStore(prev => ({ ...prev, apiKey: e.target.value }))}
-              type="password"
-              placeholder="Введите API ключ"
-              disabled={!!limitError}
-            />
-          </div>
-          
-          <DialogFooter className="pt-4">
-            <Button 
-              variant="outline" 
-              onClick={() => onOpenChange(false)}
-            >
-              Отмена
-            </Button>
-            <Button 
-              className="w-full" 
-              onClick={handleSubmit}
-              disabled={isLoading || !!limitError || !newStore.name || !newStore.marketplace}
-            >
-              {isLoading ? "Добавление..." : "Добавить"}
-            </Button>
-          </DialogFooter>
-        </div>
+        {!isAtStoreLimit && (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="name">Название магазина</Label>
+                <Badge variant="outline" className="flex items-center gap-1.5 bg-blue-950/30 text-blue-400 border-blue-800">
+                  <Package2 className="h-3.5 w-3.5" />
+                  <span>{storeCount}/{storeLimit}</span>
+                </Badge>
+              </div>
+              <Input
+                id="name"
+                value={storeName}
+                onChange={(e) => setStoreName(e.target.value)}
+                placeholder="Введите название магазина"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="marketplace">Маркетплейс</Label>
+              <Select value={marketplace} onValueChange={setMarketplace}>
+                <SelectTrigger id="marketplace">
+                  <SelectValue placeholder="Выберите маркетплейс" />
+                </SelectTrigger>
+                <SelectContent>
+                  {marketplaces.map((mp) => (
+                    <SelectItem key={mp} value={mp}>
+                      {mp}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="apiKey">API ключ</Label>
+              <Input
+                id="apiKey"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="Введите API ключ"
+              />
+            </div>
+            
+            {!isLoading && (
+              <Alert variant="default" className="bg-yellow-900/20 border-yellow-800/30 text-yellow-300">
+                <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                <AlertDescription>
+                  Удаление магазина будет доступно только через 1 месяц после активации тарифа
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            <div className="flex justify-end">
+              <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)} className="mr-2">
+                Отмена
+              </Button>
+              <Button type="submit" disabled={isLoading || !storeName || !marketplace || !apiKey}>
+                {isLoading ? "Добавление..." : "Добавить"}
+              </Button>
+            </div>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );
