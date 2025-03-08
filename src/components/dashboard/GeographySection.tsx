@@ -1,13 +1,11 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { Package, Info, ShoppingBag, MapPin, DollarSign } from "lucide-react";
 import { WildberriesSale } from "@/types/store";
 import { format, subDays } from "date-fns";
-import { productAdvertisingData as defaultProductAdvertisingData } from "@/components/analytics/data/productAdvertisingData";
-import { getAdvertCosts } from "@/services/advertisingApi";
-import PeriodSelector, { Period } from "@/components/dashboard/PeriodSelector";
+import { productAdvertisingData } from "@/components/analytics/data/productAdvertisingData";
 
 interface ProductSalesDistribution {
   name: string;
@@ -19,149 +17,27 @@ interface GeographySectionProps {
   warehouseDistribution: any[];
   regionDistribution: any[];
   sales?: WildberriesSale[];
-  period?: Period;
 }
 
 const COLORS = ["#8B5CF6", "#EC4899", "#10B981", "#FF8042", "#A86EE7"];
 
 // Sample advertising data by date
-const getAdvertisingExpensesByDate = (period: Period = 'week') => {
-  const daysCount = period === 'today' ? 1 : 
-                    period === 'yesterday' ? 1 : 
-                    period === 'week' ? 7 : 
-                    period === '2weeks' ? 14 : 28;
-  
-  return Array.from({ length: daysCount }, (_, i) => ({
-    date: format(subDays(new Date(), daysCount - 1 - i), 'dd.MM'),
-    value: Math.round(1500 + Math.random() * 3000)
-  }));
-};
+const advertisingExpensesByDate = [
+  { date: format(subDays(new Date(), 6), 'dd.MM'), value: 2100 },
+  { date: format(subDays(new Date(), 5), 'dd.MM'), value: 2500 },
+  { date: format(subDays(new Date(), 4), 'dd.MM'), value: 2300 },
+  { date: format(subDays(new Date(), 3), 'dd.MM'), value: 3100 },
+  { date: format(subDays(new Date(), 2), 'dd.MM'), value: 3800 },
+  { date: format(subDays(new Date(), 1), 'dd.MM'), value: 4200 },
+  { date: format(new Date(), 'dd.MM'), value: 3900 }
+];
 
 const GeographySection: React.FC<GeographySectionProps> = ({
   warehouseDistribution,
   regionDistribution,
-  sales = [],
-  period = 'week'
+  sales = []
 }) => {
   const [activeView, setActiveView] = useState<'cabinets' | 'dates'>('cabinets');
-  const [productAdvertisingData, setProductAdvertisingData] = useState(defaultProductAdvertisingData);
-  const [advertisingExpensesByDate, setAdvertisingExpensesByDate] = useState(getAdvertisingExpensesByDate(period));
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Загрузка актуальных данных по рекламе при изменении периода
-  useEffect(() => {
-    const fetchAdvertisingData = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Получаем выбранный магазин из localStorage
-        const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
-        const selectedStore = stores.find((store: any) => store.isSelected);
-        
-        if (!selectedStore?.apiKey) {
-          setAdvertisingExpensesByDate(getAdvertisingExpensesByDate(period));
-          return;
-        }
-        
-        // Определяем даты на основе выбранного периода
-        let dateFrom = new Date();
-        const dateTo = new Date();
-        
-        if (period === 'today') {
-          dateFrom = new Date();
-        } else if (period === 'yesterday') {
-          dateFrom = subDays(new Date(), 1);
-          dateTo.setTime(dateFrom.getTime());
-        } else if (period === 'week') {
-          dateFrom = subDays(new Date(), 6);
-        } else if (period === '2weeks') {
-          dateFrom = subDays(new Date(), 13);
-        } else if (period === '4weeks') {
-          dateFrom = subDays(new Date(), 27);
-        }
-        
-        // Получаем данные о расходах на рекламу через API
-        const advertCosts = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
-        
-        if (advertCosts && advertCosts.length > 0) {
-          // Обработка данных по кабинетам
-          const campaignCosts: Record<string, number> = {};
-          
-          advertCosts.forEach(cost => {
-            if (!campaignCosts[cost.campName]) {
-              campaignCosts[cost.campName] = 0;
-            }
-            campaignCosts[cost.campName] += cost.updSum;
-          });
-          
-          const advertisingDataArray = Object.entries(campaignCosts)
-            .map(([name, value]) => ({ 
-              name, 
-              value: Number(value.toFixed(2)),
-              color: COLORS[Math.floor(Math.random() * COLORS.length)]
-            }))
-            .sort((a, b) => b.value - a.value);
-          
-          let topProducts = advertisingDataArray.slice(0, 4);
-          const otherProducts = advertisingDataArray.slice(4);
-          
-          if (otherProducts.length > 0) {
-            const otherSum = Number(otherProducts.reduce((sum, item) => sum + item.value, 0).toFixed(2));
-            topProducts.push({ 
-              name: "Другие товары", 
-              value: otherSum,
-              color: COLORS[4]
-            });
-          }
-          
-          setProductAdvertisingData(topProducts.length > 0 ? topProducts : defaultProductAdvertisingData);
-          
-          // Обработка данных по датам
-          // Группируем данные по датам
-          const dateMap: Record<string, number> = {};
-          
-          advertCosts.forEach(cost => {
-            const date = cost.updTime.split('T')[0];
-            const formattedDate = format(new Date(date), 'dd.MM');
-            if (!dateMap[formattedDate]) {
-              dateMap[formattedDate] = 0;
-            }
-            dateMap[formattedDate] += cost.updSum;
-          });
-          
-          // Преобразуем в массив для графика
-          const dateExpenses = Object.entries(dateMap)
-            .map(([date, value]) => ({ 
-              date, 
-              value: Number(value.toFixed(2))
-            }))
-            .sort((a, b) => {
-              const dateA = a.date.split('.');
-              const dateB = b.date.split('.');
-              return new Date(`2023-${dateA[1]}-${dateA[0]}`).getTime() - 
-                     new Date(`2023-${dateB[1]}-${dateB[0]}`).getTime();
-            });
-          
-          if (dateExpenses.length > 0) {
-            setAdvertisingExpensesByDate(dateExpenses);
-          } else {
-            setAdvertisingExpensesByDate(getAdvertisingExpensesByDate(period));
-          }
-        } else {
-          setProductAdvertisingData(defaultProductAdvertisingData);
-          setAdvertisingExpensesByDate(getAdvertisingExpensesByDate(period));
-        }
-      } catch (error) {
-        console.error('Error fetching advertising data:', error);
-        setProductAdvertisingData(defaultProductAdvertisingData);
-        setAdvertisingExpensesByDate(getAdvertisingExpensesByDate(period));
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchAdvertisingData();
-  }, [period]);
 
   // Process sales data to get product quantity distribution
   const getProductSalesDistribution = (): ProductSalesDistribution[] => {
@@ -236,7 +112,7 @@ const GeographySection: React.FC<GeographySectionProps> = ({
     const cabinetData = productAdvertisingData.map(item => ({
       name: item.name,
       value: item.value,
-      color: item.color || COLORS[Math.floor(Math.random() * COLORS.length)]
+      color: item.color
     }));
 
     return (
@@ -389,21 +265,15 @@ const GeographySection: React.FC<GeographySectionProps> = ({
             </CardDescription>
           </CardHeader>
           <CardContent className="px-2">
-            {isLoading ? (
-              <div className="flex justify-center items-center h-[280px]">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
+            {activeView === 'cabinets' ? (
+              <>
+                {renderAdvertisingExpensesByCabinet()}
+                <div className="mt-4 px-4">
+                  {renderAdvertisingExpensesList()}
+                </div>
+              </>
             ) : (
-              activeView === 'cabinets' ? (
-                <>
-                  {renderAdvertisingExpensesByCabinet()}
-                  <div className="mt-4 px-4">
-                    {renderAdvertisingExpensesList()}
-                  </div>
-                </>
-              ) : (
-                renderAdvertisingExpensesByDate()
-              )
+              renderAdvertisingExpensesByDate()
             )}
           </CardContent>
         </Card>
