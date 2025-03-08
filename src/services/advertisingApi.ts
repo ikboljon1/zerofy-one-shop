@@ -1,3 +1,4 @@
+
 import { AxiosError } from 'axios';
 import axios from 'axios';
 import { getStatusString, getTypeString } from '@/components/analytics/data/productAdvertisingData';
@@ -200,15 +201,16 @@ export const getAdvertCosts = async (dateFrom: Date, dateTo: Date, apiKey: strin
     
     let costs = response.data || [];
     
+    // Make sure we strictly filter by the date range
     const fromTime = new Date(params.from).getTime();
-    const toTime = new Date(params.to).getTime() + 86400000;
+    const toTime = new Date(params.to).getTime() + 86400000; // Add a day to include the end date
     
     costs = costs.filter((cost: AdvertCost) => {
-      const costTime = new Date(cost.updTime.split('T')[0]).getTime();
+      const costTime = new Date(cost.updTime).getTime();
       return costTime >= fromTime && costTime <= toTime;
     });
     
-    console.log(`Received ${costs.length} advertising costs records`);
+    console.log(`Received ${costs.length} advertising costs records within date range ${params.from} to ${params.to}`);
     
     return costs;
   } catch (error) {
