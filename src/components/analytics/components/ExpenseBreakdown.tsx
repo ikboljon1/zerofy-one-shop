@@ -13,7 +13,7 @@ interface ExpenseBreakdownProps {
         penalties: number;
         advertising: number;
         acceptance: number;
-        deductions?: number; // Add deductions to the interface
+        deductions?: number;
       };
     };
   };
@@ -23,15 +23,16 @@ interface ExpenseBreakdownProps {
 }
 
 const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps) => {
-  // Используем общую сумму расходов на рекламу без разбивки
-  const advertisingAmount = data.currentPeriod.expenses.advertising || 0;
+  // Use the filtered advertising amount from the advertisingBreakdown prop
+  // which should be calculated specifically for the selected date range
+  const advertisingAmount = advertisingBreakdown?.search || 0;
   const acceptanceAmount = data.currentPeriod.expenses.acceptance || 0;
   const deductionsAmount = data.currentPeriod.expenses.deductions || 0;
   
-  // Общая сумма расходов для расчета процентов
+  // Use the filtered advertising amount for calculating total expenses percentage
   const totalExpenses = data.currentPeriod.expenses.total;
 
-  // Рассчитываем штрафы и удержания для отображения
+  // Calculate penalties for display
   const penaltiesAmount = data.currentPeriod.expenses.penalties;
 
   return (
