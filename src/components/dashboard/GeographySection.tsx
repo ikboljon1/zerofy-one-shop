@@ -2,7 +2,7 @@
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
-import { Package, Info, ShoppingBag, MapPin } from "lucide-react";
+import { Package, Info, ShoppingBag } from "lucide-react";
 import { WildberriesSale } from "@/types/store";
 
 interface ProductSalesDistribution {
@@ -133,11 +133,11 @@ const GeographySection: React.FC<GeographySectionProps> = ({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
-              <MapPin className="mr-2 h-5 w-5" />
-              Распределение по складам
+              <Package className="mr-2 h-5 w-5" />
+              Распределение по категориям
             </CardTitle>
             <CardDescription>
-              Топ 5 складов по количеству отправленных товаров
+              Топ 5 категорий по количеству проданных товаров
             </CardDescription>
           </CardHeader>
           <CardContent className="px-2">
@@ -160,13 +160,13 @@ const GeographySection: React.FC<GeographySectionProps> = ({
           <p>Данные собираются из ваших продаж Wildberries с помощью API:</p>
           <ul className="list-disc list-inside space-y-1 ml-2">
             <li>Для проданных товаров мы группируем продажи по названию товара из ответа API</li>
-            <li>Для складов мы используем данные о физическом местоположении складов Wildberries</li>
-            <li>Мы подсчитываем количество каждого товара/склада и расчитываем проценты</li>
-            <li>Диаграммы отображают 5 лучших товаров и 5 наиболее активных складов</li>
+            <li>Для категорий мы используем данные складов, группируя их для наглядности</li>
+            <li>Мы подсчитываем количество каждого товара/категории и расчитываем проценты</li>
+            <li>Диаграммы отображают 5 лучших товаров и категорий по количеству продаж</li>
           </ul>
           <p className="pt-2">
-            Эти данные предоставляют ценную информацию о том, какие товары наиболее популярны у ваших клиентов
-            и из каких складов чаще всего отправляются ваши товары, что помогает оптимизировать логистику.
+            Эти данные предоставляют ценную информацию о том, какие товары наиболее популярны у ваших клиентов,
+            помогая вам оптимизировать ваши товарные запасы и маркетинговые стратегии.
           </p>
         </CardContent>
       </Card>
