@@ -17,9 +17,9 @@ import {
   fetchStocks,
   processStocksByCategory,
   processStocksByWarehouse,
+  WarehouseCoefficient,
   WarehouseData,
   Warehouse,
-  WarehouseCoefficient,
   SupplyOptionsResponse,
   WildberriesStock,
   StocksByCategory,
@@ -31,7 +31,7 @@ import {
   SupplyForm, 
   WarehouseCoefficientsTable, 
   SupplyOptionsResults,
-  InventoryDetails
+  InventoryDetailsAdapter
 } from '@/components/supplies';
 
 import { toast } from '@/hooks/use-toast';
@@ -209,7 +209,7 @@ const Warehouses: React.FC = () => {
       } else {
         toast({
           title: "Успех",
-          description: "Все товары доступны для поставки"
+          description: "Все товары доступны для по��тавки"
         });
       }
     } catch (error) {
@@ -286,7 +286,7 @@ const Warehouses: React.FC = () => {
               <Skeleton className="h-[300px] w-full" />
             </div>
           ) : (
-            <InventoryDetails
+            <InventoryDetailsAdapter
               stocks={stocks}
               categorySummary={categorySummary}
               selectedCategory={selectedCategory}
