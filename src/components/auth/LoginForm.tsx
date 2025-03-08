@@ -53,11 +53,11 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
         
         onSuccess();
         
-        // Redirect to admin panel if role is admin
+        // Redirect to admin panel if role is admin, otherwise to dashboard
         if (result.user?.role === 'admin') {
           navigate("/admin");
         } else {
-          navigate("/");
+          navigate("/dashboard");
         }
       } else {
         toast({
