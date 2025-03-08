@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
@@ -27,6 +28,7 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [period, setPeriod] = useState<Period>("today");
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   
   const [orders, setOrders] = useState<WildberriesOrder[]>([]);
   const [sales, setSales] = useState<WildberriesSale[]>([]);
@@ -130,12 +132,19 @@ const Dashboard = () => {
         return;
       }
 
+      // Проверяем, изменился ли выбранный магазин
+      if (selectedStore.id !== selectedStoreId) {
+        setSelectedStoreId(selectedStore.id);
+      }
+
+      // Всегда запрашиваем новые данные
       const ordersResult = await fetchAndUpdateOrders(selectedStore);
       if (ordersResult) {
         setOrders(ordersResult.orders);
         setWarehouseDistribution(ordersResult.warehouseDistribution);
         setRegionDistribution(ordersResult.regionDistribution);
       } else {
+        // Если не удалось получить данные, пробуем загрузить из временного хранилища
         const savedOrdersData = getOrdersData(selectedStore.id);
         if (savedOrdersData) {
           setOrders(savedOrdersData.orders || []);
@@ -148,6 +157,7 @@ const Dashboard = () => {
       if (salesResult) {
         setSales(salesResult);
       } else {
+        // Если не удалось получить данные, пробуем загрузить из временного хранилища
         const savedSalesData = getSalesData(selectedStore.id);
         if (savedSalesData) {
           setSales(savedSalesData.sales || []);
@@ -175,21 +185,13 @@ const Dashboard = () => {
     const selectedStore = stores.find(s => s.isSelected);
     
     if (selectedStore) {
-      const savedOrdersData = getOrdersData(selectedStore.id);
-      if (savedOrdersData) {
-        setOrders(savedOrdersData.orders || []);
-        setWarehouseDistribution(savedOrdersData.warehouseDistribution || []);
-        setRegionDistribution(savedOrdersData.regionDistribution || []);
+      // Устанавливаем ID выбранного магазина
+      if (selectedStore.id !== selectedStoreId) {
+        setSelectedStoreId(selectedStore.id);
       }
-
-      const savedSalesData = getSalesData(selectedStore.id);
-      if (savedSalesData) {
-        setSales(savedSalesData.sales || []);
-      }
-
-      if (!savedOrdersData || !savedSalesData) {
-        fetchData();
-      }
+      
+      // Запрашиваем данные при первой загрузке
+      fetchData();
     }
 
     const refreshInterval = setInterval(() => {
@@ -199,6 +201,13 @@ const Dashboard = () => {
 
     return () => clearInterval(refreshInterval);
   }, []);
+
+  // При изменении ID выбранного магазина обновляем данные
+  useEffect(() => {
+    if (selectedStoreId) {
+      fetchData();
+    }
+  }, [selectedStoreId]);
 
   return (
     <div className="space-y-4">

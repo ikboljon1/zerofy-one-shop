@@ -1,4 +1,3 @@
-
 import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY, ORDERS_STORAGE_KEY, SALES_STORAGE_KEY, WildberriesOrder, WildberriesSale } from "@/types/store";
 import { fetchWildberriesStats, fetchWildberriesOrders, fetchWildberriesSales } from "@/services/wildberriesApi";
 
@@ -49,66 +48,9 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           };
         }) || [];
         
-        // Генерируем уникальный timestamp для данных, чтобы предотвратить кэширование
-        const timestamp = Date.now();
-        
-        // Сохраняем полные данные статистики, включая топовые продукты с их изображениями
-        localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify({
-          storeId: store.id,
-          dateFrom: from.toISOString(),
-          dateTo: to.toISOString(),
-          stats: stats,
-          deductionsTimeline: deductionsTimeline,
-          timestamp: timestamp
-        }));
-        
-        // Также сохраняем данные для аналитики и раздела товаров с тем же timestamp
-        localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify({
-          storeId: store.id,
-          dateFrom: from.toISOString(),
-          dateTo: to.toISOString(),
-          data: stats,
-          deductionsTimeline: deductionsTimeline,
-          penalties: [],
-          returns: [],
-          productAdvertisingData: [],
-          advertisingBreakdown: { search: stats.currentPeriod.expenses.advertising || 0 },
-          timestamp: timestamp
-        }));
-        
-        // Сохраняем данные о заказах отдельно
-        if (stats.orders && stats.orders.length > 0) {
-          localStorage.setItem(`${ORDERS_STORAGE_KEY}_${store.id}`, JSON.stringify({
-            storeId: store.id,
-            dateFrom: from.toISOString(),
-            dateTo: to.toISOString(),
-            orders: stats.orders,
-            warehouseDistribution: stats.warehouseDistribution || [],
-            regionDistribution: stats.regionDistribution || [],
-            timestamp: timestamp
-          }));
-        }
-        
-        // Сохраняем данные о продажах отдельно
-        if (stats.sales && stats.sales.length > 0) {
-          localStorage.setItem(`${SALES_STORAGE_KEY}_${store.id}`, JSON.stringify({
-            storeId: store.id,
-            dateFrom: from.toISOString(),
-            dateTo: to.toISOString(),
-            sales: stats.sales,
-            timestamp: timestamp
-          }));
-        }
-        
-        // Детализированные данные по продуктам для раздела товаров с тем же timestamp
-        if (stats.topProfitableProducts || stats.topUnprofitableProducts) {
-          localStorage.setItem(`products_detailed_${store.id}`, JSON.stringify({
-            profitableProducts: stats.topProfitableProducts || [],
-            unprofitableProducts: stats.topUnprofitableProducts || [],
-            updateDate: new Date().toISOString(),
-            timestamp: timestamp
-          }));
-        }
+        // Мы больше не сохраняем данные в localStorage
+        // Они будут храниться только в оперативной памяти
+        // TODO: Здесь должно быть сохранение в базу данных
         
         return updatedStore;
       }
@@ -124,6 +66,7 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
 // Получение данных о заказах для конкретного магазина
 export const getOrdersData = (storeId: string) => {
   try {
+    // TODO: Здесь должен быть запрос к базе данных вместо localStorage
     const storedData = localStorage.getItem(`${ORDERS_STORAGE_KEY}_${storeId}`);
     if (storedData) {
       return JSON.parse(storedData);
@@ -138,6 +81,7 @@ export const getOrdersData = (storeId: string) => {
 // Получение данных о продажах для конкретного магазина
 export const getSalesData = (storeId: string) => {
   try {
+    // TODO: Здесь должен быть запрос к базе данных вместо localStorage
     const storedData = localStorage.getItem(`${SALES_STORAGE_KEY}_${storeId}`);
     if (storedData) {
       return JSON.parse(storedData);
@@ -194,7 +138,8 @@ export const fetchAndUpdateOrders = async (store: Store) => {
           .sort((a, b) => b.count - a.count)
           .slice(0, 5);
         
-        // Сохраняем данные в localStorage
+        // Сохраняем данные в localStorage только временно
+        // TODO: Здесь должно быть сохранение в базу данных
         localStorage.setItem(`${ORDERS_STORAGE_KEY}_${store.id}`, JSON.stringify({
           storeId: store.id,
           dateFrom: from.toISOString(),
@@ -226,7 +171,8 @@ export const fetchAndUpdateSales = async (store: Store) => {
       const sales = await fetchWildberriesSales(store.apiKey, from);
       
       if (sales && sales.length > 0) {
-        // Сохраняем данные в localStorage
+        // Сохраняем данные в localStorage только временно
+        // TODO: Здесь должно быть сохранение в базу данных
         localStorage.setItem(`${SALES_STORAGE_KEY}_${store.id}`, JSON.stringify({
           storeId: store.id,
           dateFrom: from.toISOString(),
@@ -279,7 +225,30 @@ export const getProductProfitabilityData = (storeId: string) => {
 
 // Получение данных аналитики с проверкой обязательных полей и принудительным обновлением при наличии параметра forceRefresh
 export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
+  // Если forceRefresh = true, всегда возвращаем пустую структуру
+  if (forceRefresh) {
+    console.log('Forced refresh requested, returning default structure');
+    // Возвращаем базовую структуру
+    return {
+      data: null,
+      penalties: [],
+      returns: [],
+      deductionsTimeline: Array.from({ length: 7 }, (_, i) => ({
+        date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        logistic: 0,
+        storage: 0, 
+        penalties: 0,
+        acceptance: 0,
+        advertising: 0
+      })),
+      productAdvertisingData: [],
+      advertisingBreakdown: { search: 0 },
+      timestamp: Date.now()
+    };
+  }
+  
   try {
+    // TODO: Здесь должен быть запрос к базе данных вместо localStorage
     const key = `marketplace_analytics_${storeId}`;
     const storedData = localStorage.getItem(key);
     

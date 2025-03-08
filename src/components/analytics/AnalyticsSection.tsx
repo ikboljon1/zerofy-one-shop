@@ -119,81 +119,28 @@ const AnalyticsSection = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState<AnalyticsData>(demoData);
   const [penalties, setPenalties] = useState<Array<{name: string, value: number}>>([]);
-  const [deductions, setDeductions] = useState<Array<{name: string, value: number}>>([]);  // Добавляем состояние для удержаний
+  const [deductions, setDeductions] = useState<Array<{name: string, value: number}>>([]);
   const [returns, setReturns] = useState<Array<{name: string, value: number}>>([]);
   const [deductionsTimeline, setDeductionsTimeline] = useState<DeductionsTimelineItem[]>(deductionsTimelineData);
   const [productAdvertisingData, setProductAdvertisingData] = useState<Array<{name: string, value: number}>>([]);
   const [advertisingBreakdown, setAdvertisingBreakdown] = useState<AdvertisingBreakdown>({
     search: 0
   });
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [dataTimestamp, setDataTimestamp] = useState<number>(Date.now());
   const isMobile = useIsMobile();
   const { toast } = useToast();
 
   const getSelectedStore = () => {
     const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
-    return stores.find((store: any) => store.isSelected) || null;
-  };
-
-  const saveAnalyticsData = (storeId: string) => {
-    // Обновляем timestamp при каждом сохранении
-    const timestamp = Date.now();
-    setDataTimestamp(timestamp);
+    const store = stores.find((store: any) => store.isSelected) || null;
     
-    const analyticsData: StoredAnalyticsData = {
-      storeId,
-      dateFrom: dateFrom.toISOString(),
-      dateTo: dateTo.toISOString(),
-      data,
-      penalties,
-      deductions,  // Сохраняем данные по удержаниям
-      returns,
-      deductionsTimeline,
-      productAdvertisingData,
-      advertisingBreakdown,
-      timestamp
-    };
-    
-    localStorage.setItem(`${ANALYTICS_STORAGE_KEY}_${storeId}`, JSON.stringify(analyticsData));
-    console.log('Analytics data saved to localStorage with timestamp:', timestamp);
-  };
-
-  const loadStoredAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
-    try {
-      // Используем новую функцию getAnalyticsData для получения данных с проверками и поддержкой forceRefresh
-      const analyticsData = getAnalyticsData(storeId, forceRefresh);
-      
-      if (analyticsData) {
-        // Устанавливаем данные с проверками на существование
-        setDateFrom(new Date(analyticsData.dateFrom || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)));
-        setDateTo(new Date(analyticsData.dateTo || new Date()));
-        
-        if (analyticsData.data) {
-          setData(analyticsData.data);
-        }
-        
-        // Используем проверенные данные
-        setPenalties(analyticsData.penalties || []);
-        setDeductions(analyticsData.deductions || []); // Загружаем данные по удержаниям
-        setReturns(analyticsData.returns || []);
-        setDeductionsTimeline(analyticsData.deductionsTimeline || []);
-        setProductAdvertisingData(analyticsData.productAdvertisingData || []);
-        
-        if (analyticsData.advertisingBreakdown) {
-          setAdvertisingBreakdown(analyticsData.advertisingBreakdown);
-        }
-        
-        if (analyticsData.timestamp) {
-          setDataTimestamp(analyticsData.timestamp);
-        }
-        
-        console.log('Analytics data loaded from localStorage with timestamp:', analyticsData.timestamp);
-        return true;
-      }
-    } catch (error) {
-      console.error('Error parsing stored analytics data:', error);
+    if (store && store.id !== selectedStoreId) {
+      setSelectedStoreId(store.id);
+      return store;
     }
-    return false;
+    
+    return store;
   };
 
   const fetchData = async () => {
@@ -213,7 +160,6 @@ const AnalyticsSection = () => {
 
       const statsData = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
       
-      // Try-catch block for advertising API to prevent it from breaking everything else
       let totalAdvertisingCost = 0;
       try {
         const advertCosts = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
@@ -260,7 +206,6 @@ const AnalyticsSection = () => {
         }
       } catch (error) {
         console.error('Error fetching advertising data:', error);
-        // If advertising API fails, use demo data for advertising
         setProductAdvertisingData(advertisingData);
         setAdvertisingBreakdown({
           search: roundToTwoDecimals(demoData.currentPeriod.expenses.advertising)
@@ -269,7 +214,6 @@ const AnalyticsSection = () => {
       }
       
       if (statsData) {
-        // Применяем новый алгоритм расчета чистой прибыли из Python-скрипта
         const sales = roundToTwoDecimals(statsData.currentPeriod.sales);
         const logistics = roundToTwoDecimals(statsData.currentPeriod.expenses.logistics);
         const storage = roundToTwoDecimals(statsData.currentPeriod.expenses.storage);
@@ -279,8 +223,6 @@ const AnalyticsSection = () => {
         const returns = statsData.productReturns ? 
           roundToTwoDecimals(statsData.productReturns.reduce((sum, item) => sum + item.value, 0)) : 0;
         
-        // Расчет чистой прибыли на основе алгоритма из Python
-        // total_to_pay = total_for_pay - total_delivery_rub - total_storage_fee - total_returns
         const forPay = roundToTwoDecimals(statsData.currentPeriod.transferred || 0);
         const netProfit = roundToTwoDecimals(
           forPay - logistics - storage - penalties - totalAdvertisingCost - acceptance - deductionsValue - returns
@@ -309,41 +251,33 @@ const AnalyticsSection = () => {
           topUnprofitableProducts: statsData.topUnprofitableProducts
         };
         
-        // Пересчитываем общую сумму расходов
         modifiedData.currentPeriod.expenses.total = roundToTwoDecimals(
           logistics + storage + penalties + totalAdvertisingCost + acceptance + deductionsValue
         );
         
         setData(modifiedData);
         
-        // Set real penalties data if available
         if (statsData.penaltiesData && statsData.penaltiesData.length > 0) {
-          // Округляем все значения до двух знаков
           const roundedPenalties = statsData.penaltiesData.map(item => ({
             ...item,
             value: roundToTwoDecimals(item.value)
           }));
           setPenalties(roundedPenalties);
         } else {
-          // Clear penalties if none exist (don't use demo data)
           setPenalties([]);
         }
         
-        // Set real deductions data if available
         if (statsData.deductionsData && statsData.deductionsData.length > 0) {
-          // Округляем все значения до двух знаков
           const roundedDeductions = statsData.deductionsData.map(item => ({
             ...item,
             value: roundToTwoDecimals(item.value)
           }));
           setDeductions(roundedDeductions);
         } else {
-          // Clear deductions if none exist
           setDeductions([]);
         }
         
         if (statsData.productReturns && statsData.productReturns.length > 0) {
-          // Округляем все значения до двух знаков
           const roundedReturns = statsData.productReturns.map(item => ({
             ...item,
             value: roundToTwoDecimals(item.value)
@@ -353,7 +287,6 @@ const AnalyticsSection = () => {
           setReturns([]);
         }
         
-        // Создаем данные для графика удержаний на основе ежедневных данных
         let newDeductionsTimeline = [];
         if (statsData.dailySales && statsData.dailySales.length > 0) {
           const daysCount = statsData.dailySales.length;
@@ -376,7 +309,6 @@ const AnalyticsSection = () => {
             };
           });
         } else {
-          // Создаем базовые данные для графика, если нет ежедневных данных
           newDeductionsTimeline = Array.from({ length: 7 }, (_, i) => ({
             date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             logistic: roundToTwoDecimals(modifiedData.currentPeriod.expenses.logistics / 7),
@@ -390,8 +322,7 @@ const AnalyticsSection = () => {
         
         setDeductionsTimeline(newDeductionsTimeline);
         
-        // Вызываем saveAnalyticsData с принудительным обновлением timestamp
-        saveAnalyticsData(selectedStore.id);
+        setDataTimestamp(Date.now());
         
         toast({
           title: "Успех",
@@ -406,7 +337,6 @@ const AnalyticsSection = () => {
         variant: "destructive"
       });
       
-      // Устанавливаем базовые данные для графика удержаний при ошибке
       setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
         date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         logistic: 0, 
@@ -428,21 +358,8 @@ const AnalyticsSection = () => {
   useEffect(() => {
     const selectedStore = getSelectedStore();
     if (selectedStore) {
-      // Загружаем данные сначала без принудительного обновления
-      const hasStoredData = loadStoredAnalyticsData(selectedStore.id);
-      
-      if (!hasStoredData) {
-        setPenalties([]);
-        setDeductions([]);
-        setProductAdvertisingData([]);
-        setReturns([]);
-        // Если нет сохраненных данных, загружаем новые
-        fetchData();
-      } else {
-        setIsLoading(false);
-      }
+      fetchData();
     } else {
-      // Устанавливаем базовые ��анные для графика удержаний, если нет выбранного магазина
       setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
         date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         logistic: 0, 
@@ -459,7 +376,7 @@ const AnalyticsSection = () => {
       setReturns([]);
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedStoreId]);
 
   const hasAdvertisingData = productAdvertisingData && productAdvertisingData.length > 0;
   const hasPenaltiesData = penalties && penalties.length > 0;

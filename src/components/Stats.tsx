@@ -39,7 +39,6 @@ interface Store {
 }
 
 const STORES_STORAGE_KEY = 'marketplace_stores';
-const STATS_STORAGE_KEY = 'marketplace_stats';
 
 const Stats = () => {
   const isMobile = useIsMobile();
@@ -48,22 +47,18 @@ const Stats = () => {
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState(false);
   const [statsData, setStatsData] = useState<any>(null);
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
 
   const getSelectedStore = (): Store | null => {
     const stores = JSON.parse(localStorage.getItem(STORES_STORAGE_KEY) || '[]');
-    return stores.find((store: Store) => store.isSelected) || null;
-  };
-
-  const loadStoredStats = (storeId: string) => {
-    const storedStats = localStorage.getItem(`${STATS_STORAGE_KEY}_${storeId}`);
-    if (storedStats) {
-      const data = JSON.parse(storedStats);
-      setStatsData(data.stats);
-      setDateFrom(new Date(data.dateFrom));
-      setDateTo(new Date(data.dateTo));
-      return true;
+    const store = stores.find((store: Store) => store.isSelected) || null;
+    
+    if (store && store.id !== selectedStoreId) {
+      setSelectedStoreId(store.id);
+      return store;
     }
-    return false;
+    
+    return store;
   };
 
   const fetchStats = async () => {
@@ -82,16 +77,12 @@ const Stats = () => {
 
       const data = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
       
-      // Save new stats to localStorage
-      const statsData = {
-        storeId: selectedStore.id,
-        dateFrom: dateFrom.toISOString(),
-        dateTo: dateTo.toISOString(),
-        stats: data
-      };
-      localStorage.setItem(`${STATS_STORAGE_KEY}_${selectedStore.id}`, JSON.stringify(statsData));
-      
       setStatsData(data);
+      
+      toast({
+        title: "Данные обновлены",
+        description: `Данные успешно загружены за период ${format(dateFrom, 'dd.MM.yyyy')} - ${format(dateTo, 'dd.MM.yyyy')}`,
+      });
     } catch (error) {
       console.error('Error fetching stats:', error);
       toast({
@@ -107,12 +98,9 @@ const Stats = () => {
   useEffect(() => {
     const selectedStore = getSelectedStore();
     if (selectedStore) {
-      const hasStoredStats = loadStoredStats(selectedStore.id);
-      if (!hasStoredStats) {
-        fetchStats();
-      }
+      fetchStats();
     }
-  }, []);
+  }, [selectedStoreId]);
 
   const prepareSalesTrendData = (data: any) => {
     if (!data || !data.dailySales) return [];
@@ -126,7 +114,6 @@ const Stats = () => {
     return data.productSales;
   };
 
-  // Use the correct property names based on API response
   const stats = statsData ? [
     {
       title: "Продажа",

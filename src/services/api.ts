@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 
 // Create an axios instance with default config
@@ -5,10 +6,21 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Добавляем параметр, который предотвращает кеширование запросов браузером
+  params: {
+    _timestamp: Date.now()
+  }
 });
 
-// Add request interceptor to add Authorization header
+// Добавляем интерцептор для каждого запроса
 api.interceptors.request.use((config) => {
+  // Добавляем случайный параметр к каждому запросу для предотвращения кеширования
+  config.params = {
+    ...config.params,
+    _timestamp: Date.now(),
+    _random: Math.random()
+  };
+  
   // Get API key from wherever you store it (this should be handled securely)
   const apiKey = "YOUR_API_KEY"; // This should be handled securely, not hardcoded
   

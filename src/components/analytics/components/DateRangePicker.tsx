@@ -14,6 +14,7 @@ interface DateRangePickerProps {
   setDateTo: (date: Date) => void;
   onApplyDateRange?: () => void;
   onUpdate?: () => void;
+  forceRefresh?: boolean;
 }
 
 const DateRangePicker = ({ 
@@ -22,7 +23,8 @@ const DateRangePicker = ({
   setDateFrom, 
   setDateTo,
   onApplyDateRange,
-  onUpdate
+  onUpdate,
+  forceRefresh = true  // Устанавливаем forceRefresh в true по умолчанию
 }: DateRangePickerProps) => {
   const [fromOpen, setFromOpen] = useState(false);
   const [toOpen, setToOpen] = useState(false);
