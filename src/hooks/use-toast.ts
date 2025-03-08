@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 import type {
@@ -139,7 +140,7 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
-function toast({ ...props }: Toast) {
+function toast(props: Toast) {
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -167,6 +168,11 @@ function toast({ ...props }: Toast) {
     update,
   }
 }
+
+// Add toast variants as methods
+toast.error = (props: Omit<Toast, "variant">) => toast({ ...props, variant: "destructive" })
+toast.success = (props: Omit<Toast, "variant">) => toast({ ...props })
+toast.warning = (props: Omit<Toast, "variant">) => toast({ ...props })
 
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState)

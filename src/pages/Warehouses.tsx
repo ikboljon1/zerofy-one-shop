@@ -1,14 +1,14 @@
-
 import React, { useState, useEffect } from 'react';
 import WarehouseMap from '@/components/WarehouseMap';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { 
   WarehouseIcon, TruckIcon, BarChart3Icon, ClipboardListIcon, 
   PackageSearch, ArrowUpDown, Clock, DollarSign, PackageOpen, Box, RefreshCw
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { warehouseAnalyticsData } from '@/components/analytics/data/demoData';
 import { BarChart, ResponsiveContainer, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
 import { 
   fetchAcceptanceCoefficients, 
@@ -16,7 +16,8 @@ import {
   fetchAcceptanceOptions,
   fetchStocks,
   processStocksByCategory,
-  processStocksByWarehouse
+  processStocksByWarehouse,
+  WarehouseData
 } from '@/services/suppliesApi';
 import { 
   SupplyForm, 
@@ -24,25 +25,114 @@ import {
   SupplyOptionsResults,
   InventoryDetails
 } from '@/components/supplies';
-import { 
-  SupplyFormData, 
-  WarehouseCoefficient, 
-  Warehouse as WBWarehouse,
-  SupplyOptionsResponse,
-  WildberriesStock,
-  StocksByCategory,
-  StocksByWarehouse
-} from '@/types/supplies';
-import { toast } from 'sonner';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
 
-const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1'];
+import { toast } from '@/hooks/use-toast';
+
+interface SupplyFormData {
+  items: Array<{
+    article: string;
+    quantity: number;
+  }>;
+  selectedWarehouse: string;
+}
+
+interface Warehouse {
+  ID: string;
+  name: string;
+  address: string;
+  workTime: string;
+  acceptsQR: boolean;
+}
+
+interface WarehouseCoefficient {
+  warehouse_id: string;
+  warehouse_name: string;
+  coefficients: {
+    [key: string]: number;
+  };
+}
+
+interface SupplyOptionsResponse {
+  result: Array<{
+    article: string;
+    isError: boolean;
+    errorText?: string;
+    sizes?: any[];
+  }>;
+  warehouse: {
+    id: string;
+    name: string;
+  };
+}
+
+interface WildberriesStock {
+  id: string;
+  name: string;
+  article: string;
+  barcode: string;
+  category: string;
+  warehouse: string;
+  quantity: number;
+  dateUpdate: string;
+}
+
+interface StocksByCategory {
+  name: string;
+  count: number;
+}
+
+interface StocksByWarehouse {
+  name: string;
+  count: number;
+}
+
+const warehouseAnalyticsData = {
+  utilizationByWarehouse: [
+    { name: 'Коледино', value: 78 },
+    { name: 'Электросталь', value: 65 },
+    { name: 'Санкт-Петербург', value: 82 },
+    { name: 'Краснодар', value: 45 },
+    { name: 'Казань', value: 56 }
+  ],
+  processingTimeByWarehouse: [
+    { name: 'Коледино', time: 12 },
+    { name: 'Электросталь', time: 16 },
+    { name: 'Санкт-Петербург', time: 9 },
+    { name: 'Краснодар', time: 18 },
+    { name: 'Казань', time: 14 }
+  ],
+  warehouseCosts: [
+    { warehouse: 'Коледино', rent: 1500000, staff: 2300000, utilities: 450000, maintenance: 350000 },
+    { warehouse: 'Электросталь', rent: 1200000, staff: 1800000, utilities: 380000, maintenance: 290000 },
+    { warehouse: 'СПб', rent: 1800000, staff: 2600000, utilities: 520000, maintenance: 420000 },
+    { warehouse: 'Краснодар', rent: 950000, staff: 1400000, utilities: 280000, maintenance: 210000 },
+    { warehouse: 'Казань', rent: 1100000, staff: 1700000, utilities: 340000, maintenance: 260000 }
+  ],
+  monthlyShipments: [
+    { month: 'Янв', count: 4500 },
+    { month: 'Фев', count: 5200 },
+    { month: 'Мар', count: 4800 },
+    { month: 'Апр', count: 5900 },
+    { month: 'Май', count: 6300 },
+    { month: 'Июн', count: 5700 },
+    { month: 'Июл', count: 6100 },
+    { month: 'Авг', count: 6800 },
+    { month: 'Сен', count: 7200 },
+    { month: 'Окт', count: 6500 },
+    { month: 'Ноя', count: 7500 },
+    { month: 'Дек', count: 8200 }
+  ],
+  topPerformingWarehouses: [
+    { name: 'Коледино', ordersPerDay: 3500, accuracy: 98.5, processingCost: 45 },
+    { name: 'Санкт-Петербург', ordersPerDay: 2800, accuracy: 97.8, processingCost: 48 },
+    { name: 'Казань', ordersPerDay: 2100, accuracy: 97.2, processingCost: 51 }
+  ]
+};
 
 const Warehouses: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('map');
-  const [wbWarehouses, setWbWarehouses] = useState<WBWarehouse[]>([]);
+  const [wbWarehouses, setWbWarehouses] = useState<Warehouse[]>([]);
   const [coefficients, setCoefficients] = useState<WarehouseCoefficient[]>([]);
   const [supplyResults, setSupplyResults] = useState<SupplyOptionsResponse | null>(null);
   const [stocks, setStocks] = useState<WildberriesStock[]>([]);
@@ -55,7 +145,6 @@ const Warehouses: React.FC = () => {
     inventory: false
   });
 
-  // Эмуляция API-ключа (в реальном приложении должен быть получен от пользователя)
   const apiKey = "test_api_key";
 
   useEffect(() => {
@@ -71,10 +160,21 @@ const Warehouses: React.FC = () => {
     try {
       setLoading(prev => ({ ...prev, warehouses: true }));
       const data = await fetchWarehouses(apiKey);
-      setWbWarehouses(data);
+      const warehouses: Warehouse[] = data.map((warehouse: WarehouseData) => ({
+        ID: warehouse.id || warehouse.ID || '',
+        name: warehouse.name,
+        address: warehouse.coordinates ? `Координаты: ${warehouse.coordinates}` : 'Адрес не указан',
+        workTime: 'Стандартное время работы', 
+        acceptsQR: true
+      }));
+      setWbWarehouses(warehouses);
     } catch (error) {
       console.error('Ошибка при загрузке складов:', error);
-      toast.error('Не удалось загрузить список складов');
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить список складов",
+        variant: "destructive"
+      });
     } finally {
       setLoading(prev => ({ ...prev, warehouses: false }));
     }
@@ -87,7 +187,11 @@ const Warehouses: React.FC = () => {
       setCoefficients(data);
     } catch (error) {
       console.error('Ошибка при загрузке коэффициентов:', error);
-      toast.error('Не удалось загрузить коэффициенты приемки');
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить коэффициенты приемки",
+        variant: "destructive"
+      });
     } finally {
       setLoading(prev => ({ ...prev, coefficients: false }));
     }
@@ -99,17 +203,23 @@ const Warehouses: React.FC = () => {
       const stocksData = await fetchStocks(apiKey);
       setStocks(stocksData);
       
-      // Process the stocks data
       const categoryData = processStocksByCategory(stocksData);
       const warehouseData = processStocksByWarehouse(stocksData);
       
       setCategorySummary(categoryData);
       setWarehouseSummary(warehouseData);
       
-      toast.success('Данные об остатках товаров успешно загружены');
+      toast({
+        title: "Успех",
+        description: "Данные об остатках товаров успешно загружены"
+      });
     } catch (error) {
       console.error('Ошибка при загрузке остатков:', error);
-      toast.error('Не удалось загрузить данные об остатках товаров');
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить данные об остатках товаров",
+        variant: "destructive"
+      });
     } finally {
       setLoading(prev => ({ ...prev, inventory: false }));
     }
@@ -120,11 +230,14 @@ const Warehouses: React.FC = () => {
       setLoading(prev => ({ ...prev, options: true }));
       
       if (!data.selectedWarehouse) {
-        toast.error('Выберите склад назначения');
+        toast({
+          title: "Ошибка",
+          description: "Выберите склад назначения",
+          variant: "destructive"
+        });
         return;
       }
       
-      // Проверка доступности товаров на выбранном складе
       const optionsResponse = await fetchAcceptanceOptions(
         apiKey,
         data.items,
@@ -133,17 +246,27 @@ const Warehouses: React.FC = () => {
       
       setSupplyResults(optionsResponse);
       
-      // Проверка на наличие ошибок
       const hasErrors = optionsResponse.result.some(item => item.isError);
       
       if (hasErrors) {
-        toast.warning('Обнаружены проблемы с некоторыми товарами');
+        toast({
+          title: "Внимание",
+          description: "Обнаружены проблемы с некоторыми товарами",
+          variant: "destructive"
+        });
       } else {
-        toast.success('Все товары доступны для поставки');
+        toast({
+          title: "Успех",
+          description: "Все товары доступны для поставки"
+        });
       }
     } catch (error) {
       console.error('Ошибка при проверке доступности:', error);
-      toast.error('Не удалось проверить доступность товаров');
+      toast({
+        title: "Ошибка",
+        description: "Не удалось проверить доступность товаров",
+        variant: "destructive"
+      });
     } finally {
       setLoading(prev => ({ ...prev, options: false }));
     }

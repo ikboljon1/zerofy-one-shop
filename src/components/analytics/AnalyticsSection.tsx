@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag, Loader2, BadgePercent } from "lucide-react";
@@ -14,16 +15,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
 import { getAdvertCosts, getAdvertBalance, getAdvertPayments } from "@/services/advertisingApi";
-import { getAnalyticsData } from "@/utils/storeUtils";
 import { formatCurrency, roundToTwoDecimals } from "@/utils/formatCurrency";
-
-import { 
-  demoData, 
-  deductionsTimelineData,
-  advertisingData
-} from "./data/demoData";
-
-const ANALYTICS_STORAGE_KEY = 'marketplace_analytics';
 
 interface AnalyticsData {
   currentPeriod: {
@@ -36,7 +28,7 @@ interface AnalyticsData {
       penalties: number;
       advertising: number;
       acceptance: number;
-      deductions?: number; // Добавляем удержания
+      deductions?: number;
     };
     netProfit: number;
     acceptance: number;
@@ -81,28 +73,6 @@ interface AdvertisingBreakdown {
   search: number;
 }
 
-interface StoredAnalyticsData {
-  storeId: string;
-  dateFrom: string;
-  dateTo: string;
-  data: AnalyticsData;
-  penalties: Array<{name: string, value: number}>;
-  deductions: Array<{name: string, value: number}>; // Добавляем отдельное поле для удержаний
-  returns: Array<{name: string, value: number}>;
-  deductionsTimeline: Array<{
-    date: string; 
-    logistic: number; 
-    storage: number; 
-    penalties: number;
-    acceptance: number;
-    advertising: number;
-    deductions?: number; // Добавляем удержания
-  }>;
-  productAdvertisingData: Array<{name: string, value: number}>;
-  advertisingBreakdown: AdvertisingBreakdown;
-  timestamp: number;
-}
-
 interface DeductionsTimelineItem {
   date: string;
   logistic: number;
@@ -110,18 +80,41 @@ interface DeductionsTimelineItem {
   penalties: number;
   acceptance: number;
   advertising: number;
-  deductions?: number; // Добавляем удержания
+  deductions?: number;
 }
+
+// Базовые пустые данные для инициализации
+const emptyAnalyticsData: AnalyticsData = {
+  currentPeriod: {
+    sales: 0,
+    transferred: 0,
+    expenses: {
+      total: 0,
+      logistics: 0,
+      storage: 0,
+      penalties: 0,
+      advertising: 0,
+      acceptance: 0,
+      deductions: 0
+    },
+    netProfit: 0,
+    acceptance: 0
+  },
+  dailySales: [],
+  productSales: [],
+  productReturns: []
+};
 
 const AnalyticsSection = () => {
   const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState(true);
-  const [data, setData] = useState<AnalyticsData>(demoData);
+  const [hasError, setHasError] = useState(false);
+  const [data, setData] = useState<AnalyticsData>(emptyAnalyticsData);
   const [penalties, setPenalties] = useState<Array<{name: string, value: number}>>([]);
   const [deductions, setDeductions] = useState<Array<{name: string, value: number}>>([]);
   const [returns, setReturns] = useState<Array<{name: string, value: number}>>([]);
-  const [deductionsTimeline, setDeductionsTimeline] = useState<DeductionsTimelineItem[]>(deductionsTimelineData);
+  const [deductionsTimeline, setDeductionsTimeline] = useState<DeductionsTimelineItem[]>([]);
   const [productAdvertisingData, setProductAdvertisingData] = useState<Array<{name: string, value: number}>>([]);
   const [advertisingBreakdown, setAdvertisingBreakdown] = useState<AdvertisingBreakdown>({
     search: 0
@@ -146,15 +139,16 @@ const AnalyticsSection = () => {
   const fetchData = async () => {
     try {
       setIsLoading(true);
+      setHasError(false);
       const selectedStore = getSelectedStore();
       
       if (!selectedStore) {
-        toast({
+        toast.error({
           title: "Внимание",
-          description: "Выберите основной магазин в разделе 'Магазины'",
-          variant: "destructive"
+          description: "Выберите основной магазин в разделе 'Магазины'"
         });
         setIsLoading(false);
+        setHasError(true);
         return;
       }
 
@@ -193,24 +187,19 @@ const AnalyticsSection = () => {
             topProducts.push({ name: "Другие товары", value: otherSum });
           }
           
-          setProductAdvertisingData(topProducts.length > 0 ? topProducts : []);
+          setProductAdvertisingData(topProducts);
         } else {
-          if (productAdvertisingData.length === 0) {
-            setProductAdvertisingData(advertisingData);
-          }
-          
+          setProductAdvertisingData([]);
           setAdvertisingBreakdown({
-            search: roundToTwoDecimals(demoData.currentPeriod.expenses.advertising)
+            search: 0
           });
-          totalAdvertisingCost = roundToTwoDecimals(demoData.currentPeriod.expenses.advertising);
         }
       } catch (error) {
         console.error('Error fetching advertising data:', error);
-        setProductAdvertisingData(advertisingData);
+        setProductAdvertisingData([]);
         setAdvertisingBreakdown({
-          search: roundToTwoDecimals(demoData.currentPeriod.expenses.advertising)
+          search: 0
         });
-        totalAdvertisingCost = roundToTwoDecimals(demoData.currentPeriod.expenses.advertising);
       }
       
       if (statsData) {
@@ -311,12 +300,12 @@ const AnalyticsSection = () => {
         } else {
           newDeductionsTimeline = Array.from({ length: 7 }, (_, i) => ({
             date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            logistic: roundToTwoDecimals(modifiedData.currentPeriod.expenses.logistics / 7),
-            storage: roundToTwoDecimals(modifiedData.currentPeriod.expenses.storage / 7), 
-            penalties: roundToTwoDecimals(modifiedData.currentPeriod.expenses.penalties / 7),
-            acceptance: roundToTwoDecimals(modifiedData.currentPeriod.expenses.acceptance / 7 || 0),
-            advertising: roundToTwoDecimals(modifiedData.currentPeriod.expenses.advertising / 7 || 0),
-            deductions: roundToTwoDecimals(modifiedData.currentPeriod.expenses.deductions / 7 || 0)
+            logistic: 0,
+            storage: 0, 
+            penalties: 0,
+            acceptance: 0,
+            advertising: 0,
+            deductions: 0
           }));
         }
         
@@ -324,19 +313,21 @@ const AnalyticsSection = () => {
         
         setDataTimestamp(Date.now());
         
-        toast({
+        toast.success({
           title: "Успех",
           description: "Аналитические данные успешно обновлены",
         });
       }
     } catch (error) {
       console.error('Error fetching analytics data:', error);
-      toast({
+      setHasError(true);
+      toast.error({
         title: "Ошибка",
         description: "Не удалось загрузить аналитические данные",
-        variant: "destructive"
       });
       
+      // Инициализируем пустые данные
+      setData(emptyAnalyticsData);
       setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
         date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         logistic: 0, 
@@ -350,6 +341,7 @@ const AnalyticsSection = () => {
       setPenalties([]);
       setDeductions([]);
       setReturns([]);
+      setProductAdvertisingData([]);
     } finally {
       setIsLoading(false);
     }
@@ -360,6 +352,11 @@ const AnalyticsSection = () => {
     if (selectedStore) {
       fetchData();
     } else {
+      setIsLoading(false);
+      setHasError(true);
+      
+      // Инициализируем пустые данные
+      setData(emptyAnalyticsData);
       setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
         date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         logistic: 0, 
@@ -374,13 +371,13 @@ const AnalyticsSection = () => {
       setDeductions([]);
       setProductAdvertisingData([]);
       setReturns([]);
-      setIsLoading(false);
     }
   }, [selectedStoreId]);
 
   const hasAdvertisingData = productAdvertisingData && productAdvertisingData.length > 0;
   const hasPenaltiesData = penalties && penalties.length > 0;
   const hasDeductionsData = deductions && deductions.length > 0;
+  const hasReturnsData = returns && returns.length > 0;
 
   const handleDateChange = () => {
     fetchData();
@@ -392,6 +389,38 @@ const AnalyticsSection = () => {
         <div className="flex flex-col items-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <p className="mt-4 text-muted-foreground">Загрузка аналитики...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (hasError) {
+    return (
+      <div className="space-y-8">
+        <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-100 dark:border-blue-800/30 shadow-lg">
+          <DateRangePicker 
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            setDateFrom={setDateFrom}
+            setDateTo={setDateTo}
+            onApplyDateRange={handleDateChange}
+            onUpdate={handleDateChange}
+          />
+        </div>
+        
+        <div className="flex flex-col items-center justify-center p-10 text-center">
+          <AlertCircle className="h-16 w-16 text-red-500 mb-4" />
+          <h3 className="text-2xl font-semibold mb-2">Ошибка загрузки данных</h3>
+          <p className="text-muted-foreground max-w-md">
+            Не удалось загрузить аналитические данные. Возможно, превышен лимит запросов к API или отсутствует подключение к сервису.
+          </p>
+          <Button 
+            onClick={fetchData} 
+            className="mt-6"
+            variant="outline"
+          >
+            Попробовать снова
+          </Button>
         </div>
       </div>
     );
