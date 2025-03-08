@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
@@ -32,6 +33,12 @@ const Dashboard = () => {
   const [sales, setSales] = useState<WildberriesSale[]>([]);
   const [warehouseDistribution, setWarehouseDistribution] = useState<any[]>([]);
   const [regionDistribution, setRegionDistribution] = useState<any[]>([]);
+  
+  // Добавляем состояния для дат периода
+  const [periodDates, setPeriodDates] = useState<{dateFrom: Date, dateTo: Date}>({
+    dateFrom: new Date(new Date().setHours(0, 0, 0, 0)),
+    dateTo: new Date()
+  });
 
   const filterDataByPeriod = (date: string, period: Period) => {
     const now = new Date();
@@ -61,6 +68,42 @@ const Dashboard = () => {
         return true;
     }
   };
+
+  // Обновляем даты периода при изменении периода
+  useEffect(() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    let dateFrom;
+    const dateTo = new Date();
+    
+    switch (period) {
+      case "today":
+        dateFrom = todayStart;
+        break;
+      case "yesterday":
+        dateFrom = new Date(todayStart);
+        dateFrom.setDate(dateFrom.getDate() - 1);
+        break;
+      case "week":
+        dateFrom = new Date(todayStart);
+        dateFrom.setDate(dateFrom.getDate() - 7);
+        break;
+      case "2weeks":
+        dateFrom = new Date(todayStart);
+        dateFrom.setDate(dateFrom.getDate() - 14);
+        break;
+      case "4weeks":
+        dateFrom = new Date(todayStart);
+        dateFrom.setDate(dateFrom.getDate() - 28);
+        break;
+      default:
+        dateFrom = new Date(todayStart);
+        dateFrom.setDate(dateFrom.getDate() - 7);
+    }
+    
+    setPeriodDates({ dateFrom, dateTo });
+  }, [period]);
 
   const getFilteredOrders = (orders: WildberriesOrder[]) => {
     const filteredOrders = orders.filter(order => filterDataByPeriod(order.date, period));
@@ -268,6 +311,9 @@ const Dashboard = () => {
             warehouseDistribution={warehouseDistribution} 
             regionDistribution={regionDistribution}
             sales={getFilteredSales(sales)}
+            period={period}
+            dateFrom={periodDates.dateFrom}
+            dateTo={periodDates.dateTo}
           />
         </TabsContent>
       </Tabs>

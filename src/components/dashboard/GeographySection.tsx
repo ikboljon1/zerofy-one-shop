@@ -1,9 +1,10 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { Package, Info, ShoppingBag, MapPin } from "lucide-react";
 import { WildberriesSale } from "@/types/store";
+import { getAdvertCosts } from "@/services/advertisingApi";
 
 interface ProductSalesDistribution {
   name: string;
@@ -15,6 +16,9 @@ interface GeographySectionProps {
   warehouseDistribution: any[];
   regionDistribution: any[];
   sales?: WildberriesSale[];
+  period?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
 }
 
 const COLORS = ["#8B5CF6", "#EC4899", "#10B981", "#FF8042", "#A86EE7"];
@@ -22,8 +26,68 @@ const COLORS = ["#8B5CF6", "#EC4899", "#10B981", "#FF8042", "#A86EE7"];
 const GeographySection: React.FC<GeographySectionProps> = ({
   warehouseDistribution,
   regionDistribution,
-  sales = []
+  sales = [],
+  period,
+  dateFrom,
+  dateTo
 }) => {
+  const [productAdvertisingData, setProductAdvertisingData] = useState<ProductSalesDistribution[]>([]);
+
+  // Загрузка данных по рекламным расходам за выбранный период
+  useEffect(() => {
+    const fetchAdvertisingData = async () => {
+      try {
+        // Используем текущие даты, если не указаны
+        const startDate = dateFrom || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const endDate = dateTo || new Date();
+        
+        const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
+        const selectedStore = stores.find((store: any) => store.isSelected);
+        
+        if (!selectedStore) return;
+        
+        const advertCosts = await getAdvertCosts(startDate, endDate, selectedStore.apiKey);
+        
+        if (advertCosts && advertCosts.length > 0) {
+          const campaignCosts: Record<string, number> = {};
+          
+          advertCosts.forEach(cost => {
+            if (!campaignCosts[cost.campName]) {
+              campaignCosts[cost.campName] = 0;
+            }
+            campaignCosts[cost.campName] += cost.updSum;
+          });
+          
+          const advertisingData = Object.entries(campaignCosts)
+            .map(([name, value]) => ({
+              name,
+              count: Math.round(value),
+              percentage: 0 // Сначала инициализируем нулем
+            }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 5);
+          
+          // Рассчитаем общую сумму и проценты
+          const totalAdvertising = advertisingData.reduce((sum, item) => sum + item.count, 0);
+          
+          // Обновляем проценты
+          advertisingData.forEach(item => {
+            item.percentage = (item.count / totalAdvertising) * 100;
+          });
+          
+          setProductAdvertisingData(advertisingData);
+        } else {
+          setProductAdvertisingData([]);
+        }
+      } catch (error) {
+        console.error('Error fetching advertising data:', error);
+        setProductAdvertisingData([]);
+      }
+    };
+    
+    fetchAdvertisingData();
+  }, [dateFrom, dateTo, period]);
+
   // Process sales data to get product quantity distribution
   const getProductSalesDistribution = (): ProductSalesDistribution[] => {
     if (!sales || sales.length === 0) return [];
@@ -149,6 +213,26 @@ const GeographySection: React.FC<GeographySectionProps> = ({
         </Card>
       </div>
       
+      {productAdvertisingData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Package className="mr-2 h-5 w-5" />
+              Расходы на рекламу по товарам
+            </CardTitle>
+            <CardDescription>
+              Распределение рекламных расходов за выбранный период
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-2">
+            {renderPieChart(productAdvertisingData, "count")}
+            <div className="mt-4 px-4">
+              {renderDistributionList(productAdvertisingData)}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
       <Card className="bg-muted/50 border-dashed">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center">
@@ -161,6 +245,7 @@ const GeographySection: React.FC<GeographySectionProps> = ({
           <ul className="list-disc list-inside space-y-1 ml-2">
             <li>Для проданных товаров мы группируем продажи по названию товара из ответа API</li>
             <li>Для складов мы используем данные о физическом местоположении складов Wildberries</li>
+            <li>Для рекламных расходов мы получаем данные из рекламного API Wildberries</li>
             <li>Мы подсчитываем количество каждого товара/склада и расчитываем проценты</li>
             <li>Диаграммы отображают 5 лучших товаров и 5 наиболее активных складов</li>
           </ul>
