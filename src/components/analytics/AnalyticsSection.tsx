@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
-import { AlertCircle, Target, PackageX, Tag, Loader2, BadgePercent } from "lucide-react";
+import { AlertCircle, Target, PackageX, Tag, Loader2, BadgePercent, AlertOctagon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 import DateRangePicker from "./components/DateRangePicker";
@@ -14,16 +15,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
 import { getAdvertCosts, getAdvertBalance, getAdvertPayments } from "@/services/advertisingApi";
-import { getAnalyticsData } from "@/utils/storeUtils";
-import { formatCurrency, roundToTwoDecimals } from "@/utils/formatCurrency";
-
-import { 
-  demoData, 
-  deductionsTimelineData,
-  advertisingData
-} from "./data/demoData";
-
-const ANALYTICS_STORAGE_KEY = 'marketplace_analytics';
+import { roundToTwoDecimals } from "@/utils/formatCurrency";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 interface AnalyticsData {
   currentPeriod: {
@@ -36,7 +29,7 @@ interface AnalyticsData {
       penalties: number;
       advertising: number;
       acceptance: number;
-      deductions?: number; // Добавляем удержания
+      deductions?: number;
     };
     netProfit: number;
     acceptance: number;
@@ -75,32 +68,10 @@ interface AnalyticsData {
     returnCount?: number;
     category?: string;
   }>;
-}
-
-interface AdvertisingBreakdown {
-  search: number;
-}
-
-interface StoredAnalyticsData {
-  storeId: string;
-  dateFrom: string;
-  dateTo: string;
-  data: AnalyticsData;
-  penalties: Array<{name: string, value: number}>;
-  deductions: Array<{name: string, value: number}>; // Добавляем отдельное поле для удержаний
-  returns: Array<{name: string, value: number}>;
-  deductionsTimeline: Array<{
-    date: string; 
-    logistic: number; 
-    storage: number; 
-    penalties: number;
-    acceptance: number;
-    advertising: number;
-    deductions?: number; // Добавляем удержания
-  }>;
-  productAdvertisingData: Array<{name: string, value: number}>;
-  advertisingBreakdown: AdvertisingBreakdown;
-  timestamp: number;
+  error?: {
+    message: string;
+    code: number;
+  };
 }
 
 interface DeductionsTimelineItem {
@@ -110,24 +81,43 @@ interface DeductionsTimelineItem {
   penalties: number;
   acceptance: number;
   advertising: number;
-  deductions?: number; // Добавляем удержания
+  deductions?: number;
 }
 
 const AnalyticsSection = () => {
   const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState(true);
-  const [data, setData] = useState<AnalyticsData>(demoData);
+  const [data, setData] = useState<AnalyticsData>({
+    currentPeriod: {
+      sales: 0,
+      transferred: 0,
+      expenses: {
+        total: 0,
+        logistics: 0,
+        storage: 0,
+        penalties: 0,
+        advertising: 0,
+        acceptance: 0,
+        deductions: 0
+      },
+      netProfit: 0,
+      acceptance: 0
+    },
+    dailySales: [],
+    productSales: [],
+    productReturns: []
+  });
+  const [error, setError] = useState<string | null>(null);
   const [penalties, setPenalties] = useState<Array<{name: string, value: number}>>([]);
   const [deductions, setDeductions] = useState<Array<{name: string, value: number}>>([]);
   const [returns, setReturns] = useState<Array<{name: string, value: number}>>([]);
-  const [deductionsTimeline, setDeductionsTimeline] = useState<DeductionsTimelineItem[]>(deductionsTimelineData);
+  const [deductionsTimeline, setDeductionsTimeline] = useState<DeductionsTimelineItem[]>([]);
   const [productAdvertisingData, setProductAdvertisingData] = useState<Array<{name: string, value: number}>>([]);
-  const [advertisingBreakdown, setAdvertisingBreakdown] = useState<AdvertisingBreakdown>({
+  const [advertisingBreakdown, setAdvertisingBreakdown] = useState<{search: number}>({
     search: 0
   });
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
-  const [dataTimestamp, setDataTimestamp] = useState<number>(Date.now());
   const isMobile = useIsMobile();
   const { toast } = useToast();
 
@@ -146,6 +136,7 @@ const AnalyticsSection = () => {
   const fetchData = async () => {
     try {
       setIsLoading(true);
+      setError(null);
       const selectedStore = getSelectedStore();
       
       if (!selectedStore) {
@@ -158,8 +149,22 @@ const AnalyticsSection = () => {
         return;
       }
 
+      // Получение данных о статистике
       const statsData = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
       
+      // Проверка на наличие ошибки в ответе API
+      if (statsData.error) {
+        setError(statsData.error.message);
+        toast({
+          title: "Ошибка",
+          description: statsData.error.message,
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Получение данных о рекламе
       let totalAdvertisingCost = 0;
       try {
         const advertCosts = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
@@ -195,24 +200,20 @@ const AnalyticsSection = () => {
           
           setProductAdvertisingData(topProducts.length > 0 ? topProducts : []);
         } else {
-          if (productAdvertisingData.length === 0) {
-            setProductAdvertisingData(advertisingData);
-          }
-          
+          setProductAdvertisingData([]);
           setAdvertisingBreakdown({
-            search: roundToTwoDecimals(demoData.currentPeriod.expenses.advertising)
+            search: 0
           });
-          totalAdvertisingCost = roundToTwoDecimals(demoData.currentPeriod.expenses.advertising);
         }
       } catch (error) {
         console.error('Error fetching advertising data:', error);
-        setProductAdvertisingData(advertisingData);
+        setProductAdvertisingData([]);
         setAdvertisingBreakdown({
-          search: roundToTwoDecimals(demoData.currentPeriod.expenses.advertising)
+          search: 0
         });
-        totalAdvertisingCost = roundToTwoDecimals(demoData.currentPeriod.expenses.advertising);
       }
       
+      // Обработка полученных данных
       if (statsData) {
         const sales = roundToTwoDecimals(statsData.currentPeriod.sales);
         const logistics = roundToTwoDecimals(statsData.currentPeriod.expenses.logistics);
@@ -257,6 +258,7 @@ const AnalyticsSection = () => {
         
         setData(modifiedData);
         
+        // Устанавливаем штрафы, удержания и возвраты
         if (statsData.penaltiesData && statsData.penaltiesData.length > 0) {
           const roundedPenalties = statsData.penaltiesData.map(item => ({
             ...item,
@@ -287,6 +289,7 @@ const AnalyticsSection = () => {
           setReturns([]);
         }
         
+        // Создаем данные для графика расходов
         let newDeductionsTimeline = [];
         if (statsData.dailySales && statsData.dailySales.length > 0) {
           const daysCount = statsData.dailySales.length;
@@ -311,26 +314,25 @@ const AnalyticsSection = () => {
         } else {
           newDeductionsTimeline = Array.from({ length: 7 }, (_, i) => ({
             date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            logistic: roundToTwoDecimals(modifiedData.currentPeriod.expenses.logistics / 7),
-            storage: roundToTwoDecimals(modifiedData.currentPeriod.expenses.storage / 7), 
-            penalties: roundToTwoDecimals(modifiedData.currentPeriod.expenses.penalties / 7),
-            acceptance: roundToTwoDecimals(modifiedData.currentPeriod.expenses.acceptance / 7 || 0),
-            advertising: roundToTwoDecimals(modifiedData.currentPeriod.expenses.advertising / 7 || 0),
-            deductions: roundToTwoDecimals(modifiedData.currentPeriod.expenses.deductions / 7 || 0)
+            logistic: 0,
+            storage: 0, 
+            penalties: 0,
+            acceptance: 0,
+            advertising: 0,
+            deductions: 0
           }));
         }
         
         setDeductionsTimeline(newDeductionsTimeline);
-        
-        setDataTimestamp(Date.now());
         
         toast({
           title: "Успех",
           description: "Аналитические данные успешно обновлены",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching analytics data:', error);
+      setError(error.message || "Произошла ошибка при загрузке данных");
       toast({
         title: "Ошибка",
         description: "Не удалось загрузить аналитические данные",
@@ -360,20 +362,7 @@ const AnalyticsSection = () => {
     if (selectedStore) {
       fetchData();
     } else {
-      setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
-        date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        logistic: 0, 
-        storage: 0, 
-        penalties: 0,
-        acceptance: 0,
-        advertising: 0,
-        deductions: 0
-      })));
-      
-      setPenalties([]);
-      setDeductions([]);
-      setProductAdvertisingData([]);
-      setReturns([]);
+      setError("Выберите основной магазин в разделе 'Магазины'");
       setIsLoading(false);
     }
   }, [selectedStoreId]);
@@ -393,6 +382,31 @@ const AnalyticsSection = () => {
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <p className="mt-4 text-muted-foreground">Загрузка аналитики...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-8">
+        <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-100 dark:border-blue-800/30 shadow-lg">
+          <DateRangePicker 
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            setDateFrom={setDateFrom}
+            setDateTo={setDateTo}
+            onApplyDateRange={handleDateChange}
+            onUpdate={handleDateChange}
+          />
+        </div>
+        
+        <Alert variant="destructive" className="mt-4">
+          <AlertOctagon className="h-4 w-4" />
+          <AlertTitle>Ошибка при загрузке данных</AlertTitle>
+          <AlertDescription>
+            {error}
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }

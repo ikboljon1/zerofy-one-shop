@@ -77,6 +77,10 @@ export interface WildberriesResponse {
     count: number;
     percentage: number;
   }>;
+  error?: {
+    message: string;
+    code: number;
+  };
 }
 
 const formatDate = (date: Date): string => {
@@ -90,7 +94,6 @@ const formatDateRFC3339 = (date: Date, isEnd: boolean = false): string => {
 
 /**
  * Загружает детальный отчет с Wildberries API с поддержкой пагинации
- * Реализация в соответствии с функцией fetch_wb_report_detail из Python-скрипта
  */
 const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date, rrdid = 0, limit = 100000) => {
   try {
@@ -112,7 +115,6 @@ const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date, r
     console.log(`Fetching report detail from Wildberries API with rrdid ${rrdid}...`);
     const response = await axios.get(url, { headers, params });
     
-    // Определяем ID для следующего запроса в соответствии с Python-скриптом
     let nextRrdid = 0;
     if (response.data && response.data.length > 0) {
       const lastRecord = response.data[response.data.length - 1];
@@ -122,13 +124,12 @@ const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date, r
     return { data: response.data, nextRrdid };
   } catch (error) {
     console.error("Error fetching report detail:", error);
-    return { data: null, nextRrdid: 0 };
+    throw error;
   }
 };
 
 /**
  * Загружает все данные отчета с поддержкой пагинации
- * Реализация в соответствии с циклом while из Python-скрипта
  */
 const fetchAllReportDetails = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
   let allData: any[] = [];
@@ -142,27 +143,31 @@ const fetchAllReportDetails = async (apiKey: string, dateFrom: Date, dateTo: Dat
     pageCount++;
     console.log(`Fetching page ${pageCount} with rrdid ${nextRrdid}...`);
     
-    const result = await fetchReportDetail(apiKey, dateFrom, dateTo, nextRrdid);
-    const data = result.data;
-    
-    if (!data || data.length === 0) {
-      console.log(`Page ${pageCount} returned no data, ending pagination.`);
+    try {
+      const result = await fetchReportDetail(apiKey, dateFrom, dateTo, nextRrdid);
+      const data = result.data;
+      
+      if (!data || data.length === 0) {
+        console.log(`Page ${pageCount} returned no data, ending pagination.`);
+        hasMoreData = false;
+        continue;
+      }
+      
+      allData = [...allData, ...data];
+      
+      const prevRrdid = nextRrdid;
+      nextRrdid = result.nextRrdid;
+      
+      console.log(`Page ${pageCount} received ${data.length} records, last rrdid: ${nextRrdid}`);
+      
+      if (data.length < 100000 || nextRrdid === 0 || nextRrdid === prevRrdid) {
+        console.log(`End of pagination reached after ${pageCount} pages. Total records: ${allData.length}`);
+        hasMoreData = false;
+      }
+    } catch (error) {
+      console.error(`Error fetching page ${pageCount}:`, error);
       hasMoreData = false;
-      continue;
-    }
-    
-    allData = [...allData, ...data];
-    
-    // Получаем идентификатор для следующего запроса
-    const prevRrdid = nextRrdid;
-    nextRrdid = result.nextRrdid;
-    
-    console.log(`Page ${pageCount} received ${data.length} records, last rrdid: ${nextRrdid}`);
-    
-    // Если вернулось меньше записей, чем размер страницы, или если rrdid не изменился, значит данных больше нет
-    if (data.length < 100000 || nextRrdid === 0 || nextRrdid === prevRrdid) {
-      console.log(`End of pagination reached after ${pageCount} pages. Total records: ${allData.length}`);
-      hasMoreData = false;
+      throw error;
     }
   }
   
@@ -172,7 +177,6 @@ const fetchAllReportDetails = async (apiKey: string, dateFrom: Date, dateTo: Dat
 
 /**
  * Загружает отчет о платной приемке с Wildberries API
- * Реализация в соответствии с функцией fetch_paid_acceptance_report из Python-скрипта
  */
 const fetchPaidAcceptanceReport = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
   try {
@@ -194,36 +198,34 @@ const fetchPaidAcceptanceReport = async (apiKey: string, dateFrom: Date, dateTo:
     return response.data.report || [];
   } catch (error) {
     console.error("Error fetching paid acceptance report:", error);
-    return [];
+    throw error;
   }
 };
 
 /**
  * Рассчитывает метрики на основе данных отчета
- * Реализация в соответствии с функцией calculate_metrics из Python-скрипта
  */
 const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   if (!data || data.length === 0) {
-    return null;
+    throw new Error("No data provided for metrics calculation");
   }
 
-  let totalSales = 0;           // Продажа (retail_price_withdisc_rub)
-  let totalForPay = 0;          // К перечислению за товар (ppvz_for_pay)
-  let totalDeliveryRub = 0;     // Стоимость логистики (delivery_rub)
-  let totalRebillLogisticCost = 0; // Логистика возмещение издержек (rebill_logistic_cost)
-  let totalStorageFee = 0;      // Стоимость хранения (storage_fee)
-  let totalReturns = 0;         // Возврат (отрицательные ppvz_for_pay)
-  let totalPenalty = 0;         // Штрафы (penalty)
-  let totalDeduction = 0;       // Удержания (deduction)
-  let totalReturnCount = 0;     // Количество возвратов
-  let totalToPay = 0;           // Итого к оплате
+  let totalSales = 0;
+  let totalForPay = 0;
+  let totalDeliveryRub = 0;
+  let totalRebillLogisticCost = 0;
+  let totalStorageFee = 0;
+  let totalReturns = 0;
+  let totalPenalty = 0;
+  let totalDeduction = 0;
+  let totalReturnCount = 0;
+  let totalToPay = 0;
 
   const returnsByProduct: Record<string, { value: number; count: number }> = {};
-  const returnsByNmId: Record<string, number> = {}; // Словарь для хранения информации о возвратах по nmId
+  const returnsByNmId: Record<string, number> = {};
   const penaltiesByReason: Record<string, number> = {};
   const deductionsByReason: Record<string, { total: number; items: Array<{nm_id?: string | number; value: number}> }> = {};
   
-  // Метрики для расчета прибыльности товаров
   const productProfitability: Record<string, { 
     name: string;
     price: number;
@@ -238,12 +240,10 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   console.log(`Processing ${data.length} records for metrics calculation...`);
   
   for (const record of data) {
-    // Обработка продаж в соответствии с Python-скриптом
     if (record.doc_type_name === 'Продажа') {
       totalSales += record.retail_price_withdisc_rub || 0;
       totalForPay += record.ppvz_for_pay || 0;
       
-      // Учет данных для расчета прибыльности товаров
       if (record.sa_name) {
         const productName = record.sa_name;
         if (!productProfitability[productName]) {
@@ -271,12 +271,10 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
         productProfitability[productName].count += 1;
       }
     } 
-    // Обработка возвратов в соответствии с Python-скриптом
     else if (record.doc_type_name === 'Возврат') {
       totalReturns += Math.abs(record.ppvz_for_pay || 0);
       totalReturnCount += 1;
       
-      // Учет возвратов по nmId в соответствии с Python-скриптом
       if (record.nm_id) {
         const nmId = record.nm_id.toString();
         if (!returnsByNmId[nmId]) {
@@ -310,12 +308,10 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       }
     }
     
-    // Учет расходов на логистику и хранение в соответствии с Python-скриптом
     totalDeliveryRub += record.delivery_rub || 0;
     totalRebillLogisticCost += record.rebill_logistic_cost || 0;
     totalStorageFee += record.storage_fee || 0;
     
-    // Обработка штрафов (сохраняем существующую логику)
     if (record.penalty && record.penalty > 0) {
       const reason = record.penalty_reason || record.bonus_type_name || 'Другие причины';
       if (!penaltiesByReason[reason]) {
@@ -325,7 +321,6 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
       totalPenalty += record.penalty;
     }
     
-    // Обработка удержаний (сохраняем существующую логику)
     if (record.deduction !== undefined && record.deduction !== null) {
       const reason = record.bonus_type_name || 'Прочие удержания';
       
@@ -343,24 +338,19 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     }
   }
 
-  // Расчет общей суммы по платной приемке
   const totalAcceptance = paidAcceptanceData.reduce((sum, record) => sum + (record.total || 0), 0);
 
-  // Расчет итоговой суммы к оплате по логике Python-скрипта
   totalToPay = totalForPay - totalDeliveryRub - totalStorageFee - totalReturns;
 
-  // Расчет прибыльности товаров
   for (const key in productProfitability) {
     productProfitability[key].profit = productProfitability[key].sales - productProfitability[key].costs;
   }
 
-  // Подготовка данных о возвратах по товарам
   const productReturns = Object.entries(returnsByProduct)
     .map(([name, { value, count }]) => ({ name, value, count }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 5);
 
-  // Подготовка данных о штрафах
   const penaltiesData = Object.entries(penaltiesByReason)
     .map(([name, value]) => ({
       name,
@@ -368,7 +358,6 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     }))
     .sort((a, b) => b.value - a.value);
 
-  // Подготовка данных об удержаниях
   const deductionsData = Object.entries(deductionsByReason)
     .map(([name, data]) => {
       if (data.total === 0) return null;
@@ -383,7 +372,6 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     .filter(item => item !== null)
     .sort((a, b) => Math.abs((b?.value || 0)) - Math.abs((a?.value || 0)));
 
-  // Подготовка данных о самых прибыльных и убыточных товарах
   const productProfitabilityArray = Object.values(productProfitability);
 
   const sortedByProfit = [...productProfitabilityArray].sort((a, b) => b.profit - a.profit);
@@ -454,7 +442,7 @@ export const fetchWildberriesOrders = async (apiKey: string, dateFrom: Date): Pr
     return response.data || [];
   } catch (error) {
     console.error("Error fetching orders:", error);
-    return [];
+    throw error;
   }
 };
 
@@ -476,7 +464,7 @@ export const fetchWildberriesSales = async (apiKey: string, dateFrom: Date): Pro
     return response.data || [];
   } catch (error) {
     console.error("Error fetching sales:", error);
-    return [];
+    throw error;
   }
 };
 
@@ -485,44 +473,81 @@ export const fetchWildberriesSales = async (apiKey: string, dateFrom: Date): Pro
  * @param apiKey Ключ API
  * @param dateFrom Начальная дата
  * @param dateTo Конечная дата
- * @returns Статистика Wildberries
+ * @returns Статистика Wildberries или сообщение об ошибке
  */
-export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
+export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, dateTo: Date): Promise<WildberriesResponse> => {
   try {
     console.log(`Fetching Wildberries stats from ${dateFrom.toISOString()} to ${dateTo.toISOString()}`);
     
-    if (process.env.NODE_ENV === 'development' && !apiKey.startsWith('eyJ')) {
-      console.log('Using demo data in development mode');
-      return getDemoData();
-    }
-    
-    // 1. Получаем детальный отчет через пагинацию (в соответствии с Python-скриптом)
+    // 1. Получаем детальный отчет через пагинацию
     console.log("Starting to fetch all report details with pagination...");
     const reportData = await fetchAllReportDetails(apiKey, dateFrom, dateTo);
     console.log(`Completed fetching all report details. Total records: ${reportData.length}`);
     
-    // 2. Получаем данные о платной приемке (в соответствии с Python-скриптом)
-    const formattedDateFrom = formatDate(dateFrom);
-    const formattedDateTo = formatDate(dateTo);
+    // 2. Получаем данные о платной приемке
     const paidAcceptanceData = await fetchPaidAcceptanceReport(apiKey, dateFrom, dateTo);
     
     // 3. Получаем данные о заказах и продажах
     const ordersData = await fetchWildberriesOrders(apiKey, dateFrom);
     const salesData = await fetchWildberriesSales(apiKey, dateFrom);
     
-    // 4. Если данных нет, возвращаем демо-данные
+    // 4. Если данных нет, возвращаем ошибку
     if (!reportData || reportData.length === 0) {
-      console.log('No data received from Wildberries API, using demo data');
-      return getDemoData();
+      return {
+        currentPeriod: {
+          sales: 0,
+          transferred: 0,
+          expenses: {
+            total: 0,
+            logistics: 0,
+            storage: 0,
+            penalties: 0,
+            acceptance: 0,
+            advertising: 0,
+            deductions: 0
+          },
+          netProfit: 0,
+          acceptance: 0
+        },
+        dailySales: [],
+        productSales: [],
+        productReturns: [],
+        error: {
+          message: "Нет данных для указанного периода",
+          code: 404
+        }
+      };
     }
     
-    // 5. Рассчитываем метрики на основе полученных данных (в соответствии с Python-скриптом)
+    // 5. Рассчитываем метрики на основе полученных данных
     console.log("Calculating metrics from report data...");
     const result = calculateMetrics(reportData, paidAcceptanceData);
     
     if (!result || !result.metrics) {
-      console.log('Failed to calculate metrics, using demo data');
-      return getDemoData();
+      return {
+        currentPeriod: {
+          sales: 0,
+          transferred: 0,
+          expenses: {
+            total: 0,
+            logistics: 0,
+            storage: 0,
+            penalties: 0,
+            acceptance: 0,
+            advertising: 0,
+            deductions: 0
+          },
+          netProfit: 0,
+          acceptance: 0
+        },
+        dailySales: [],
+        productSales: [],
+        productReturns: [],
+        error: {
+          message: "Ошибка при расчете метрик",
+          code: 500
+        }
+      };
     }
     
     const { 
@@ -604,21 +629,21 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
     
-    // 10. Формируем итоговый ответ с использованием метрик из Python-скрипта
+    // 10. Формируем итоговый ответ
     const response: WildberriesResponse = {
       currentPeriod: {
         sales: metrics.total_sales,
-        transferred: metrics.total_for_pay, // По логике Python-скрипта используем total_for_pay как transferred
+        transferred: metrics.total_for_pay,
         expenses: {
           total: metrics.total_delivery_rub + metrics.total_storage_fee + metrics.total_penalty + metrics.total_acceptance,
           logistics: metrics.total_delivery_rub,
           storage: metrics.total_storage_fee,
           penalties: metrics.total_penalty,
           acceptance: metrics.total_acceptance,
-          advertising: 0,  // Рекламные расходы в скрипте не учитываются
+          advertising: 0,  // Рекламные расходы нужно будет добавить из отдельного API
           deductions: metrics.total_deduction
         },
-        netProfit: metrics.total_to_pay, // По логике Python-скрипта используем total_to_pay как netProfit
+        netProfit: metrics.total_to_pay,
         acceptance: metrics.total_acceptance
       },
       dailySales,
@@ -637,154 +662,35 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
     console.log(`Successfully processed data from Wildberries API. Net profit (total_to_pay): ${metrics.total_to_pay}`);
     
     return response;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching Wildberries stats:", error);
-    return getDemoData();
+    
+    // Возвращаем структуру с информацией об ошибке
+    return {
+      currentPeriod: {
+        sales: 0,
+        transferred: 0,
+        expenses: {
+          total: 0,
+          logistics: 0,
+          storage: 0,
+          penalties: 0,
+          acceptance: 0,
+          advertising: 0,
+          deductions: 0
+        },
+        netProfit: 0,
+        acceptance: 0
+      },
+      dailySales: [],
+      productSales: [],
+      productReturns: [],
+      error: {
+        message: error.response?.status === 429 
+          ? "Превышен лимит запросов к API Wildberries. Пожалуйста, повторите попытку позже." 
+          : "Ошибка при получении данных от API Wildberries",
+        code: error.response?.status || 500
+      }
+    };
   }
-};
-
-/**
- * Возвращает демо-данные для тестирования и отладки
- * @returns Демо-данные для Wildberries
- */
-const getDemoData = (): WildberriesResponse => {
-  return {
-    currentPeriod: {
-      sales: 294290.6,
-      transferred: 218227.70,
-      expenses: {
-        total: 65794.94, 
-        logistics: 35669.16,
-        storage: 23125.78,
-        penalties: 0,
-        acceptance: 0,
-        advertising: 0,
-        deductions: 7000 
-      },
-      netProfit: 147037.23,
-      acceptance: 0
-    },
-    dailySales: [
-      {
-        date: "2025-02-26",
-        sales: 36652.93,
-        previousSales: 0
-      },
-      {
-        date: "2025-02-27",
-        sales: 79814.5,
-        previousSales: 0
-      },
-      {
-        date: "2025-02-28",
-        sales: 37899.90,
-        previousSales: 0
-      },
-      {
-        date: "2025-03-01",
-        sales: 62596.15,
-        previousSales: 0
-      },
-      {
-        date: "2025-03-02",
-        sales: 77327.11,
-        previousSales: 0
-      }
-    ],
-    productSales: [
-      { subject_name: "Костюмы", quantity: 48 },
-      { subject_name: "Платья", quantity: 6 },
-      { subject_name: "Свитшоты", quantity: 4 },
-      { subject_name: "Лонгсливы", quantity: 3 },
-      { subject_name: "Костюмы спортивные", quantity: 1 }
-    ],
-    productReturns: [
-      { name: "Костюм женский спортивный", value: 12000, count: 3 },
-      { name: "Платье летнее", value: 8500, count: 2 },
-      { name: "Футболка мужская", value: 6300, count: 4 },
-      { name: "Джинсы классические", value: 4200, count: 1 },
-      { name: "Куртка зимняя", value: 3000, count: 1 }
-    ],
-    penaltiesData: [
-      { name: "Недопоставка", value: 3500 },
-      { name: "Нарушение упаковки", value: 2800 },
-      { name: "Нарушение маркировки", value: 1200 },
-      { name: "Другие причины", value: 2500 }
-    ],
-    deductionsData: [ 
-      { name: "Услуги доставки транзитных поставок", value: 17265.33 },
-      { name: "Штраф за перенос поставки", value: -1079.00, isNegative: true },
-      { name: "Штраф за недопоставку", value: -2345.67, isNegative: true },
-      { name: "Компенсация клиенту за брак", value: -1587.45, isNegative: true },
-      { name: "Недостача товара", value: -3254.89, isNegative: true }
-    ],
-    topProfitableProducts: [
-      { 
-        name: "Костюм женский спортивный", 
-        price: "3200", 
-        profit: "25000", 
-        image: "https://images.wbstatic.net/big/new/25250000/25251346-1.jpg",
-        quantitySold: 65,
-        margin: 42,
-        returnCount: 3,
-        category: "Женская одежда"
-      },
-      { 
-        name: "Платье летнее", 
-        price: "1200", 
-        profit: "18000", 
-        image: "https://images.wbstatic.net/big/new/22270000/22271973-1.jpg",
-        quantitySold: 58,
-        margin: 45,
-        returnCount: 2,
-        category: "Женская одежда" 
-      },
-      { 
-        name: "Джинсы классические", 
-        price: "2800", 
-        profit: "15500", 
-        image: "https://images.wbstatic.net/big/new/13730000/13733711-1.jpg",
-        quantitySold: 42,
-        margin: 35,
-        returnCount: 1,
-        category: "Мужская одежда" 
-      }
-    ],
-    topUnprofitableProducts: [
-      { 
-        name: "Шарф зимний", 
-        price: "800", 
-        profit: "-5200", 
-        image: "https://images.wbstatic.net/big/new/11080000/11081822-1.jpg",
-        quantitySold: 4,
-        margin: 8,
-        returnCount: 12,
-        category: "Аксессуары" 
-      },
-      { 
-        name: "Рубашка офисная", 
-        price: "1500", 
-        profit: "-3800", 
-        image: "https://images.wbstatic.net/big/new/9080000/9080277-1.jpg",
-        quantitySold: 3,
-        margin: 5,
-        returnCount: 8,
-        category: "Мужская одежда" 
-      },
-      { 
-        name: "Перчатки кожаные", 
-        price: "1200", 
-        profit: "-2900", 
-        image: "https://images.wbstatic.net/big/new/10320000/10328291-1.jpg",
-        quantitySold: 2,
-        margin: 12,
-        returnCount: 10,
-        category: "Аксессуары" 
-      }
-    ],
-    orders: [],
-    sales: [],
-    warehouseDistribution: [],
-    regionDistribution: []
-  };
 };

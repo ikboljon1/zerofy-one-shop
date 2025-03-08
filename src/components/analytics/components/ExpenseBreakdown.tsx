@@ -1,6 +1,6 @@
 
 import { Card } from "@/components/ui/card";
-import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, Coins } from "lucide-react";
+import { Truck, AlertCircle, WarehouseIcon, Target, Coins } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 interface ExpenseBreakdownProps {
@@ -13,7 +13,7 @@ interface ExpenseBreakdownProps {
         penalties: number;
         advertising: number;
         acceptance: number;
-        deductions?: number; // Add deductions to the interface
+        deductions?: number;
       };
     };
   };
@@ -31,7 +31,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
   // Общая сумма расходов для расчета процентов
   const totalExpenses = data.currentPeriod.expenses.total;
 
-  // Рассчитываем штрафы и удержания для отображения
+  // Рассчитываем штрафы для отображения
   const penaltiesAmount = data.currentPeriod.expenses.penalties;
 
   return (
@@ -98,12 +98,8 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           <div className="mt-4 pt-4 border-t border-red-200 dark:border-red-800/50">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Брак и повреждения</span>
-                <span className="font-medium">{formatCurrency(penaltiesAmount * 0.35)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Нарушение правил</span>
-                <span className="font-medium">{formatCurrency(penaltiesAmount * 0.35)}</span>
+                <span>Штрафы от маркетплейса</span>
+                <span className="font-medium">{formatCurrency(penaltiesAmount)}</span>
               </div>
             </div>
           </div>
