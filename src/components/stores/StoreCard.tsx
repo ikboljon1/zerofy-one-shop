@@ -12,6 +12,7 @@ interface StoreCardProps {
   onDelete: (id: string) => void;
   onRefreshStats: (store: Store) => void;
   isLoading: boolean;
+  canDelete?: boolean; // Added the canDelete prop with optional flag
 }
 
 export function StoreCard({ 
@@ -19,7 +20,8 @@ export function StoreCard({
   onToggleSelection, 
   onDelete, 
   onRefreshStats,
-  isLoading 
+  isLoading,
+  canDelete = true // Default to true to maintain backward compatibility
 }: StoreCardProps) {
   return (
     <Card className={store.isSelected ? "border-primary" : ""}>
@@ -37,6 +39,7 @@ export function StoreCard({
               size="icon"
               className="text-destructive hover:text-destructive/90"
               onClick={() => onDelete(store.id)}
+              disabled={!canDelete} // Disable the button based on canDelete prop
             >
               <Trash2 className="h-4 w-4" />
             </Button>

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,7 +44,6 @@ export function AddStoreDialog({ isOpen, isLoading, onOpenChange, onAddStore }: 
   } | null>(null);
   const { toast } = useToast();
 
-  // Get current user from localStorage
   const getCurrentUserId = (): string | null => {
     const userData = localStorage.getItem('user');
     if (!userData) return null;
@@ -60,10 +58,8 @@ export function AddStoreDialog({ isOpen, isLoading, onOpenChange, onAddStore }: 
 
   const handleOpenChange = (open: boolean) => {
     if (open) {
-      // Check store limit when dialog opens
       checkStoreLimit();
     } else {
-      // Reset form when closing
       setNewStore({});
       setLimitError(null);
     }
@@ -80,7 +76,6 @@ export function AddStoreDialog({ isOpen, isLoading, onOpenChange, onAddStore }: 
 
     setIsCheckingLimit(true);
     try {
-      // Get subscription information
       const subscription = await getSubscriptionStatus(userId);
       setSubscriptionInfo(subscription);
       
@@ -111,7 +106,6 @@ export function AddStoreDialog({ isOpen, isLoading, onOpenChange, onAddStore }: 
       return;
     }
 
-    // Check store limit one more time before submitting
     try {
       const limitCheck = await canAddStore(userId);
       
@@ -120,17 +114,14 @@ export function AddStoreDialog({ isOpen, isLoading, onOpenChange, onAddStore }: 
         return;
       }
 
-      // Get subscription information to ensure it's active
       const subscription = await getSubscriptionStatus(userId);
       if (!subscription.isActive) {
         setLimitError("Подписка неактивна. Пожалуйста, обновите тариф");
         return;
       }
 
-      // Update the store count
       await incrementStoreCount(userId);
       
-      // Call the original onAddStore
       onAddStore(newStore);
       
       toast({
@@ -146,7 +137,6 @@ export function AddStoreDialog({ isOpen, isLoading, onOpenChange, onAddStore }: 
     }
   };
 
-  // Функция для определения, прошел ли минимальный период подписки (1 месяц)
   const hasMinimumSubscriptionPeriodPassed = (): boolean => {
     if (!subscriptionInfo || !subscriptionInfo.endDate) return false;
     
@@ -154,11 +144,9 @@ export function AddStoreDialog({ isOpen, isLoading, onOpenChange, onAddStore }: 
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
     
-    // Если конец подписки более чем через месяц, значит подписка оформлена менее месяца назад
     return subscriptionEndDate.getTime() - oneMonthAgo.getTime() < 0;
   };
 
-  // Подготовка текста ошибки, связанной с минимальным сроком подписки
   const getSubscriptionPeriodErrorText = (): string => {
     if (!subscriptionInfo || !subscriptionInfo.endDate) return "Информация о подписке недоступна";
 
@@ -207,7 +195,7 @@ export function AddStoreDialog({ isOpen, isLoading, onOpenChange, onAddStore }: 
         )}
 
         {subscriptionInfo && !hasMinimumSubscriptionPeriodPassed() && (
-          <Alert variant="warning" className="mb-4 bg-yellow-900/30 border-yellow-800/30 text-yellow-300">
+          <Alert variant="default" className="mb-4 bg-yellow-900/30 border-yellow-800/30 text-yellow-300">
             <AlertCircle className="h-4 w-4 text-yellow-500" />
             <AlertTitle>Важная информация</AlertTitle>
             <AlertDescription>
