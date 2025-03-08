@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -858,3 +859,15 @@ const Profile = () => {
                         У вас активирован пробный период с тарифом "Премиум". После его окончания вы будете переведены на тариф "Стартовый".
                       </AlertDescription>
                     </Alert>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+export default Profile;
