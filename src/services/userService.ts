@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   name: string;
@@ -13,6 +14,8 @@ export interface User {
   isInTrial?: boolean;
   subscriptionEndDate?: string;
   isSubscriptionActive?: boolean;
+  phone?: string; // Add phone field to the User interface
+  company?: string; // Add company field to the User interface
 }
 
 const mockUsers: User[] = [
@@ -91,7 +94,7 @@ const mockUsers: User[] = [
   }
 ];
 
-const TARIFF_STORE_LIMITS: Record<string, number> = {
+export const TARIFF_STORE_LIMITS: Record<string, number> = {
   '1': 1,
   '2': 3,
   '3': 10,

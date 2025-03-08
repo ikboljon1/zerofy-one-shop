@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -63,15 +62,12 @@ const Profile = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Simulate fetching user data and subscription status on component mount
   useEffect(() => {
-    // In a real app, this would come from the backend
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       const user = JSON.parse(storedUser);
       setUserProfile(user);
       
-      // Set mock subscription data based on user info
       const mockSubscriptionData = {
         plan: user.tariffId === "3" ? "Премиум" : user.tariffId === "2" ? "Бизнес" : "Стартовый",
         endDate: user.subscriptionEndDate || "2024-12-31T23:59:59Z",
@@ -215,9 +211,7 @@ const Profile = () => {
       setIsProcessing(true);
       
       try {
-        // Here we'll later integrate with the payment system
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulating API call
-        
+        await new Promise(resolve => setTimeout(resolve, 1500));
         toast({
           title: "Карта добавлена",
           description: "Ваша карта успешно добавлена",
@@ -252,12 +246,9 @@ const Profile = () => {
 
     setIsProcessing(true);
     try {
-      // Here we'll later integrate with the payment system
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulating API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Update the current subscription with the new plan
       if (currentSubscription || isSubscriptionExpired) {
-        // Calculate new end date (1 month from now)
         const newEndDate = new Date();
         newEndDate.setMonth(newEndDate.getMonth() + 1);
         
@@ -289,7 +280,6 @@ const Profile = () => {
         description: `Подписка ${selectedPlan} успешно оформлена`,
       });
       
-      // Navigate to subscription tab to show the new subscription
       setActiveTab("subscription");
     } catch (error) {
       toast({
@@ -315,8 +305,7 @@ const Profile = () => {
     if (!currentSubscription) return 0;
     if (!currentSubscription.isActive) return 100;
     
-    // Calculate subscription progress
-    const daysInMonth = 30; // Approximation
+    const daysInMonth = 30;
     const daysElapsed = daysInMonth - currentSubscription.daysRemaining;
     return Math.min(100, Math.max(0, (daysElapsed / daysInMonth) * 100));
   };
@@ -328,13 +317,11 @@ const Profile = () => {
       description: "Перенаправление на страницу входа...",
     });
     
-    // Redirect to login page
     setTimeout(() => {
       navigate('/');
     }, 1000);
   };
 
-  // If subscription is expired, show an alert at the top
   const SubscriptionExpiredAlert = () => {
     if (!isSubscriptionExpired) return null;
     
@@ -378,11 +365,9 @@ const Profile = () => {
         </Button>
       </div>
       
-      {/* Subscription expired alert */}
       <SubscriptionExpiredAlert />
       
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-        {/* User Profile Card */}
         <Card className="lg:col-span-1">
           <CardHeader className="text-center pb-2">
             <div className="flex justify-center mb-4">
@@ -437,7 +422,6 @@ const Profile = () => {
           </CardContent>
         </Card>
         
-        {/* Subscription Status Card */}
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>Информация о подписке</CardTitle>
@@ -581,7 +565,7 @@ const Profile = () => {
                   <div className="relative">
                     <Input
                       id="phone"
-                      defaultValue={userData.phone}
+                      defaultValue={userData.phone || ''}
                       className="pl-10"
                     />
                     <Phone className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
@@ -592,7 +576,7 @@ const Profile = () => {
                   <div className="relative">
                     <Input
                       id="company"
-                      defaultValue={userData.company}
+                      defaultValue={userData.company || ''}
                       className="pl-10"
                     />
                     <Building className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
@@ -635,7 +619,6 @@ const Profile = () => {
 
         <TabsContent value="subscription">
           <div className="space-y-6">
-            {/* Current Subscription Status */}
             {currentSubscription && (
               <Card className="mb-6 overflow-hidden">
                 <div className={`h-2 ${
@@ -893,7 +876,6 @@ const Profile = () => {
                         <Badge className={`${
                           selectedPlan === "Премиум" ? "bg-amber-500" : 
                           selectedPlan === "Бизнес" ? "bg-purple-600" : 
-                          selectedPlan === "Корпоративный" ? "bg-emerald-600" :
                           "bg-blue-600"
                         }`}>
                           {selectedPlan}
