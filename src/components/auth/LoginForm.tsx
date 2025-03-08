@@ -8,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { authenticate } from "@/services/userService";
 
 const loginSchema = z.object({
-  email: z.string().email({ message: "Введите корректный email" }),
-  password: z.string().min(6, { message: "Пароль должен содержать минимум 6 символов" }),
+  email: z.string().min(1, { message: "Введите логин" }),
+  password: z.string().min(1, { message: "Введите пароль" }),
 });
 
 interface LoginFormProps {
@@ -39,23 +40,36 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
     setIsLoading(true);
     
     try {
-      // In a real application, you would call an authentication API here
-      console.log("Login data:", data);
+      const result = await authenticate(data.email, data.password);
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: "Успешный вход",
-        description: "Вы успешно вошли в систему",
-      });
-      
-      onSuccess();
-      navigate("/");
+      if (result.success) {
+        // Store user info in localStorage
+        localStorage.setItem('user', JSON.stringify(result.user));
+        
+        toast({
+          title: "Успешный вход",
+          description: "Вы успешно вошли в систему",
+        });
+        
+        onSuccess();
+        
+        // Redirect to admin panel if role is admin
+        if (result.user?.role === 'admin') {
+          navigate("/admin");
+        } else {
+          navigate("/");
+        }
+      } else {
+        toast({
+          title: "Ошибка",
+          description: result.errorMessage || "Не удалось войти. Проверьте данные и попробуйте снова.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       toast({
         title: "Ошибка",
-        description: "Не удалось войти. Проверьте данные и попробуйте снова.",
+        description: "Произошла ошибка при входе в систему",
         variant: "destructive",
       });
     } finally {
@@ -66,11 +80,11 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">Логин</Label>
         <Input
           id="email"
-          type="email"
-          placeholder="example@mail.com"
+          type="text"
+          placeholder="Введите логин (admin)"
           {...register("email")}
         />
         {errors.email && (
@@ -87,6 +101,7 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
         <Input
           id="password"
           type="password"
+          placeholder="Введите пароль (admin)"
           {...register("password")}
         />
         {errors.password && (

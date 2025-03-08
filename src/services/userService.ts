@@ -64,6 +64,54 @@ const mockUsers: User[] = [
   }
 ];
 
+// Mock admin credentials
+const ADMIN_CREDENTIALS = {
+  email: 'admin',
+  password: 'admin'
+};
+
+// Function to authenticate a user login
+export const authenticate = (email: string, password: string): Promise<{ success: boolean; user?: User; errorMessage?: string }> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      // Check if admin credentials
+      if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
+        // Create admin user if not exists
+        let adminUser = mockUsers.find(u => u.email === 'admin@admin.com');
+        
+        if (!adminUser) {
+          adminUser = {
+            id: '0',
+            name: 'Администратор',
+            email: 'admin@admin.com',
+            role: 'admin',
+            status: 'active',
+            registeredAt: new Date().toISOString(),
+            lastLogin: new Date().toISOString(),
+            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin'
+          };
+          mockUsers.unshift(adminUser);
+        } else {
+          // Update last login
+          adminUser.lastLogin = new Date().toISOString();
+        }
+        
+        resolve({ 
+          success: true, 
+          user: adminUser 
+        });
+        return;
+      }
+      
+      // If not admin, could implement regular user auth here
+      resolve({ 
+        success: false, 
+        errorMessage: 'Неверный логин или пароль' 
+      });
+    }, 500);
+  });
+};
+
 // Function to get all users
 export const getUsers = (): Promise<User[]> => {
   return new Promise((resolve) => {
