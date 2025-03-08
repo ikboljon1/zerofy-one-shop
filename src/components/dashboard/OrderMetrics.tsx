@@ -82,7 +82,7 @@ const OrderMetrics: React.FC<OrderMetricsProps> = ({ orders }) => {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">
-            {formatCurrency(totalAmount)} ₽
+            {formatCurrency(totalAmount)}
           </div>
         </CardContent>
       </Card>

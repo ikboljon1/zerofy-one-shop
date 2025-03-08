@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,13 +41,11 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales, title = "Продажи"
     let valueA: any = a[sortField];
     let valueB: any = b[sortField];
 
-    // Преобразование дат для правильной сортировки
     if (sortField === "date" || sortField === "lastChangeDate") {
       valueA = new Date(valueA).getTime();
       valueB = new Date(valueB).getTime();
     }
 
-    // Преобразование числовых строк для правильной сортировки
     if (typeof valueA === "string" && !isNaN(Number(valueA))) {
       valueA = Number(valueA);
     }
@@ -70,7 +67,6 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales, title = "Продажи"
     }
   };
 
-  // Check if a sale is a return (negative price)
   const isReturn = (sale: WildberriesSale) => sale.priceWithDisc < 0;
 
   return (

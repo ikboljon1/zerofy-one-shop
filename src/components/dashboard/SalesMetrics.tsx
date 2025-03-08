@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   Card,
@@ -51,7 +52,7 @@ const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales }) => {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-amber-700 dark:text-amber-300">
-            {formatCurrency(totalAmount)} ₽
+            {formatCurrency(totalAmount)}
           </div>
         </CardContent>
       </Card>
@@ -68,7 +69,7 @@ const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales }) => {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-green-700 dark:text-green-300">
-            {formatCurrency(totalProfit)} ₽
+            {formatCurrency(totalProfit)}
           </div>
         </CardContent>
       </Card>
@@ -85,7 +86,7 @@ const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales }) => {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-cyan-700 dark:text-cyan-300">
-            {formatCurrency(avgSaleValue)} ₽
+            {formatCurrency(avgSaleValue)}
           </div>
         </CardContent>
       </Card>
