@@ -120,7 +120,8 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
         setFormData(result.user);
         onUserUpdated(result.user);
         
-        getSubscriptionStatus(formData.id).then(data => {
+        // Use the imported async function, not the local synchronous one
+        fetchSubscriptionStatus(formData.id).then(data => {
           setSubscriptionData(data);
         });
         
