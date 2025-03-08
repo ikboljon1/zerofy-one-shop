@@ -20,8 +20,9 @@ import {
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { getAnalyticsData } from "@/utils/storeUtils";
 import Chart from "@/components/Chart";
 
 const calculatePercentageChange = (current: number, previous: number): string => {
@@ -75,7 +76,53 @@ const Stats = () => {
         return;
       }
 
+      const analyticsData = getAnalyticsData(selectedStore.id);
+      if (analyticsData && analyticsData.data) {
+        console.log("Using data from analytics storage", analyticsData);
+        setStatsData(analyticsData.data);
+        
+        toast({
+          title: "Данные обновлены",
+          description: `Данные успешно загружены за период ${format(new Date(analyticsData.dateFrom), 'dd.MM.yyyy')} - ${format(new Date(analyticsData.dateTo), 'dd.MM.yyyy')}`,
+        });
+        setIsLoading(false);
+        return;
+      }
+
       const data = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
+      
+      if (data) {
+        const analyticsData = {
+          storeId: selectedStore.id,
+          dateFrom: dateFrom.toISOString(),
+          dateTo: dateTo.toISOString(),
+          data: data,
+          deductionsTimeline: data.dailySales?.map((day: any) => {
+            const daysCount = data.dailySales.length || 1;
+            const logistic = (data.currentPeriod.expenses.logistics || 0) / daysCount;
+            const storage = (data.currentPeriod.expenses.storage || 0) / daysCount;
+            const penalties = (data.currentPeriod.expenses.penalties || 0) / daysCount;
+            const acceptance = (data.currentPeriod.expenses.acceptance || 0) / daysCount;
+            const advertising = (data.currentPeriod.expenses.advertising || 0) / daysCount;
+            
+            return {
+              date: typeof day.date === 'string' ? day.date.split('T')[0] : new Date().toISOString().split('T')[0],
+              logistic,
+              storage,
+              penalties,
+              acceptance,
+              advertising
+            };
+          }) || [],
+          penalties: [],
+          returns: [],
+          productAdvertisingData: [],
+          advertisingBreakdown: { search: 0 },
+          timestamp: Date.now()
+        };
+        
+        localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
+      }
       
       setStatsData(data);
       

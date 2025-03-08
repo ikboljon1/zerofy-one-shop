@@ -1,3 +1,4 @@
+
 import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY, ORDERS_STORAGE_KEY, SALES_STORAGE_KEY, WildberriesOrder, WildberriesSale } from "@/types/store";
 import { fetchWildberriesStats, fetchWildberriesOrders, fetchWildberriesSales } from "@/services/wildberriesApi";
 
@@ -48,9 +49,21 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           };
         }) || [];
         
-        // Мы больше не сохраняем данные в localStorage
-        // Они будут храниться только в оперативной памяти
-        // TODO: Здесь должно быть сохранение в базу данных
+        // Сохраняем также аналитические данные в совместимом формате
+        const analyticsData = {
+          storeId: store.id,
+          dateFrom: from.toISOString(),
+          dateTo: to.toISOString(),
+          data: stats,
+          deductionsTimeline,
+          penalties: [],
+          returns: [],
+          productAdvertisingData: [],
+          advertisingBreakdown: { search: 0 },
+          timestamp: Date.now()
+        };
+        
+        localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
         
         return updatedStore;
       }

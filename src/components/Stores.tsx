@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { ShoppingBag, Store } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { Store as StoreType, NewStore, STATS_STORAGE_KEY } from "@/types/store";
 import { loadStores, saveStores, refreshStoreStats } from "@/utils/storeUtils";
 import { AddStoreDialog } from "./stores/AddStoreDialog";
@@ -61,6 +61,20 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       const updatedStore = await refreshStoreStats(store);
       const storeToAdd = updatedStore || store;
       
+      // Также сохраняем данные для использования в Analytics и Dashboard
+      if (updatedStore && updatedStore.stats) {
+        const analyticsData = {
+          storeId: store.id,
+          dateFrom: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          dateTo: new Date().toISOString(),
+          data: updatedStore.stats,
+          timestamp: Date.now()
+        };
+        
+        // Сохраняем данные для использования в аналитике
+        localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
+      }
+      
       const updatedStores = [...stores, storeToAdd];
       setStores(updatedStores);
       saveStores(updatedStores);
@@ -113,6 +127,20 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         setStores(updatedStores);
         saveStores(updatedStores);
         
+        // Также обновляем данные для использования в Analytics и Dashboard
+        if (updatedStore.stats) {
+          const analyticsData = {
+            storeId: store.id,
+            dateFrom: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+            dateTo: new Date().toISOString(),
+            data: updatedStore.stats,
+            timestamp: Date.now()
+          };
+          
+          // Сохраняем данные для использования в аналитике
+          localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
+        }
+        
         toast({
           title: "Успешно",
           description: "Статистика магазина обновлена",
@@ -138,6 +166,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     setStores(updatedStores);
     saveStores(updatedStores);
     localStorage.removeItem(`${STATS_STORAGE_KEY}_${storeId}`);
+    localStorage.removeItem(`marketplace_analytics_${storeId}`);
     
     toast({
       title: "Магазин удален",
