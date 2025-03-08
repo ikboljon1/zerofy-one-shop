@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +31,8 @@ import {
   Trash2, 
   CheckCircle2, 
   XCircle,
-  Info 
+  Info,
+  Store
 } from "lucide-react";
 
 interface Tariff {
@@ -44,9 +44,9 @@ interface Tariff {
   features: string[];
   isPopular: boolean;
   isActive: boolean;
+  storeLimit: number;
 }
 
-// Mock data for tariffs
 const mockTariffs: Tariff[] = [
   {
     id: '1',
@@ -61,7 +61,8 @@ const mockTariffs: Tariff[] = [
       'Email поддержка'
     ],
     isPopular: false,
-    isActive: true
+    isActive: true,
+    storeLimit: 1
   },
   {
     id: '2',
@@ -77,7 +78,8 @@ const mockTariffs: Tariff[] = [
       'API интеграции'
     ],
     isPopular: true,
-    isActive: true
+    isActive: true,
+    storeLimit: 3
   },
   {
     id: '3',
@@ -94,7 +96,8 @@ const mockTariffs: Tariff[] = [
       'Приоритетные обновления'
     ],
     isPopular: false,
-    isActive: true
+    isActive: true,
+    storeLimit: 10
   },
   {
     id: '4',
@@ -111,7 +114,8 @@ const mockTariffs: Tariff[] = [
       'SLA гарантии'
     ],
     isPopular: false,
-    isActive: false
+    isActive: false,
+    storeLimit: 999
   }
 ];
 
@@ -131,14 +135,12 @@ export default function TariffSection() {
     if (!currentTariff) return;
     
     if (currentTariff.id) {
-      // Update existing tariff
       setTariffs(tariffs.map(t => t.id === currentTariff.id ? currentTariff : t));
       toast({
         title: "Тариф обновлен",
         description: `Тариф "${currentTariff.name}" успешно обновлен`,
       });
     } else {
-      // Add new tariff
       const newTariff = {
         ...currentTariff,
         id: String(Date.now()),
@@ -209,7 +211,8 @@ export default function TariffSection() {
       description: 'Описание тарифа',
       features: [],
       isPopular: false,
-      isActive: true
+      isActive: true,
+      storeLimit: 1
     });
     setIsEditDialogOpen(true);
   };
@@ -306,6 +309,13 @@ export default function TariffSection() {
                     </div>
                   </CardHeader>
                   <CardContent className="flex-grow">
+                    <div className="mb-3 flex items-center text-blue-600 dark:text-blue-400 font-medium">
+                      <Store className="mr-2 h-5 w-5" />
+                      {tariff.storeLimit === 999 ? 
+                        'Неограниченное количество магазинов' : 
+                        `До ${tariff.storeLimit} ${tariff.storeLimit === 1 ? 'магазина' : 'магазинов'}`
+                      }
+                    </div>
                     <ul className="space-y-2">
                       {tariff.features.map((feature, index) => (
                         <li key={index} className="flex items-start gap-2 text-gray-700 dark:text-gray-300">
@@ -371,6 +381,9 @@ export default function TariffSection() {
                         Период
                       </th>
                       <th scope="col" className="px-6 py-3 text-gray-700 dark:text-gray-300">
+                        Лимит магазинов
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-gray-700 dark:text-gray-300">
                         Статус
                       </th>
                       <th scope="col" className="px-6 py-3 text-gray-700 dark:text-gray-300">
@@ -400,6 +413,9 @@ export default function TariffSection() {
                         </td>
                         <td className="px-6 py-4 text-gray-700 dark:text-gray-300">
                           {tariff.period === 'monthly' ? 'Месячный' : 'Годовой'}
+                        </td>
+                        <td className="px-6 py-4 text-gray-700 dark:text-gray-300">
+                          {tariff.storeLimit === 999 ? 'Неограниченно' : tariff.storeLimit}
                         </td>
                         <td className="px-6 py-4">
                           <Badge 
@@ -543,6 +559,20 @@ export default function TariffSection() {
                     onCheckedChange={(checked) => setCurrentTariff({...currentTariff, isActive: checked})}
                   />
                   <Label htmlFor="isActive" className="text-gray-700 dark:text-gray-300">Активен</Label>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="storeLimit" className="text-gray-700 dark:text-gray-300">Лимит магазинов</Label>
+                  <Input
+                    id="storeLimit"
+                    type="number"
+                    min="1"
+                    max="999"
+                    value={currentTariff.storeLimit}
+                    onChange={(e) => setCurrentTariff({...currentTariff, storeLimit: Number(e.target.value)})}
+                    className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700"
+                  />
+                  <p className="text-xs text-gray-500">Установите 999 для неограниченного количества</p>
                 </div>
               </div>
               
