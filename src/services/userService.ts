@@ -22,6 +22,7 @@ export interface SubscriptionData {
   status: 'active' | 'trial' | 'expired';
   endDate?: string;
   daysRemaining?: number;
+  tariffId?: string;
 }
 
 export interface PaymentHistoryItem {
@@ -41,7 +42,6 @@ export const TARIFF_STORE_LIMITS: Record<string, number> = {
   "4": 999 // Корпоративный
 };
 
-// Get users from localStorage or return mock data if empty
 export const getUsers = async (): Promise<User[]> => {
   await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
   
@@ -50,7 +50,6 @@ export const getUsers = async (): Promise<User[]> => {
     return JSON.parse(storedUsers);
   }
   
-  // Return mock users if no data in localStorage
   const mockUsers: User[] = [
     {
       id: '1',
@@ -148,13 +147,11 @@ export const authenticate = async (
 ): Promise<{ success: boolean; user?: User; errorMessage?: string }> => {
   await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
   
-  // For demo purposes, allow "admin" email and password
   if (email === 'admin' && password === 'admin') {
     const users = await getUsers();
     const adminUser = users.find(user => user.role === 'admin') || users[0];
     
     if (adminUser) {
-      // Update lastLogin
       adminUser.lastLogin = new Date().toISOString();
       await updateUser(adminUser.id, { lastLogin: adminUser.lastLogin });
       
@@ -165,12 +162,10 @@ export const authenticate = async (
     }
   }
   
-  // Check for users in localStorage
   const users = await getUsers();
   const user = users.find(u => u.email === email);
   
   if (user && (password === 'password' || password === user.password)) {
-    // Update lastLogin
     user.lastLogin = new Date().toISOString();
     await updateUser(user.id, { lastLogin: user.lastLogin });
     
@@ -193,7 +188,6 @@ export const registerUser = async (
 ): Promise<{ success: boolean; user?: User; errorMessage?: string }> => {
   await new Promise(resolve => setTimeout(resolve, 1200)); // Simulate network delay
   
-  // Check if user already exists
   const users = await getUsers();
   const userExists = users.some(user => user.email === email);
   
@@ -204,16 +198,15 @@ export const registerUser = async (
     };
   }
   
-  // Create new user with trial period
   const newUser: User = {
     id: Date.now().toString(),
     name,
     email,
     password,
-    tariffId: '1', // Start with basic plan
+    tariffId: '3',
     isSubscriptionActive: false,
     isInTrial: true,
-    trialEndDate: new Date(new Date().setDate(new Date().getDate() + 14)).toISOString(), // 14 days trial
+    trialEndDate: new Date(new Date().setDate(new Date().getDate() + 3)).toISOString(),
     avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name.replace(/\s+/g, '')}`,
     role: 'user',
     status: 'active',
@@ -222,7 +215,6 @@ export const registerUser = async (
     storeCount: 0
   };
   
-  // Add to users
   users.push(newUser);
   localStorage.setItem('users', JSON.stringify(users));
   
@@ -248,11 +240,9 @@ export const activateSubscription = async (
   
   const user = users[userIndex];
   
-  // Calculate new subscription end date
   const currentDate = new Date();
   const endDate = new Date();
   
-  // If user has an active subscription, extend it
   if (user.isSubscriptionActive && user.subscriptionEndDate) {
     const existingEndDate = new Date(user.subscriptionEndDate);
     if (existingEndDate > currentDate) {
@@ -260,15 +250,14 @@ export const activateSubscription = async (
     }
   }
   
-  // Add months to end date
   endDate.setMonth(endDate.getMonth() + months);
   
-  // Update user subscription
   const updatedUser: User = {
     ...user,
     tariffId,
     isSubscriptionActive: true,
-    isInTrial: false, // End trial if active
+    isInTrial: false,
+    trialEndDate: undefined,
     subscriptionEndDate: endDate.toISOString()
   };
   
@@ -287,12 +276,8 @@ export const changePassword = async (
   currentPassword: string,
   newPassword: string
 ): Promise<{ success: boolean; message?: string }> => {
-  // In a real application, this would be an API call
-  // For now, we'll simulate success with a mock implementation
-  
   await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
   
-  // Get the user from localStorage
   const storedUser = localStorage.getItem('user');
   if (!storedUser) {
     return { success: false, message: "Пользователь не найден" };
@@ -300,21 +285,16 @@ export const changePassword = async (
   
   const user = JSON.parse(storedUser);
   
-  // Mock password check (in a real app, this would be a proper authentication check)
   if (user.id !== userId) {
     return { success: false, message: "Пользователь не найден" };
   }
   
-  // In a real app, we'd have a proper password verification
-  // Here we're just simulating it
   if (currentPassword !== 'current-password' && currentPassword !== user.password) {
     return { success: false, message: "Неверный текущий пароль" };
   }
   
-  // Update the password
   user.password = newPassword;
   
-  // Save back to localStorage
   localStorage.setItem('user', JSON.stringify(user));
   
   return { success: true };
@@ -339,7 +319,8 @@ export const getSubscriptionStatus = (user: User): SubscriptionData => {
     return {
       status: 'trial',
       endDate: user.trialEndDate,
-      daysRemaining: getTrialDaysRemaining(user)
+      daysRemaining: getTrialDaysRemaining(user),
+      tariffId: user.tariffId
     };
   }
   
@@ -353,26 +334,26 @@ export const getSubscriptionStatus = (user: User): SubscriptionData => {
     return {
       status: 'active',
       endDate: user.subscriptionEndDate,
-      daysRemaining
+      daysRemaining,
+      tariffId: user.tariffId
     };
   }
   
   return { 
     status: 'expired',
-    endDate: user.subscriptionEndDate
+    endDate: user.subscriptionEndDate,
+    tariffId: user.tariffId
   };
 };
 
 export const getPaymentHistory = async (userId: string): Promise<PaymentHistoryItem[]> => {
   await new Promise(resolve => setTimeout(resolve, 800)); // Simulate network delay
   
-  // Try to get payment history from localStorage
   const storedHistory = localStorage.getItem(`payment_history_${userId}`);
   if (storedHistory) {
     return JSON.parse(storedHistory);
   }
   
-  // Create mock payment history
   const mockHistory: PaymentHistoryItem[] = [
     {
       id: '1',
@@ -423,11 +404,9 @@ export const addPaymentRecord = async (
     period: `${months} ${months === 1 ? 'месяц' : months < 5 ? 'месяца' : 'месяцев'}`
   };
   
-  // Get existing payment history
   const history = await getPaymentHistory(userId);
   const updatedHistory = [newPayment, ...history];
   
-  // Save updated history
   localStorage.setItem(`payment_history_${userId}`, JSON.stringify(updatedHistory));
   
   return newPayment;
@@ -436,7 +415,6 @@ export const addPaymentRecord = async (
 export const getUserSubscriptionData = async (userId: string): Promise<SubscriptionData> => {
   await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
   
-  // Get user from localStorage
   const storedUsers = localStorage.getItem('users');
   if (!storedUsers) {
     return { status: 'expired' };

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -162,6 +161,16 @@ const UserDetails = ({ user, onBack, onUserUpdated }: UserDetailsProps) => {
     return tariffId in TARIFF_STORE_LIMITS ? TARIFF_STORE_LIMITS[tariffId] : 1;
   };
 
+  const getTariffName = (id: string): string => {
+    switch (id) {
+      case "1": return "Стартовый";
+      case "2": return "Бизнес";
+      case "3": return "Премиум";
+      case "4": return "Корпоративный";
+      default: return `Тариф ${id}`;
+    }
+  };
+
   if (isLoading) {
     return <Card>
       <CardContent>Загрузка...</CardContent>
@@ -244,6 +253,14 @@ const UserDetails = ({ user, onBack, onUserUpdated }: UserDetailsProps) => {
         </div>
         
         <div className="border rounded-md p-4">
+          {user.isInTrial && (
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+              <h3 className="font-medium">Пробный период</h3>
+              <p>Активирован с тарифом "{getTariffName(user.tariffId)}"</p>
+              <p>Осталось дней: {trialDaysRemaining}</p>
+            </div>
+          )}
+          
           <div className="space-y-2">
             <Label htmlFor="tariff">Тариф</Label>
             <Select value={selectedTariff} onValueChange={setSelectedTariff}>
