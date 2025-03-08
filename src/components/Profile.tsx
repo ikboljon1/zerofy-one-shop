@@ -20,6 +20,7 @@ import {
   Loader2,
   AlertTriangle,
   Clock,
+  Lock,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Progress } from "@/components/ui/progress";
@@ -40,6 +41,7 @@ const Profile = () => {
     daysRemaining: number;
     isActive: boolean;
   } | null>(null);
+  const [isSubscriptionExpired, setIsSubscriptionExpired] = useState(false);
   const isMobile = useIsMobile();
   const { toast } = useToast();
 
@@ -53,7 +55,16 @@ const Profile = () => {
       isActive: true
     };
     
+    // To simulate an expired subscription, uncomment the following:
+    // const mockSubscriptionData = {
+    //   plan: "Бизнес",
+    //   endDate: "2023-12-31T23:59:59Z",
+    //   daysRemaining: 0,
+    //   isActive: false
+    // };
+    
     setCurrentSubscription(mockSubscriptionData);
+    setIsSubscriptionExpired(!mockSubscriptionData.isActive);
   }, []);
 
   const userData = {
@@ -186,7 +197,7 @@ const Profile = () => {
       await new Promise(resolve => setTimeout(resolve, 1500)); // Simulating API call
       
       // Update the current subscription with the new plan
-      if (currentSubscription) {
+      if (currentSubscription || isSubscriptionExpired) {
         // Calculate new end date (1 month from now)
         const newEndDate = new Date();
         newEndDate.setMonth(newEndDate.getMonth() + 1);
@@ -197,6 +208,8 @@ const Profile = () => {
           daysRemaining: 30,
           isActive: true
         });
+        
+        setIsSubscriptionExpired(false);
       }
       
       toast({
@@ -228,6 +241,7 @@ const Profile = () => {
 
   const getSubscriptionProgress = (): number => {
     if (!currentSubscription) return 0;
+    if (!currentSubscription.isActive) return 100;
     
     // Calculate subscription progress
     const daysInMonth = 30; // Approximation
@@ -235,9 +249,33 @@ const Profile = () => {
     return Math.min(100, Math.max(0, (daysElapsed / daysInMonth) * 100));
   };
 
+  // If subscription is expired, show an alert at the top
+  const SubscriptionExpiredAlert = () => {
+    if (!isSubscriptionExpired) return null;
+    
+    return (
+      <Alert variant="destructive" className="mb-6">
+        <Lock className="h-5 w-5" />
+        <AlertDescription>
+          <div className="font-bold text-lg">Ваша подписка истекла!</div>
+          <p>Доступ к функциям системы ограничен. Пожалуйста, продлите подписку для восстановления полного доступа.</p>
+          <Button 
+            className="mt-2 w-full sm:w-auto" 
+            onClick={() => setActiveTab("subscription")}
+          >
+            Продлить подписку
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  };
+
   return (
     <div className="container mx-auto p-4 md:p-6 max-w-5xl">
       <h1 className="text-2xl md:text-3xl font-bold mb-6">Профиль</h1>
+      
+      {/* Subscription expired alert */}
+      <SubscriptionExpiredAlert />
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 w-full">
@@ -312,7 +350,21 @@ const Profile = () => {
                   </div>
                 </div>
               </div>
-              <Button className="w-full md:w-auto mt-6">Сохранить изменения</Button>
+              <Button className="w-full md:w-auto mt-6" disabled={isSubscriptionExpired}>
+                Сохранить изменения
+                {isSubscriptionExpired && (
+                  <Lock className="ml-2 h-4 w-4" />
+                )}
+              </Button>
+              
+              {isSubscriptionExpired && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    Редактирование профиля недоступно. Пожалуйста, продлите подписку.
+                  </AlertDescription>
+                </Alert>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -343,7 +395,10 @@ const Profile = () => {
                       <span>Прогресс подписки</span>
                       <span>{Math.round(getSubscriptionProgress())}%</span>
                     </div>
-                    <Progress value={getSubscriptionProgress()} className="h-2" />
+                    <Progress 
+                      value={getSubscriptionProgress()} 
+                      className={!currentSubscription.isActive ? "h-2 bg-red-950" : "h-2"} 
+                    />
                   </div>
                   
                   <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg space-y-2">
@@ -351,20 +406,22 @@ const Profile = () => {
                       <span className="text-muted-foreground">Дата окончания:</span>
                       <span className="font-medium">{formatDate(currentSubscription.endDate)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Осталось дней:</span>
-                      <Badge variant="outline">
-                        {currentSubscription.daysRemaining}
-                      </Badge>
-                    </div>
+                    {currentSubscription.isActive && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Осталось дней:</span>
+                        <Badge variant="outline">
+                          {currentSubscription.daysRemaining}
+                        </Badge>
+                      </div>
+                    )}
                   </div>
                   
                   {!currentSubscription.isActive && (
                     <Alert variant="destructive">
                       <AlertTriangle className="h-4 w-4" />
                       <AlertDescription>
-                        Ваша подписка истекла. Некоторые функции могут быть недоступны. 
-                        Пожалуйста, продлите подписку.
+                        Ваша подписка истекла. Функции системы недоступны.
+                        Пожалуйста, продлите подписку для восстановления доступа.
                       </AlertDescription>
                     </Alert>
                   )}

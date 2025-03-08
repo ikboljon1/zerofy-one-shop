@@ -56,12 +56,14 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
     setFormData(user);
     
     if (user.trialEndDate) {
+      // Fetch trial days remaining
       getTrialDaysRemaining(user.id).then(days => {
         setTrialDaysRemaining(days);
       });
     }
     
     if (user.subscriptionEndDate) {
+      // Fetch subscription status
       getSubscriptionStatus(user.id).then(data => {
         setSubscriptionData(data);
       });
@@ -248,8 +250,16 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
     }
   };
 
+  // Directly compute the trial and subscription status instead of treating them as async
   const trialStatus = getTrialStatus();
   const subscriptionStatus = getSubscriptionStatus();
+
+  // Determine if the user should be blocked from using the system
+  const isUserBlocked = (
+    (subscriptionStatus === 'expired' && !formData.isInTrial) || 
+    (trialStatus === 'expired' && subscriptionStatus !== 'active') ||
+    formData.status === 'inactive'
+  );
 
   return (
     <Card className="h-full overflow-hidden border border-gray-800 shadow-xl rounded-3xl bg-gray-900">
@@ -267,6 +277,19 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
 
       <form onSubmit={handleSubmit}>
         <CardContent className="p-6 space-y-6 overflow-auto h-[calc(100%-14rem)] bg-gray-900">
+          {/* User access warning */}
+          {isUserBlocked && (
+            <Alert className="bg-red-900/30 border-red-800/30 text-red-300 mb-4">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              <AlertDescription className="font-semibold">
+                Пользователь заблокирован! Доступ к системе ограничен.
+                {formData.status === 'inactive' ? 
+                  ' Аккаунт пользователя неактивен.' : 
+                  ' Срок действия подписки или пробного периода истек.'}
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <div className="flex flex-col sm:flex-row gap-6 items-start">
             <div className="flex flex-col items-center gap-3">
               <Avatar className="h-24 w-24 border-4 border-gray-800 shadow-lg">
@@ -472,21 +495,30 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
                               </div>
                               <div>
                                 <span className="text-red-300">
-                                  Пробный период истек. {formData.status === 'active' ? 
-                                  'Пользователь может продолжать пользоваться системой с текущим тарифом.' : 
-                                  'Доступ пользователя ограничен из-за неактивного статуса.'}
+                                  Пробный период истек. Функциональность системы ограничена. Пожалуйста, приобретите подписку для продолжения использования всех функций системы.
                                 </span>
                               </div>
-                              <Button 
-                                type="button" 
-                                variant="outline" 
-                                size="sm" 
-                                className="mt-1 gap-1 bg-red-900/30 border-red-700 text-red-300 hover:bg-red-800/50"
-                                onClick={handleExtendTrial}
-                              >
-                                <TimerReset className="h-4 w-4" />
-                                <span>Продлить пробный период</span>
-                              </Button>
+                              <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                                <Button 
+                                  type="button" 
+                                  variant="outline"  
+                                  className="gap-1 bg-red-900/30 border-red-700 text-red-300 hover:bg-red-800/50"
+                                  onClick={handleExtendTrial}
+                                >
+                                  <TimerReset className="h-4 w-4" />
+                                  <span>Продлить пробный период</span>
+                                </Button>
+                                <Button 
+                                  type="button"
+                                  variant="default"
+                                  className="gap-1 bg-green-600 hover:bg-green-700"
+                                  onClick={handleActivateSubscription}
+                                  disabled={isActivatingSubscription}
+                                >
+                                  <BadgeDollarSign className="h-4 w-4" />
+                                  <span>Оплатить подписку</span>
+                                </Button>
+                              </div>
                             </AlertDescription>
                           </Alert>
                         )}
@@ -560,16 +592,14 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
                           </div>
                           <div>
                             <span className="text-red-300">
-                              Подписка истекла. {formData.status === 'active' ? 
-                              'Пользователь может продолжать пользоваться системой с базовым тарифом.' : 
-                              'Доступ пользователя ограничен из-за неактивного статуса.'}
+                              Подписка истекла. Доступ к системе ограничен. Пожалуйста, продлите подписку для возобновления доступа.
                             </span>
                           </div>
                           <Button 
                             type="button"
                             onClick={handleActivateSubscription}
                             disabled={isActivatingSubscription}
-                            className="mt-1 gap-1 bg-red-900/30 border-red-700 text-red-300 hover:bg-red-800/50"
+                            className="mt-2 gap-1 bg-red-900/30 border-red-700 text-red-300 hover:bg-red-800/50"
                           >
                             {isActivatingSubscription ? (
                               <span className="animate-spin">&#8230;</span>
@@ -614,12 +644,14 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
                 <p className="font-medium">{formData.lastLogin ? formatDate(formData.lastLogin) : "Нет данных"}</p>
               </div>
               
-              {formData.status === 'inactive' && (
+              {isUserBlocked && (
                 <div className="col-span-1 sm:col-span-2">
-                  <Alert className="bg-gray-800 border-gray-700">
-                    <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                  <Alert className="bg-red-900/20 border-red-800/30 text-red-300">
+                    <AlertTriangle className="h-4 w-4 text-red-500" />
                     <AlertDescription>
-                      Аккаунт пользователя неактивен. Пользователь не может войти в систему.
+                      {formData.status === 'inactive' 
+                        ? "Аккаунт пользователя неактивен. Пользователь не может войти в систему."
+                        : "Срок действия подписки истек. Доступ пользователя к системе заблокирован до продления подписки."}
                     </AlertDescription>
                   </Alert>
                 </div>
@@ -627,9 +659,9 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
               
               {formData.status === 'active' && subscriptionStatus === 'expired' && !formData.isInTrial && (
                 <div className="col-span-1 sm:col-span-2">
-                  <Alert className="bg-blue-900/20 border-blue-800/30">
+                  <Alert className="bg-red-900/20 border-red-800/30 text-red-300">
                     <AlertDescription>
-                      Подписка истекла, но пользователь может продолжать использовать систему с базовым функционалом. Для восстановления полного доступа необходимо продлить подписку.
+                      Подписка истекла. Доступ к функциям системы ограничен. Для восстановления полного доступа необходимо продлить подписку.
                     </AlertDescription>
                   </Alert>
                 </div>
