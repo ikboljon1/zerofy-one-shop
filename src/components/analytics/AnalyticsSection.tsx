@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag, Loader2, BadgePercent } from "lucide-react";
@@ -23,6 +24,8 @@ import {
   advertisingData
 } from "./data/demoData";
 
+// Глобальный ключ для отключения кеширования
+const USE_CACHE = false;
 const ANALYTICS_STORAGE_KEY = 'marketplace_analytics';
 
 interface AnalyticsData {
@@ -119,7 +122,7 @@ const AnalyticsSection = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState<AnalyticsData>(demoData);
   const [penalties, setPenalties] = useState<Array<{name: string, value: number}>>([]);
-  const [deductions, setDeductions] = useState<Array<{name: string, value: number}>>([]);  // Добавляем состояние для удержаний
+  const [deductions, setDeductions] = useState<Array<{name: string, value: number}>>([]);
   const [returns, setReturns] = useState<Array<{name: string, value: number}>>([]);
   const [deductionsTimeline, setDeductionsTimeline] = useState<DeductionsTimelineItem[]>(deductionsTimelineData);
   const [productAdvertisingData, setProductAdvertisingData] = useState<Array<{name: string, value: number}>>([]);
@@ -127,15 +130,28 @@ const AnalyticsSection = () => {
     search: 0
   });
   const [dataTimestamp, setDataTimestamp] = useState<number>(Date.now());
+  const [currentStoreId, setCurrentStoreId] = useState<string | null>(null);
+  const [forceRefresh, setForceRefresh] = useState<boolean>(false);
+  
   const isMobile = useIsMobile();
   const { toast } = useToast();
 
   const getSelectedStore = () => {
     const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
-    return stores.find((store: any) => store.isSelected) || null;
+    const selected = stores.find((store: any) => store.isSelected) || null;
+    
+    if (selected && selected.id !== currentStoreId) {
+      setCurrentStoreId(selected.id);
+      // Если магазин изменился, устанавливаем принудительное обновление
+      setForceRefresh(true);
+    }
+    
+    return selected;
   };
 
   const saveAnalyticsData = (storeId: string) => {
+    if (!USE_CACHE) return; // Отключаем кеширование, если указано
+    
     // Обновляем timestamp при каждом сохранении
     const timestamp = Date.now();
     setDataTimestamp(timestamp);
@@ -146,7 +162,7 @@ const AnalyticsSection = () => {
       dateTo: dateTo.toISOString(),
       data,
       penalties,
-      deductions,  // Сохраняем данные по удержаниям
+      deductions,
       returns,
       deductionsTimeline,
       productAdvertisingData,
@@ -154,13 +170,22 @@ const AnalyticsSection = () => {
       timestamp
     };
     
-    localStorage.setItem(`${ANALYTICS_STORAGE_KEY}_${storeId}`, JSON.stringify(analyticsData));
-    console.log('Analytics data saved to localStorage with timestamp:', timestamp);
+    try {
+      localStorage.setItem(`${ANALYTICS_STORAGE_KEY}_${storeId}`, JSON.stringify(analyticsData));
+      console.log('Analytics data saved to localStorage with timestamp:', timestamp);
+    } catch (error) {
+      console.error('Error saving analytics data to localStorage:', error);
+    }
   };
 
   const loadStoredAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
+    if (!USE_CACHE || forceRefresh) {
+      console.log('Cache disabled or force refresh enabled, fetching fresh data');
+      return false;
+    }
+    
     try {
-      // Используем новую функцию getAnalyticsData для получения данных с проверками и поддержкой forceRefresh
+      // Используем новую функцию getAnalyticsData для получения данных с проверками
       const analyticsData = getAnalyticsData(storeId, forceRefresh);
       
       if (analyticsData) {
@@ -174,7 +199,7 @@ const AnalyticsSection = () => {
         
         // Используем проверенные данные
         setPenalties(analyticsData.penalties || []);
-        setDeductions(analyticsData.deductions || []); // Загружаем данные по удержаниям
+        setDeductions(analyticsData.deductions || []);
         setReturns(analyticsData.returns || []);
         setDeductionsTimeline(analyticsData.deductionsTimeline || []);
         setProductAdvertisingData(analyticsData.productAdvertisingData || []);
@@ -211,6 +236,7 @@ const AnalyticsSection = () => {
         return;
       }
 
+      // Всегда загружаем свежие данные для статистики
       const statsData = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
       
       // Try-catch block for advertising API to prevent it from breaking everything else
@@ -390,8 +416,13 @@ const AnalyticsSection = () => {
         
         setDeductionsTimeline(newDeductionsTimeline);
         
-        // Вызываем saveAnalyticsData с принудительным обновлением timestamp
-        saveAnalyticsData(selectedStore.id);
+        // Сбрасываем флаг принудительного обновления
+        setForceRefresh(false);
+        
+        // Сохраняем данные в кеш, только если кеширование включено
+        if (USE_CACHE) {
+          saveAnalyticsData(selectedStore.id);
+        }
         
         toast({
           title: "Успех",
@@ -420,6 +451,9 @@ const AnalyticsSection = () => {
       setPenalties([]);
       setDeductions([]);
       setReturns([]);
+      
+      // Сбрасываем флаг принудительного обновления даже при ошибке
+      setForceRefresh(false);
     } finally {
       setIsLoading(false);
     }
@@ -428,21 +462,10 @@ const AnalyticsSection = () => {
   useEffect(() => {
     const selectedStore = getSelectedStore();
     if (selectedStore) {
-      // Загружаем данные сначала без принудительного обновления
-      const hasStoredData = loadStoredAnalyticsData(selectedStore.id);
-      
-      if (!hasStoredData) {
-        setPenalties([]);
-        setDeductions([]);
-        setProductAdvertisingData([]);
-        setReturns([]);
-        // Если нет сохраненных данных, загружаем новые
-        fetchData();
-      } else {
-        setIsLoading(false);
-      }
+      // Всегда фетчим свежие данные при инициализации или изменении магазина
+      fetchData();
     } else {
-      // Устанавливаем базовые ��анные для графика удержаний, если нет выбранного магазина
+      // Устанавливаем базовые данные для графика удержаний, если нет выбранного магазина
       setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
         date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         logistic: 0, 
@@ -461,11 +484,33 @@ const AnalyticsSection = () => {
     }
   }, []);
 
+  // Добавляем эффект для отслеживания изменения магазина
+  useEffect(() => {
+    const checkSelectedStore = () => {
+      const selectedStore = getSelectedStore();
+      if (selectedStore && selectedStore.id !== currentStoreId) {
+        console.log(`Store changed from ${currentStoreId} to ${selectedStore.id}, fetching new data`);
+        setCurrentStoreId(selectedStore.id);
+        fetchData();
+      }
+    };
+    
+    // Проверяем изменение магазина при монтировании компонента
+    checkSelectedStore();
+    
+    // Устанавливаем интервал для проверки изменения магазина
+    const interval = setInterval(checkSelectedStore, 2000);
+    
+    // Очищаем интервал при размонтировании
+    return () => clearInterval(interval);
+  }, [currentStoreId]);
+
   const hasAdvertisingData = productAdvertisingData && productAdvertisingData.length > 0;
   const hasPenaltiesData = penalties && penalties.length > 0;
   const hasDeductionsData = deductions && deductions.length > 0;
 
   const handleDateChange = () => {
+    // При изменении дат всегда загружаем свежие данные
     fetchData();
   };
 
@@ -490,6 +535,9 @@ const AnalyticsSection = () => {
           setDateTo={setDateTo}
           onApplyDateRange={handleDateChange}
           onUpdate={handleDateChange}
+          isLoading={isLoading}
+          forceRefresh={forceRefresh}
+          setForceRefresh={setForceRefresh}
         />
       </div>
 

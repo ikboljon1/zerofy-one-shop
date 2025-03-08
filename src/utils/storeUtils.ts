@@ -2,6 +2,9 @@
 import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY, ORDERS_STORAGE_KEY, SALES_STORAGE_KEY, WildberriesOrder, WildberriesSale } from "@/types/store";
 import { fetchWildberriesStats, fetchWildberriesOrders, fetchWildberriesSales } from "@/services/wildberriesApi";
 
+// Константа для управления кешированием
+export const USE_ANALYTICS_CACHE = false;
+
 export const getLastWeekDateRange = () => {
   const now = new Date();
   const lastWeek = new Date(now);
@@ -97,80 +100,82 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
         // Генерируем уникальный timestamp для данных, чтобы предотвратить кэширование
         const timestamp = Date.now();
         
-        try {
-          // Сохраняем полные данные статистики, включая топовые продукты с их изображениями
-          localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify({
-            storeId: store.id,
-            dateFrom: from.toISOString(),
-            dateTo: to.toISOString(),
-            stats: stats,
-            deductionsTimeline: deductionsTimeline,
-            timestamp: timestamp
-          }));
-          
-          // Также сохраняем данные для аналитики и раздела товаров с тем же timestamp
-          localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify({
-            storeId: store.id,
-            dateFrom: from.toISOString(),
-            dateTo: to.toISOString(),
-            data: stats,
-            deductionsTimeline: deductionsTimeline,
-            penalties: [],
-            returns: [],
-            productAdvertisingData: [],
-            advertisingBreakdown: { search: stats.currentPeriod.expenses.advertising || 0 },
-            timestamp: timestamp
-          }));
-          
-          // Сохраняем данные о заказах отдельно
-          if (stats.orders && stats.orders.length > 0) {
-            localStorage.setItem(`${ORDERS_STORAGE_KEY}_${store.id}`, JSON.stringify({
+        if (USE_ANALYTICS_CACHE) {
+          try {
+            // Сохраняем полные данные статистики, включая топовые продукты с их изображениями
+            localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify({
               storeId: store.id,
               dateFrom: from.toISOString(),
               dateTo: to.toISOString(),
-              orders: stats.orders,
-              warehouseDistribution: stats.warehouseDistribution || [],
-              regionDistribution: stats.regionDistribution || [],
+              stats: stats,
+              deductionsTimeline: deductionsTimeline,
               timestamp: timestamp
             }));
-          }
-          
-          // Сохраняем данные о продажах отдельно
-          if (stats.sales && stats.sales.length > 0) {
-            localStorage.setItem(`${SALES_STORAGE_KEY}_${store.id}`, JSON.stringify({
+            
+            // Также сохраняем данные для аналитики и раздела товаров с тем же timestamp
+            localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify({
               storeId: store.id,
               dateFrom: from.toISOString(),
               dateTo: to.toISOString(),
-              sales: stats.sales,
+              data: stats,
+              deductionsTimeline: deductionsTimeline,
+              penalties: [],
+              returns: [],
+              productAdvertisingData: [],
+              advertisingBreakdown: { search: stats.currentPeriod.expenses.advertising || 0 },
               timestamp: timestamp
             }));
-          }
-          
-          // Детализированные данные по продуктам для раздела товаров с тем же timestamp
-          if (stats.topProfitableProducts || stats.topUnprofitableProducts) {
-            localStorage.setItem(`products_detailed_${store.id}`, JSON.stringify({
-              profitableProducts: stats.topProfitableProducts || [],
-              unprofitableProducts: stats.topUnprofitableProducts || [],
-              updateDate: new Date().toISOString(),
-              timestamp: timestamp
-            }));
-          }
-        } catch (storageError) {
-          // Обработка ошибок localStorage
-          console.error('Error saving data to localStorage:', storageError);
-          if (storageError instanceof DOMException && storageError.name === 'QuotaExceededError') {
-            clearOldStoreData();
-            // Пытаемся сохранить только самые важные данные после очистки
-            try {
-              localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify({
+            
+            // Сохраняем данные о заказах отдельно
+            if (stats.orders && stats.orders.length > 0) {
+              localStorage.setItem(`${ORDERS_STORAGE_KEY}_${store.id}`, JSON.stringify({
                 storeId: store.id,
                 dateFrom: from.toISOString(),
                 dateTo: to.toISOString(),
-                stats: stats,
+                orders: stats.orders,
+                warehouseDistribution: stats.warehouseDistribution || [],
+                regionDistribution: stats.regionDistribution || [],
                 timestamp: timestamp
               }));
-            } catch (retryError) {
-              console.error('Still unable to save data after clearing storage:', retryError);
+            }
+            
+            // Сохраняем данные о продажах отдельно
+            if (stats.sales && stats.sales.length > 0) {
+              localStorage.setItem(`${SALES_STORAGE_KEY}_${store.id}`, JSON.stringify({
+                storeId: store.id,
+                dateFrom: from.toISOString(),
+                dateTo: to.toISOString(),
+                sales: stats.sales,
+                timestamp: timestamp
+              }));
+            }
+            
+            // Детализированные данные по продуктам для раздела товаров с тем же timestamp
+            if (stats.topProfitableProducts || stats.topUnprofitableProducts) {
+              localStorage.setItem(`products_detailed_${store.id}`, JSON.stringify({
+                profitableProducts: stats.topProfitableProducts || [],
+                unprofitableProducts: stats.topUnprofitableProducts || [],
+                updateDate: new Date().toISOString(),
+                timestamp: timestamp
+              }));
+            }
+          } catch (storageError) {
+            // Обработка ошибок localStorage
+            console.error('Error saving data to localStorage:', storageError);
+            if (storageError instanceof DOMException && storageError.name === 'QuotaExceededError') {
+              clearOldStoreData();
+              // Пытаемся сохранить только самые важные данные после очистки
+              try {
+                localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify({
+                  storeId: store.id,
+                  dateFrom: from.toISOString(),
+                  dateTo: to.toISOString(),
+                  stats: stats,
+                  timestamp: timestamp
+                }));
+              } catch (retryError) {
+                console.error('Still unable to save data after clearing storage:', retryError);
+              }
             }
           }
         }
@@ -384,6 +389,11 @@ export const getProductProfitabilityData = (storeId: string) => {
 
 // Получение данных аналитики с проверкой обязательных полей и принудительным обновлением при наличии параметра forceRefresh
 export const getAnalyticsData = (storeId: string, forceRefresh?: boolean, customDateRange?: { from: Date, to: Date }) => {
+  if (!USE_ANALYTICS_CACHE || forceRefresh) {
+    console.log('Analytics cache disabled or force refresh requested, returning null');
+    return null;
+  }
+  
   try {
     const key = `marketplace_analytics_${storeId}`;
     const storedData = localStorage.getItem(key);
