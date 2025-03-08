@@ -63,7 +63,16 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       
       const updatedStores = [...stores, storeToAdd];
       setStores(updatedStores);
-      saveStores(updatedStores);
+      
+      try {
+        saveStores(updatedStores);
+      } catch (storageError) {
+        console.error("Ошибка при сохранении магазинов:", storageError);
+        toast({
+          title: "Предупреждение",
+          description: "Магазин добавлен, но возникли проблемы с сохранением. Возможно, достигнут лимит хранилища.",
+        });
+      }
       
       console.log("Store added successfully:", storeToAdd);
       
@@ -72,6 +81,12 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         title: "Успешно",
         description: "Магазин успешно добавлен",
       });
+      
+      // Автоматический выбор магазина, если это первый магазин
+      if (stores.length === 0 && onStoreSelect) {
+        handleToggleSelection(storeToAdd.id);
+      }
+      
     } catch (error) {
       console.error("Ошибка при добавлении магазина:", error);
       toast({
@@ -91,7 +106,16 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     }));
     
     setStores(updatedStores);
-    saveStores(updatedStores);
+    
+    try {
+      saveStores(updatedStores);
+    } catch (storageError) {
+      console.error("Ошибка при сохранении выбора магазина:", storageError);
+      toast({
+        title: "Предупреждение",
+        description: "Магазин выбран, но возникли проблемы с сохранением. Возможно, достигнут лимит хранилища.",
+      });
+    }
 
     const selectedStore = stores.find(store => store.id === storeId);
     if (selectedStore && onStoreSelect) {
@@ -111,12 +135,25 @@ export default function Stores({ onStoreSelect }: StoresProps) {
           s.id === store.id ? updatedStore : s
         );
         setStores(updatedStores);
-        saveStores(updatedStores);
+        
+        try {
+          saveStores(updatedStores);
+        } catch (storageError) {
+          console.error("Ошибка при сохранении обновленной статистики:", storageError);
+        }
         
         toast({
           title: "Успешно",
           description: "Статистика магазина обновлена",
         });
+        
+        // Уведомление о необходимости обновить аналитику
+        setTimeout(() => {
+          toast({
+            title: "Рекомендация",
+            description: "Для обновления данных аналитики, перейдите в раздел 'Аналитика' и нажмите 'Применить'",
+          });
+        }, 1500);
       }
     } catch (error) {
       console.error("Ошибка при обновлении статистики:", error);
@@ -136,8 +173,18 @@ export default function Stores({ onStoreSelect }: StoresProps) {
 
     const updatedStores = stores.filter(store => store.id !== storeId);
     setStores(updatedStores);
-    saveStores(updatedStores);
-    localStorage.removeItem(`${STATS_STORAGE_KEY}_${storeId}`);
+    
+    try {
+      saveStores(updatedStores);
+      // Удаляем все связанные данные из localStorage
+      localStorage.removeItem(`${STATS_STORAGE_KEY}_${storeId}`);
+      localStorage.removeItem(`marketplace_analytics_${storeId}`);
+      localStorage.removeItem(`marketplace_orders_${storeId}`);
+      localStorage.removeItem(`marketplace_sales_${storeId}`);
+      localStorage.removeItem(`products_detailed_${storeId}`);
+    } catch (storageError) {
+      console.error("Ошибка при удалении магазина:", storageError);
+    }
     
     toast({
       title: "Магазин удален",

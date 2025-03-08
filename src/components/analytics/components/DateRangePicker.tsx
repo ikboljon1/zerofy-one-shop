@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, RefreshCw } from 'lucide-react';
 
 interface DateRangePickerProps {
   dateFrom: Date;
@@ -14,6 +14,7 @@ interface DateRangePickerProps {
   setDateTo: (date: Date) => void;
   onApplyDateRange?: () => void;
   onUpdate?: () => void;
+  isLoading?: boolean;
 }
 
 const DateRangePicker = ({ 
@@ -22,7 +23,8 @@ const DateRangePicker = ({
   setDateFrom, 
   setDateTo,
   onApplyDateRange,
-  onUpdate
+  onUpdate,
+  isLoading = false
 }: DateRangePickerProps) => {
   const [fromOpen, setFromOpen] = useState(false);
   const [toOpen, setToOpen] = useState(false);
@@ -102,8 +104,15 @@ const DateRangePicker = ({
           </PopoverContent>
         </Popover>
         
-        <Button onClick={handleApply}>
-          Применить
+        <Button onClick={handleApply} disabled={isLoading}>
+          {isLoading ? (
+            <>
+              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              Загрузка...
+            </>
+          ) : (
+            "Применить"
+          )}
         </Button>
       </div>
     </div>
