@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { User, getUsers } from "@/services/userService";
@@ -57,7 +56,6 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
   const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "user">("all");
   const { toast } = useToast();
 
-  // Pagination
   const [page, setPage] = useState(1);
   const itemsPerPage = 5;
   const [paginatedUsers, setPaginatedUsers] = useState<User[]>([]);
@@ -67,7 +65,6 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
   }, []);
 
   useEffect(() => {
-    // Apply filters
     let result = users;
     
     if (searchQuery) {
@@ -88,11 +85,10 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
     }
     
     setFilteredUsers(result);
-    setPage(1); // Reset to first page when filters change
+    setPage(1);
   }, [searchQuery, statusFilter, roleFilter, users]);
 
   useEffect(() => {
-    // Paginate the filtered users
     const start = (page - 1) * itemsPerPage;
     const end = start + itemsPerPage;
     setPaginatedUsers(filteredUsers.slice(start, end));
@@ -137,6 +133,18 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
   };
 
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+
+  const handlePreviousPage = () => {
+    if (page > 1) {
+      setPage(page - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (page < totalPages) {
+      setPage(page + 1);
+    }
+  };
 
   return (
     <Card className="h-full overflow-hidden border shadow-xl rounded-2xl bg-white dark:bg-gray-900">
@@ -410,8 +418,7 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
                     <PaginationContent>
                       <PaginationItem>
                         <PaginationPrevious 
-                          onClick={() => setPage(old => Math.max(old - 1, 1))}
-                          disabled={page === 1}
+                          onClick={handlePreviousPage}
                           className={page === 1 ? "pointer-events-none opacity-50" : ""}
                         />
                       </PaginationItem>
@@ -429,8 +436,7 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
                       
                       <PaginationItem>
                         <PaginationNext 
-                          onClick={() => setPage(old => Math.min(old + 1, totalPages))}
-                          disabled={page === totalPages}
+                          onClick={handleNextPage}
                           className={page === totalPages ? "pointer-events-none opacity-50" : ""}
                         />
                       </PaginationItem>
