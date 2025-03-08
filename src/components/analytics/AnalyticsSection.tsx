@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag, Loader2, BadgePercent } from "lucide-react";
@@ -13,7 +14,12 @@ import ProductList from "./components/ProductList";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
-import { getAdvertCosts, getAdvertBalance, getAdvertPayments } from "@/services/advertisingApi";
+import { 
+  getAdvertCosts, 
+  getAdvertBalance, 
+  getAdvertPayments, 
+  getProductAdvertisingCosts 
+} from "@/services/advertisingApi";
 import { getAnalyticsData } from "@/utils/storeUtils";
 import { formatCurrency, roundToTwoDecimals } from "@/utils/formatCurrency";
 
@@ -211,6 +217,7 @@ const AnalyticsSection = () => {
       
       let totalAdvertisingCost = 0;
       try {
+        // Получаем данные о расходах на рекламу
         const advertCosts = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
         
         if (advertCosts && advertCosts.length > 0) {
@@ -221,38 +228,29 @@ const AnalyticsSection = () => {
             search: totalAdvertisingCost
           });
           
-          const campaignCosts: Record<string, number> = {};
+          // Получаем статистику расходов на рекламу по товарам за выбранный период
+          const productAdvertisingData = await getProductAdvertisingCosts(selectedStore.apiKey, dateFrom, dateTo);
           
-          advertCosts.forEach(cost => {
-            if (!campaignCosts[cost.campName]) {
-              campaignCosts[cost.campName] = 0;
-            }
-            campaignCosts[cost.campName] += cost.updSum;
-          });
-          
-          const advertisingDataArray = Object.entries(campaignCosts)
-            .map(([name, value]) => ({ name, value: roundToTwoDecimals(value) }))
-            .sort((a, b) => b.value - a.value);
-          
-          let topProducts = advertisingDataArray.slice(0, 4);
-          const otherProducts = advertisingDataArray.slice(4);
-          
-          if (otherProducts.length > 0) {
-            const otherSum = roundToTwoDecimals(otherProducts.reduce((sum, item) => sum + item.value, 0));
-            topProducts.push({ name: "Другие товары", value: otherSum });
-          }
-          
-          setProductAdvertisingData(topProducts.length > 0 ? topProducts : []);
-        } else {
-          if (productAdvertisingData.length === 0) {
+          if (productAdvertisingData && productAdvertisingData.length > 0) {
+            setProductAdvertisingData(productAdvertisingData);
+          } else {
+            // Если данных нет, используем демо данные с масштабированием
+            const daysInPeriod = Math.max(1, Math.round((dateTo.getTime() - dateFrom.getTime()) / (24 * 60 * 60 * 1000)));
             const scaledDemoData = advertisingData.map(item => ({
               ...item,
-              value: roundToTwoDecimals(item.value / 30 * Math.min(7, (dateTo.getTime() - dateFrom.getTime()) / (24 * 60 * 60 * 1000)))
+              value: roundToTwoDecimals(item.value / 30 * daysInPeriod)
             }));
             setProductAdvertisingData(scaledDemoData);
           }
-          
+        } else {
+          // Рассчитываем приблизительные данные, если API не вернуло реальные данные
           const daysInPeriod = Math.max(1, Math.round((dateTo.getTime() - dateFrom.getTime()) / (24 * 60 * 60 * 1000)));
+          const scaledDemoData = advertisingData.map(item => ({
+            ...item,
+            value: roundToTwoDecimals(item.value / 30 * daysInPeriod)
+          }));
+          setProductAdvertisingData(scaledDemoData);
+          
           const estimatedDailyCost = demoData.currentPeriod.expenses.advertising / 30;
           totalAdvertisingCost = roundToTwoDecimals(estimatedDailyCost * daysInPeriod);
           

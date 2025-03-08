@@ -13,7 +13,7 @@ interface ExpenseBreakdownProps {
         penalties: number;
         advertising: number;
         acceptance: number;
-        deductions?: number; // Add deductions to the interface
+        deductions?: number;
       };
     };
   };
