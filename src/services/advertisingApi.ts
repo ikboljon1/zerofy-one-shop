@@ -384,26 +384,3 @@ export interface Campaign {
   numericType?: number;
   changeTime?: string;
 }
-
-export const setExcludedKeywords = async (
-  apiKey: string,
-  campaignId: number,
-  excludedKeywords: string[]
-): Promise<boolean> => {
-  try {
-    const api = createApiInstance(apiKey);
-    const url = `/v1/auto/set-excluded?id=${campaignId}`;
-    
-    const payload = {
-      excluded: excludedKeywords
-    };
-    
-    console.log(`Setting excluded keywords for campaign ${campaignId}:`, excludedKeywords);
-    
-    const response = await api.post(url, payload);
-    return response.status === 200;
-  } catch (error) {
-    console.error('Error setting excluded keywords:', error);
-    throw error;
-  }
-};
