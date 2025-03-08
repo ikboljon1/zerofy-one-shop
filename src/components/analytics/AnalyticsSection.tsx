@@ -13,7 +13,7 @@ import ProductList from "./components/ProductList";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
-import { getAdvertBalance, getAdvertPayments, getProductAdvertisingCostsForPeriod } from "@/services/advertisingApi";
+import { getAdvertCosts, getAdvertBalance, getAdvertPayments } from "@/services/advertisingApi";
 import { getAnalyticsData } from "@/utils/storeUtils";
 import { formatCurrency, roundToTwoDecimals } from "@/utils/formatCurrency";
 
@@ -36,7 +36,7 @@ interface AnalyticsData {
       penalties: number;
       advertising: number;
       acceptance: number;
-      deductions?: number;
+      deductions?: number; // Добавляем удержания
     };
     netProfit: number;
     acceptance: number;
@@ -87,7 +87,7 @@ interface StoredAnalyticsData {
   dateTo: string;
   data: AnalyticsData;
   penalties: Array<{name: string, value: number}>;
-  deductions: Array<{name: string, value: number}>;
+  deductions: Array<{name: string, value: number}>; // Добавляем отдельное поле для удержаний
   returns: Array<{name: string, value: number}>;
   deductionsTimeline: Array<{
     date: string; 
@@ -96,7 +96,7 @@ interface StoredAnalyticsData {
     penalties: number;
     acceptance: number;
     advertising: number;
-    deductions?: number;
+    deductions?: number; // Добавляем удержания
   }>;
   productAdvertisingData: Array<{name: string, value: number}>;
   advertisingBreakdown: AdvertisingBreakdown;
@@ -110,7 +110,7 @@ interface DeductionsTimelineItem {
   penalties: number;
   acceptance: number;
   advertising: number;
-  deductions?: number;
+  deductions?: number; // Добавляем удержания
 }
 
 const AnalyticsSection = () => {
@@ -119,7 +119,7 @@ const AnalyticsSection = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState<AnalyticsData>(demoData);
   const [penalties, setPenalties] = useState<Array<{name: string, value: number}>>([]);
-  const [deductions, setDeductions] = useState<Array<{name: string, value: number}>>([]);
+  const [deductions, setDeductions] = useState<Array<{name: string, value: number}>>([]);  // Добавляем состояние для удержаний
   const [returns, setReturns] = useState<Array<{name: string, value: number}>>([]);
   const [deductionsTimeline, setDeductionsTimeline] = useState<DeductionsTimelineItem[]>(deductionsTimelineData);
   const [productAdvertisingData, setProductAdvertisingData] = useState<Array<{name: string, value: number}>>([]);
@@ -136,6 +136,7 @@ const AnalyticsSection = () => {
   };
 
   const saveAnalyticsData = (storeId: string) => {
+    // Обновляем timestamp при каждом сохранении
     const timestamp = Date.now();
     setDataTimestamp(timestamp);
     
@@ -145,7 +146,7 @@ const AnalyticsSection = () => {
       dateTo: dateTo.toISOString(),
       data,
       penalties,
-      deductions,
+      deductions,  // Сохраняем данные по удержаниям
       returns,
       deductionsTimeline,
       productAdvertisingData,
@@ -159,9 +160,11 @@ const AnalyticsSection = () => {
 
   const loadStoredAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
     try {
+      // Используем новую функцию getAnalyticsData для получения данных с проверками и поддержкой forceRefresh
       const analyticsData = getAnalyticsData(storeId, forceRefresh);
       
       if (analyticsData) {
+        // Устанавливаем данные с проверками на существование
         setDateFrom(new Date(analyticsData.dateFrom || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)));
         setDateTo(new Date(analyticsData.dateTo || new Date()));
         
@@ -169,8 +172,9 @@ const AnalyticsSection = () => {
           setData(analyticsData.data);
         }
         
+        // Используем проверенные данные
         setPenalties(analyticsData.penalties || []);
-        setDeductions(analyticsData.deductions || []);
+        setDeductions(analyticsData.deductions || []); // Загружаем данные по удержаниям
         setReturns(analyticsData.returns || []);
         setDeductionsTimeline(analyticsData.deductionsTimeline || []);
         setProductAdvertisingData(analyticsData.productAdvertisingData || []);
@@ -209,25 +213,54 @@ const AnalyticsSection = () => {
 
       const statsData = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
       
+      // Try-catch block for advertising API to prevent it from breaking everything else
       let totalAdvertisingCost = 0;
-      let advertisingProductData: Array<{name: string, value: number}> = [];
-      
       try {
-        const advertisingCostsData = await getProductAdvertisingCostsForPeriod(dateFrom, dateTo, selectedStore.apiKey);
+        const advertCosts = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
         
-        totalAdvertisingCost = advertisingCostsData.totalCost;
-        advertisingProductData = advertisingCostsData.productCosts;
-        
-        setAdvertisingBreakdown({
-          search: totalAdvertisingCost
-        });
-        
-        setProductAdvertisingData(advertisingProductData.length > 0 ? advertisingProductData : []);
-        
-        console.log('Advertising costs for period:', totalAdvertisingCost);
-        console.log('Product advertising data:', advertisingProductData);
+        if (advertCosts && advertCosts.length > 0) {
+          totalAdvertisingCost = advertCosts.reduce((sum, cost) => sum + cost.updSum, 0);
+          totalAdvertisingCost = roundToTwoDecimals(totalAdvertisingCost);
+          
+          setAdvertisingBreakdown({
+            search: totalAdvertisingCost
+          });
+          
+          const campaignCosts: Record<string, number> = {};
+          
+          advertCosts.forEach(cost => {
+            if (!campaignCosts[cost.campName]) {
+              campaignCosts[cost.campName] = 0;
+            }
+            campaignCosts[cost.campName] += cost.updSum;
+          });
+          
+          const advertisingDataArray = Object.entries(campaignCosts)
+            .map(([name, value]) => ({ name, value: roundToTwoDecimals(value) }))
+            .sort((a, b) => b.value - a.value);
+          
+          let topProducts = advertisingDataArray.slice(0, 4);
+          const otherProducts = advertisingDataArray.slice(4);
+          
+          if (otherProducts.length > 0) {
+            const otherSum = roundToTwoDecimals(otherProducts.reduce((sum, item) => sum + item.value, 0));
+            topProducts.push({ name: "Другие товары", value: otherSum });
+          }
+          
+          setProductAdvertisingData(topProducts.length > 0 ? topProducts : []);
+        } else {
+          if (productAdvertisingData.length === 0) {
+            setProductAdvertisingData(advertisingData);
+          }
+          
+          setAdvertisingBreakdown({
+            search: roundToTwoDecimals(demoData.currentPeriod.expenses.advertising)
+          });
+          totalAdvertisingCost = roundToTwoDecimals(demoData.currentPeriod.expenses.advertising);
+        }
       } catch (error) {
         console.error('Error fetching advertising data:', error);
+        // If advertising API fails, use demo data for advertising
         setProductAdvertisingData(advertisingData);
         setAdvertisingBreakdown({
           search: roundToTwoDecimals(demoData.currentPeriod.expenses.advertising)
@@ -236,6 +269,7 @@ const AnalyticsSection = () => {
       }
       
       if (statsData) {
+        // Применяем новый алгоритм расчета чистой прибыли из Python-скрипта
         const sales = roundToTwoDecimals(statsData.currentPeriod.sales);
         const logistics = roundToTwoDecimals(statsData.currentPeriod.expenses.logistics);
         const storage = roundToTwoDecimals(statsData.currentPeriod.expenses.storage);
@@ -245,6 +279,8 @@ const AnalyticsSection = () => {
         const returns = statsData.productReturns ? 
           roundToTwoDecimals(statsData.productReturns.reduce((sum, item) => sum + item.value, 0)) : 0;
         
+        // Расчет чистой прибыли на основе алгоритма из Python
+        // total_to_pay = total_for_pay - total_delivery_rub - total_storage_fee - total_returns
         const forPay = roundToTwoDecimals(statsData.currentPeriod.transferred || 0);
         const netProfit = roundToTwoDecimals(
           forPay - logistics - storage - penalties - totalAdvertisingCost - acceptance - deductionsValue - returns
@@ -273,33 +309,41 @@ const AnalyticsSection = () => {
           topUnprofitableProducts: statsData.topUnprofitableProducts
         };
         
+        // Пересчитываем общую сумму расходов
         modifiedData.currentPeriod.expenses.total = roundToTwoDecimals(
           logistics + storage + penalties + totalAdvertisingCost + acceptance + deductionsValue
         );
         
         setData(modifiedData);
         
+        // Set real penalties data if available
         if (statsData.penaltiesData && statsData.penaltiesData.length > 0) {
+          // Округляем все значения до двух знаков
           const roundedPenalties = statsData.penaltiesData.map(item => ({
             ...item,
             value: roundToTwoDecimals(item.value)
           }));
           setPenalties(roundedPenalties);
         } else {
+          // Clear penalties if none exist (don't use demo data)
           setPenalties([]);
         }
         
+        // Set real deductions data if available
         if (statsData.deductionsData && statsData.deductionsData.length > 0) {
+          // Округляем все значения до двух знаков
           const roundedDeductions = statsData.deductionsData.map(item => ({
             ...item,
             value: roundToTwoDecimals(item.value)
           }));
           setDeductions(roundedDeductions);
         } else {
+          // Clear deductions if none exist
           setDeductions([]);
         }
         
         if (statsData.productReturns && statsData.productReturns.length > 0) {
+          // Округляем все значения до двух знаков
           const roundedReturns = statsData.productReturns.map(item => ({
             ...item,
             value: roundToTwoDecimals(item.value)
@@ -309,6 +353,7 @@ const AnalyticsSection = () => {
           setReturns([]);
         }
         
+        // Создаем данные для графика удержаний на основе ежедневных данных
         let newDeductionsTimeline = [];
         if (statsData.dailySales && statsData.dailySales.length > 0) {
           const daysCount = statsData.dailySales.length;
@@ -331,6 +376,7 @@ const AnalyticsSection = () => {
             };
           });
         } else {
+          // Создаем базовые данные для графика, если нет ежедневных данных
           newDeductionsTimeline = Array.from({ length: 7 }, (_, i) => ({
             date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             logistic: roundToTwoDecimals(modifiedData.currentPeriod.expenses.logistics / 7),
@@ -344,6 +390,7 @@ const AnalyticsSection = () => {
         
         setDeductionsTimeline(newDeductionsTimeline);
         
+        // Вызываем saveAnalyticsData с принудительным обновлением timestamp
         saveAnalyticsData(selectedStore.id);
         
         toast({
@@ -359,6 +406,7 @@ const AnalyticsSection = () => {
         variant: "destructive"
       });
       
+      // Устанавливаем базовые данные для графика удержаний при ошибке
       setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
         date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         logistic: 0, 
@@ -380,6 +428,7 @@ const AnalyticsSection = () => {
   useEffect(() => {
     const selectedStore = getSelectedStore();
     if (selectedStore) {
+      // Загружаем данные сначала без принудительного обновления
       const hasStoredData = loadStoredAnalyticsData(selectedStore.id);
       
       if (!hasStoredData) {
@@ -387,11 +436,13 @@ const AnalyticsSection = () => {
         setDeductions([]);
         setProductAdvertisingData([]);
         setReturns([]);
+        // Если нет сохраненных данных, загружаем новые
         fetchData();
       } else {
         setIsLoading(false);
       }
     } else {
+      // Устанавливаем базовые ��анные для графика удержаний, если нет выбранного магазина
       setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
         date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         logistic: 0, 

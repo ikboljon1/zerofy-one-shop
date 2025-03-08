@@ -1,4 +1,3 @@
-
 import { AxiosError } from 'axios';
 import axios from 'axios';
 import { getStatusString, getTypeString } from '@/components/analytics/data/productAdvertisingData';
@@ -185,88 +184,6 @@ const aggregateAdvertCosts = (costs: AdvertCost[]) => {
   return Object.entries(campaignCosts)
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value);
-};
-
-// New function to get product advertising costs for a specific date range
-export const getProductAdvertisingCostsForPeriod = async (
-  dateFrom: Date,
-  dateTo: Date,
-  apiKey: string
-): Promise<{ totalCost: number; productCosts: {name: string, value: number}[] }> => {
-  try {
-    // First, get all campaigns to get their IDs
-    const campaigns = await getAllCampaigns(apiKey);
-    
-    if (!campaigns || campaigns.length === 0) {
-      return { totalCost: 0, productCosts: [] };
-    }
-    
-    // Fetch full stats for each campaign, which includes daily statistics
-    const campaignStatsPromises = campaigns.map(campaign => 
-      getCampaignFullStats(apiKey, [campaign.advertId], dateFrom, dateTo)
-    );
-    
-    const campaignStatsResults = await Promise.all(campaignStatsPromises);
-    
-    // Flatten the results
-    const campaignStats = campaignStatsResults.flat();
-    
-    if (!campaignStats || campaignStats.length === 0) {
-      return { totalCost: 0, productCosts: [] };
-    }
-    
-    // Calculate total cost and costs per product
-    let totalCost = 0;
-    const productCosts: Record<string, number> = {};
-    
-    // Process each campaign's daily stats
-    campaignStats.forEach(campaign => {
-      // Get the campaign name from the campaign list
-      const campaignInfo = campaigns.find(c => c.advertId === campaign.advertId);
-      const campaignName = campaignInfo ? campaignInfo.campName : `Campaign ${campaign.advertId}`;
-      
-      // Process daily stats
-      if (campaign.days && campaign.days.length > 0) {
-        campaign.days.forEach(day => {
-          // Check if the day is within our date range
-          const dayDate = new Date(day.date);
-          if (dayDate >= dateFrom && dayDate <= dateTo) {
-            // Add to total cost
-            totalCost += day.sum;
-            
-            // Add to product costs
-            if (!productCosts[campaignName]) {
-              productCosts[campaignName] = 0;
-            }
-            productCosts[campaignName] += day.sum;
-          }
-        });
-      }
-    });
-    
-    // Convert product costs to array format
-    const productCostsArray = Object.entries(productCosts)
-      .map(([name, value]) => ({ name, value: parseFloat(value.toFixed(2)) }))
-      .sort((a, b) => b.value - a.value);
-    
-    // Limit to top products
-    let topProducts = productCostsArray.slice(0, 4);
-    const otherProducts = productCostsArray.slice(4);
-    
-    // Group "other" products
-    if (otherProducts.length > 0) {
-      const otherSum = parseFloat(otherProducts.reduce((sum, item) => sum + item.value, 0).toFixed(2));
-      topProducts.push({ name: "Другие товары", value: otherSum });
-    }
-    
-    return { 
-      totalCost: parseFloat(totalCost.toFixed(2)), 
-      productCosts: topProducts.length > 0 ? topProducts : []
-    };
-  } catch (error) {
-    console.error('Error fetching product advertising costs for period:', error);
-    return { totalCost: 0, productCosts: [] };
-  }
 };
 
 export const getAdvertCosts = async (dateFrom: Date, dateTo: Date, apiKey: string): Promise<AdvertCost[]> => {
