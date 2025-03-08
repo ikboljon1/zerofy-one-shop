@@ -64,6 +64,24 @@ const mockUsers: User[] = [
   }
 ];
 
+// Store users in localStorage to persist them between page refreshes
+const initializeUsers = () => {
+  const storedUsers = localStorage.getItem('mockUsers');
+  if (!storedUsers) {
+    localStorage.setItem('mockUsers', JSON.stringify(mockUsers));
+    return [...mockUsers];
+  }
+  return JSON.parse(storedUsers);
+};
+
+// Initialize users from localStorage or default mock data
+let users = initializeUsers();
+
+// Function to save users to localStorage
+const saveUsers = () => {
+  localStorage.setItem('mockUsers', JSON.stringify(users));
+};
+
 // Mock admin credentials
 const ADMIN_CREDENTIALS = {
   email: 'admin',
@@ -77,7 +95,7 @@ export const authenticate = (email: string, password: string): Promise<{ success
       // Check if admin credentials
       if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
         // Create admin user if not exists
-        let adminUser = mockUsers.find(u => u.email === 'admin@admin.com');
+        let adminUser = users.find(u => u.email === 'admin@admin.com');
         
         if (!adminUser) {
           adminUser = {
@@ -90,10 +108,12 @@ export const authenticate = (email: string, password: string): Promise<{ success
             lastLogin: new Date().toISOString(),
             avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin'
           };
-          mockUsers.unshift(adminUser);
+          users.unshift(adminUser);
+          saveUsers();
         } else {
           // Update last login
           adminUser.lastLogin = new Date().toISOString();
+          saveUsers();
         }
         
         resolve({ 
@@ -103,12 +123,13 @@ export const authenticate = (email: string, password: string): Promise<{ success
         return;
       }
       
-      // Check if user exists in mockUsers
-      const user = mockUsers.find(u => u.email === email);
+      // Check if user exists in users
+      const user = users.find(u => u.email === email);
       if (user) {
         // In a real app, we would check the password here
         // For the demo, we'll just accept any password for existing users
         user.lastLogin = new Date().toISOString();
+        saveUsers();
         resolve({ 
           success: true, 
           user 
@@ -129,7 +150,7 @@ export const registerUser = (name: string, email: string, password: string): Pro
   return new Promise((resolve) => {
     setTimeout(() => {
       // Check if user already exists
-      const existingUser = mockUsers.find(u => u.email === email);
+      const existingUser = users.find(u => u.email === email);
       if (existingUser) {
         resolve({
           success: false,
@@ -140,7 +161,7 @@ export const registerUser = (name: string, email: string, password: string): Pro
 
       // Create new user
       const newUser: User = {
-        id: String(mockUsers.length + 1),
+        id: String(Date.now()),
         name,
         email,
         role: 'user',
@@ -151,7 +172,8 @@ export const registerUser = (name: string, email: string, password: string): Pro
       };
 
       // Add to users array
-      mockUsers.push(newUser);
+      users.push(newUser);
+      saveUsers();
 
       resolve({
         success: true,
@@ -164,9 +186,12 @@ export const registerUser = (name: string, email: string, password: string): Pro
 // Function to get all users
 export const getUsers = (): Promise<User[]> => {
   return new Promise((resolve) => {
+    // Refresh users from localStorage to ensure we have the latest data
+    users = JSON.parse(localStorage.getItem('mockUsers') || JSON.stringify(users));
+    
     // Simulate API delay
     setTimeout(() => {
-      resolve([...mockUsers]);
+      resolve([...users]);
     }, 500);
   });
 };
@@ -175,7 +200,7 @@ export const getUsers = (): Promise<User[]> => {
 export const getUserById = (id: string): Promise<User | undefined> => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      const user = mockUsers.find(user => user.id === id);
+      const user = users.find(user => user.id === id);
       resolve(user ? {...user} : undefined);
     }, 300);
   });
@@ -185,10 +210,11 @@ export const getUserById = (id: string): Promise<User | undefined> => {
 export const updateUser = (id: string, updates: Partial<User>): Promise<User | undefined> => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      const index = mockUsers.findIndex(user => user.id === id);
+      const index = users.findIndex(user => user.id === id);
       if (index !== -1) {
-        mockUsers[index] = { ...mockUsers[index], ...updates };
-        resolve({...mockUsers[index]});
+        users[index] = { ...users[index], ...updates };
+        saveUsers();
+        resolve({...users[index]});
       } else {
         resolve(undefined);
       }
@@ -202,10 +228,11 @@ export const addUser = (user: Omit<User, 'id'>): Promise<User> => {
     setTimeout(() => {
       const newUser = {
         ...user,
-        id: String(mockUsers.length + 1),
+        id: String(Date.now()),
         registeredAt: user.registeredAt || new Date().toISOString()
       };
-      mockUsers.push(newUser);
+      users.push(newUser);
+      saveUsers();
       resolve({...newUser});
     }, 500);
   });
@@ -215,9 +242,10 @@ export const addUser = (user: Omit<User, 'id'>): Promise<User> => {
 export const deleteUser = (id: string): Promise<boolean> => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      const index = mockUsers.findIndex(user => user.id === id);
+      const index = users.findIndex(user => user.id === id);
       if (index !== -1) {
-        mockUsers.splice(index, 1);
+        users.splice(index, 1);
+        saveUsers();
         resolve(true);
       } else {
         resolve(false);

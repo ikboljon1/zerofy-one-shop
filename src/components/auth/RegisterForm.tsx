@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { registerUser } from "@/services/userService";
 
 // Country codes with Kyrgyzstan (+996) as default
 const countryCodes = [
@@ -62,19 +63,27 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
       // Combine country code with phone number
       const fullPhoneNumber = `${countryCode}${data.phone}`;
       
-      // In a real application, you would call a registration API here
-      console.log("Registration data:", { ...data, phone: fullPhoneNumber });
+      // Use userService to register the user
+      const result = await registerUser(data.name, data.email, data.password);
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: "Регистрация успешна",
-        description: "Вы успешно зарегистрировались в системе",
-      });
-      
-      onSuccess();
-      navigate("/");
+      if (result.success) {
+        toast({
+          title: "Регистрация успешна",
+          description: "Вы успешно зарегистрировались в системе",
+        });
+        
+        // Store user in localStorage for session
+        localStorage.setItem('user', JSON.stringify(result.user));
+        
+        onSuccess();
+        navigate("/");
+      } else {
+        toast({
+          title: "Ошибка",
+          description: result.errorMessage || "Не удалось зарегистрироваться",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       toast({
         title: "Ошибка",
