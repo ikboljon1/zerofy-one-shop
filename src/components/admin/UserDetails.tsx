@@ -16,12 +16,13 @@ import {
   Clock,
   AlertTriangle,
   BadgeDollarSign,
-  Badge
+  Badge as BadgeIcon
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 
 interface UserDetailsProps {
   user: User;
