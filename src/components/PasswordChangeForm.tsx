@@ -76,7 +76,7 @@ const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ userId }) => {
         setNewPassword('');
         setConfirmPassword('');
       } else {
-        setError(result.message);
+        setError(result.message || 'Произошла ошибка при изменении пароля');
       }
     } catch (error) {
       console.error('Error changing password:', error);
