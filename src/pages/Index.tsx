@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Chart from "@/components/Chart";
@@ -13,26 +13,11 @@ import MainLayout from "@/components/layout/MainLayout";
 import AnalyticsSection from "@/components/analytics/AnalyticsSection";
 import Dashboard from "@/components/dashboard/Dashboard";
 import { getProductProfitabilityData } from "@/utils/storeUtils";
-import { User } from "@/services/userService";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
   const isMobile = useIsMobile();
   const [selectedStore, setSelectedStore] = useState<{id: string; apiKey: string} | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    // Load user data from localStorage on component mount
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      try {
-        const userData = JSON.parse(userStr);
-        setUser(userData);
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-      }
-    }
-  }, []);
 
   const getProductsData = () => {
     const selectedStore = getSelectedStore();
@@ -73,13 +58,6 @@ const Index = () => {
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
-  };
-
-  const handleUserUpdated = (updatedUser: User) => {
-    // Update user state
-    setUser(updatedUser);
-    // Update localStorage
-    localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
   const renderContent = () => {
@@ -154,13 +132,7 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            {user ? (
-              <Profile user={user} onUserUpdated={handleUserUpdated} />
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-gray-500">Загрузка профиля...</p>
-              </div>
-            )}
+            <Profile />
           </motion.div>
         );
       default:
