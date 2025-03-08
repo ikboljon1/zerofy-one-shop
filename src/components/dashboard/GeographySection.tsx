@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
@@ -108,11 +107,9 @@ const GeographySection: React.FC<GeographySectionProps> = ({
       return <p className="text-muted-foreground text-center py-4">Нет данных</p>;
     }
 
-    // Include all properties from productAdvertisingData, including color
     const cabinetData = productAdvertisingData.map(item => ({
       name: item.name,
-      value: item.value,
-      color: item.color
+      value: item.value
     }));
 
     return (
