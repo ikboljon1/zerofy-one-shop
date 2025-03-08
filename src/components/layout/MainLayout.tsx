@@ -13,8 +13,7 @@ import {
   Settings,
   LogOut,
   WarehouseIcon,
-  MenuIcon,
-  Shield
+  MenuIcon
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -158,17 +157,6 @@ const MainLayout = ({ children, activeTab, onTabChange }: MainLayoutProps) => {
                       <User className="mr-2 h-4 w-4" />
                       Профиль
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="justify-start"
-                      onClick={() => {
-                        onTabChange("admin");
-                        setShowMobileMenu(false);
-                      }}
-                    >
-                      <Shield className="mr-2 h-4 w-4" />
-                      Админ-панель
-                    </Button>
                     
                     <div className="border-t my-2 pt-2">
                       {profileMenu.map((item) => (
@@ -254,14 +242,6 @@ const MainLayout = ({ children, activeTab, onTabChange }: MainLayoutProps) => {
                 >
                   <User className="mr-2 h-4 w-4" />
                   Профиль
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => onTabChange("admin")}
-                  className={activeTab === "admin" ? "bg-accent" : ""}
-                >
-                  <Shield className="mr-2 h-4 w-4" />
-                  Админ
                 </Button>
               </nav>
             </div>
