@@ -1,9 +1,10 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
-import { Package, Info, ShoppingBag, MapPin } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import { Package, Info, ShoppingBag, MapPin, Tag } from "lucide-react";
 import { WildberriesSale } from "@/types/store";
+import { format, subDays } from "date-fns";
 
 interface ProductSalesDistribution {
   name: string;
@@ -19,11 +20,32 @@ interface GeographySectionProps {
 
 const COLORS = ["#8B5CF6", "#EC4899", "#10B981", "#FF8042", "#A86EE7"];
 
+// Sample advertising data by cabinet and date
+const advertisingExpensesByCabinet = [
+  { name: "Кабинет №1", value: 15000 },
+  { name: "Кабинет №2", value: 8700 },
+  { name: "Кабинет №3", value: 5300 },
+  { name: "Кабинет №4", value: 3200 },
+  { name: "Другие кабинеты", value: 1800 }
+];
+
+const advertisingExpensesByDate = [
+  { date: format(subDays(new Date(), 6), 'dd.MM'), value: 2100 },
+  { date: format(subDays(new Date(), 5), 'dd.MM'), value: 2500 },
+  { date: format(subDays(new Date(), 4), 'dd.MM'), value: 2300 },
+  { date: format(subDays(new Date(), 3), 'dd.MM'), value: 3100 },
+  { date: format(subDays(new Date(), 2), 'dd.MM'), value: 3800 },
+  { date: format(subDays(new Date(), 1), 'dd.MM'), value: 4200 },
+  { date: format(new Date(), 'dd.MM'), value: 3900 }
+];
+
 const GeographySection: React.FC<GeographySectionProps> = ({
   warehouseDistribution,
   regionDistribution,
   sales = []
 }) => {
+  const [activeView, setActiveView] = useState<'cabinets' | 'dates'>('cabinets');
+
   // Process sales data to get product quantity distribution
   const getProductSalesDistribution = (): ProductSalesDistribution[] => {
     if (!sales || sales.length === 0) return [];
@@ -87,6 +109,63 @@ const GeographySection: React.FC<GeographySectionProps> = ({
     );
   };
 
+  // Render advertising expenses by cabinet as pie chart
+  const renderAdvertisingExpensesByCabinet = () => {
+    if (!advertisingExpensesByCabinet || advertisingExpensesByCabinet.length === 0) {
+      return <p className="text-muted-foreground text-center py-4">Нет данных</p>;
+    }
+
+    return (
+      <ResponsiveContainer width="100%" height={280}>
+        <PieChart>
+          <Pie
+            data={advertisingExpensesByCabinet}
+            cx="50%"
+            cy="50%"
+            labelLine={false}
+            outerRadius={100}
+            innerRadius={60}
+            fill="#8884d8"
+            dataKey="value"
+            nameKey="name"
+            label={({ name, value }) => `${name}: ${value} ₽`}
+          >
+            {advertisingExpensesByCabinet.map((_, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip 
+            formatter={(value, name) => [`${value} ₽`, name]}
+            contentStyle={{ borderRadius: "8px" }}
+          />
+          <Legend layout="vertical" verticalAlign="middle" align="right" />
+        </PieChart>
+      </ResponsiveContainer>
+    );
+  };
+
+  // Render advertising expenses by date as bar chart
+  const renderAdvertisingExpensesByDate = () => {
+    if (!advertisingExpensesByDate || advertisingExpensesByDate.length === 0) {
+      return <p className="text-muted-foreground text-center py-4">Нет данных</p>;
+    }
+
+    return (
+      <ResponsiveContainer width="100%" height={280}>
+        <BarChart
+          data={advertisingExpensesByDate}
+          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+          <XAxis dataKey="date" />
+          <YAxis />
+          <Tooltip formatter={(value) => [`${value} ₽`, 'Расходы']} />
+          <Bar dataKey="value" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  };
+
   const renderDistributionList = (items: ProductSalesDistribution[]) => {
     if (!items || items.length === 0) {
       return <p className="text-muted-foreground text-center py-4">Нет данных</p>;
@@ -102,6 +181,31 @@ const GeographySection: React.FC<GeographySectionProps> = ({
             </div>
             <div className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300">
               {item.percentage.toFixed(1)}%
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Render advertising expenses distribution list
+  const renderAdvertisingExpensesList = () => {
+    const data = activeView === 'cabinets' ? advertisingExpensesByCabinet : [];
+    
+    if (!data || data.length === 0) {
+      return <p className="text-muted-foreground text-center py-4">Нет данных</p>;
+    }
+
+    return (
+      <div className="space-y-4">
+        {data.map((item, index) => (
+          <div key={index} className="flex justify-between items-center">
+            <div className="flex-1">
+              <div className="text-sm font-medium">{item.name}</div>
+              <div className="text-xs text-muted-foreground">{item.value} ₽</div>
+            </div>
+            <div className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/20 text-purple-800 dark:text-purple-300">
+              {((item.value / data.reduce((sum, i) => sum + i.value, 0)) * 100).toFixed(1)}%
             </div>
           </div>
         ))}
@@ -133,18 +237,44 @@ const GeographySection: React.FC<GeographySectionProps> = ({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
-              <MapPin className="mr-2 h-5 w-5" />
-              Распределение по складам
+              <Tag className="mr-2 h-5 w-5" />
+              Расходы на рекламу по товарам
             </CardTitle>
             <CardDescription>
-              Топ 5 складов по количеству отправленных товаров
+              <div className="flex justify-between items-center">
+                <span>Анализ рекламных затрат</span>
+                <div className="flex space-x-2 mt-2">
+                  <button 
+                    className={`text-xs px-3 py-1 rounded-full transition-colors ${activeView === 'cabinets' 
+                      ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300' 
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}
+                    onClick={() => setActiveView('cabinets')}
+                  >
+                    По кабинетам
+                  </button>
+                  <button 
+                    className={`text-xs px-3 py-1 rounded-full transition-colors ${activeView === 'dates' 
+                      ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300' 
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}
+                    onClick={() => setActiveView('dates')}
+                  >
+                    По датам
+                  </button>
+                </div>
+              </div>
             </CardDescription>
           </CardHeader>
           <CardContent className="px-2">
-            {renderPieChart(warehouseDistribution, "count")}
-            <div className="mt-4 px-4">
-              {renderDistributionList(warehouseDistribution)}
-            </div>
+            {activeView === 'cabinets' ? (
+              <>
+                {renderAdvertisingExpensesByCabinet()}
+                <div className="mt-4 px-4">
+                  {renderAdvertisingExpensesList()}
+                </div>
+              </>
+            ) : (
+              renderAdvertisingExpensesByDate()
+            )}
           </CardContent>
         </Card>
       </div>
@@ -161,6 +291,7 @@ const GeographySection: React.FC<GeographySectionProps> = ({
           <ul className="list-disc list-inside space-y-1 ml-2">
             <li>Для проданных товаров мы группируем продажи по названию товара из ответа API</li>
             <li>Для складов мы используем данные о физическом местоположении складов Wildberries</li>
+            <li>Для рекламы мы анализируем расходы по рекламным кабинетам и временным периодам</li>
             <li>Мы подсчитываем количество каждого товара/склада и расчитываем проценты</li>
             <li>Диаграммы отображают 5 лучших товаров и 5 наиболее активных складов</li>
           </ul>
