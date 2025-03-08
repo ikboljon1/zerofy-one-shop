@@ -1,43 +1,38 @@
 
-import React, { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+import { Card, CardContent } from "./ui/card";
+import { useEffect, useState } from "react";
+import { 
+  getAdvertCosts, 
+  getAdvertStats, 
+  getAdvertPayments, 
+  getCampaignFullStats,
+  CampaignFullStats 
+} from "@/services/advertisingApi";
 import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Badge } from "./ui/badge";
-import { Skeleton } from "./ui/skeleton";
-import { Progress } from "./ui/progress";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { Calendar } from "./ui/calendar";
-import { cn } from "@/lib/utils";
-import {
-  HomeIcon,
-  Megaphone,
-  Users,
+import { 
+  RefreshCw, 
+  TrendingUp, 
+  TrendingDown, 
+  DollarSign, 
+  ArrowUpRight, 
+  ArrowDownRight, 
+  ChevronLeft, 
+  AlertCircle, 
+  Sparkles, 
+  Star, 
+  Trophy, 
+  Gem,
+  Target,
   Eye,
   MousePointerClick,
+  ShoppingCart,
+  PercentIcon,
+  Package,
   BarChart3,
   CreditCard,
   Clock,
   Search,
-  CalendarIcon,
-  ChevronLeft,
-  ChevronRight,
-  RefreshCw
+  CalendarRange
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, subDays } from "date-fns";
@@ -45,304 +40,233 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/hooks/use-theme";
+import { Progress } from "./ui/progress";
 import ProductStatsTable from "./advertising/ProductStatsTable";
-import { getAdvertCosts, getAdvertStats, getAdvertPayments, getAdvFullStats } from "@/services/advertisingApi";
 import { ProductStats } from "@/services/advertisingApi";
 import KeywordStatisticsComponent from "./advertising/KeywordStatistics";
 import { formatCurrency } from "@/utils/formatCurrency";
-import DateRangePicker from "./analytics/components/DateRangePicker";
+import PeriodSelector, { Period } from "./dashboard/PeriodSelector";
 
 interface CampaignDetailsProps {
   campaignId: number;
   campaignName: string;
-  campaignType?: string; // Making this optional since it's missing in Advertising.tsx
   apiKey: string;
   onBack: () => void;
 }
 
-interface Statistics {
+interface CampaignStats {
+  views: number;
   clicks: number;
-  shows: number;
-  orders: number;
-  cpc: number;
   ctr: number;
+  orders: number;
   cr: number;
-  cost: number;
+  sum: number;
 }
 
-interface Payment {
-  date: string;
-  amount: number;
-}
+const CAMPAIGN_DETAILS_KEY = 'campaign_details';
+const CAMPAIGN_COSTS_KEY = 'campaign_costs';
+const CAMPAIGN_PAYMENTS_KEY = 'campaign_payments';
+const CAMPAIGN_LAST_UPDATE_KEY = 'campaign_last_update';
 
-interface Cost {
-  date: string;
-  updSum: number;
-  campName: string;
-}
-
-const CampaignDetails: React.FC<CampaignDetailsProps> = ({
-  campaignId,
-  campaignName,
-  campaignType,
-  apiKey,
-  onBack
-}) => {
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [statistics, setStatistics] = useState<Statistics>({
-    clicks: 0,
-    shows: 0,
-    orders: 0,
-    cpc: 0,
-    ctr: 0,
-    cr: 0,
-    cost: 0,
-  });
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [costs, setCosts] = useState<Cost[]>([]);
+const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignDetailsProps) => {
+  const [costs, setCosts] = useState<any[]>([]);
+  const [stats, setStats] = useState<CampaignStats | null>(null);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [fullStats, setFullStats] = useState<CampaignFullStats | null>(null);
   const [productStats, setProductStats] = useState<ProductStats[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const filteredProductStats = productStats.filter((product) =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("stats");
+  const { toast } = useToast();
   const isMobile = useIsMobile();
   const { theme } = useTheme();
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
-  const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
-  const [dateTo, setDateTo] = useState<Date>(new Date());
-  const [fromCalendarOpen, setFromCalendarOpen] = useState(false);
-  const [toCalendarOpen, setToCalendarOpen] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState<Period>("week");
+
+  const getDateRangeFromPeriod = (): { from: Date, to: Date } => {
+    const to = new Date();
+    let from = new Date();
+    
+    switch (selectedPeriod) {
+      case "today":
+        // From начало сегодняшнего дня
+        from.setHours(0, 0, 0, 0);
+        break;
+      case "yesterday":
+        // From начало вчерашнего дня
+        from = subDays(new Date(), 1);
+        from.setHours(0, 0, 0, 0);
+        // To конец вчерашнего дня
+        to.setDate(to.getDate() - 1);
+        to.setHours(23, 59, 59, 999);
+        break;
+      case "week":
+        // From 7 дней назад
+        from.setDate(from.getDate() - 7);
+        break;
+      case "2weeks":
+        // From 14 дней назад
+        from.setDate(from.getDate() - 14);
+        break;
+      case "4weeks":
+        // From 28 дней назад
+        from.setDate(from.getDate() - 28);
+        break;
+      default:
+        // По умолчанию неделя
+        from.setDate(from.getDate() - 7);
+    }
+    
+    return { from, to };
+  };
 
   const loadCachedData = () => {
-    const cached = JSON.parse(localStorage.getItem('adv_campaigns_cache') || '{}');
-    if (cached[campaignId] && cached[campaignId].statistics) {
-      const { costs, stats, payments, fullStats } = cached[campaignId].statistics;
-      setCosts(costs || []);
-      setPayments(payments || []);
+    try {
+      const detailsKey = `${CAMPAIGN_DETAILS_KEY}_${campaignId}`;
+      const costsKey = `${CAMPAIGN_COSTS_KEY}_${campaignId}`;
+      const paymentsKey = `${CAMPAIGN_PAYMENTS_KEY}_${campaignId}`;
+      const lastUpdateKey = `${CAMPAIGN_LAST_UPDATE_KEY}_${campaignId}`;
+      const productsKey = `campaign_products_${campaignId}`;
 
-      if (fullStats && fullStats.length > 0) {
-        const totalClicks = fullStats.reduce((sum, item) => sum + item.clicks, 0);
-        const totalShows = fullStats.reduce((sum, item) => sum + item.shows, 0);
-        const totalOrders = fullStats.reduce((sum, item) => sum + item.orders, 0);
-        const totalCost = fullStats.reduce((sum, item) => sum + item.cost, 0);
+      const savedDetails = localStorage.getItem(detailsKey);
+      const savedCosts = localStorage.getItem(costsKey);
+      const savedPayments = localStorage.getItem(paymentsKey);
+      const savedLastUpdate = localStorage.getItem(lastUpdateKey);
+      const savedProducts = localStorage.getItem(productsKey);
 
-        const ctr = totalShows > 0 ? (totalClicks / totalShows) * 100 : 0;
-        const cr = totalClicks > 0 ? (totalOrders / totalClicks) * 100 : 0;
-        const cpc = totalClicks > 0 ? totalCost / totalClicks : 0;
-
-        setStatistics({
-          clicks: totalClicks,
-          shows: totalShows,
-          orders: totalOrders,
-          cpc: cpc,
-          ctr: ctr,
-          cr: cr,
-          cost: totalCost,
-        });
+      if (savedDetails) {
+        const parsedDetails = JSON.parse(savedDetails);
+        setStats(parsedDetails.stats);
+        setFullStats(parsedDetails.fullStats);
       }
 
-      if (cached[campaignId].lastUpdate) {
-        setLastUpdate(cached[campaignId].lastUpdate);
+      if (savedCosts) {
+        setCosts(JSON.parse(savedCosts));
       }
 
-      if (fullStats && fullStats.length > 0) {
-        const productStatsMap: { [key: string]: ProductStats } = {};
-
-        fullStats.forEach(item => {
-          const productId = item.nmId.toString();
-          if (!productStatsMap[productId]) {
-            productStatsMap[productId] = {
-              nmId: item.nmId,
-              name: item.name,
-              clicks: 0,
-              shows: 0,
-              views: 0,
-              orders: 0,
-              ctr: 0,
-              cr: 0,
-              cpc: 0,
-              cost: 0,
-              sum: 0,
-              profit: 0,
-              roi: 0,
-              imageUrl: ''
-            };
-          }
-
-          productStatsMap[productId].clicks += item.clicks;
-          productStatsMap[productId].shows += item.shows;
-          productStatsMap[productId].views = productStatsMap[productId].shows; // Ensure views is set
-          productStatsMap[productId].orders += item.orders;
-          productStatsMap[productId].cost += item.cost;
-          productStatsMap[productId].sum = productStatsMap[productId].cost; // Ensure sum is set
-          productStatsMap[productId].profit += item.profit;
-          productStatsMap[productId].imageUrl = item.imageUrl;
-        });
-
-        const productStatsArray: ProductStats[] = Object.values(productStatsMap);
-
-        productStatsArray.forEach(product => {
-          product.ctr = product.shows > 0 ? (product.clicks / product.shows) * 100 : 0;
-          product.cr = product.clicks > 0 ? (product.orders / product.clicks) * 100 : 0;
-          product.cpc = product.clicks > 0 ? product.cost / product.clicks : 0;
-          product.roi = product.cost > 0 ? (product.profit / product.cost) * 100 : 0;
-        });
-
-        setProductStats(productStatsArray);
+      if (savedPayments) {
+        setPayments(JSON.parse(savedPayments));
       }
 
-      setLoading(false);
-    } else {
-      fetchData();
+      if (savedLastUpdate) {
+        setLastUpdate(savedLastUpdate);
+      }
+      
+      if (savedProducts) {
+        setProductStats(JSON.parse(savedProducts));
+      }
+
+      const shouldRefresh = !savedLastUpdate || 
+        (new Date().getTime() - new Date(savedLastUpdate).getTime()) > 60 * 60 * 1000;
+
+      if (shouldRefresh || !savedDetails) {
+        fetchData();
+      }
+    } catch (error) {
+      console.error('Error loading cached campaign data:', error);
     }
   };
 
-  const calculateTotal = (data: any[], key: string): number => {
-    return data.reduce((acc, item) => acc + (item[key] || 0), 0);
-  };
+  const cacheData = (
+    statsData: CampaignStats | null, 
+    fullStatsData: CampaignFullStats | null,
+    costsData: any[],
+    paymentsData: any[],
+    productsData: ProductStats[] = []
+  ) => {
+    try {
+      const now = new Date().toISOString();
+      
+      const detailsKey = `${CAMPAIGN_DETAILS_KEY}_${campaignId}`;
+      const costsKey = `${CAMPAIGN_COSTS_KEY}_${campaignId}`;
+      const paymentsKey = `${CAMPAIGN_PAYMENTS_KEY}_${campaignId}`;
+      const lastUpdateKey = `${CAMPAIGN_LAST_UPDATE_KEY}_${campaignId}`;
+      const productsKey = `campaign_products_${campaignId}`;
 
-  const formatNumber = (value: number): string => {
-    return value.toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+      localStorage.setItem(detailsKey, JSON.stringify({
+        stats: statsData,
+        fullStats: fullStatsData
+      }));
+      localStorage.setItem(costsKey, JSON.stringify(costsData));
+      localStorage.setItem(paymentsKey, JSON.stringify(paymentsData));
+      localStorage.setItem(lastUpdateKey, now);
+      localStorage.setItem(productsKey, JSON.stringify(productsData));
+      
+      setLastUpdate(now);
+    } catch (error) {
+      console.error('Error caching campaign data:', error);
+    }
   };
 
   const fetchData = async () => {
     setLoading(true);
     try {
+      const { from: dateFrom, to: dateTo } = getDateRangeFromPeriod();
+
       const [costsData, statsData, paymentsData, fullStatsData] = await Promise.all([
         getAdvertCosts(dateFrom, dateTo, apiKey),
-        getAdvertStats(dateFrom, dateTo, apiKey),
+        getAdvertStats(dateFrom, dateTo, [campaignId], apiKey),
         getAdvertPayments(dateFrom, dateTo, apiKey),
-        getAdvFullStats(dateFrom, dateTo, campaignId, apiKey)
+        getCampaignFullStats(apiKey, [campaignId], dateFrom, dateTo)
       ]);
 
-      // Transform costsData to match Cost interface
-      const transformedCosts = costsData.map(cost => ({
-        date: cost.date || cost.updTime.split('T')[0],
-        updSum: cost.updSum,
-        campName: cost.campName
-      }));
-      setCosts(transformedCosts);
-
-      // Transform paymentsData to match Payment interface
-      const transformedPayments = paymentsData.map(payment => ({
-        date: payment.date,
-        amount: payment.amount || payment.sum
-      }));
-      setPayments(transformedPayments);
-
+      const campaignCosts = costsData.filter(cost => cost.advertId === campaignId);
+      setCosts(campaignCosts);
+      setStats(statsData[0]);
+      setPayments(paymentsData);
+      
+      let productsData: ProductStats[] = [];
+      
       if (fullStatsData && fullStatsData.length > 0) {
-        // Calculate totals using safe property access
-        const totalClicks = fullStatsData.reduce((sum, item) => sum + item.clicks, 0);
-        const totalShows = fullStatsData.reduce((sum, item) => sum + (item.shows || item.views || 0), 0);
-        const totalOrders = fullStatsData.reduce((sum, item) => sum + item.orders, 0);
-        const totalCost = fullStatsData.reduce((sum, item) => sum + (item.cost || item.sum || 0), 0);
-
-        const ctr = totalShows > 0 ? (totalClicks / totalShows) * 100 : 0;
-        const cr = totalClicks > 0 ? (totalOrders / totalClicks) * 100 : 0;
-        const cpc = totalClicks > 0 ? totalCost / totalClicks : 0;
-
-        setStatistics({
-          clicks: totalClicks,
-          shows: totalShows,
-          orders: totalOrders,
-          cpc: cpc,
-          ctr: ctr,
-          cr: cr,
-          cost: totalCost,
-        });
-
-        const productStatsMap: { [key: string]: ProductStats } = {};
-
-        // Process days and nm data from fullStatsData safely
-        fullStatsData.forEach(stats => {
-          // Process nm data if available
-          if (stats.days) {
-            stats.days.forEach(day => {
-              if (day.nm) {
-                day.nm.forEach(product => {
-                  const productId = product.nmId.toString();
-                  if (!productStatsMap[productId]) {
-                    productStatsMap[productId] = {
-                      nmId: product.nmId,
-                      name: product.name,
-                      clicks: 0,
-                      shows: 0,
-                      views: 0,
-                      orders: 0,
-                      ctr: 0,
-                      cr: 0,
-                      cpc: 0,
-                      cost: 0,
-                      sum: 0,
-                      profit: 0,
-                      roi: 0,
-                      imageUrl: product.imageUrl || ''
-                    };
+        const campaignData = fullStatsData[0];
+        setFullStats(campaignData);
+        
+        if (campaignData.days && campaignData.days.length > 0) {
+          const productsMap = new Map<number, ProductStats>();
+          
+          for (const day of campaignData.days) {
+            if (day.nm && day.nm.length > 0) {
+              for (const product of day.nm) {
+                if (productsMap.has(product.nmId)) {
+                  const existingProduct = productsMap.get(product.nmId)!;
+                  existingProduct.views += product.views;
+                  existingProduct.clicks += product.clicks;
+                  existingProduct.sum += product.sum;
+                  existingProduct.atbs += product.atbs;
+                  existingProduct.orders += product.orders;
+                  existingProduct.shks += product.shks;
+                  existingProduct.sum_price += product.sum_price;
+                  if (existingProduct.views > 0) {
+                    existingProduct.ctr = (existingProduct.clicks / existingProduct.views) * 100;
                   }
-
-                  productStatsMap[productId].clicks += product.clicks;
-                  productStatsMap[productId].shows += product.shows || product.views || 0;
-                  productStatsMap[productId].views = productStatsMap[productId].shows;
-                  productStatsMap[productId].orders += product.orders;
-                  productStatsMap[productId].cost += product.cost || product.sum || 0;
-                  productStatsMap[productId].sum = productStatsMap[productId].cost;
-                  productStatsMap[productId].profit += product.profit || 0;
-                });
+                  if (existingProduct.clicks > 0) {
+                    existingProduct.cpc = existingProduct.sum / existingProduct.clicks;
+                    existingProduct.cr = (existingProduct.orders / existingProduct.clicks) * 100;
+                  }
+                } else {
+                  productsMap.set(product.nmId, { ...product });
+                }
               }
-            });
+            }
           }
-        });
-
-        const productStatsArray: ProductStats[] = Object.values(productStatsMap);
-
-        productStatsArray.forEach(product => {
-          product.ctr = product.shows > 0 ? (product.clicks / product.shows) * 100 : 0;
-          product.cr = product.clicks > 0 ? (product.orders / product.clicks) * 100 : 0;
-          product.cpc = product.clicks > 0 ? product.cost / product.clicks : 0;
-          product.roi = product.cost > 0 ? (product.profit / product.cost) * 100 : 0;
-        });
-
-        setProductStats(productStatsArray);
-      } else {
-        setStatistics({
-          clicks: 0,
-          shows: 0,
-          orders: 0,
-          cpc: 0,
-          ctr: 0,
-          cr: 0,
-          cost: 0,
-        });
-        setProductStats([]);
-      }
-
-      // Save timestamp of the last update
-      setLastUpdate(new Date().toISOString());
-      const cached = JSON.parse(localStorage.getItem('adv_campaigns_cache') || '{}');
-      localStorage.setItem('adv_campaigns_cache', JSON.stringify({
-        ...cached,
-        [campaignId]: {
-          ...(cached[campaignId] || {}),
-          lastUpdate: new Date().toISOString(),
-          statistics: {
-            costs: transformedCosts,
-            stats: statsData,
-            payments: transformedPayments,
-            fullStats: fullStatsData
-          }
+          
+          productsData = Array.from(productsMap.values());
         }
-      }));
+      }
+      
+      setProductStats(productsData);
 
+      cacheData(statsData[0], fullStatsData?.[0] || null, campaignCosts, paymentsData, productsData);
+
+      toast({
+        title: "Успех",
+        description: "Данные успешно обновлены",
+      });
     } catch (error) {
-      console.error('Error fetching campaign details:', error);
+      console.error('Error fetching campaign data:', error);
       toast({
         title: "Ошибка",
-        description: "Не удалось загрузить данные по кампании",
-        variant: "destructive"
+        description: error instanceof Error ? error.message : "Не удалось загрузить данные",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -353,317 +277,568 @@ const CampaignDetails: React.FC<CampaignDetailsProps> = ({
     loadCachedData();
   }, [campaignId]);
 
-  const getFormattedLastUpdate = () => {
-    if (!lastUpdate) {
-      return "Данные еще не загружались";
-    }
-
-    const lastUpdateDate = new Date(lastUpdate);
-    const now = new Date();
-    const diff = now.getTime() - lastUpdateDate.getTime();
-    const minutes = Math.round(diff / (1000 * 60));
-
-    if (minutes < 1) {
-      return "Обновлено менее минуты назад";
-    } else if (minutes < 60) {
-      return `Обновлено ${minutes} минут назад`;
-    } else {
-      const hours = Math.floor(minutes / 60);
-      return `Обновлено ${hours} ${hours === 1 ? 'час' : 'часов'} назад`;
-    }
-  };
-
-  const totalPayments = calculateTotal(payments, "amount");
-  const totalCost = calculateTotal(costs, "updSum");
-
-  const handleApplyDateRange = () => {
+  useEffect(() => {
     fetchData();
+  }, [selectedPeriod]);
+
+  const getFormattedLastUpdate = () => {
+    if (!lastUpdate) return "Никогда";
+    
+    const updateDate = new Date(lastUpdate);
+    return `${updateDate.toLocaleDateString('ru-RU')} ${updateDate.toLocaleTimeString('ru-RU')}`;
   };
+
+  const StatCard = ({ title, value, icon: Icon, trend, color, isTrendPositive, caption }: { 
+    title: string; 
+    value: string; 
+    icon: any; 
+    trend?: number;
+    color: string;
+    isTrendPositive?: boolean;
+    caption?: string;
+  }) => (
+    <div className={`rounded-2xl p-4 bg-white/80 dark:bg-gray-800/40 backdrop-blur-sm border border-${color}-100 dark:border-${color}-900/30 shadow-md overflow-hidden relative`}>
+      <div className={`w-1.5 h-full absolute left-0 top-0 bg-gradient-to-b from-${color}-400 to-${color}-600 rounded-l-lg`}></div>
+      <div className="flex flex-col pl-2">
+        <div className="flex items-center justify-between mb-1">
+          <div className={`p-2 rounded-full bg-${color}-100 dark:bg-${color}-900/40`}>
+            <Icon className={`h-4 w-4 text-${color}-600 dark:text-${color}-400`} />
+          </div>
+          {trend !== undefined && (
+            <div className={`flex items-center ${isTrendPositive ? 'text-green-500' : 'text-red-500'} 
+                            ${isTrendPositive ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'} 
+                            px-2 py-0.5 rounded-full text-xs font-medium`}>
+              {isTrendPositive ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}
+              <span>{typeof trend === 'number' ? trend.toFixed(1) : trend}%</span>
+            </div>
+          )}
+        </div>
+        <p className={`text-xs font-medium text-${color}-600 dark:text-${color}-400 mb-0.5`}>{title}</p>
+        <p className="text-lg font-bold">{value}</p>
+        {caption && (
+          <p className="text-xs text-gray-500 mt-0.5">{caption}</p>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderCostHistory = () => (
+    <Card className="overflow-hidden border-0 shadow-xl rounded-3xl h-full">
+      <div 
+        className="relative overflow-hidden h-full flex flex-col"
+        style={{
+          background: theme === 'dark' 
+            ? 'linear-gradient(135deg, rgba(30,41,59,1) 0%, rgba(45,55,72,1) 100%)'
+            : 'linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%)'
+        }}
+      >
+        <div className="absolute -top-16 -right-16 opacity-10">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+          >
+            <DollarSign className="h-64 w-64" />
+          </motion.div>
+        </div>
+
+        <div className="p-5 border-b border-gray-200/30 dark:border-gray-700/30 flex items-center justify-between relative z-10">
+          <h3 className="text-xl font-bold flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-amber-500" />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-500 to-pink-500">История затрат</span>
+          </h3>
+          <div className="flex items-center gap-2">
+            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+              <Star className="h-5 w-5 text-amber-400" />
+            </motion.div>
+            <div className="text-xs text-gray-500 flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              <span>{getFormattedLastUpdate()}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-5 relative z-10 overflow-y-auto scrollbar-hide flex-1">
+          <AnimatePresence>
+            {costs.length > 0 ? (
+              <div className="space-y-4">
+                {costs.map((cost, index) => (
+                  <motion.div 
+                    key={index}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ delay: index * 0.05 }}
+                    whileHover={{ scale: 1.03, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
+                    className="relative overflow-hidden"
+                  >
+                    <div className="bg-white/80 dark:bg-gray-800/40 backdrop-blur-sm rounded-2xl p-4 border border-amber-100/80 dark:border-amber-900/30 flex flex-col gap-2">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center">
+                          <div className="w-2 h-10 rounded-full bg-gradient-to-b from-amber-400 to-amber-600 mr-3"></div>
+                          <span className="font-bold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-amber-600 to-rose-500">
+                            {formatCurrency(cost.updSum)}
+                          </span>
+                        </div>
+                        <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 px-3 py-1.5 rounded-full font-medium">
+                          {format(new Date(cost.updTime), 'dd.MM.yyyy HH:mm')}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="py-10 flex flex-col items-center justify-center"
+              >
+                <motion.div 
+                  whileHover={{ rotate: 10 }}
+                  className="w-20 h-20 mb-4 rounded-full bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center"
+                >
+                  <DollarSign className="h-10 w-10 text-amber-400" />
+                </motion.div>
+                <h4 className="text-lg font-semibold text-amber-700 dark:text-amber-300 mb-1">
+                  Нет данных о затратах
+                </h4>
+                <p className="text-center text-gray-500 max-w-xs">
+                  Информация о расходах появится здесь после запуска кампании
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </Card>
+  );
+
+  const renderStatMetrics = () => {
+    if (!fullStats) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-6 mx-auto"></div>
+            <h4 className="text-lg font-semibold text-blue-700 dark:text-blue-300 mb-1">
+              Загрузка статистики...
+            </h4>
+          </div>
+        </div>
+      );
+    }
+
+    const metricCards = [
+      {
+        title: "Показы",
+        value: formatCurrency(fullStats.views),
+        icon: Eye,
+        color: "purple",
+        trend: 12.5,
+        isTrendPositive: true,
+        caption: "Всего просмотров"
+      },
+      {
+        title: "Клики",
+        value: formatCurrency(fullStats.clicks),
+        icon: MousePointerClick,
+        color: "blue",
+        trend: 8.7,
+        isTrendPositive: true,
+        caption: "Всего кликов"
+      },
+      {
+        title: "CTR",
+        value: `${fullStats.ctr.toFixed(2)}%`,
+        icon: PercentIcon,
+        color: "green",
+        trend: fullStats.ctr - 1.2,
+        isTrendPositive: fullStats.ctr > 1.2,
+        caption: "Кликабельность"
+      },
+      {
+        title: "CPC",
+        value: `${fullStats.cpc.toFixed(2)}`,
+        icon: CreditCard,
+        color: "amber",
+        trend: 3.2,
+        isTrendPositive: false,
+        caption: "Стоимость клика"
+      },
+      {
+        title: "Затраты",
+        value: formatCurrency(fullStats.sum),
+        icon: DollarSign,
+        color: "red",
+        trend: 5.3,
+        isTrendPositive: false,
+        caption: "Всего затрат"
+      },
+      {
+        title: "Товары в корзине",
+        value: formatCurrency(fullStats.atbs),
+        icon: ShoppingCart,
+        color: "teal",
+        trend: 9.4,
+        isTrendPositive: true,
+        caption: "Добавлено в корзину"
+      },
+      {
+        title: "Заказы",
+        value: formatCurrency(fullStats.orders),
+        icon: Package,
+        color: "indigo",
+        trend: 7.2,
+        isTrendPositive: true,
+        caption: "Количество заказов"
+      },
+      {
+        title: "CR",
+        value: `${fullStats.cr.toFixed(2)}%`,
+        icon: Target,
+        color: "emerald",
+        trend: 4.1,
+        isTrendPositive: true,
+        caption: "Конверсия"
+      },
+      {
+        title: "Продано товаров",
+        value: formatCurrency(fullStats.shks),
+        icon: BarChart3,
+        color: "sky",
+        trend: 10.3,
+        isTrendPositive: true,
+        caption: "шт."
+      },
+      {
+        title: "Сумма заказов",
+        value: formatCurrency(fullStats.sum_price),
+        icon: TrendingUp,
+        color: "fuchsia",
+        trend: 6.8,
+        isTrendPositive: true,
+        caption: "Общая сумма"
+      }
+    ];
+
+    return (
+      <div className="space-y-6">
+        {isMobile ? (
+          <div className="overflow-x-auto pb-4">
+            <div className="flex flex-row gap-3" style={{ minWidth: "max-content" }}>
+              {metricCards.map((card, index) => (
+                <div key={index} className="w-[170px]">
+                  <StatCard {...card} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {metricCards.map((card, index) => (
+              <StatCard key={index} {...card} />
+            ))}
+          </div>
+        )}
+
+        <div className="bg-white/90 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-4 border border-blue-100 dark:border-blue-900/20 shadow-lg">
+          <h4 className="text-lg font-semibold text-blue-700 dark:text-blue-400 mb-4">Эффективность кампании</h4>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="flex items-center gap-1">
+                    <Target className="h-4 w-4 text-purple-500" />
+                    <span>CTR (Кликабельность)</span>
+                  </span>
+                  <span className="font-bold">{fullStats.ctr.toFixed(2)}%</span>
+                </div>
+                <Progress value={Math.min(fullStats.ctr * 10, 100)} className="h-2 bg-purple-100 dark:bg-purple-900/30" />
+                <p className="text-xs text-gray-500">Отношение кликов к показам</p>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="flex items-center gap-1">
+                    <TrendingUp className="h-4 w-4 text-green-500" />
+                    <span>CR (Конверсия)</span>
+                  </span>
+                  <span className="font-bold">{fullStats.cr.toFixed(2)}%</span>
+                </div>
+                <Progress value={Math.min(fullStats.cr * 10, 100)} className="h-2 bg-green-100 dark:bg-green-900/30" />
+                <p className="text-xs text-gray-500">Отношение заказов к кликам</p>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="flex items-center gap-1">
+                    <CreditCard className="h-4 w-4 text-amber-500" />
+                    <span>CPC (Стоимость клика)</span>
+                  </span>
+                  <span className="font-bold">{fullStats.cpc.toFixed(2)} ₽</span>
+                </div>
+                <Progress value={Math.min((fullStats.cpc / 10) * 100, 100)} className="h-2 bg-amber-100 dark:bg-amber-900/30" />
+                <p className="text-xs text-gray-500">Средняя стоимость за клик</p>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="flex items-center gap-1">
+                    <ShoppingCart className="h-4 w-4 text-blue-500" />
+                    <span>Корзина / Показы</span>
+                  </span>
+                  <span className="font-bold">{(fullStats.atbs / fullStats.views * 100).toFixed(2)}%</span>
+                </div>
+                <Progress value={Math.min((fullStats.atbs / fullStats.views * 100) * 3, 100)} className="h-2 bg-blue-100 dark:bg-blue-900/30" />
+                <p className="text-xs text-gray-500">Добавления в корзину к показам</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {fullStats.days && fullStats.days.length > 0 && (
+          <Card className="overflow-hidden border-0 shadow-xl rounded-3xl">
+            <div className="bg-white/90 dark:bg-gray-800/60 backdrop-blur-sm p-4 border-b border-gray-200 dark:border-gray-700">
+              <h4 className="text-lg font-semibold text-blue-700 dark:text-blue-400 flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Статистика по дням
+              </h4>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-blue-50 dark:bg-blue-950/30">
+                  <tr>
+                    <th className="py-3 px-4 text-left text-xs font-medium text-blue-800 dark:text-blue-300 uppercase tracking-wider">Дата</th>
+                    <th className="py-3 px-4 text-right text-xs font-medium text-blue-800 dark:text-blue-300 uppercase tracking-wider">Показы</th>
+                    <th className="py-3 px-4 text-right text-xs font-medium text-blue-800 dark:text-blue-300 uppercase tracking-wider">Клики</th>
+                    <th className="py-3 px-4 text-right text-xs font-medium text-blue-800 dark:text-blue-300 uppercase tracking-wider">CTR</th>
+                    <th className="py-3 px-4 text-right text-xs font-medium text-blue-800 dark:text-blue-300 uppercase tracking-wider">Затраты</th>
+                    <th className="py-3 px-4 text-right text-xs font-medium text-blue-800 dark:text-blue-300 uppercase tracking-wider">Заказы</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-blue-100 dark:divide-blue-900/20">
+                  {fullStats.days.map((day, index) => (
+                    <tr key={index} className="hover:bg-blue-50/50 dark:hover:bg-blue-900/10">
+                      <td className="py-3 px-4 text-sm whitespace-nowrap font-medium">
+                        {format(new Date(day.date), 'dd.MM.yyyy')}
+                      </td>
+                      <td className="py-3 px-4 text-sm text-right whitespace-nowrap">
+                        {day.views.toLocaleString('ru-RU')}
+                      </td>
+                      <td className="py-3 px-4 text-sm text-right whitespace-nowrap">
+                        {day.clicks.toLocaleString('ru-RU')}
+                      </td>
+                      <td className="py-3 px-4 text-sm text-right whitespace-nowrap">
+                        {day.ctr.toFixed(2)}%
+                      </td>
+                      <td className="py-3 px-4 text-sm text-right whitespace-nowrap">
+                        {day.sum.toLocaleString('ru-RU')} ₽
+                      </td>
+                      <td className="py-3 px-4 text-sm text-right whitespace-nowrap">
+                        {day.orders.toLocaleString('ru-RU')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
+      </div>
+    );
+  };
+
+  const renderDetailedStats = () => (
+    <Card className="overflow-hidden border-0 shadow-xl rounded-3xl w-full">
+      <div 
+        className="relative overflow-hidden"
+        style={{
+          background: theme === 'dark' 
+            ? 'linear-gradient(135deg, rgba(15,23,42,1) 0%, rgba(51,65,85,1) 100%)'
+            : 'linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%)'
+        }}
+      >
+        <div className="p-5 border-b border-gray-200/30 dark:border-gray-700/30 flex items-center justify-between relative z-10">
+          <h3 className="text-xl font-bold flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-blue-500" />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500">Подробная статистика</span>
+          </h3>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <CalendarRange className="h-4 w-4 text-gray-500" />
+              <PeriodSelector value={selectedPeriod} onChange={setSelectedPeriod} />
+            </div>
+            <div className="text-xs text-gray-500 flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              <span>{getFormattedLastUpdate()}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-5 relative z-10">
+          {renderStatMetrics()}
+        </div>
+      </div>
+    </Card>
+  );
+
+  const renderPaymentHistory = () => (
+    <Card className="overflow-hidden border-0 shadow-xl rounded-3xl h-full">
+      <div 
+        className="relative overflow-hidden h-full flex flex-col"
+        style={{
+          background: theme === 'dark' 
+            ? 'linear-gradient(135deg, rgba(124,58,237,0.2) 0%, rgba(236,72,153,0.2) 100%)'
+            : 'linear-gradient(to top, #d299c2 0%, #fef9d7 100%)'
+        }}
+      >
+        <div className="absolute -top-16 -right-16 opacity-10">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+          >
+            <DollarSign className="h-64 w-64" />
+          </motion.div>
+        </div>
+
+        <div className="p-5 border-b border-gray-200/30 dark:border-gray-700/30 flex items-center justify-between relative z-10">
+          <h3 className="text-xl font-bold flex items-center gap-2">
+            <Gem className="h-5 w-5 text-purple-500" />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-pink-500">История пополнений</span>
+          </h3>
+          <div className="flex items-center gap-2">
+            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+              <Trophy className="h-5 w-5 text-purple-400" />
+            </motion.div>
+            <div className="text-xs text-gray-500 flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              <span>{getFormattedLastUpdate()}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-5 relative z-10 overflow-y-auto scrollbar-hide flex-1">
+          <AnimatePresence>
+            {payments.length > 0 ? (
+              <div className="space-y-4">
+                {payments.map((payment, index) => (
+                  <motion.div 
+                    key={index}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ delay: index * 0.05 }}
+                    whileHover={{ scale: 1.03, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
+                    className="relative overflow-hidden"
+                  >
+                    <div className="bg-white/80 dark:bg-gray-800/40 backdrop-blur-sm rounded-2xl p-4 border border-purple-100/80 dark:border-purple-900/30">
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center">
+                          <div className="w-2 h-10 rounded-full bg-gradient-to-b from-purple-400 to-pink-600 mr-3"></div>
+                          <span className="font-bold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-500">
+                            {formatCurrency(payment.sum)}
+                          </span>
+                        </div>
+                        <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 px-3 py-1.5 rounded-full font-medium">
+                          {format(new Date(payment.date), 'dd.MM.yyyy HH:mm')}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="py-10 flex flex-col items-center justify-center"
+              >
+                <motion.div 
+                  whileHover={{ rotate: 10 }}
+                  className="w-20 h-20 mb-4 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center"
+                >
+                  <DollarSign className="h-10 w-10 text-purple-400" />
+                </motion.div>
+                <h4 className="text-lg font-semibold text-purple-700 dark:text-purple-300 mb-1">
+                  Нет данных о пополнениях
+                </h4>
+                <p className="text-center text-gray-500 max-w-xs">
+                  Информация о пополнениях появится здесь после запуска кампании
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </Card>
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <Breadcrumb className="w-full sm:w-auto">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink onClick={onBack} className="flex items-center">
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                <Megaphone className="h-4 w-4 mr-1" />
-                <span>Кампании</span>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{campaignName}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
+    <div className="p-4 space-y-8">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center space-x-2">
+          <Button variant="outline" size="icon" onClick={onBack}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-2xl font-bold">{campaignName}</h1>
+        </div>
         <Button 
-          size="sm" 
+          className="flex items-center space-x-2" 
           onClick={fetchData}
-          className="w-full sm:w-auto"
           disabled={loading}
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Обновить данные
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          <span>Обновить данные</span>
         </Button>
       </div>
 
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <CardTitle><Skeleton className="h-6 w-32" /></CardTitle>
-                <CardDescription><Skeleton className="h-4 w-48" /></CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-full" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <>
-          <AnimatePresence>
-            {statistics === null ? (
-              <motion.div
-                key="no-data"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                className="flex items-center justify-center h-48 text-gray-500 dark:text-gray-400"
-              >
-                Нет данных для отображения.
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
+      <Tabs 
+        value={activeTab} 
+        onValueChange={setActiveTab} 
+        className="w-full"
+      >
+        <TabsList className="mb-4">
+          <TabsTrigger value="stats" className="flex items-center space-x-2">
+            <TrendingUp className="h-4 w-4" />
+            <span>Статистика</span>
+          </TabsTrigger>
+          <TabsTrigger value="products" className="flex items-center space-x-2">
+            <Package className="h-4 w-4" />
+            <span>Товары</span>
+          </TabsTrigger>
+          <TabsTrigger value="keywords" className="flex items-center space-x-2">
+            <Search className="h-4 w-4" />
+            <span>Ключевые слова</span>
+          </TabsTrigger>
+        </TabsList>
 
-          <Tabs defaultValue="overview" className="space-y-4">
-            <TabsList className="w-full">
-              <TabsTrigger value="overview">Обзор</TabsTrigger>
-              <TabsTrigger value="products">Товары</TabsTrigger>
-              <TabsTrigger value="keywords">Ключевые слова</TabsTrigger>
-            </TabsList>
+        <TabsContent value="stats">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              {renderDetailedStats()}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
+              {renderCostHistory()}
+              {renderPaymentHistory()}
+            </div>
+          </div>
+        </TabsContent>
 
-            <TabsContent value="overview" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Eye className="mr-2 h-4 w-4" />
-                      Показы
-                    </CardTitle>
-                    <CardDescription>Количество показов объявлений</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{formatNumber(statistics.shows)}</div>
-                  </CardContent>
-                </Card>
+        <TabsContent value="products">
+          <ProductStatsTable products={productStats} />
+        </TabsContent>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <MousePointerClick className="mr-2 h-4 w-4" />
-                      Клики
-                    </CardTitle>
-                    <CardDescription>Количество кликов по объявлениям</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{formatNumber(statistics.clicks)}</div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      Затраты
-                    </CardTitle>
-                    <CardDescription>Общая сумма затрат на рекламу</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{formatCurrency(statistics.cost)}</div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <BarChart3 className="mr-2 h-4 w-4" />
-                      Заказы
-                    </CardTitle>
-                    <CardDescription>Количество заказов после клика</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{formatNumber(statistics.orders)}</div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 dark:bg-slate-900 p-4 rounded-lg mt-8">
-                <h3 className="text-lg font-semibold flex items-center gap-2 mb-4 sm:mb-0">
-                  <BarChart3 className="h-5 w-5 text-blue-500" />
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500">Подробная статистика</span>
-                </h3>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-2">
-                      <Popover open={fromCalendarOpen} onOpenChange={setFromCalendarOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "justify-start text-left font-normal",
-                              !dateFrom && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dateFrom ? format(dateFrom, 'PPP') : <span>Начальная дата</span>}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={dateFrom}
-                            onSelect={(date) => {
-                              if (date) {
-                                setDateFrom(date);
-                                setFromCalendarOpen(false);
-                              }
-                            }}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      
-                      <Popover open={toCalendarOpen} onOpenChange={setToCalendarOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "justify-start text-left font-normal",
-                              !dateTo && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dateTo ? format(dateTo, 'PPP') : <span>Конечная дата</span>}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={dateTo}
-                            onSelect={(date) => {
-                              if (date) {
-                                setDateTo(date);
-                                setToCalendarOpen(false);
-                              }
-                            }}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      
-                      <Button onClick={fetchData} disabled={loading}>
-                        {loading ? (
-                          <>
-                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                            Загрузка...
-                          </>
-                        ) : (
-                          "Применить"
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="text-xs text-gray-500 flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    <span>{getFormattedLastUpdate()}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>CTR (Click-Through Rate)</CardTitle>
-                    <CardDescription>Отношение кликов к показам</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Progress value={statistics.ctr} max={100} className="mb-2" />
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {formatNumber(statistics.ctr)}%
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>CPC (Cost Per Click)</CardTitle>
-                    <CardDescription>Средняя стоимость клика</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{formatCurrency(statistics.cpc)}</div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>CR (Conversion Rate)</CardTitle>
-                    <CardDescription>Отношение заказов к кликам</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Progress value={statistics.cr} max={100} className="mb-2" />
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {formatNumber(statistics.cr)}%
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Product Statistics Table */}
-              <div className="mt-8">
-                <h3 className="text-lg font-semibold mb-4">Статистика по товарам</h3>
-                <ProductStatsTable 
-                  productStats={productStats} 
-                  loading={loading && productStats.length === 0} 
-                />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="products" className="space-y-4">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 dark:bg-slate-900 p-4 rounded-lg">
-                <h3 className="text-lg font-semibold">Статистика по товарам</h3>
-                <div className="flex items-center gap-2 mt-4 sm:mt-0">
-                  <Input 
-                    className="w-full sm:w-64" 
-                    placeholder="Поиск по названию" 
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                  <Search className="h-4 w-4 text-gray-500 -ml-10" />
-                </div>
-              </div>
-
-              <ProductStatsTable 
-                productStats={filteredProductStats} 
-                loading={loading && productStats.length === 0}
-                showProgressBar={true}
-              />
-            </TabsContent>
-
-            <TabsContent value="keywords" className="space-y-4">
-              <KeywordStatisticsComponent 
-                campaignId={campaignId} 
-                apiKey={apiKey} 
-                dateFrom={dateFrom}
-                dateTo={dateTo}
-              />
-            </TabsContent>
-          </Tabs>
-        </>
-      )}
+        <TabsContent value="keywords">
+          <KeywordStatisticsComponent 
+            campaignId={campaignId} 
+            apiKey={apiKey} 
+            dateFrom={getDateRangeFromPeriod().from}
+            dateTo={getDateRangeFromPeriod().to}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
