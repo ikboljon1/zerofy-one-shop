@@ -24,7 +24,7 @@ import { NewStore, marketplaces, Marketplace } from "@/types/store";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { canAddStore, incrementStoreCount } from "@/services/userService";
+import { canAddStore, incrementStoreCount, getSubscriptionStatus } from "@/services/userService";
 
 interface AddStoreDialogProps {
   isOpen: boolean;
@@ -37,6 +37,12 @@ export function AddStoreDialog({ isOpen, isLoading, onOpenChange, onAddStore }: 
   const [newStore, setNewStore] = useState<NewStore>({});
   const [isCheckingLimit, setIsCheckingLimit] = useState(false);
   const [limitError, setLimitError] = useState<string | null>(null);
+  const [subscriptionInfo, setSubscriptionInfo] = useState<{
+    isActive: boolean;
+    daysRemaining: number;
+    endDate?: string;
+    tariffId?: string;
+  } | null>(null);
   const { toast } = useToast();
 
   // Get current user from localStorage
@@ -74,6 +80,10 @@ export function AddStoreDialog({ isOpen, isLoading, onOpenChange, onAddStore }: 
 
     setIsCheckingLimit(true);
     try {
+      // Get subscription information
+      const subscription = await getSubscriptionStatus(userId);
+      setSubscriptionInfo(subscription);
+      
       const result = await canAddStore(userId);
       
       if (!result.allowed) {
@@ -110,6 +120,13 @@ export function AddStoreDialog({ isOpen, isLoading, onOpenChange, onAddStore }: 
         return;
       }
 
+      // Get subscription information to ensure it's active
+      const subscription = await getSubscriptionStatus(userId);
+      if (!subscription.isActive) {
+        setLimitError("Подписка неактивна. Пожалуйста, обновите тариф");
+        return;
+      }
+
       // Update the store count
       await incrementStoreCount(userId);
       
@@ -127,6 +144,27 @@ export function AddStoreDialog({ isOpen, isLoading, onOpenChange, onAddStore }: 
         variant: "destructive",
       });
     }
+  };
+
+  // Функция для определения, прошел ли минимальный период подписки (1 месяц)
+  const hasMinimumSubscriptionPeriodPassed = (): boolean => {
+    if (!subscriptionInfo || !subscriptionInfo.endDate) return false;
+    
+    const subscriptionEndDate = new Date(subscriptionInfo.endDate);
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    
+    // Если конец подписки более чем через месяц, значит подписка оформлена менее месяца назад
+    return subscriptionEndDate.getTime() - oneMonthAgo.getTime() < 0;
+  };
+
+  // Подготовка текста ошибки, связанной с минимальным сроком подписки
+  const getSubscriptionPeriodErrorText = (): string => {
+    if (!subscriptionInfo || !subscriptionInfo.endDate) return "Информация о подписке недоступна";
+
+    const endDate = new Date(subscriptionInfo.endDate);
+    const formattedDate = endDate.toLocaleDateString('ru-RU');
+    return `Вы не можете удалить магазин до истечения минимального срока подписки. Подписка действует до ${formattedDate}`;
   };
 
   return (
@@ -164,6 +202,16 @@ export function AddStoreDialog({ isOpen, isLoading, onOpenChange, onAddStore }: 
                   Обновить тариф
                 </Button>
               </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {subscriptionInfo && !hasMinimumSubscriptionPeriodPassed() && (
+          <Alert variant="warning" className="mb-4 bg-yellow-900/30 border-yellow-800/30 text-yellow-300">
+            <AlertCircle className="h-4 w-4 text-yellow-500" />
+            <AlertTitle>Важная информация</AlertTitle>
+            <AlertDescription>
+              Удаление магазинов будет доступно только через 1 месяц после активации тарифа.
             </AlertDescription>
           </Alert>
         )}

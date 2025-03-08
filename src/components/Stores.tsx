@@ -7,6 +7,7 @@ import { Store as StoreType, NewStore, STATS_STORAGE_KEY } from "@/types/store";
 import { loadStores, saveStores, refreshStoreStats } from "@/utils/storeUtils";
 import { AddStoreDialog } from "./stores/AddStoreDialog";
 import { StoreCard } from "./stores/StoreCard";
+import { getSubscriptionStatus } from "@/services/userService";
 
 interface StoresProps {
   onStoreSelect?: (store: { id: string; apiKey: string }) => void;
@@ -16,12 +17,14 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   const [stores, setStores] = useState<StoreType[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [canDeleteStores, setCanDeleteStores] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     try {
       const savedStores = loadStores();
       setStores(savedStores);
+      checkDeletePermissions();
     } catch (error) {
       console.error("Ошибка загрузки магазинов:", error);
       toast({
@@ -31,6 +34,32 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       });
     }
   }, []);
+
+  const checkDeletePermissions = async () => {
+    // Get current user from localStorage
+    const userData = localStorage.getItem('user');
+    if (!userData) return;
+    
+    try {
+      const user = JSON.parse(userData);
+      const userId = user.id;
+      
+      // Get subscription information
+      const subscription = await getSubscriptionStatus(userId);
+      
+      if (subscription && subscription.endDate) {
+        const subscriptionEndDate = new Date(subscription.endDate);
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        
+        // Если конец подписки более чем через месяц, значит подписка оформлена менее месяца назад
+        // В этом случае удаление запрещено
+        setCanDeleteStores(subscriptionEndDate.getTime() - oneMonthAgo.getTime() < 0);
+      }
+    } catch (error) {
+      console.error("Ошибка при проверке разрешений:", error);
+    }
+  };
 
   const handleAddStore = async (newStore: NewStore) => {
     console.log("Starting store addition...");
@@ -159,6 +188,16 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   };
 
   const handleDeleteStore = (storeId: string) => {
+    // Проверяем, можно ли удалять магазины
+    if (!canDeleteStores) {
+      toast({
+        title: "Действие запрещено",
+        description: "Удаление магазинов будет доступно через 1 месяц после активации тарифа",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const storeToDelete = stores.find(store => store.id === storeId);
     if (!storeToDelete) return;
 
@@ -206,6 +245,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
               onDelete={handleDeleteStore}
               onRefreshStats={handleRefreshStats}
               isLoading={isLoading}
+              canDelete={canDeleteStores}
             />
           ))}
         </div>
