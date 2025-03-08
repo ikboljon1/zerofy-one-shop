@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ShoppingBag, Store, Package2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,7 +6,7 @@ import { Store as StoreType, NewStore, STATS_STORAGE_KEY } from "@/types/store";
 import { loadStores, saveStores, refreshStoreStats } from "@/utils/storeUtils";
 import { AddStoreDialog } from "./stores/AddStoreDialog";
 import { StoreCard } from "./stores/StoreCard";
-import { getSubscriptionStatus } from "@/services/userService";
+import { getSubscriptionStatus, SubscriptionData } from "@/services/userService";
 import { Badge } from "@/components/ui/badge";
 
 interface StoresProps {
@@ -76,13 +75,12 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     
     try {
       const user = JSON.parse(userData);
-      const userId = user.id;
       
       // Get subscription information
-      const subscription = await getSubscriptionStatus(userId);
+      const subscriptionData: SubscriptionData = getSubscriptionStatus(user);
       
-      if (subscription && subscription.endDate) {
-        const subscriptionEndDate = new Date(subscription.endDate);
+      if (subscriptionData && subscriptionData.endDate) {
+        const subscriptionEndDate = new Date(subscriptionData.endDate);
         const oneMonthAgo = new Date();
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
         

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -40,7 +39,13 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { TARIFF_STORE_LIMITS, getTrialDaysRemaining, getSubscriptionStatus, User as UserType } from "@/services/userService";
+import { 
+  TARIFF_STORE_LIMITS, 
+  getTrialDaysRemaining, 
+  getSubscriptionStatus, 
+  User as UserType,
+  PaymentHistoryItem 
+} from "@/services/userService";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
@@ -50,16 +55,6 @@ interface SavedCard {
   expiryDate: string;
   cvv: string;
   lastFour: string;
-}
-
-interface PaymentHistoryItem {
-  id: string;
-  date: string;
-  amount: string;
-  description: string;
-  status: string;
-  tariff: string;
-  period: string;
 }
 
 const Profile = () => {
@@ -468,7 +463,7 @@ const Profile = () => {
             <div className="flex items-center gap-2 mt-2">
               <span>Осталось дней:</span>
               <Badge variant="outline" className="bg-amber-500/20 border-amber-500/30">
-                {userProfile.trialEndDate ? Math.max(0, Math.ceil((new Date(userProfile.trialEndDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : 0}
+                {userProfile?.trialEndDate ? Math.max(0, Math.ceil((new Date(userProfile.trialEndDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : 0}
               </Badge>
             </div>
           </AlertDescription>

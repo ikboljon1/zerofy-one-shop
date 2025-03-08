@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   name: string;
@@ -20,9 +19,9 @@ export interface User {
 }
 
 export interface SubscriptionData {
-  isActive: boolean;
-  daysRemaining: number;
+  status: 'active' | 'trial' | 'expired';
   endDate?: string;
+  daysRemaining?: number;
 }
 
 export interface PaymentHistoryItem {
@@ -335,16 +334,33 @@ export const getTrialDaysRemaining = (user: User): number => {
   return Math.max(0, diffDays);
 };
 
-export const getSubscriptionStatus = (user: User): 'active' | 'trial' | 'expired' => {
+export const getSubscriptionStatus = (user: User): SubscriptionData => {
   if (user.isInTrial) {
-    return 'trial';
+    return {
+      status: 'trial',
+      endDate: user.trialEndDate,
+      daysRemaining: getTrialDaysRemaining(user)
+    };
   }
   
   if (user.isSubscriptionActive) {
-    return 'active';
+    const today = new Date();
+    const endDate = user.subscriptionEndDate ? new Date(user.subscriptionEndDate) : null;
+    const daysRemaining = endDate 
+      ? Math.max(0, Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))) 
+      : 0;
+    
+    return {
+      status: 'active',
+      endDate: user.subscriptionEndDate,
+      daysRemaining
+    };
   }
   
-  return 'expired';
+  return { 
+    status: 'expired',
+    endDate: user.subscriptionEndDate
+  };
 };
 
 export const getPaymentHistory = async (userId: string): Promise<PaymentHistoryItem[]> => {
@@ -415,4 +431,23 @@ export const addPaymentRecord = async (
   localStorage.setItem(`payment_history_${userId}`, JSON.stringify(updatedHistory));
   
   return newPayment;
+};
+
+export const getUserSubscriptionData = async (userId: string): Promise<SubscriptionData> => {
+  await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+  
+  // Get user from localStorage
+  const storedUsers = localStorage.getItem('users');
+  if (!storedUsers) {
+    return { status: 'expired' };
+  }
+  
+  const users: User[] = JSON.parse(storedUsers);
+  const user = users.find(u => u.id === userId);
+  
+  if (!user) {
+    return { status: 'expired' };
+  }
+  
+  return getSubscriptionStatus(user);
 };
