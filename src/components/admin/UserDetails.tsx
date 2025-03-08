@@ -215,7 +215,7 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
     return Math.min(100, Math.max(0, (elapsed / subscriptionDuration) * 100));
   };
 
-  const getTrialStatus = () => {
+  const getTrialStatus = (): 'active' | 'expired' | 'not-applicable' => {
     if (!formData.trialEndDate) return 'not-applicable';
     if (!formData.isInTrial) return 'not-applicable';
     
