@@ -31,10 +31,11 @@ import {
   BarChart3,
   CreditCard,
   Clock,
-  Search
+  Search,
+  CalendarRange
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -44,6 +45,7 @@ import ProductStatsTable from "./advertising/ProductStatsTable";
 import { ProductStats } from "@/services/advertisingApi";
 import KeywordStatisticsComponent from "./advertising/KeywordStatistics";
 import { formatCurrency } from "@/utils/formatCurrency";
+import PeriodSelector, { Period } from "./dashboard/PeriodSelector";
 
 interface CampaignDetailsProps {
   campaignId: number;
@@ -78,6 +80,44 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
   const isMobile = useIsMobile();
   const { theme } = useTheme();
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<Period>("week");
+
+  const getDateRangeFromPeriod = (): { from: Date, to: Date } => {
+    const to = new Date();
+    let from = new Date();
+    
+    switch (selectedPeriod) {
+      case "today":
+        // From начало сегодняшнего дня
+        from.setHours(0, 0, 0, 0);
+        break;
+      case "yesterday":
+        // From начало вчерашнего дня
+        from = subDays(new Date(), 1);
+        from.setHours(0, 0, 0, 0);
+        // To конец вчерашнего дня
+        to.setDate(to.getDate() - 1);
+        to.setHours(23, 59, 59, 999);
+        break;
+      case "week":
+        // From 7 дней назад
+        from.setDate(from.getDate() - 7);
+        break;
+      case "2weeks":
+        // From 14 дней назад
+        from.setDate(from.getDate() - 14);
+        break;
+      case "4weeks":
+        // From 28 дней назад
+        from.setDate(from.getDate() - 28);
+        break;
+      default:
+        // По умолчанию неделя
+        from.setDate(from.getDate() - 7);
+    }
+    
+    return { from, to };
+  };
 
   const loadCachedData = () => {
     try {
@@ -160,9 +200,7 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
   const fetchData = async () => {
     setLoading(true);
     try {
-      const dateTo = new Date();
-      const dateFrom = new Date();
-      dateFrom.setDate(dateFrom.getDate() - 30);
+      const { from: dateFrom, to: dateTo } = getDateRangeFromPeriod();
 
       const [costsData, statsData, paymentsData, fullStatsData] = await Promise.all([
         getAdvertCosts(dateFrom, dateTo, apiKey),
@@ -238,6 +276,10 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
   useEffect(() => {
     loadCachedData();
   }, [campaignId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [selectedPeriod]);
 
   const getFormattedLastUpdate = () => {
     if (!lastUpdate) return "Никогда";
@@ -623,9 +665,15 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
             <Trophy className="h-5 w-5 text-blue-500" />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500">Подробная статистика</span>
           </h3>
-          <div className="text-xs text-gray-500 flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            <span>{getFormattedLastUpdate()}</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <CalendarRange className="h-4 w-4 text-gray-500" />
+              <PeriodSelector value={selectedPeriod} onChange={setSelectedPeriod} />
+            </div>
+            <div className="text-xs text-gray-500 flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              <span>{getFormattedLastUpdate()}</span>
+            </div>
           </div>
         </div>
 
@@ -786,8 +834,8 @@ const CampaignDetails = ({ campaignId, campaignName, apiKey, onBack }: CampaignD
           <KeywordStatisticsComponent 
             campaignId={campaignId} 
             apiKey={apiKey} 
-            dateFrom={new Date(new Date().setDate(new Date().getDate() - 30))}
-            dateTo={new Date()}
+            dateFrom={getDateRangeFromPeriod().from}
+            dateTo={getDateRangeFromPeriod().to}
           />
         </TabsContent>
       </Tabs>
