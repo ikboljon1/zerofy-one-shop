@@ -13,7 +13,9 @@ import {
   RefreshCw, 
   UserCheck, 
   UserX,
-  Filter
+  Filter,
+  Calendar,
+  AlertTriangle
 } from "lucide-react";
 import { 
   DropdownMenu, 
@@ -40,6 +42,7 @@ import {
   PaginationNext, 
   PaginationPrevious 
 } from "@/components/ui/pagination";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface UserListProps {
   onSelectUser: (user: User) => void;
@@ -54,6 +57,7 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
   const [view, setView] = useState<"list" | "table">("list");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "user">("all");
+  const [trialFilter, setTrialFilter] = useState<"all" | "trial" | "notrial">("all");
   const { toast } = useToast();
 
   const [page, setPage] = useState(1);
@@ -84,9 +88,15 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
       result = result.filter(user => user.role === roleFilter);
     }
     
+    if (trialFilter !== "all") {
+      result = result.filter(user => 
+        trialFilter === "trial" ? user.isInTrial : !user.isInTrial
+      );
+    }
+    
     setFilteredUsers(result);
     setPage(1);
-  }, [searchQuery, statusFilter, roleFilter, users]);
+  }, [searchQuery, statusFilter, roleFilter, trialFilter, users]);
 
   useEffect(() => {
     const start = (page - 1) * itemsPerPage;
@@ -132,6 +142,18 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
       .toUpperCase();
   };
 
+  const getTariffName = (tariffId?: string): string => {
+    if (!tariffId) return 'Не выбран';
+    
+    switch (tariffId) {
+      case '1': return 'Базовый';
+      case '2': return 'Профессиональный';
+      case '3': return 'Бизнес';
+      case '4': return 'Корпоративный';
+      default: return `Тариф ${tariffId}`;
+    }
+  };
+
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
 
   const handlePreviousPage = () => {
@@ -168,6 +190,7 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>Фильтры</DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                
                 <DropdownMenuLabel className="text-xs text-muted-foreground">Статус</DropdownMenuLabel>
                 <DropdownMenuItem 
                   onClick={() => setStatusFilter("all")}
@@ -187,7 +210,9 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
                 >
                   Неактивные
                 </DropdownMenuItem>
+                
                 <DropdownMenuSeparator />
+                
                 <DropdownMenuLabel className="text-xs text-muted-foreground">Роль</DropdownMenuLabel>
                 <DropdownMenuItem 
                   onClick={() => setRoleFilter("all")}
@@ -207,8 +232,31 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
                 >
                   Пользователи
                 </DropdownMenuItem>
+                
+                <DropdownMenuSeparator />
+                
+                <DropdownMenuLabel className="text-xs text-muted-foreground">Пробный период</DropdownMenuLabel>
+                <DropdownMenuItem 
+                  onClick={() => setTrialFilter("all")}
+                  className={trialFilter === "all" ? "bg-blue-50 dark:bg-blue-900/30" : ""}
+                >
+                  Все
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setTrialFilter("trial")}
+                  className={trialFilter === "trial" ? "bg-blue-50 dark:bg-blue-900/30" : ""}
+                >
+                  На пробном периоде
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setTrialFilter("notrial")}
+                  className={trialFilter === "notrial" ? "bg-blue-50 dark:bg-blue-900/30" : ""}
+                >
+                  Без пробного периода
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button 
@@ -232,15 +280,6 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={fetchUsers}
-              disabled={loading}
-              className="rounded-full"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
             <Button 
               onClick={onAddUser}
               size="sm"
@@ -295,24 +334,49 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
                             <h3 className="font-medium truncate">{user.name}</h3>
-                            <div className="flex gap-2 items-center">
-                              {user.role === 'admin' && (
-                                <Badge variant="info" className="capitalize">
-                                  Админ
-                                </Badge>
-                              )}
-                              <Badge variant={user.status === 'active' ? "success" : "destructive"} className="ml-2">
-                                {user.status === 'active' ? 'Активен' : 'Неактивен'}
-                              </Badge>
-                            </div>
+                            {user.isInTrial && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="cursor-help">
+                                      <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Пробный период активен</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                           </div>
                           <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {user.role === 'admin' && (
+                              <Badge variant="info" className="capitalize">
+                                Админ
+                              </Badge>
+                            )}
+                            <Badge variant={user.status === 'active' ? "success" : "destructive"}>
+                              {user.status === 'active' ? 'Активен' : 'Неактивен'}
+                            </Badge>
+                            <Badge variant="outline" className="bg-gray-50">
+                              {getTariffName(user.tariffId)}
+                            </Badge>
+                            {user.isInTrial && (
+                              <Badge variant="warning">
+                                Пробный период
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                         <div className="text-xs text-muted-foreground text-right hidden md:block">
                           <div>Регистрация: {formatDate(user.registeredAt)}</div>
                           <div>Последний вход: {user.lastLogin ? formatDate(user.lastLogin) : "—"}</div>
+                          {user.trialEndDate && (
+                            <div>Окончание пробного периода: {formatDate(user.trialEndDate)}</div>
+                          )}
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -331,7 +395,7 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
                               e.stopPropagation();
                               toast({
                                 title: "Действие",
-                                description: `Блокировка пользователя ${user.name}`,
+                                description: `${user.status === 'active' ? 'Блокировка' : 'Разблокировка'} пользователя ${user.name}`,
                               });
                             }}>
                               {user.status === 'active' ? 'Заблокировать' : 'Разблокировать'}
@@ -351,6 +415,8 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
                         <TableHead>Email</TableHead>
                         <TableHead>Роль</TableHead>
                         <TableHead>Статус</TableHead>
+                        <TableHead>Тариф</TableHead>
+                        <TableHead>Пробный период</TableHead>
                         <TableHead>Регистрация</TableHead>
                         <TableHead className="text-right">Действия</TableHead>
                       </TableRow>
@@ -377,6 +443,18 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
                             <Badge variant={user.status === 'active' ? "success" : "destructive"}>
                               {user.status === 'active' ? 'Активен' : 'Неактивен'}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {getTariffName(user.tariffId)}
+                          </TableCell>
+                          <TableCell>
+                            {user.isInTrial ? (
+                              <Badge variant="warning">
+                                Активен
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">Неактивен</span>
+                            )}
                           </TableCell>
                           <TableCell>{formatDate(user.registeredAt)}</TableCell>
                           <TableCell className="text-right">
@@ -450,7 +528,7 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
               <UserX className="h-16 w-16 text-gray-300 mb-4" />
               <h3 className="text-lg font-medium text-gray-500">Пользователи не найдены</h3>
               <p className="text-sm text-gray-400 mt-1">
-                {searchQuery || statusFilter !== "all" || roleFilter !== "all" 
+                {searchQuery || statusFilter !== "all" || roleFilter !== "all" || trialFilter !== "all"
                   ? "Попробуйте изменить параметры поиска или фильтры" 
                   : "В системе еще нет зарегистрированных пользователей"}
               </p>

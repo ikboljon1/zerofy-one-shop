@@ -9,6 +9,8 @@ export interface User {
   avatar?: string;
   tariffId?: string;
   storeCount?: number;
+  trialEndDate?: string;
+  isInTrial?: boolean;
 }
 
 const mockUsers: User[] = [
@@ -22,7 +24,8 @@ const mockUsers: User[] = [
     lastLogin: '2023-06-28T14:22:10Z',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex',
     tariffId: '3',
-    storeCount: 2
+    storeCount: 2,
+    isInTrial: false
   },
   {
     id: '2',
@@ -34,7 +37,8 @@ const mockUsers: User[] = [
     lastLogin: '2023-06-25T09:15:30Z',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Kate',
     tariffId: '2',
-    storeCount: 1
+    storeCount: 1,
+    isInTrial: false
   },
   {
     id: '3',
@@ -46,7 +50,8 @@ const mockUsers: User[] = [
     lastLogin: '2023-05-17T16:40:12Z',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Michael',
     tariffId: '1',
-    storeCount: 1
+    storeCount: 1,
+    isInTrial: false
   },
   {
     id: '4',
@@ -58,7 +63,8 @@ const mockUsers: User[] = [
     lastLogin: '2023-06-27T12:35:45Z',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Anna',
     tariffId: '2',
-    storeCount: 2
+    storeCount: 2,
+    isInTrial: false
   },
   {
     id: '5',
@@ -70,11 +76,12 @@ const mockUsers: User[] = [
     lastLogin: '2023-06-26T18:50:22Z',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Dmitry',
     tariffId: '1',
-    storeCount: 0
+    storeCount: 0,
+    isInTrial: false
   }
 ];
 
-export const TARIFF_STORE_LIMITS: Record<string, number> = {
+const TARIFF_STORE_LIMITS: Record<string, number> = {
   '1': 1,
   '2': 3,
   '3': 10,
@@ -82,6 +89,19 @@ export const TARIFF_STORE_LIMITS: Record<string, number> = {
 };
 
 const DEFAULT_TARIFF_ID = '1';
+
+const calculateTrialEndDate = (): string => {
+  const trialEndDate = new Date();
+  trialEndDate.setDate(trialEndDate.getDate() + 3);
+  return trialEndDate.toISOString();
+};
+
+const isUserInTrial = (trialEndDate?: string): boolean => {
+  if (!trialEndDate) return false;
+  const now = new Date();
+  const endDate = new Date(trialEndDate);
+  return now < endDate;
+};
 
 const initializeUsers = () => {
   const storedUsers = localStorage.getItem('mockUsers');
@@ -165,6 +185,8 @@ export const registerUser = (name: string, email: string, password: string): Pro
         return;
       }
 
+      const trialEndDate = calculateTrialEndDate();
+      
       const newUser: User = {
         id: String(Date.now()),
         name,
@@ -175,7 +197,9 @@ export const registerUser = (name: string, email: string, password: string): Pro
         lastLogin: new Date().toISOString(),
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name.replace(/\s/g, '')}`,
         tariffId: DEFAULT_TARIFF_ID,
-        storeCount: 0
+        storeCount: 0,
+        trialEndDate: trialEndDate,
+        isInTrial: true
       };
 
       users.push(newUser);
@@ -189,9 +213,23 @@ export const registerUser = (name: string, email: string, password: string): Pro
   });
 };
 
+const updateUsersTrialStatus = (usersList: User[]): User[] => {
+  return usersList.map(user => {
+    if (user.trialEndDate) {
+      user.isInTrial = isUserInTrial(user.trialEndDate);
+    }
+    return user;
+  });
+};
+
 export const getUsers = (): Promise<User[]> => {
   return new Promise((resolve) => {
     users = JSON.parse(localStorage.getItem('mockUsers') || JSON.stringify(users));
+    
+    const updatedUsers = updateUsersTrialStatus([...users]);
+    
+    users = updatedUsers;
+    saveUsers();
     
     setTimeout(() => {
       resolve([...users]);
@@ -299,6 +337,32 @@ export const incrementStoreCount = (userId: string): Promise<boolean> => {
       
       saveUsers();
       resolve(true);
+    }, 300);
+  });
+};
+
+export const getTrialDaysRemaining = (userId: string): Promise<number> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const user = users.find(u => u.id === userId);
+      
+      if (!user || !user.trialEndDate) {
+        resolve(0);
+        return;
+      }
+      
+      const now = new Date();
+      const endDate = new Date(user.trialEndDate);
+      
+      if (now > endDate) {
+        resolve(0);
+        return;
+      }
+      
+      const timeDiff = endDate.getTime() - now.getTime();
+      const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+      
+      resolve(daysDiff);
     }, 300);
   });
 };
