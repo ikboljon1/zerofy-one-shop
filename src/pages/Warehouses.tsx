@@ -17,7 +17,14 @@ import {
   fetchStocks,
   processStocksByCategory,
   processStocksByWarehouse,
-  WarehouseData
+  WarehouseData,
+  Warehouse,
+  WarehouseCoefficient,
+  SupplyOptionsResponse,
+  WildberriesStock,
+  StocksByCategory,
+  StocksByWarehouse,
+  SupplyItem
 } from '@/services/suppliesApi';
 import { 
   SupplyForm, 
@@ -26,14 +33,16 @@ import {
   InventoryDetails
 } from '@/components/supplies';
 
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 interface SupplyFormData {
-  items: Array<{
-    article: string;
-    quantity: number;
-  }>;
+  items: SupplyItem[];
   selectedWarehouse: string;
+}
+
+interface SupplyItem {
+  article: string;
+  quantity: number;
 }
 
 interface Warehouse {
@@ -159,15 +168,12 @@ const Warehouses: React.FC = () => {
   const loadWarehouses = async () => {
     try {
       setLoading(prev => ({ ...prev, warehouses: true }));
-      const data = await fetchWarehouses(apiKey);
-      const warehouses: Warehouse[] = data.map((warehouse: WarehouseData) => ({
-        ID: warehouse.id || warehouse.ID || '',
-        name: warehouse.name,
-        address: warehouse.coordinates ? `Координаты: ${warehouse.coordinates}` : 'Адрес не указан',
-        workTime: 'Стандартное время работы', 
-        acceptsQR: true
-      }));
+      const warehouses = await fetchWarehouses(apiKey);
       setWbWarehouses(warehouses);
+      toast({
+        title: "Успех",
+        description: "Список складов успешно загружен"
+      });
     } catch (error) {
       console.error('Ошибка при загрузке складов:', error);
       toast({
@@ -185,6 +191,10 @@ const Warehouses: React.FC = () => {
       setLoading(prev => ({ ...prev, coefficients: true }));
       const data = await fetchAcceptanceCoefficients(apiKey);
       setCoefficients(data);
+      toast({
+        title: "Успех",
+        description: "Коэффициенты приемки успешно загружены"
+      });
     } catch (error) {
       console.error('Ошибка при загрузке коэффициентов:', error);
       toast({
@@ -238,10 +248,11 @@ const Warehouses: React.FC = () => {
         return;
       }
       
+      const warehouseID = parseInt(data.selectedWarehouse, 10);
       const optionsResponse = await fetchAcceptanceOptions(
         apiKey,
         data.items,
-        data.selectedWarehouse
+        warehouseID
       );
       
       setSupplyResults(optionsResponse);

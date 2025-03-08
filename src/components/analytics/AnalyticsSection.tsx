@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag, Loader2, BadgePercent } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 
 import DateRangePicker from "./components/DateRangePicker";
 import KeyMetrics from "./components/KeyMetrics";
@@ -83,7 +83,6 @@ interface DeductionsTimelineItem {
   deductions?: number;
 }
 
-// Базовые пустые данные для инициализации
 const emptyAnalyticsData: AnalyticsData = {
   currentPeriod: {
     sales: 0,
@@ -326,7 +325,6 @@ const AnalyticsSection = () => {
         description: "Не удалось загрузить аналитические данные",
       });
       
-      // Инициализируем пустые данные
       setData(emptyAnalyticsData);
       setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
         date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -355,7 +353,6 @@ const AnalyticsSection = () => {
       setIsLoading(false);
       setHasError(true);
       
-      // Инициализируем пустые данные
       setData(emptyAnalyticsData);
       setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
         date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
