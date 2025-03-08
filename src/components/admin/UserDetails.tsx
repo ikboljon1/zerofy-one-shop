@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,11 +14,12 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { TARIFF_STORE_LIMITS } from "@/services/userService";
 
 interface UserDetailsProps {
-  userId: string;
+  user: User;
+  onBack: () => void;
+  onUserUpdated: (user: User) => void;
 }
 
-const UserDetails = ({ userId }: UserDetailsProps) => {
-  const [user, setUser] = useState<User | null>(null);
+const UserDetails = ({ user, onBack, onUserUpdated }: UserDetailsProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
@@ -37,49 +39,29 @@ const UserDetails = ({ userId }: UserDetailsProps) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const loadUserData = async () => {
       setIsLoading(true);
       try {
-        // Get users from localStorage
-        const storedUsers = localStorage.getItem('users');
-        if (!storedUsers) {
-          console.log('No users found in localStorage');
-          return;
-        }
+        setName(user.name);
+        setEmail(user.email);
+        setPhone(user.phone || '');
+        setCompany(user.company || '');
+        setStatus(user.status || 'active');
+        setRole(user.role || 'user');
+        setTariffId(user.tariffId);
+        setIsSubscriptionActive(user.isSubscriptionActive);
+        setSubscriptionEndDate(user.subscriptionEndDate ? new Date(user.subscriptionEndDate) : undefined);
+        setSelectedTariff(user.tariffId);
         
-        const users: User[] = JSON.parse(storedUsers);
-        const foundUser = users.find(u => u.id === userId);
+        const subscriptionData = await getUserSubscriptionData(user.id);
+        setSubscriptionData(subscriptionData);
         
-        if (foundUser) {
-          setUser(foundUser);
-          setName(foundUser.name);
-          setEmail(foundUser.email);
-          setPhone(foundUser.phone || '');
-          setCompany(foundUser.company || '');
-          setStatus(foundUser.status || 'active');
-          setRole(foundUser.role || 'user');
-          setTariffId(foundUser.tariffId);
-          setIsSubscriptionActive(foundUser.isSubscriptionActive);
-          setSubscriptionEndDate(foundUser.subscriptionEndDate ? new Date(foundUser.subscriptionEndDate) : undefined);
-          setSelectedTariff(foundUser.tariffId);
-          
-          getUserSubscriptionData(foundUser.id).then(subscriptionData => {
-            setSubscriptionData(subscriptionData);
-          });
-          
-          if (foundUser.isInTrial) {
-            const trialDays = getTrialDaysRemaining(foundUser);
-            setTrialDaysRemaining(trialDays);
-          }
-        } else {
-          toast({
-            title: "Ошибка",
-            description: "Пользователь не найден",
-            variant: "destructive",
-          });
+        if (user.isInTrial) {
+          const trialDays = getTrialDaysRemaining(user);
+          setTrialDaysRemaining(trialDays);
         }
       } catch (error) {
-        console.error("Failed to fetch user:", error);
+        console.error("Failed to load user data:", error);
         toast({
           title: "Ошибка",
           description: "Не удалось загрузить данные пользователя",
@@ -90,12 +72,10 @@ const UserDetails = ({ userId }: UserDetailsProps) => {
       }
     };
     
-    fetchUser();
-  }, [userId, toast]);
+    loadUserData();
+  }, [user, toast]);
   
   const handleActivateSubscription = async () => {
-    if (!user) return;
-    
     setIsActivating(true);
     try {
       const result = await activateSubscription(
@@ -105,11 +85,10 @@ const UserDetails = ({ userId }: UserDetailsProps) => {
       );
       
       if (result.success && result.user) {
-        setUser(result.user);
+        onUserUpdated(result.user);
         
-        getUserSubscriptionData(user.id).then(data => {
-          setSubscriptionData(data);
-        });
+        const subscriptionData = await getUserSubscriptionData(user.id);
+        setSubscriptionData(subscriptionData);
         
         toast({
           title: "Успешно",
@@ -128,8 +107,6 @@ const UserDetails = ({ userId }: UserDetailsProps) => {
   };
 
   const handleSave = async () => {
-    if (!user) return;
-
     setIsSaving(true);
     try {
       const updatedUser: Partial<User> = {
@@ -147,15 +124,7 @@ const UserDetails = ({ userId }: UserDetailsProps) => {
       const result = await updateUser(user.id, updatedUser);
 
       if (result) {
-        setUser(result);
-        
-        // Update user in localStorage
-        const storedUsers = localStorage.getItem('users');
-        if (storedUsers) {
-          const users: User[] = JSON.parse(storedUsers);
-          const updatedUsers = users.map(u => u.id === user.id ? result : u);
-          localStorage.setItem('users', JSON.stringify(updatedUsers));
-        }
+        onUserUpdated(result);
         
         toast({
           title: "Успешно",
@@ -199,17 +168,16 @@ const UserDetails = ({ userId }: UserDetailsProps) => {
     </Card>;
   }
 
-  if (!user) {
-    return <Card>
-      <CardContent>Пользователь не найден</CardContent>
-    </Card>;
-  }
-
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Редактирование пользователя</CardTitle>
-        <CardDescription>Измените данные пользователя</CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Редактирование пользователя</CardTitle>
+            <CardDescription>Измените данные пользователя</CardDescription>
+          </div>
+          <Button variant="outline" onClick={onBack}>Назад</Button>
+        </div>
       </CardHeader>
       <CardContent className="grid gap-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -303,7 +271,6 @@ const UserDetails = ({ userId }: UserDetailsProps) => {
           <div className="mt-4">
             <Label>Дата окончания подписки</Label>
             <DatePicker
-              id="subscriptionEndDate"
               value={subscriptionEndDate}
               onValueChange={setSubscriptionEndDate}
             />
