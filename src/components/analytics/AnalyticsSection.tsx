@@ -1,7 +1,9 @@
+
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag, Loader2, BadgePercent } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
 
 import DateRangePicker from "./components/DateRangePicker";
 import KeyMetrics from "./components/KeyMetrics";
@@ -185,15 +187,15 @@ const AnalyticsSection = () => {
             .map(([name, value]) => ({ name, value: roundToTwoDecimals(value) }))
             .sort((a, b) => b.value - a.value);
           
-          let topProducts = advertisingDataArray.slice(0, 4);
+          let topProductsList = advertisingDataArray.slice(0, 4);
           const otherProducts = advertisingDataArray.slice(4);
           
           if (otherProducts.length > 0) {
             const otherSum = roundToTwoDecimals(otherProducts.reduce((sum, item) => sum + item.value, 0));
-            topProducts.push({ name: "Другие товары", value: otherSum });
+            topProductsList.push({ name: "Другие товары", value: otherSum });
           }
           
-          setProductAdvertisingData(topProducts.length > 0 ? topProducts : []);
+          setProductAdvertisingData(topProductsList.length > 0 ? topProductsList : []);
         } else {
           if (productAdvertisingData.length === 0) {
             setProductAdvertisingData(advertisingData);
@@ -258,6 +260,7 @@ const AnalyticsSection = () => {
         setData(modifiedData);
         
         if (statsData.penaltiesData && statsData.penaltiesData.length > 0) {
+          // Fixed: Define the roundedPenalties variable
           const roundedPenalties = statsData.penaltiesData.map(item => ({
             ...item,
             value: roundToTwoDecimals(item.value)
@@ -268,6 +271,7 @@ const AnalyticsSection = () => {
         }
         
         if (statsData.deductionsData && statsData.deductionsData.length > 0) {
+          // Fixed: Define the roundedDeductions variable
           const roundedDeductions = statsData.deductionsData.map(item => ({
             ...item,
             value: roundToTwoDecimals(item.value)
@@ -278,6 +282,7 @@ const AnalyticsSection = () => {
         }
         
         if (statsData.productReturns && statsData.productReturns.length > 0) {
+          // Fixed: Define the roundedReturns variable
           const roundedReturns = statsData.productReturns.map(item => ({
             ...item,
             value: roundToTwoDecimals(item.value)
