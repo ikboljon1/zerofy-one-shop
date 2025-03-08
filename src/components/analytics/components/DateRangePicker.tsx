@@ -6,6 +6,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { CalendarIcon, RefreshCw } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface DateRangePickerProps {
   dateFrom: Date;
@@ -15,6 +16,8 @@ interface DateRangePickerProps {
   onApplyDateRange?: () => void;
   onUpdate?: () => void;
   isLoading?: boolean;
+  forceRefresh?: boolean;
+  setForceRefresh?: (force: boolean) => void;
 }
 
 const DateRangePicker = ({ 
@@ -24,12 +27,31 @@ const DateRangePicker = ({
   setDateTo,
   onApplyDateRange,
   onUpdate,
-  isLoading = false
+  isLoading = false,
+  forceRefresh = false,
+  setForceRefresh
 }: DateRangePickerProps) => {
   const [fromOpen, setFromOpen] = useState(false);
   const [toOpen, setToOpen] = useState(false);
+  const { toast } = useToast();
 
   const handleApply = () => {
+    // Проверка на корректность выбранных дат
+    if (dateFrom > dateTo) {
+      toast({
+        title: "Ошибка в датах",
+        description: "Начальная дата не может быть позже конечной даты",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Устанавливаем forceRefresh в true, если он передан
+    if (setForceRefresh) {
+      setForceRefresh(true);
+    }
+    
+    // Вызываем функции обновления данных
     if (onApplyDateRange) {
       onApplyDateRange();
     }
@@ -104,14 +126,18 @@ const DateRangePicker = ({
           </PopoverContent>
         </Popover>
         
-        <Button onClick={handleApply} disabled={isLoading}>
+        <Button 
+          onClick={handleApply} 
+          disabled={isLoading}
+          className={forceRefresh ? "bg-green-600 hover:bg-green-700" : ""}
+        >
           {isLoading ? (
             <>
               <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
               Загрузка...
             </>
           ) : (
-            "Применить"
+            forceRefresh ? "Принудительно обновить" : "Применить"
           )}
         </Button>
       </div>
