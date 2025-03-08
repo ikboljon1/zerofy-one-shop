@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import PasswordChangeForm from "@/components/PasswordChangeForm";
 import {
   CreditCard,
   History,
@@ -31,7 +32,8 @@ import {
   UserCog,
   Check,
   CalendarIcon,
-  ShoppingBag
+  ShoppingBag,
+  KeyRound
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Progress } from "@/components/ui/progress";
@@ -94,7 +96,7 @@ const Profile = () => {
               user.tariffId === "4" ? "Корпоративный" : "Стартовый",
         endDate: user.subscriptionEndDate || "2024-12-31T23:59:59Z",
         daysRemaining: 30,
-        isActive: user.isSubscriptionActive || true
+        isActive: user.isSubscriptionActive || user.isInTrial || false
       };
       
       setCurrentSubscription(mockSubscriptionData);
@@ -456,21 +458,51 @@ const Profile = () => {
         </Button>
       </div>
       
-      <SubscriptionExpiredAlert />
+      {userProfile?.isInTrial && (
+        <Alert className="mb-6 bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-300">
+          <Star className="h-5 w-5" />
+          <AlertDescription className="flex flex-col">
+            <div className="font-bold text-lg">Пробный период</div>
+            <p>У вас активирован пробный период с тарифом "Премиум". Вы можете использовать все функции системы.</p>
+            <div className="flex items-center gap-2 mt-2">
+              <span>Осталось дней:</span>
+              <Badge variant="outline" className="bg-amber-500/20 border-amber-500/30">
+                {userProfile.trialEndDate ? Math.max(0, Math.ceil((new Date(userProfile.trialEndDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : 0}
+              </Badge>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {isSubscriptionExpired && !userProfile?.isInTrial && (
+        <Alert variant="destructive" className="mb-6">
+          <Lock className="h-5 w-5" />
+          <AlertDescription>
+            <div className="font-bold text-lg">Ваша подписка истекла!</div>
+            <p>Доступ к функциям системы ограничен. Пожалуйста, продлите подписку для восстановления полного доступа.</p>
+            <Button 
+              className="mt-2 w-full sm:w-auto" 
+              onClick={() => setActiveTab("subscription")}
+            >
+              Продлить подписку
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
       
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
         <Card className="lg:col-span-1">
           <CardHeader className="text-center pb-2">
             <div className="flex justify-center mb-4">
               <Avatar className="h-24 w-24">
-                <AvatarImage src={userData.avatar} alt={userData.name} />
-                <AvatarFallback>{userData.name.charAt(0)}</AvatarFallback>
+                <AvatarImage src={userProfile?.avatar} alt={userProfile?.name} />
+                <AvatarFallback>{userProfile?.name?.charAt(0) || "U"}</AvatarFallback>
               </Avatar>
             </div>
-            <CardTitle className="text-xl">{userData.name}</CardTitle>
+            <CardTitle className="text-xl">{userProfile?.name}</CardTitle>
             <CardDescription className="flex items-center justify-center gap-1 mt-1">
               <Mail className="h-3.5 w-3.5" />
-              {userData.email}
+              {userProfile?.email}
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
@@ -480,6 +512,7 @@ const Profile = () => {
                 <Badge className={`${
                   userProfile?.tariffId === "3" ? "bg-amber-500/90" : 
                   userProfile?.tariffId === "2" ? "bg-purple-600/90" : 
+                  userProfile?.tariffId === "4" ? "bg-emerald-600/90" :
                   "bg-blue-600/90"
                 }`}>
                   {currentSubscription?.plan || "Стартовый"}
@@ -494,7 +527,9 @@ const Profile = () => {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Статус:</span>
-                {isSubscriptionExpired ? (
+                {userProfile?.isInTrial ? (
+                  <Badge className="bg-amber-500">Пробный</Badge>
+                ) : isSubscriptionExpired ? (
                   <Badge variant="destructive">Истекла</Badge>
                 ) : (
                   <Badge className="bg-green-600">Активна</Badge>
@@ -524,7 +559,9 @@ const Profile = () => {
                   <span className="text-lg">Тарифный план:</span>
                   <div className="flex items-center gap-2">
                     <span className="text-lg font-bold">{currentSubscription.plan}</span>
-                    {currentSubscription.isActive ? (
+                    {userProfile?.isInTrial ? (
+                      <Badge className="bg-amber-500">Пробный</Badge>
+                    ) : currentSubscription.isActive ? (
                       <Badge className="bg-green-600">Активна</Badge>
                     ) : (
                       <Badge variant="destructive">Истекла</Badge>
@@ -539,7 +576,7 @@ const Profile = () => {
                   </div>
                   <Progress 
                     value={getSubscriptionProgress()} 
-                    className={!currentSubscription.isActive ? "h-2 bg-red-950" : "h-2"} 
+                    className={!currentSubscription.isActive && !userProfile?.isInTrial ? "h-2 bg-red-950" : "h-2"} 
                   />
                 </div>
                 
@@ -547,14 +584,22 @@ const Profile = () => {
                   <div className="bg-card rounded-lg p-4 border flex flex-col items-center justify-center space-y-1 text-center">
                     <CalendarIcon className="h-5 w-5 text-muted-foreground mb-1" />
                     <span className="text-sm text-muted-foreground">Дата окончания</span>
-                    <span className="font-medium">{formatDate(currentSubscription.endDate)}</span>
+                    <span className="font-medium">
+                      {userProfile?.isInTrial 
+                        ? (userProfile.trialEndDate ? formatDate(userProfile.trialEndDate) : 'N/A')
+                        : formatDate(currentSubscription.endDate)
+                      }
+                    </span>
                   </div>
                   
                   <div className="bg-card rounded-lg p-4 border flex flex-col items-center justify-center space-y-1 text-center">
                     <Clock className="h-5 w-5 text-muted-foreground mb-1" />
                     <span className="text-sm text-muted-foreground">Осталось дней</span>
                     <Badge variant="outline" className="font-medium mt-1">
-                      {currentSubscription.daysRemaining}
+                      {userProfile?.isInTrial 
+                        ? (userProfile.trialEndDate ? Math.max(0, Math.ceil((new Date(userProfile.trialEndDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : 0)
+                        : currentSubscription.daysRemaining
+                      }
                     </Badge>
                   </div>
                   
@@ -573,7 +618,7 @@ const Profile = () => {
                     onClick={() => setActiveTab("subscription")}
                   >
                     <Star className="h-4 w-4" />
-                    {currentSubscription.isActive ? "Изменить тариф" : "Активировать подписку"}
+                    {currentSubscription.isActive || userProfile?.isInTrial ? "Изменить тариф" : "Активировать подписку"}
                   </Button>
                   <Button 
                     className="flex items-center gap-2"
@@ -599,10 +644,14 @@ const Profile = () => {
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 w-full">
+        <TabsList className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-2 md:gap-4 w-full">
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             <span className={isMobile ? 'text-sm' : ''}>Профиль</span>
+          </TabsTrigger>
+          <TabsTrigger value="password" className="flex items-center gap-2">
+            <KeyRound className="h-4 w-4" />
+            <span className={isMobile ? 'text-sm' : ''}>Пароль</span>
           </TabsTrigger>
           <TabsTrigger value="subscription" className="flex items-center gap-2">
             <DollarSign className="h-4 w-4" />
@@ -633,7 +682,7 @@ const Profile = () => {
                   <div className="relative">
                     <Input
                       id="name"
-                      defaultValue={userData.name}
+                      defaultValue={userProfile?.name}
                       className="pl-10"
                     />
                     <User className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
@@ -645,7 +694,7 @@ const Profile = () => {
                     <Input
                       id="email"
                       type="email"
-                      defaultValue={userData.email}
+                      defaultValue={userProfile?.email}
                       className="pl-10"
                     />
                     <Mail className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
@@ -656,7 +705,7 @@ const Profile = () => {
                   <div className="relative">
                     <Input
                       id="phone"
-                      defaultValue={userData.phone || ''}
+                      defaultValue={userProfile?.phone || ''}
                       className="pl-10"
                     />
                     <Phone className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
@@ -667,7 +716,7 @@ const Profile = () => {
                   <div className="relative">
                     <Input
                       id="company"
-                      defaultValue={userData.company || ''}
+                      defaultValue={userProfile?.company || ''}
                       className="pl-10"
                     />
                     <Building className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
@@ -677,11 +726,11 @@ const Profile = () => {
               <div className="flex justify-between items-center mt-6">
                 <Button 
                   className="w-full md:w-auto" 
-                  disabled={isSubscriptionExpired}
+                  disabled={isSubscriptionExpired && !userProfile?.isInTrial}
                 >
                   <Check className="mr-2 h-4 w-4" />
                   Сохранить изменения
-                  {isSubscriptionExpired && (
+                  {isSubscriptionExpired && !userProfile?.isInTrial && (
                     <Lock className="ml-2 h-4 w-4" />
                   )}
                 </Button>
@@ -696,11 +745,43 @@ const Profile = () => {
                 </Button>
               </div>
               
-              {isSubscriptionExpired && (
+              {isSubscriptionExpired && !userProfile?.isInTrial && (
                 <Alert variant="destructive" className="mt-4">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
-                    Редактирование профиля недоступно. Пожалуйст��, продлите подписку.
+                    Редактирование профиля недоступно. Пожалуйста, продлите подписку.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="password">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5 text-blue-500" />
+                Смена пароля
+              </CardTitle>
+              <CardDescription>
+                Обновите пароль для входа в личный кабинет
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {userProfile ? (
+                <PasswordChangeForm userId={userProfile.id} />
+              ) : (
+                <div className="flex justify-center items-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              )}
+              
+              {isSubscriptionExpired && !userProfile?.isInTrial && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    Изменение пароля недоступно. Пожалуйста, продлите подписку.
                   </AlertDescription>
                 </Alert>
               )}
@@ -715,12 +796,15 @@ const Profile = () => {
                 <div className={`h-2 ${
                   userProfile?.tariffId === "3" ? "bg-amber-500" : 
                   userProfile?.tariffId === "2" ? "bg-purple-600" : 
+                  userProfile?.tariffId === "4" ? "bg-emerald-600" :
                   "bg-blue-600"
                 }`}></div>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <span>Ваша текущая подписка</span>
-                    {currentSubscription.isActive ? (
+                    {userProfile?.isInTrial ? (
+                      <Badge className="bg-amber-500">Пробный период</Badge>
+                    ) : currentSubscription.isActive ? (
                       <Badge className="bg-green-600">Активна</Badge>
                     ) : (
                       <Badge variant="destructive">Истекла</Badge>
@@ -740,399 +824,37 @@ const Profile = () => {
                     </div>
                     <Progress 
                       value={getSubscriptionProgress()} 
-                      className={!currentSubscription.isActive ? "h-2 bg-red-950" : "h-2"} 
+                      className={!currentSubscription.isActive && !userProfile?.isInTrial ? "h-2 bg-red-950" : "h-2"} 
                     />
                   </div>
                   
                   <div className="bg-muted/50 p-4 rounded-lg space-y-2">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Дата окончания:</span>
-                      <span className="font-medium">{formatDate(currentSubscription.endDate)}</span>
+                      <span className="font-medium">
+                        {userProfile?.isInTrial 
+                          ? (userProfile.trialEndDate ? formatDate(userProfile.trialEndDate) : 'N/A')
+                          : formatDate(currentSubscription.endDate)
+                        }
+                      </span>
                     </div>
-                    {currentSubscription.isActive && (
+                    {(currentSubscription.isActive || userProfile?.isInTrial) && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Осталось дней:</span>
                         <Badge variant="outline">
-                          {currentSubscription.daysRemaining}
+                          {userProfile?.isInTrial 
+                            ? (userProfile.trialEndDate ? Math.max(0, Math.ceil((new Date(userProfile.trialEndDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : 0)
+                            : currentSubscription.daysRemaining
+                          }
                         </Badge>
                       </div>
                     )}
                   </div>
                   
-                  {!currentSubscription.isActive && (
-                    <Alert variant="destructive">
-                      <ShieldAlert className="h-4 w-4" />
+                  {userProfile?.isInTrial && (
+                    <Alert className="bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-300">
+                      <Star className="h-4 w-4" />
                       <AlertDescription>
-                        Ваша подписка истекла. Функции системы недоступны.
-                        Пожалуйста, продлите подписку для восстановления доступа.
+                        У вас активирован пробный период с тарифом "Премиум". После его окончания вы будете переведены на тариф "Стартовый".
                       </AlertDescription>
                     </Alert>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-            
-            <h2 className="text-xl font-bold mb-4">Доступные тарифные планы</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {subscriptionPlans.map((plan) => (
-                <Card 
-                  key={plan.id} 
-                  className={`relative hover:shadow-lg transition-shadow duration-300 overflow-hidden ${
-                    selectedPlan === plan.name ? 'ring-2 ring-primary' : ''
-                  }`}
-                >
-                  <div className={`h-2 ${plan.color}`}></div>
-                  <CardHeader className="pb-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle>{plan.name}</CardTitle>
-                        <CardDescription className="mt-1">
-                          <p className="text-2xl font-bold">{plan.price}</p>
-                        </CardDescription>
-                      </div>
-                      <div className={`p-2 rounded-full ${plan.color} text-white`}>
-                        <plan.icon className="h-5 w-5" />
-                      </div>
-                    </div>
-                    {selectedPlan === plan.name && (
-                      <Badge className="absolute top-10 right-4 bg-primary">
-                        <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                        Выбрано
-                      </Badge>
-                    )}
-                  </CardHeader>
-                  <CardContent className="h-48 overflow-auto">
-                    <ul className="space-y-2">
-                      {plan.features.map((feature, index) => (
-                        <li key={index} className="flex items-center gap-2 text-sm">
-                          <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                  <CardFooter className="bg-muted/30 pt-4">
-                    <Button 
-                      className="w-full" 
-                      variant={selectedPlan === plan.name ? "secondary" : "default"}
-                      onClick={() => handleSelectPlan(plan.name)}
-                    >
-                      {selectedPlan === plan.name ? "Выбрано" : "Выбрать"}
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-            
-            <div className="flex justify-center mt-6">
-              <Button 
-                size="lg"
-                onClick={handleProceedToPayment}
-                disabled={!selectedPlan || isProcessing}
-                className="w-full md:w-auto"
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Обработка...
-                  </>
-                ) : (
-                  <>
-                    <ArrowRight className="mr-2 h-4 w-4" />
-                    Перейти к оплате
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="payment">
-          <Card>
-            <CardHeader>
-              <CardTitle>Способы оплаты</CardTitle>
-              <CardDescription>
-                Управление платежными методами и оплата подписки
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {savedCard ? (
-                <div className="space-y-4">
-                  <div className="bg-card rounded-lg p-4 border">
-                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                          <CreditCard className="h-6 w-6 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-medium">Карта **** **** **** {savedCard.lastFour}</p>
-                          <p className="text-sm text-muted-foreground">
-                            Срок действия: {savedCard.expiryDate}
-                          </p>
-                        </div>
-                      </div>
-                      <Button 
-                        variant="destructive" 
-                        size="sm" 
-                        className="flex items-center gap-2"
-                        onClick={handleDeleteCard}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Удалить
-                      </Button>
-                    </div>
-                  </div>
-                  <Button 
-                    className="w-full flex items-center justify-center gap-2"
-                    onClick={() => setIsAddingCard(true)}
-                    variant="outline"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Добавить еще одну карту
-                  </Button>
-                </div>
-              ) : !isAddingCard ? (
-                <div className="space-y-4">
-                  <div className="bg-card rounded-lg p-4 border">
-                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                          <CreditCard className="h-6 w-6 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-medium">Добавьте карту для оплаты</p>
-                          <p className="text-sm text-muted-foreground">
-                            Для оформления подписки необходимо добавить карту
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <Button 
-                    className="w-full flex items-center justify-center gap-2"
-                    onClick={handleAddCard}
-                    disabled={isProcessing}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Обработка...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="h-4 w-4" />
-                        Добавить карту
-                      </>
-                    )}
-                  </Button>
-                </div>
-              ) : (
-                <div className="bg-card rounded-lg p-5 border space-y-4">
-                  <h3 className="font-medium text-lg">Добавление новой карты</h3>
-                  <div className="space-y-2">
-                    <Label htmlFor="cardNumber">Номер карты</Label>
-                    <Input
-                      id="cardNumber"
-                      placeholder="1234 5678 9012 3456"
-                      value={cardNumber}
-                      onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                      maxLength={19}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="expiryDate">Срок действия</Label>
-                      <Input
-                        id="expiryDate"
-                        placeholder="MM/YY"
-                        value={expiryDate}
-                        onChange={(e) => setExpiryDate(formatExpiryDate(e.target.value))}
-                        maxLength={5}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="cvv">CVV</Label>
-                      <Input
-                        id="cvv"
-                        type="password"
-                        maxLength={3}
-                        placeholder="123"
-                        value={cvv}
-                        onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').substring(0, 3))}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end space-x-2 pt-2">
-                    <Button 
-                      variant="outline"
-                      onClick={() => setIsAddingCard(false)}
-                    >
-                      Отмена
-                    </Button>
-                    <Button 
-                      className="flex items-center gap-2"
-                      onClick={handleAddCard}
-                      disabled={isProcessing}
-                    >
-                      {isProcessing ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Сохранение...
-                        </>
-                      ) : (
-                        <>
-                          <Check className="h-4 w-4" />
-                          Сохранить карту
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              )}
-              
-              {selectedPlan && (
-                <div className="mt-8 space-y-4">
-                  <div className="bg-muted/50 rounded-lg p-5 border space-y-4">
-                    <h3 className="font-medium text-lg flex items-center gap-2">
-                      <CreditCardIcon className="h-5 w-5 text-primary" />
-                      Детали подписки
-                    </h3>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center p-2 border-b">
-                        <span className="text-muted-foreground">Тариф:</span>
-                        <Badge className={`${
-                          selectedPlan === "Премиум" ? "bg-amber-500" : 
-                          selectedPlan === "Бизнес" ? "bg-purple-600" : 
-                          "bg-blue-600"
-                        }`}>
-                          {selectedPlan}
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between items-center p-2 border-b">
-                        <span className="text-muted-foreground">Стоимость:</span>
-                        <span className="font-medium">
-                          {subscriptionPlans.find(plan => plan.name === selectedPlan)?.price}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center p-2 border-b">
-                        <span className="text-muted-foreground">Период:</span>
-                        <span className="font-medium">1 месяц</span>
-                      </div>
-                      <div className="flex justify-between items-center p-2">
-                        <span className="text-muted-foreground">Автопродление:</span>
-                        <Badge variant="outline" className="bg-green-600/10 text-green-600 border-green-600/30">
-                          Включено
-                        </Badge>
-                      </div>
-                      
-                      <Alert className="mt-2 bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-300">
-                        <Clock className="h-4 w-4" />
-                        <AlertDescription>
-                          С вашей карты будет автоматически списываться оплата каждый месяц.
-                          Вы можете отключить автопродление в любое время.
-                        </AlertDescription>
-                      </Alert>
-                    </div>
-                  </div>
-                  
-                  <Button 
-                    className="w-full"
-                    onClick={handlePayment}
-                    disabled={isProcessing || (!savedCard && !isAddingCard)}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Обработка платежа...
-                      </>
-                    ) : (
-                      <>
-                        <CreditCardIcon className="mr-2 h-4 w-4" />
-                        Оплатить подписку
-                      </>
-                    )}
-                  </Button>
-                  
-                  {!savedCard && !isAddingCard && (
-                    <Alert variant="destructive" className="mt-2">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription>
-                        Для оплаты необходимо добавить карту
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="history">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <History className="h-5 w-5" />
-                История платежей
-              </CardTitle>
-              <CardDescription>
-                Ваши последние операции и платежи
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {isLoadingHistory ? (
-                  <div className="flex justify-center items-center p-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  </div>
-                ) : paymentHistory.length === 0 ? (
-                  <div className="text-center p-8">
-                    <p className="text-muted-foreground">У вас пока нет истории платежей</p>
-                  </div>
-                ) : (
-                  paymentHistory.map((payment) => (
-                    <div
-                      key={payment.id}
-                      className="bg-card rounded-lg p-4 border hover:border-primary transition-colors"
-                    >
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Badge className={`${
-                              payment.tariff === "Премиум" ? "bg-amber-500" : 
-                              payment.tariff === "Бизнес" ? "bg-purple-600" : 
-                              payment.tariff === "Корпоративный" ? "bg-emerald-600" :
-                              "bg-blue-600"
-                            }`}>
-                              {payment.tariff}
-                            </Badge>
-                            <p className="font-medium">{payment.description}</p>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <CalendarIcon className="h-3.5 w-3.5" />
-                            <span>{payment.date}</span>
-                            <span>•</span>
-                            <CalendarClock className="h-3.5 w-3.5" />
-                            <span>{payment.period}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <span className="font-medium text-lg">{payment.amount}</span>
-                          <Badge variant="outline" className="bg-green-600/10 text-green-600 border-green-600/30">
-                            {payment.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-};
-
-export default Profile;

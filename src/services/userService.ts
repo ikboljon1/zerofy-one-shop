@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   name: string;
@@ -153,6 +154,35 @@ const saveUsers = () => {
   localStorage.setItem('mockUsers', JSON.stringify(users));
 };
 
+// Store passwords in a separate object (in a real app, these would be hashed)
+interface UserCredentials {
+  [email: string]: string;
+}
+
+// Initialize user credentials
+const initializeUserCredentials = (): UserCredentials => {
+  const storedCredentials = localStorage.getItem('userCredentials');
+  if (!storedCredentials) {
+    const initialCredentials: UserCredentials = {
+      'admin': 'admin',
+      'alex@example.com': 'password',
+      'kate@example.com': 'password',
+      'michael@example.com': 'password',
+      'anna@example.com': 'password',
+      'dmitry@example.com': 'password'
+    };
+    localStorage.setItem('userCredentials', JSON.stringify(initialCredentials));
+    return initialCredentials;
+  }
+  return JSON.parse(storedCredentials);
+};
+
+let userCredentials = initializeUserCredentials();
+
+const saveUserCredentials = () => {
+  localStorage.setItem('userCredentials', JSON.stringify(userCredentials));
+};
+
 const ADMIN_CREDENTIALS = {
   email: 'admin',
   password: 'admin'
@@ -189,15 +219,18 @@ export const authenticate = (email: string, password: string): Promise<{ success
         return;
       }
       
-      const user = users.find(u => u.email === email);
-      if (user) {
-        user.lastLogin = new Date().toISOString();
-        saveUsers();
-        resolve({ 
-          success: true, 
-          user 
-        });
-        return;
+      // Check if email exists and password matches
+      if (userCredentials[email] === password) {
+        const user = users.find(u => u.email === email);
+        if (user) {
+          user.lastLogin = new Date().toISOString();
+          saveUsers();
+          resolve({ 
+            success: true, 
+            user 
+          });
+          return;
+        }
       }
       
       resolve({ 
@@ -231,7 +264,7 @@ export const registerUser = (name: string, email: string, password: string): Pro
         registeredAt: new Date().toISOString(),
         lastLogin: new Date().toISOString(),
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name.replace(/\s/g, '')}`,
-        tariffId: DEFAULT_TARIFF_ID,
+        tariffId: '3', // Start with Premium tariff during trial
         storeCount: 0,
         trialEndDate: trialEndDate,
         isInTrial: true,
@@ -240,12 +273,54 @@ export const registerUser = (name: string, email: string, password: string): Pro
 
       users.push(newUser);
       saveUsers();
+      
+      // Store the user's credentials
+      userCredentials[email] = password;
+      saveUserCredentials();
 
       resolve({
         success: true,
         user: newUser
       });
     }, 800);
+  });
+};
+
+export const changePassword = (
+  userId: string, 
+  currentPassword: string, 
+  newPassword: string
+): Promise<{ success: boolean; message: string }> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const user = users.find(u => u.id === userId);
+      
+      if (!user) {
+        resolve({
+          success: false,
+          message: "Пользователь не найден"
+        });
+        return;
+      }
+      
+      // Check if current password matches
+      if (userCredentials[user.email] !== currentPassword) {
+        resolve({
+          success: false,
+          message: "Текущий пароль неверный"
+        });
+        return;
+      }
+      
+      // Update password
+      userCredentials[user.email] = newPassword;
+      saveUserCredentials();
+      
+      resolve({
+        success: true,
+        message: "Пароль успешно изменен"
+      });
+    }, 500);
   });
 };
 
@@ -258,7 +333,7 @@ const updateUsersTrialAndSubscriptionStatus = (usersList: User[]): User[] => {
     if (user.subscriptionEndDate) {
       user.isSubscriptionActive = isSubscriptionActive(user.subscriptionEndDate);
       
-      if (!user.isSubscriptionActive) {
+      if (!user.isSubscriptionActive && !user.isInTrial) {
         user.tariffId = DEFAULT_TARIFF_ID;
       }
     }
