@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,11 +21,27 @@ import {
   AlertTriangle,
   Clock,
   Lock,
+  LogOut,
+  CreditCardIcon,
+  CalendarClock,
+  Star,
+  ShieldCheck,
+  Award,
+  ArrowRight,
+  ShieldAlert,
+  UserCog,
+  Check,
+  CalendarIcon,
+  ShoppingBag
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { TARIFF_STORE_LIMITS, getTrialDaysRemaining, getSubscriptionStatus, User as UserType } from "@/services/userService";
+import { useNavigate } from "react-router-dom";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState("profile");
@@ -42,84 +58,127 @@ const Profile = () => {
     isActive: boolean;
   } | null>(null);
   const [isSubscriptionExpired, setIsSubscriptionExpired] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserType | null>(null);
   const isMobile = useIsMobile();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
-  // Simulate fetching subscription data on component mount
+  // Simulate fetching user data and subscription status on component mount
   useEffect(() => {
     // In a real app, this would come from the backend
-    const mockSubscriptionData = {
-      plan: "Бизнес",
-      endDate: "2024-12-31T23:59:59Z",
-      daysRemaining: 30,
-      isActive: true
-    };
-    
-    // To simulate an expired subscription, uncomment the following:
-    // const mockSubscriptionData = {
-    //   plan: "Бизнес",
-    //   endDate: "2023-12-31T23:59:59Z",
-    //   daysRemaining: 0,
-    //   isActive: false
-    // };
-    
-    setCurrentSubscription(mockSubscriptionData);
-    setIsSubscriptionExpired(!mockSubscriptionData.isActive);
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      setUserProfile(user);
+      
+      // Set mock subscription data based on user info
+      const mockSubscriptionData = {
+        plan: user.tariffId === "3" ? "Премиум" : user.tariffId === "2" ? "Бизнес" : "Стартовый",
+        endDate: user.subscriptionEndDate || "2024-12-31T23:59:59Z",
+        daysRemaining: 30,
+        isActive: user.isSubscriptionActive || true
+      };
+      
+      setCurrentSubscription(mockSubscriptionData);
+      setIsSubscriptionExpired(!mockSubscriptionData.isActive);
+    }
   }, []);
 
-  const userData = {
+  const userData = userProfile || {
     name: "Иван Иванов",
     email: "ivan@example.com",
     phone: "+7 (999) 123-45-67",
     company: "ООО Компания",
     subscription: "Бизнес",
     subscriptionEnd: "31.12.2024",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ivan"
   };
 
   const paymentHistory = [
     {
       id: 1,
-      date: "2024-02-20",
+      date: "2024-05-20",
       amount: "5000 ₽",
       description: "Подписка Бизнес",
       status: "Оплачено",
+      tariff: "Бизнес",
+      period: "1 месяц"
     },
     {
       id: 2,
-      date: "2024-01-20",
+      date: "2024-04-20",
       amount: "5000 ₽",
       description: "Подписка Бизнес",
       status: "Оплачено",
+      tariff: "Бизнес",
+      period: "1 месяц"
+    },
+    {
+      id: 3,
+      date: "2024-03-20",
+      amount: "2000 ₽",
+      description: "Подписка Стартовый",
+      status: "Оплачено",
+      tariff: "Стартовый",
+      period: "1 месяц"
     },
   ];
 
   const subscriptionPlans = [
     {
+      id: "1",
       name: "Стартовый",
       price: "2000 ₽/мес",
+      priceValue: 2000,
+      color: "bg-blue-600",
       features: ["1 магазин", "Базовая аналитика", "Email поддержка"],
+      icon: ShoppingBag
     },
     {
+      id: "2",
       name: "Бизнес",
       price: "5000 ₽/мес",
+      priceValue: 5000,
+      color: "bg-purple-600",
       features: [
-        "До 5 магазинов",
+        "До 3 магазинов",
         "Расширенная аналитика",
         "Приоритетная поддержка",
         "API доступ",
       ],
+      icon: Star
     },
     {
+      id: "3",
       name: "Премиум",
       price: "10000 ₽/мес",
+      priceValue: 10000,
+      color: "bg-amber-500",
       features: [
-        "Неограниченное количество магазинов",
+        "До 10 магазинов",
         "Полная аналитика",
         "24/7 поддержка",
         "API доступ",
         "Персональный менеджер",
       ],
+      icon: Award
     },
+    {
+      id: "4",
+      name: "Корпоративный",
+      price: "30000 ₽/мес",
+      priceValue: 30000,
+      color: "bg-emerald-600",
+      features: [
+        "Неограниченное количество магазинов",
+        "Корпоративные отчеты",
+        "Выделенная линия поддержки",
+        "Полный API доступ",
+        "Команда персональных менеджеров",
+        "Интеграция с корпоративными системами"
+      ],
+      icon: ShieldCheck
+    }
   ];
 
   const handleSelectPlan = (planName: string) => {
@@ -202,12 +261,25 @@ const Profile = () => {
         const newEndDate = new Date();
         newEndDate.setMonth(newEndDate.getMonth() + 1);
         
+        const selectedPlanObject = subscriptionPlans.find(plan => plan.name === selectedPlan);
+        
         setCurrentSubscription({
           plan: selectedPlan,
           endDate: newEndDate.toISOString(),
           daysRemaining: 30,
           isActive: true
         });
+        
+        if (userProfile && selectedPlanObject) {
+          const updatedUser = {
+            ...userProfile,
+            tariffId: selectedPlanObject.id,
+            isSubscriptionActive: true,
+            subscriptionEndDate: newEndDate.toISOString()
+          };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          setUserProfile(updatedUser);
+        }
         
         setIsSubscriptionExpired(false);
       }
@@ -249,6 +321,19 @@ const Profile = () => {
     return Math.min(100, Math.max(0, (daysElapsed / daysInMonth) * 100));
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    toast({
+      title: "Вы вышли из системы",
+      description: "Перенаправление на страницу входа...",
+    });
+    
+    // Redirect to login page
+    setTimeout(() => {
+      navigate('/');
+    }, 1000);
+  };
+
   // If subscription is expired, show an alert at the top
   const SubscriptionExpiredAlert = () => {
     if (!isSubscriptionExpired) return null;
@@ -270,12 +355,173 @@ const Profile = () => {
     );
   };
 
+  const getStoreLimit = () => {
+    if (!userProfile || !userProfile.tariffId) return 1;
+    return userProfile.tariffId in TARIFF_STORE_LIMITS ? TARIFF_STORE_LIMITS[userProfile.tariffId] : 1;
+  };
+
   return (
     <div className="container mx-auto p-4 md:p-6 max-w-5xl">
-      <h1 className="text-2xl md:text-3xl font-bold mb-6">Профиль</h1>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold">Личный кабинет</h1>
+          <p className="text-muted-foreground">Управление вашим профилем и подпиской</p>
+        </div>
+        
+        <Button 
+          variant="destructive" 
+          className="flex items-center gap-2"
+          onClick={handleLogout}
+        >
+          <LogOut className="h-4 w-4" />
+          Выйти из системы
+        </Button>
+      </div>
       
       {/* Subscription expired alert */}
       <SubscriptionExpiredAlert />
+      
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+        {/* User Profile Card */}
+        <Card className="lg:col-span-1">
+          <CardHeader className="text-center pb-2">
+            <div className="flex justify-center mb-4">
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={userData.avatar} alt={userData.name} />
+                <AvatarFallback>{userData.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+            </div>
+            <CardTitle className="text-xl">{userData.name}</CardTitle>
+            <CardDescription className="flex items-center justify-center gap-1 mt-1">
+              <Mail className="h-3.5 w-3.5" />
+              {userData.email}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <div className="flex flex-col space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Тариф:</span>
+                <Badge className={`${
+                  userProfile?.tariffId === "3" ? "bg-amber-500/90" : 
+                  userProfile?.tariffId === "2" ? "bg-purple-600/90" : 
+                  "bg-blue-600/90"
+                }`}>
+                  {currentSubscription?.plan || "Стартовый"}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Магазины:</span>
+                <Badge variant="outline" className="flex items-center gap-1.5 bg-blue-950/30 text-blue-400 border-blue-800">
+                  <ShoppingBag className="h-3 w-3" />
+                  <span>{userProfile?.storeCount || 0}/{getStoreLimit()}</span>
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Статус:</span>
+                {isSubscriptionExpired ? (
+                  <Badge variant="destructive">Истекла</Badge>
+                ) : (
+                  <Badge className="bg-green-600">Активна</Badge>
+                )}
+              </div>
+              <Separator className="my-2" />
+              <Button 
+                onClick={() => setActiveTab("profile")}
+                variant="outline" 
+                className="w-full flex items-center justify-center gap-2"
+              >
+                <UserCog className="h-4 w-4" />
+                Редактировать профиль
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* Subscription Status Card */}
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Информация о подписке</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {currentSubscription && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-lg">Тарифный план:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold">{currentSubscription.plan}</span>
+                    {currentSubscription.isActive ? (
+                      <Badge className="bg-green-600">Активна</Badge>
+                    ) : (
+                      <Badge variant="destructive">Истекла</Badge>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span>Прогресс подписки</span>
+                    <span>{Math.round(getSubscriptionProgress())}%</span>
+                  </div>
+                  <Progress 
+                    value={getSubscriptionProgress()} 
+                    className={!currentSubscription.isActive ? "h-2 bg-red-950" : "h-2"} 
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                  <div className="bg-card rounded-lg p-4 border flex flex-col items-center justify-center space-y-1 text-center">
+                    <CalendarIcon className="h-5 w-5 text-muted-foreground mb-1" />
+                    <span className="text-sm text-muted-foreground">Дата окончания</span>
+                    <span className="font-medium">{formatDate(currentSubscription.endDate)}</span>
+                  </div>
+                  
+                  <div className="bg-card rounded-lg p-4 border flex flex-col items-center justify-center space-y-1 text-center">
+                    <Clock className="h-5 w-5 text-muted-foreground mb-1" />
+                    <span className="text-sm text-muted-foreground">Осталось дней</span>
+                    <Badge variant="outline" className="font-medium mt-1">
+                      {currentSubscription.daysRemaining}
+                    </Badge>
+                  </div>
+                  
+                  <div className="bg-card rounded-lg p-4 border flex flex-col items-center justify-center space-y-1 text-center">
+                    <ShoppingBag className="h-5 w-5 text-muted-foreground mb-1" />
+                    <span className="text-sm text-muted-foreground">Лимит магазинов</span>
+                    <Badge variant="outline" className="font-medium mt-1">
+                      {getStoreLimit()}
+                    </Badge>
+                  </div>
+                </div>
+                
+                <div className="flex flex-col md:flex-row gap-2 mt-4">
+                  <Button 
+                    className="flex items-center gap-2"
+                    onClick={() => setActiveTab("subscription")}
+                  >
+                    <Star className="h-4 w-4" />
+                    {currentSubscription.isActive ? "Изменить тариф" : "Активировать подписку"}
+                  </Button>
+                  <Button 
+                    className="flex items-center gap-2"
+                    variant="outline"
+                    onClick={() => setActiveTab("payment")}
+                  >
+                    <CreditCardIcon className="h-4 w-4" />
+                    Управление платежами
+                  </Button>
+                  <Button 
+                    className="flex items-center gap-2"
+                    variant="outline"
+                    onClick={() => setActiveTab("history")}
+                  >
+                    <History className="h-4 w-4" />
+                    История платежей
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 w-full">
@@ -301,6 +547,9 @@ const Profile = () => {
           <Card>
             <CardHeader>
               <CardTitle>Личные данные</CardTitle>
+              <CardDescription>
+                Обновите информацию о себе и вашей компании
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -350,12 +599,27 @@ const Profile = () => {
                   </div>
                 </div>
               </div>
-              <Button className="w-full md:w-auto mt-6" disabled={isSubscriptionExpired}>
-                Сохранить изменения
-                {isSubscriptionExpired && (
-                  <Lock className="ml-2 h-4 w-4" />
-                )}
-              </Button>
+              <div className="flex justify-between items-center mt-6">
+                <Button 
+                  className="w-full md:w-auto" 
+                  disabled={isSubscriptionExpired}
+                >
+                  <Check className="mr-2 h-4 w-4" />
+                  Сохранить изменения
+                  {isSubscriptionExpired && (
+                    <Lock className="ml-2 h-4 w-4" />
+                  )}
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  className="w-full md:w-auto ml-2 hidden md:flex"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Выйти из системы
+                </Button>
+              </div>
               
               {isSubscriptionExpired && (
                 <Alert variant="destructive" className="mt-4">
@@ -373,7 +637,12 @@ const Profile = () => {
           <div className="space-y-6">
             {/* Current Subscription Status */}
             {currentSubscription && (
-              <Card className="mb-6">
+              <Card className="mb-6 overflow-hidden">
+                <div className={`h-2 ${
+                  userProfile?.tariffId === "3" ? "bg-amber-500" : 
+                  userProfile?.tariffId === "2" ? "bg-purple-600" : 
+                  "bg-blue-600"
+                }`}></div>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <span>Ваша текущая подписка</span>
@@ -401,7 +670,7 @@ const Profile = () => {
                     />
                   </div>
                   
-                  <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg space-y-2">
+                  <div className="bg-muted/50 p-4 rounded-lg space-y-2">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Дата окончания:</span>
                       <span className="font-medium">{formatDate(currentSubscription.endDate)}</span>
@@ -418,65 +687,71 @@ const Profile = () => {
                   
                   {!currentSubscription.isActive && (
                     <Alert variant="destructive">
-                      <AlertTriangle className="h-4 w-4" />
+                      <ShieldAlert className="h-4 w-4" />
                       <AlertDescription>
                         Ваша подписка истекла. Функции системы недоступны.
                         Пожалуйста, продлите подписку для восстановления доступа.
                       </AlertDescription>
                     </Alert>
                   )}
-                  
-                  <Button 
-                    className="w-full mt-2"
-                    onClick={() => {
-                      setSelectedPlan(currentSubscription.plan);
-                      setActiveTab("payment");
-                    }}
-                  >
-                    {currentSubscription.isActive ? "Изменить тариф" : "Продлить подписку"}
-                  </Button>
                 </CardContent>
               </Card>
             )}
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <h2 className="text-xl font-bold mb-4">Доступные тарифные планы</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {subscriptionPlans.map((plan) => (
                 <Card 
-                  key={plan.name} 
-                  className={`relative hover:shadow-lg transition-shadow duration-300 ${
-                    selectedPlan === plan.name ? 'border-primary' : ''
+                  key={plan.id} 
+                  className={`relative hover:shadow-lg transition-shadow duration-300 overflow-hidden ${
+                    selectedPlan === plan.name ? 'ring-2 ring-primary' : ''
                   }`}
                 >
-                  <CardHeader>
-                    <CardTitle className="flex justify-between items-start">
-                      <span>{plan.name}</span>
-                      {selectedPlan === plan.name && (
-                        <CheckCircle2 className="h-5 w-5 text-primary" />
-                      )}
-                    </CardTitle>
-                    <p className="text-2xl font-bold">{plan.price}</p>
+                  <div className={`h-2 ${plan.color}`}></div>
+                  <CardHeader className="pb-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle>{plan.name}</CardTitle>
+                        <CardDescription className="mt-1">
+                          <p className="text-2xl font-bold">{plan.price}</p>
+                        </CardDescription>
+                      </div>
+                      <div className={`p-2 rounded-full ${plan.color} text-white`}>
+                        <plan.icon className="h-5 w-5" />
+                      </div>
+                    </div>
+                    {selectedPlan === plan.name && (
+                      <Badge className="absolute top-10 right-4 bg-primary">
+                        <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                        Выбрано
+                      </Badge>
+                    )}
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="h-48 overflow-auto">
                     <ul className="space-y-2">
                       {plan.features.map((feature, index) => (
                         <li key={index} className="flex items-center gap-2 text-sm">
-                          <span className="text-green-500">✓</span>
-                          {feature}
+                          <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                          <span>{feature}</span>
                         </li>
                       ))}
                     </ul>
+                  </CardContent>
+                  <CardFooter className="bg-muted/30 pt-4">
                     <Button 
-                      className="w-full mt-6" 
+                      className="w-full" 
                       variant={selectedPlan === plan.name ? "secondary" : "default"}
                       onClick={() => handleSelectPlan(plan.name)}
                     >
                       {selectedPlan === plan.name ? "Выбрано" : "Выбрать"}
                     </Button>
-                  </CardContent>
+                  </CardFooter>
                 </Card>
               ))}
             </div>
-            <div className="flex justify-center">
+            
+            <div className="flex justify-center mt-6">
               <Button 
                 size="lg"
                 onClick={handleProceedToPayment}
@@ -489,7 +764,10 @@ const Profile = () => {
                     Обработка...
                   </>
                 ) : (
-                  'Перейти к оплате'
+                  <>
+                    <ArrowRight className="mr-2 h-4 w-4" />
+                    Перейти к оплате
+                  </>
                 )}
               </Button>
             </div>
@@ -500,6 +778,9 @@ const Profile = () => {
           <Card>
             <CardHeader>
               <CardTitle>Способы оплаты</CardTitle>
+              <CardDescription>
+                Управление платежными методами и оплата подписки
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {!isAddingCard ? (
@@ -538,7 +819,8 @@ const Profile = () => {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="bg-card rounded-lg p-5 border space-y-4">
+                  <h3 className="font-medium text-lg">Добавление новой карты</h3>
                   <div className="space-y-2">
                     <Label htmlFor="cardNumber">Номер карты</Label>
                     <Input
@@ -570,45 +852,68 @@ const Profile = () => {
                       />
                     </div>
                   </div>
-                  <Button 
-                    className="w-full"
-                    onClick={handleAddCard}
-                    disabled={isProcessing}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Сохранение карты...
-                      </>
-                    ) : (
-                      'Сохранить карту'
-                    )}
-                  </Button>
+                  <div className="flex justify-end space-x-2 pt-2">
+                    <Button 
+                      variant="outline"
+                      onClick={() => setIsAddingCard(false)}
+                    >
+                      Отмена
+                    </Button>
+                    <Button 
+                      className="flex items-center gap-2"
+                      onClick={handleAddCard}
+                      disabled={isProcessing}
+                    >
+                      {isProcessing ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Сохранение...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="h-4 w-4" />
+                          Сохранить карту
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               )}
               
               {selectedPlan && (
                 <div className="mt-8 space-y-4">
-                  <div className="bg-card rounded-lg p-4 border">
-                    <h3 className="font-medium mb-2">Детали подписки</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
+                  <div className="bg-muted/50 rounded-lg p-5 border space-y-4">
+                    <h3 className="font-medium text-lg flex items-center gap-2">
+                      <CreditCardIcon className="h-5 w-5 text-primary" />
+                      Детали подписки
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-2 border-b">
                         <span className="text-muted-foreground">Тариф:</span>
-                        <span className="font-medium">{selectedPlan}</span>
+                        <Badge className={`${
+                          selectedPlan === "Премиум" ? "bg-amber-500" : 
+                          selectedPlan === "Бизнес" ? "bg-purple-600" : 
+                          selectedPlan === "Корпоративный" ? "bg-emerald-600" :
+                          "bg-blue-600"
+                        }`}>
+                          {selectedPlan}
+                        </Badge>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between items-center p-2 border-b">
                         <span className="text-muted-foreground">Стоимость:</span>
                         <span className="font-medium">
                           {subscriptionPlans.find(plan => plan.name === selectedPlan)?.price}
                         </span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between items-center p-2 border-b">
                         <span className="text-muted-foreground">Период:</span>
                         <span className="font-medium">1 месяц</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between items-center p-2">
                         <span className="text-muted-foreground">Автопродление:</span>
-                        <span className="font-medium">Включено</span>
+                        <Badge variant="outline" className="bg-green-600/10 text-green-600 border-green-600/30">
+                          Включено
+                        </Badge>
                       </div>
                       
                       <Alert className="mt-2 bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-300">
@@ -632,7 +937,10 @@ const Profile = () => {
                         Обработка платежа...
                       </>
                     ) : (
-                      'Оплатить подписку'
+                      <>
+                        <CreditCardIcon className="mr-2 h-4 w-4" />
+                        Оплатить подписку
+                      </>
                     )}
                   </Button>
                 </div>
@@ -644,31 +952,56 @@ const Profile = () => {
         <TabsContent value="history">
           <Card>
             <CardHeader>
-              <CardTitle>История платежей</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-5 w-5" />
+                История платежей
+              </CardTitle>
+              <CardDescription>
+                Ваши последние операции и платежи
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {paymentHistory.map((payment) => (
-                  <div
-                    key={payment.id}
-                    className="bg-card rounded-lg p-4 border hover:border-primary transition-colors"
-                  >
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-                      <div className="space-y-1">
-                        <p className="font-medium">{payment.description}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {payment.date}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span className="font-medium">{payment.amount}</span>
-                        <span className="text-green-500 bg-green-500/10 px-2 py-1 rounded-full text-sm">
-                          {payment.status}
-                        </span>
+                {paymentHistory.length === 0 ? (
+                  <div className="text-center p-8">
+                    <p className="text-muted-foreground">У вас пока нет истории платежей</p>
+                  </div>
+                ) : (
+                  paymentHistory.map((payment) => (
+                    <div
+                      key={payment.id}
+                      className="bg-card rounded-lg p-4 border hover:border-primary transition-colors"
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Badge className={`${
+                              payment.tariff === "Премиум" ? "bg-amber-500" : 
+                              payment.tariff === "Бизнес" ? "bg-purple-600" : 
+                              "bg-blue-600"
+                            }`}>
+                              {payment.tariff}
+                            </Badge>
+                            <p className="font-medium">{payment.description}</p>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <CalendarIcon className="h-3.5 w-3.5" />
+                            <span>{payment.date}</span>
+                            <span>•</span>
+                            <CalendarClock className="h-3.5 w-3.5" />
+                            <span>{payment.period}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="font-medium text-lg">{payment.amount}</span>
+                          <Badge variant="outline" className="bg-green-600/10 text-green-600 border-green-600/30">
+                            {payment.status}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>

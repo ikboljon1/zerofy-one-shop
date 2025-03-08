@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   Home, 
@@ -22,12 +21,6 @@ import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/use-theme";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -37,18 +30,13 @@ import {
 import MobileNavigation from "./MobileNavigation";
 import CalculatorModal from "@/components/CalculatorModal";
 
-// Define menu profile options
+// Define menu profile options - keeping only settings, removing logout
 const profileMenu = [
   {
     label: "Настройки",
     value: "settings",
     icon: Settings,
-  },
-  {
-    label: "Выйти",
-    value: "logout",
-    icon: LogOut,
-  },
+  }
 ];
 
 interface MainLayoutProps {
@@ -285,21 +273,6 @@ const MainLayout = ({ children, activeTab, onTabChange }: MainLayoutProps) => {
               <Button variant="ghost" size="icon" onClick={toggleTheme}>
                 {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <User className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {profileMenu.map((item) => (
-                    <DropdownMenuItem key={item.value} onClick={() => onTabChange(item.value)}>
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {item.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           </div>
         )}
