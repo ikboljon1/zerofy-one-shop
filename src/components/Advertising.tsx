@@ -233,6 +233,7 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
       <CampaignDetails
         campaignId={selectedCampaign.advertId}
         campaignName={selectedCampaign.campName}
+        campaignType={selectedCampaign.type}
         apiKey={selectedStore.apiKey}
         onBack={() => setSelectedCampaign(null)}
       />

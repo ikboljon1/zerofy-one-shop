@@ -13,6 +13,7 @@ interface AdvertCost {
   advertType: string;
   paymentType: string;
   advertStatus: string;
+  date?: string;
 }
 
 interface AdvertStats {
@@ -36,6 +37,7 @@ interface AdvertPayment {
   date: string;
   sum: number;
   type: string;
+  amount?: number;
 }
 
 interface CampaignCountResponse {
@@ -70,6 +72,12 @@ export interface CampaignFullStats {
   days: DayStats[];
   boosterStats?: BoosterStats[];
   advertId: number;
+  shows?: number;
+  cost?: number;
+  nmId?: number;
+  name?: string;
+  profit?: number;
+  imageUrl?: string;
 }
 
 interface DayStats {
@@ -214,6 +222,11 @@ export const getAdvertCosts = async (dateFrom: Date, dateTo: Date, apiKey: strin
       return costTime >= fromTime && costTime <= toTime;
     });
     
+    costs = costs.map((cost: AdvertCost) => ({
+      ...cost,
+      date: cost.updTime.split('T')[0]
+    }));
+    
     console.log(`Received ${costs.length} advertising costs records`);
     
     return costs;
@@ -262,7 +275,13 @@ export const getAdvertPayments = async (dateFrom: Date, dateTo: Date, apiKey: st
     };
     
     const response = await api.get(`/v1/payments`, { params });
-    return response.data || [];
+    
+    const payments = (response.data || []).map((payment: AdvertPayment) => ({
+      ...payment,
+      amount: payment.sum
+    }));
+    
+    return payments;
   } catch (error) {
     return handleApiError(error);
   }

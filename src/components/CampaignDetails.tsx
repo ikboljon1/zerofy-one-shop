@@ -55,7 +55,7 @@ import DateRangePicker from "./analytics/components/DateRangePicker";
 interface CampaignDetailsProps {
   campaignId: number;
   campaignName: string;
-  campaignType: string;
+  campaignType?: string; // Making this optional since it's missing in Advertising.tsx
   apiKey: string;
   onBack: () => void;
 }
@@ -219,14 +219,27 @@ const CampaignDetails: React.FC<CampaignDetailsProps> = ({
         getAdvFullStats(dateFrom, dateTo, campaignId, apiKey)
       ]);
 
-      setCosts(costsData || []);
-      setPayments(paymentsData || []);
+      // Transform costsData to match Cost interface
+      const transformedCosts = costsData.map(cost => ({
+        date: cost.date || cost.updTime.split('T')[0],
+        updSum: cost.updSum,
+        campName: cost.campName
+      }));
+      setCosts(transformedCosts);
+
+      // Transform paymentsData to match Payment interface
+      const transformedPayments = paymentsData.map(payment => ({
+        date: payment.date,
+        amount: payment.amount || payment.sum
+      }));
+      setPayments(transformedPayments);
 
       if (fullStatsData && fullStatsData.length > 0) {
+        // Calculate totals using safe property access
         const totalClicks = fullStatsData.reduce((sum, item) => sum + item.clicks, 0);
-        const totalShows = fullStatsData.reduce((sum, item) => sum + item.shows, 0);
+        const totalShows = fullStatsData.reduce((sum, item) => sum + (item.shows || item.views || 0), 0);
         const totalOrders = fullStatsData.reduce((sum, item) => sum + item.orders, 0);
-        const totalCost = fullStatsData.reduce((sum, item) => sum + item.cost, 0);
+        const totalCost = fullStatsData.reduce((sum, item) => sum + (item.cost || item.sum || 0), 0);
 
         const ctr = totalShows > 0 ? (totalClicks / totalShows) * 100 : 0;
         const cr = totalClicks > 0 ? (totalOrders / totalClicks) * 100 : 0;
@@ -244,35 +257,44 @@ const CampaignDetails: React.FC<CampaignDetailsProps> = ({
 
         const productStatsMap: { [key: string]: ProductStats } = {};
 
-        fullStatsData.forEach(item => {
-          const productId = item.nmId.toString();
-          if (!productStatsMap[productId]) {
-            productStatsMap[productId] = {
-              nmId: item.nmId,
-              name: item.name,
-              clicks: 0,
-              shows: 0,
-              views: 0,
-              orders: 0,
-              ctr: 0,
-              cr: 0,
-              cpc: 0,
-              cost: 0,
-              sum: 0,
-              profit: 0,
-              roi: 0,
-              imageUrl: ''
-            };
-          }
+        // Process days and nm data from fullStatsData safely
+        fullStatsData.forEach(stats => {
+          // Process nm data if available
+          if (stats.days) {
+            stats.days.forEach(day => {
+              if (day.nm) {
+                day.nm.forEach(product => {
+                  const productId = product.nmId.toString();
+                  if (!productStatsMap[productId]) {
+                    productStatsMap[productId] = {
+                      nmId: product.nmId,
+                      name: product.name,
+                      clicks: 0,
+                      shows: 0,
+                      views: 0,
+                      orders: 0,
+                      ctr: 0,
+                      cr: 0,
+                      cpc: 0,
+                      cost: 0,
+                      sum: 0,
+                      profit: 0,
+                      roi: 0,
+                      imageUrl: product.imageUrl || ''
+                    };
+                  }
 
-          productStatsMap[productId].clicks += item.clicks;
-          productStatsMap[productId].shows += item.shows;
-          productStatsMap[productId].views = productStatsMap[productId].shows; // Ensure views is set
-          productStatsMap[productId].orders += item.orders;
-          productStatsMap[productId].cost += item.cost;
-          productStatsMap[productId].sum = productStatsMap[productId].cost; // Ensure sum is set
-          productStatsMap[productId].profit += item.profit;
-          productStatsMap[productId].imageUrl = item.imageUrl;
+                  productStatsMap[productId].clicks += product.clicks;
+                  productStatsMap[productId].shows += product.shows || product.views || 0;
+                  productStatsMap[productId].views = productStatsMap[productId].shows;
+                  productStatsMap[productId].orders += product.orders;
+                  productStatsMap[productId].cost += product.cost || product.sum || 0;
+                  productStatsMap[productId].sum = productStatsMap[productId].cost;
+                  productStatsMap[productId].profit += product.profit || 0;
+                });
+              }
+            });
+          }
         });
 
         const productStatsArray: ProductStats[] = Object.values(productStatsMap);
@@ -307,9 +329,9 @@ const CampaignDetails: React.FC<CampaignDetailsProps> = ({
           ...(cached[campaignId] || {}),
           lastUpdate: new Date().toISOString(),
           statistics: {
-            costs: costsData,
+            costs: transformedCosts,
             stats: statsData,
-            payments: paymentsData,
+            payments: transformedPayments,
             fullStats: fullStatsData
           }
         }
