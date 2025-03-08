@@ -1,4 +1,3 @@
-
 import { AxiosError } from 'axios';
 import axios from 'axios';
 import { getStatusString, getTypeString } from '@/components/analytics/data/productAdvertisingData';
@@ -172,7 +171,6 @@ const handleApiError = (error: unknown) => {
   throw error;
 };
 
-// Агрегирует расходы на рекламу по кампаниям
 const aggregateAdvertCosts = (costs: AdvertCost[]) => {
   const campaignCosts: Record<string, number> = {};
   
@@ -202,16 +200,15 @@ export const getAdvertCosts = async (dateFrom: Date, dateTo: Date, apiKey: strin
     
     let costs = response.data || [];
     
-    // Make sure we strictly filter by the date range
     const fromTime = new Date(params.from).getTime();
-    const toTime = new Date(params.to).getTime() + 86400000; // Add a day to include the end date
+    const toTime = new Date(params.to).getTime() + 86400000;
     
     costs = costs.filter((cost: AdvertCost) => {
-      const costTime = new Date(cost.updTime).getTime();
+      const costTime = new Date(cost.updTime.split('T')[0]).getTime();
       return costTime >= fromTime && costTime <= toTime;
     });
     
-    console.log(`Received ${costs.length} advertising costs records within date range ${params.from} to ${params.to}`);
+    console.log(`Received ${costs.length} advertising costs records`);
     
     return costs;
   } catch (error) {
@@ -271,7 +268,6 @@ export const getAdvertPayments = async (dateFrom: Date, dateTo: Date, apiKey: st
   }
 };
 
-// Получает полную статистику кампаний за указанный период
 export const getCampaignFullStats = async (
   apiKey: string,
   campaignIds: number[], 
@@ -307,67 +303,6 @@ export const getCampaignFullStats = async (
     return response.data || [];
   } catch (error) {
     return handleApiError(error);
-  }
-};
-
-// Новая функция для получения расходов на рекламу по товарам за выбранный период
-export const getProductAdvertisingCosts = async (
-  apiKey: string,
-  dateFrom: Date,
-  dateTo: Date
-): Promise<Array<{name: string, value: number}>> => {
-  try {
-    // Сначала получаем список всех кампаний
-    const campaigns = await getAllCampaigns(apiKey);
-    if (!campaigns || campaigns.length === 0) {
-      return [];
-    }
-    
-    const campaignIds = campaigns.map(campaign => campaign.advertId);
-    
-    // Получаем полную статистику по дням для каждой кампании
-    const campaignStats = await getCampaignFullStats(apiKey, campaignIds, dateFrom, dateTo);
-    if (!campaignStats || campaignStats.length === 0) {
-      return [];
-    }
-    
-    // Агрегируем расходы по товарам за выбранный период
-    const productCosts: Record<string, number> = {};
-    
-    campaignStats.forEach(campaign => {
-      if (campaign.days) {
-        campaign.days.forEach(day => {
-          if (day.nm) {
-            day.nm.forEach(product => {
-              const productName = product.name || `Product ${product.nmId}`;
-              if (!productCosts[productName]) {
-                productCosts[productName] = 0;
-              }
-              productCosts[productName] += product.sum || 0;
-            });
-          }
-        });
-      }
-    });
-    
-    // Преобразуем в массив и сортируем по убыванию
-    const productCostsArray = Object.entries(productCosts)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
-    
-    // Оставляем топ-4 и группируем остальные
-    let topProducts = productCostsArray.slice(0, 4);
-    const otherProducts = productCostsArray.slice(4);
-    
-    if (otherProducts.length > 0) {
-      const otherSum = otherProducts.reduce((sum, item) => sum + item.value, 0);
-      topProducts.push({ name: "Другие товары", value: otherSum });
-    }
-    
-    return topProducts;
-  } catch (error) {
-    console.error('Error fetching product advertising costs:', error);
-    return [];
   }
 };
 
