@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, AlertOctagon } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { 
@@ -21,7 +21,6 @@ import OrderMetrics from "./OrderMetrics";
 import SalesMetrics from "./SalesMetrics";
 import OrdersChart from "./OrdersChart";
 import SalesChart from "./SalesChart";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 const Dashboard = () => {
   const { toast } = useToast();
@@ -29,7 +28,6 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [period, setPeriod] = useState<Period>("today");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   
   const [orders, setOrders] = useState<WildberriesOrder[]>([]);
@@ -122,12 +120,10 @@ const Dashboard = () => {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      setError(null);
       const stores = loadStores();
       const selectedStore = stores.find(s => s.isSelected);
       
       if (!selectedStore) {
-        setError("Выберите основной магазин в разделе 'Магазины'");
         toast({
           title: "Внимание",
           description: "Выберите основной магазин в разделе 'Магазины'",
@@ -141,71 +137,44 @@ const Dashboard = () => {
         setSelectedStoreId(selectedStore.id);
       }
 
-      try {
-        // Заказы
-        const ordersResult = await fetchAndUpdateOrders(selectedStore);
-        if (ordersResult && ordersResult.orders) {
-          setOrders(ordersResult.orders);
-          setWarehouseDistribution(ordersResult.warehouseDistribution || []);
-          setRegionDistribution(ordersResult.regionDistribution || []);
-        } else {
-          setOrders([]);
-          setWarehouseDistribution([]);
-          setRegionDistribution([]);
-          console.error('No orders data returned');
+      // Всегда запрашиваем новые данные
+      const ordersResult = await fetchAndUpdateOrders(selectedStore);
+      if (ordersResult) {
+        setOrders(ordersResult.orders);
+        setWarehouseDistribution(ordersResult.warehouseDistribution);
+        setRegionDistribution(ordersResult.regionDistribution);
+      } else {
+        // Если не удалось получить данные, пробуем загрузить из временного хранилища
+        const savedOrdersData = getOrdersData(selectedStore.id);
+        if (savedOrdersData) {
+          setOrders(savedOrdersData.orders || []);
+          setWarehouseDistribution(savedOrdersData.warehouseDistribution || []);
+          setRegionDistribution(savedOrdersData.regionDistribution || []);
         }
-
-        // Продажи
-        const salesResult = await fetchAndUpdateSales(selectedStore);
-        if (salesResult) {
-          setSales(salesResult);
-        } else {
-          setSales([]);
-          console.error('No sales data returned');
-        }
-        
-        toast({
-          title: "Успех",
-          description: "Данные успешно обновлены",
-        });
-      } catch (apiError: any) {
-        console.error('API error:', apiError);
-        setError(apiError.message || "Ошибка при получении данных от API");
-        
-        if (apiError.response?.status === 429) {
-          toast({
-            title: "Превышен лимит запросов",
-            description: "Слишком много запросов к API. Пожалуйста, повторите попытку позже.",
-            variant: "destructive"
-          });
-        } else {
-          toast({
-            title: "Ошибка",
-            description: "Не удалось загрузить данные о заказах и продажах",
-            variant: "destructive"
-          });
-        }
-        
-        // Очищаем данные при ошибке
-        setOrders([]);
-        setSales([]);
-        setWarehouseDistribution([]);
-        setRegionDistribution([]);
       }
-    } catch (error: any) {
+
+      const salesResult = await fetchAndUpdateSales(selectedStore);
+      if (salesResult) {
+        setSales(salesResult);
+      } else {
+        // Если не удалось получить данные, пробуем загрузить из временного хранилища
+        const savedSalesData = getSalesData(selectedStore.id);
+        if (savedSalesData) {
+          setSales(savedSalesData.sales || []);
+        }
+      }
+
+      toast({
+        title: "Успех",
+        description: "Данные успешно обновлены",
+      });
+    } catch (error) {
       console.error('Error fetching data:', error);
-      setError(error.message || "Произошла ошибка при загрузке данных");
       toast({
         title: "Ошибка",
         description: "Не удалось загрузить данные",
         variant: "destructive"
       });
-      
-      // Очищаем данные при ошибке
-      setOrders([]);
-      setSales([]);
-      setWarehouseDistribution([]);
-      setRegionDistribution([]);
     } finally {
       setIsLoading(false);
     }
@@ -223,9 +192,6 @@ const Dashboard = () => {
       
       // Запрашиваем данные при первой загрузке
       fetchData();
-    } else {
-      setError("Выберите основной магазин в разделе 'Магазины'");
-      setIsLoading(false);
     }
 
     const refreshInterval = setInterval(() => {
@@ -243,9 +209,6 @@ const Dashboard = () => {
     }
   }, [selectedStoreId]);
 
-  const filteredOrders = orders.length > 0 ? getFilteredOrders(orders).orders : [];
-  const filteredSales = sales.length > 0 ? getFilteredSales(sales) : [];
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -257,14 +220,6 @@ const Dashboard = () => {
           </div>
         )}
       </div>
-
-      {error && (
-        <Alert variant="destructive">
-          <AlertOctagon className="h-4 w-4" />
-          <AlertTitle>Ошибка</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
 
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className={`${isMobile ? 'w-full grid grid-cols-4 gap-1' : ''}`}>
@@ -284,23 +239,17 @@ const Dashboard = () => {
             <div className="flex-grow"></div>
           </div>
           
-          {filteredOrders.length > 0 ? (
+          {orders.length > 0 && (
             <>
-              <OrderMetrics orders={filteredOrders} />
+              <OrderMetrics orders={getFilteredOrders(orders).orders} />
               <OrdersChart 
-                orders={filteredOrders} 
-                sales={filteredSales}
+                orders={getFilteredOrders(orders).orders} 
+                sales={getFilteredSales(sales)}
               />
-              <OrdersTable orders={filteredOrders} />
             </>
-          ) : (
-            <Alert>
-              <AlertTitle>Нет данных о заказах</AlertTitle>
-              <AlertDescription>
-                За выбранный период нет информации о заказах или возникла ошибка при получении данных.
-              </AlertDescription>
-            </Alert>
           )}
+          
+          <OrdersTable orders={getFilteredOrders(orders).orders} />
         </TabsContent>
 
         <TabsContent value="sales" className="space-y-4">
@@ -309,20 +258,14 @@ const Dashboard = () => {
             <div className="flex-grow"></div>
           </div>
           
-          {filteredSales.length > 0 ? (
+          {sales.length > 0 && (
             <>
-              <SalesMetrics sales={filteredSales} />
-              <SalesChart sales={filteredSales} />
-              <SalesTable sales={filteredSales} />
+              <SalesMetrics sales={getFilteredSales(sales)} />
+              <SalesChart sales={getFilteredSales(sales)} />
             </>
-          ) : (
-            <Alert>
-              <AlertTitle>Нет данных о продажах</AlertTitle>
-              <AlertDescription>
-                За выбранный период нет информации о продажах или возникла ошибка при получении данных.
-              </AlertDescription>
-            </Alert>
           )}
+          
+          <SalesTable sales={getFilteredSales(sales)} />
         </TabsContent>
 
         <TabsContent value="geography" className="space-y-4">
@@ -330,21 +273,11 @@ const Dashboard = () => {
             <PeriodSelector value={period} onChange={setPeriod} />
             <div className="flex-grow"></div>
           </div>
-          
-          {warehouseDistribution.length > 0 || regionDistribution.length > 0 ? (
-            <GeographySection 
-              warehouseDistribution={warehouseDistribution} 
-              regionDistribution={regionDistribution}
-              sales={filteredSales}
-            />
-          ) : (
-            <Alert>
-              <AlertTitle>Нет данных о географическом распределении</AlertTitle>
-              <AlertDescription>
-                За выбранный период нет информации о географии заказов или возникла ошибка при получении данных.
-              </AlertDescription>
-            </Alert>
-          )}
+          <GeographySection 
+            warehouseDistribution={warehouseDistribution} 
+            regionDistribution={regionDistribution}
+            sales={getFilteredSales(sales)}
+          />
         </TabsContent>
       </Tabs>
     </div>

@@ -1,265 +1,522 @@
 
-// Цвета для диаграмм
-export const COLORS = [
-  '#8B5CF6', '#EC4899', '#10B981', '#F59E0B', 
-  '#3B82F6', '#6366F1', '#EF4444', '#14B8A6'
+// Demo data for analytics dashboard
+export const penaltiesData = [
+  { name: "Брак товара", value: 5000 },
+  { name: "Недопоставка", value: 3500 },
+  { name: "Нарушение упаковки", value: 2800 },
+  { name: "Нарушение маркировки", value: 1200 },
+  { name: "Прочие удержания", value: 3200 },
+  { name: "Другие причины", value: 2500 }
 ];
 
-// Данные для аналитики склада
-export const warehouseAnalyticsData = {
-  utilizationByWarehouse: [
-    { name: "Подольск", value: 78 },
-    { name: "Электросталь", value: 92 },
-    { name: "Казань", value: 64 },
-    { name: "Новосибирск", value: 85 },
-    { name: "Хабаровск", value: 71 }
+export const returnsData = [
+  { name: "Костюм женский спортивный", value: 12000, count: 3 },
+  { name: "Платье летнее", value: 8500, count: 2 },
+  { name: "Футболка мужская", value: 6300, count: 4 },
+  { name: "Джинсы классические", value: 4200, count: 1 },
+  { name: "Куртка зимняя", value: 3000, count: 1 }
+];
+
+export const deductionsTimelineData = [
+  { date: "01.05.2024", logistic: 1200, storage: 800, penalties: 500, acceptance: 300, advertising: 700 },
+  { date: "02.05.2024", logistic: 1100, storage: 900, penalties: 300, acceptance: 350, advertising: 650 },
+  { date: "03.05.2024", logistic: 1500, storage: 750, penalties: 800, acceptance: 400, advertising: 800 },
+  { date: "04.05.2024", logistic: 1300, storage: 850, penalties: 200, acceptance: 320, advertising: 720 },
+  { date: "05.05.2024", logistic: 1400, storage: 950, penalties: 600, acceptance: 370, advertising: 680 },
+  { date: "06.05.2024", logistic: 1250, storage: 700, penalties: 400, acceptance: 310, advertising: 750 },
+  { date: "07.05.2024", logistic: 1600, storage: 800, penalties: 350, acceptance: 330, advertising: 790 }
+];
+
+export const advertisingData = [
+  { name: "Реклама в поиске", value: 12500 },
+  { name: "Реклама в карточках", value: 7300 },
+  { name: "Автоматическая реклама", value: 5200 },
+  { name: "Другие форматы", value: 4100 }
+];
+
+export const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1'];
+
+export const demoData = {
+  currentPeriod: {
+    sales: 1250000,
+    transferred: 1125000, // К перечислению продавцу
+    expenses: {
+      total: 125000,
+      logistics: 45000,
+      storage: 35000,
+      penalties: 15000,
+      advertising: 30000,
+      acceptance: 30000  // Добавлено поле acceptance
+    },
+    netProfit: 875000,
+    acceptance: 30000
+  },
+  dailySales: Array.from({ length: 30 }, (_, i) => ({
+    date: new Date(2024, 0, i + 1).toISOString(),
+    sales: Math.floor(Math.random() * 50000) + 20000,
+    previousSales: Math.floor(Math.random() * 40000) + 15000
+  })),
+  productSales: [
+    { subject_name: "Футболки", quantity: 150 },
+    { subject_name: "Джинсы", quantity: 120 },
+    { subject_name: "Куртки", quantity: 80 },
+    { subject_name: "Обувь", quantity: 200 },
+    { subject_name: "Аксессуары", quantity: 95 }
   ],
-  processingTimeByWarehouse: [
-    { name: "Подольск", time: 8 },
-    { name: "Электросталь", time: 12 },
-    { name: "Казань", time: 6 },
-    { name: "Новосибирск", time: 10 },
-    { name: "Хабаровск", time: 9 }
+  productReturns: returnsData,
+  topProfitableProducts: [
+    { 
+      name: "Платье летнее", 
+      price: "1200", 
+      profit: "25000", 
+      image: "https://images.wbstatic.net/big/new/22270000/22271973-1.jpg",
+      quantitySold: 78,
+      margin: 45,
+      returnCount: 2,
+      category: "Женская одежда"
+    },
+    { 
+      name: "Кроссовки спортивные", 
+      price: "3500", 
+      profit: "18000", 
+      image: "https://images.wbstatic.net/big/new/10050000/10052354-1.jpg",
+      quantitySold: 42,
+      margin: 38,
+      returnCount: 1,
+      category: "Обувь"
+    },
+    { 
+      name: "Джинсы классические", 
+      price: "2800", 
+      profit: "15500", 
+      image: "https://images.wbstatic.net/big/new/13730000/13733711-1.jpg",
+      quantitySold: 36,
+      margin: 32,
+      returnCount: 3,
+      category: "Мужская одежда"
+    }
   ],
-  warehouseCosts: [
-    { warehouse: "Подольск", rent: 1200000, staff: 950000, utilities: 180000, maintenance: 150000 },
-    { warehouse: "Электросталь", rent: 980000, staff: 850000, utilities: 120000, maintenance: 110000 },
-    { warehouse: "Казань", rent: 870000, staff: 780000, utilities: 110000, maintenance: 95000 },
-    { warehouse: "Новосибирск", rent: 920000, staff: 810000, utilities: 130000, maintenance: 100000 },
-    { warehouse: "Хабаровск", rent: 850000, staff: 760000, utilities: 105000, maintenance: 90000 }
-  ],
-  monthlyShipments: [
-    { month: "Янв", count: 14500 },
-    { month: "Фев", count: 16200 },
-    { month: "Мар", count: 18100 },
-    { month: "Апр", count: 17300 },
-    { month: "Май", count: 19500 },
-    { month: "Июн", count: 21200 },
-    { month: "Июл", count: 20100 },
-    { month: "Авг", count: 22300 },
-    { month: "Сен", count: 24100 },
-    { month: "Окт", count: 22800 },
-    { month: "Ноя", count: 25200 },
-    { month: "Дек", count: 27500 }
-  ],
-  topPerformingWarehouses: [
-    { name: "Электросталь", ordersPerDay: 4200, accuracy: 99.2, processingCost: 78 },
-    { name: "Новосибирск", ordersPerDay: 3850, accuracy: 98.7, processingCost: 82 },
-    { name: "Казань", ordersPerDay: 3650, accuracy: 98.5, processingCost: 76 }
+  topUnprofitableProducts: [
+    { 
+      name: "Шарф зимний", 
+      price: "800", 
+      profit: "-5200", 
+      image: "https://images.wbstatic.net/big/new/11080000/11081822-1.jpg",
+      quantitySold: 8,
+      margin: 12,
+      returnCount: 18,
+      category: "Аксессуары"
+    },
+    { 
+      name: "Рубашка офисная", 
+      price: "1500", 
+      profit: "-3800", 
+      image: "https://images.wbstatic.net/big/new/9080000/9080277-1.jpg",
+      quantitySold: 5,
+      margin: 8,
+      returnCount: 12,
+      category: "Мужская одежда"
+    },
+    { 
+      name: "Перчатки кожаные", 
+      price: "1200", 
+      profit: "-2900", 
+      image: "https://images.wbstatic.net/big/new/10320000/10328291-1.jpg",
+      quantitySold: 3,
+      margin: 15,
+      returnCount: 25,
+      category: "Аксессуары"
+    }
   ]
 };
 
-// Данные для складов
+// Данные о складах и логистике
 export const warehousesData = [
-  {
-    id: 1,
-    name: "Коледино",
-    coordinates: [55.341514, 37.526033],
-    size: "150,000 м²",
-    items: 28500,
+  { 
+    id: 1, 
+    name: "Московский склад", 
+    coordinates: [55.7522, 37.6156], 
+    size: "12,000 м²", 
+    items: 14500, 
     status: "active",
     fillRate: 85,
-    lastRestock: "2024-04-01",
-    manager: "Иванов И.И.",
-    totalValue: 156000000,
-    mostStockedCategory: "Одежда",
-    fastMovingItems: 8500,
-    slowMovingItems: 1200,
-    avgProcessingTime: "6 часов"
-  },
-  {
-    id: 2,
-    name: "Электросталь",
-    coordinates: [55.785092, 38.444097],
-    size: "120,000 м²",
-    items: 22800,
-    status: "active",
-    fillRate: 92,
-    lastRestock: "2024-04-02",
-    manager: "Петров П.П.",
-    totalValue: 132000000,
-    mostStockedCategory: "Обувь",
-    fastMovingItems: 7200,
-    slowMovingItems: 980,
+    lastRestock: "10.05.2024",
+    manager: "Иванов А.С.",
+    totalValue: 28500000,
+    mostStockedCategory: "Женская одежда",
+    fastMovingItems: 3200,
+    slowMovingItems: 850,
     avgProcessingTime: "5 часов"
   },
-  {
-    id: 3,
-    name: "Казань",
-    coordinates: [55.822388, 49.089444],
-    size: "90,000 м²",
-    items: 19500,
-    status: "maintenance",
-    fillRate: 64,
-    lastRestock: "2024-03-28",
-    manager: "Сидоров С.С.",
-    totalValue: 98000000,
-    mostStockedCategory: "Электроника",
-    fastMovingItems: 5800,
-    slowMovingItems: 750,
-    avgProcessingTime: "7 часов"
-  },
-  {
-    id: 4,
-    name: "Новосибирск",
-    coordinates: [55.028739, 82.927811],
-    size: "110,000 м²",
-    items: 24200,
+  { 
+    id: 2, 
+    name: "Санкт-Петербургский склад", 
+    coordinates: [59.9343, 30.3351], 
+    size: "8,000 м²", 
+    items: 9800, 
     status: "active",
-    fillRate: 88,
-    lastRestock: "2024-04-03",
-    manager: "Козлов К.К.",
-    totalValue: 118000000,
-    mostStockedCategory: "Бытовая техника",
-    fastMovingItems: 6700,
-    slowMovingItems: 820,
+    fillRate: 72,
+    lastRestock: "11.05.2024",
+    manager: "Петров В.И.",
+    totalValue: 18700000,
+    mostStockedCategory: "Обувь",
+    fastMovingItems: 2100,
+    slowMovingItems: 650,
+    avgProcessingTime: "4.5 часа"
+  },
+  { 
+    id: 3, 
+    name: "Новосибирский склад", 
+    coordinates: [55.0415, 82.9346], 
+    size: "5,500 м²", 
+    items: 6200, 
+    status: "active",
+    fillRate: 68,
+    lastRestock: "09.05.2024",
+    manager: "Сидорова Е.В.",
+    totalValue: 12400000,
+    mostStockedCategory: "Мужская одежда",
+    fastMovingItems: 1500,
+    slowMovingItems: 420,
     avgProcessingTime: "6 часов"
   },
-  {
-    id: 5,
-    name: "Хабаровск",
-    coordinates: [48.480223, 135.071917],
-    size: "85,000 м²",
-    items: 18700,
+  { 
+    id: 4, 
+    name: "Екатеринбургский склад", 
+    coordinates: [56.8519, 60.6122], 
+    size: "4,500 м²", 
+    items: 5100, 
+    status: "active",
+    fillRate: 65,
+    lastRestock: "08.05.2024",
+    manager: "Козлов Д.Н.",
+    totalValue: 9800000,
+    mostStockedCategory: "Аксессуары",
+    fastMovingItems: 1200,
+    slowMovingItems: 380,
+    avgProcessingTime: "5.5 часов"
+  },
+  { 
+    id: 5, 
+    name: "Казанский склад", 
+    coordinates: [55.7887, 49.1221], 
+    size: "3,800 м²", 
+    items: 4300, 
+    status: "maintenance",
+    fillRate: 45,
+    lastRestock: "05.05.2024",
+    manager: "Смирнова О.П.",
+    totalValue: 7600000,
+    mostStockedCategory: "Детская одежда",
+    fastMovingItems: 980,
+    slowMovingItems: 320,
+    avgProcessingTime: "7 часов"
+  },
+  { 
+    id: 6, 
+    name: "Ростовский склад", 
+    coordinates: [47.2357, 39.7015], 
+    size: "3,500 м²", 
+    items: 3900, 
     status: "low-stock",
-    fillRate: 71,
-    lastRestock: "2024-03-25",
-    manager: "Соколов С.С.",
-    totalValue: 86000000,
-    mostStockedCategory: "Товары для дома",
-    fastMovingItems: 5200,
-    slowMovingItems: 680,
+    fillRate: 38,
+    lastRestock: "02.05.2024",
+    manager: "Кузнецов А.И.",
+    totalValue: 5900000,
+    mostStockedCategory: "Спортивная одежда",
+    fastMovingItems: 860,
+    slowMovingItems: 290,
+    avgProcessingTime: "6.5 часов"
+  },
+  { 
+    id: 7, 
+    name: "Краснодарский склад", 
+    coordinates: [45.0448, 38.9760], 
+    size: "4,200 м²", 
+    items: 4800, 
+    status: "active",
+    fillRate: 78,
+    lastRestock: "12.05.2024",
+    manager: "Морозова А.Е.",
+    totalValue: 9200000,
+    mostStockedCategory: "Пляжная одежда",
+    fastMovingItems: 1380,
+    slowMovingItems: 310,
+    avgProcessingTime: "4 часа"
+  },
+  { 
+    id: 8, 
+    name: "Владивостокский склад", 
+    coordinates: [43.1332, 131.9113], 
+    size: "3,000 м²", 
+    items: 3100, 
+    status: "active",
+    fillRate: 62,
+    lastRestock: "07.05.2024",
+    manager: "Лебедев И.К.",
+    totalValue: 5400000,
+    mostStockedCategory: "Верхняя одежда",
+    fastMovingItems: 720,
+    slowMovingItems: 260,
     avgProcessingTime: "8 часов"
   }
 ];
 
-// Данные для маршрутов логистики
+// Маршруты между складами
 export const logisticsRoutes = [
-  {
-    origin: 1,
-    destination: 2,
-    volume: "22,000 кг",
-    transport: "Грузовик",
-    distance: "120 км",
-    travelTime: "2 часа",
-    cost: 35000,
-    frequency: "Ежедневно",
-    carrier: "ТК Логистик",
+  { 
+    origin: 1, 
+    destination: 2, 
+    volume: "320 единиц/день", 
+    transport: "грузовик",
+    distance: "705 км",
+    travelTime: "9 часов", 
+    cost: 42000,
+    frequency: "ежедневно",
+    carrier: "ТрансЛогистик",
     status: "active"
   },
-  {
-    origin: 1,
-    destination: 3,
-    volume: "18,000 кг",
-    transport: "Поезд",
-    distance: "800 км",
-    travelTime: "12 часов",
-    cost: 75000,
+  { 
+    origin: 1, 
+    destination: 3, 
+    volume: "220 единиц/день", 
+    transport: "авиаперевозка",
+    distance: "3191 км",
+    travelTime: "4 часа", 
+    cost: 185000,
     frequency: "3 раза в неделю",
-    carrier: "РЖД Карго",
+    carrier: "АэроКарго",
     status: "active"
   },
-  {
-    origin: 2,
-    destination: 4,
-    volume: "15,000 кг",
-    transport: "Поезд",
-    distance: "3,100 км",
-    travelTime: "3 дня",
-    cost: 180000,
-    frequency: "2 раза в неделю",
-    carrier: "РЖД Карго",
+  { 
+    origin: 1, 
+    destination: 4, 
+    volume: "180 единиц/день", 
+    transport: "грузовик",
+    distance: "1795 км",
+    travelTime: "22 часа", 
+    cost: 95000,
+    frequency: "ежедневно",
+    carrier: "УралТранс",
+    status: "active"
+  },
+  { 
+    origin: 1, 
+    destination: 5, 
+    volume: "150 единиц/день", 
+    transport: "грузовик",
+    distance: "815 км",
+    travelTime: "11 часов", 
+    cost: 48000,
+    frequency: "ежедневно",
+    carrier: "ВолгаЛогистик",
+    status: "active"
+  },
+  { 
+    origin: 1, 
+    destination: 6, 
+    volume: "140 единиц/день", 
+    transport: "грузовик",
+    distance: "1074 км",
+    travelTime: "14 часов", 
+    cost: 62000,
+    frequency: "ежедневно",
+    carrier: "ЮгТранс",
     status: "delayed"
   },
-  {
-    origin: 3,
-    destination: 5,
-    volume: "12,000 кг",
-    transport: "Самолет",
-    distance: "4,800 км",
-    travelTime: "6 часов",
-    cost: 320000,
-    frequency: "1 раз в неделю",
-    carrier: "АвиаКарго",
+  { 
+    origin: 2, 
+    destination: 3, 
+    volume: "90 единиц/день", 
+    transport: "грузовик",
+    distance: "3694 км",
+    travelTime: "46 часов", 
+    cost: 185000,
+    frequency: "2 раза в неделю",
+    carrier: "СибЭкспресс",
     status: "active"
   },
-  {
-    origin: 1,
-    destination: 5,
-    volume: "20,000 кг",
-    transport: "Поезд+Грузовик",
-    distance: "8,700 км",
-    travelTime: "7 дней",
-    cost: 450000,
-    frequency: "1 раз в 2 недели",
-    carrier: "Интер Логистика",
+  { 
+    origin: 4, 
+    destination: 3, 
+    volume: "70 единиц/день", 
+    transport: "грузовик",
+    distance: "1512 км",
+    travelTime: "19 часов", 
+    cost: 78000,
+    frequency: "3 раза в неделю",
+    carrier: "УралСибирь",
+    status: "active"
+  },
+  { 
+    origin: 5, 
+    destination: 6, 
+    volume: "50 единиц/день", 
+    transport: "грузовик",
+    distance: "1223 км",
+    travelTime: "16 часов", 
+    cost: 68000,
+    frequency: "2 раза в неделю",
+    carrier: "ВолгаДон",
+    status: "active"
+  },
+  { 
+    origin: 1, 
+    destination: 7, 
+    volume: "130 единиц/день", 
+    transport: "грузовик",
+    distance: "1359 км",
+    travelTime: "17 часов", 
+    cost: 72000,
+    frequency: "ежедневно",
+    carrier: "ЮгТранс",
+    status: "active"
+  },
+  { 
+    origin: 1, 
+    destination: 8, 
+    volume: "100 единиц/день", 
+    transport: "авиаперевозка",
+    distance: "6430 км",
+    travelTime: "8 часов", 
+    cost: 320000,
+    frequency: "2 раза в неделю",
+    carrier: "ВостокЭйр",
+    status: "active"
+  },
+  { 
+    origin: 7, 
+    destination: 6, 
+    volume: "80 единиц/день", 
+    transport: "грузовик",
+    distance: "355 км",
+    travelTime: "5 часов", 
+    cost: 28000,
+    frequency: "ежедневно",
+    carrier: "ЮгТранс",
     status: "active"
   }
 ];
 
-// Данные для категорий инвентаря
+// Данные об инвентаре (по категориям)
 export const inventoryData = [
-  {
-    category: "Одежда",
-    totalItems: 12500,
-    valueRub: 62500000,
-    topSellingItem: "Футболки",
-    averageTurnover: "8 дней",
-    returns: 320,
-    inTransit: 1800
-  },
-  {
-    category: "Обувь",
-    totalItems: 8200,
-    valueRub: 49200000,
-    topSellingItem: "Кроссовки",
-    averageTurnover: "12 дней",
-    returns: 180,
-    inTransit: 1200
-  },
-  {
-    category: "Электроника",
-    totalItems: 5600,
-    valueRub: 84000000,
-    topSellingItem: "Наушники",
-    averageTurnover: "15 дней",
-    returns: 210,
-    inTransit: 920
-  },
-  {
-    category: "Бытовая техника",
-    totalItems: 4800,
-    valueRub: 72000000,
-    topSellingItem: "Кофемашины",
-    averageTurnover: "18 дней",
-    returns: 150,
-    inTransit: 780
-  },
-  {
-    category: "Товары для дома",
-    totalItems: 9200,
-    valueRub: 36800000,
-    topSellingItem: "Постельное белье",
-    averageTurnover: "10 дней",
-    returns: 280,
-    inTransit: 1500
-  },
-  {
-    category: "Косметика",
-    totalItems: 7800,
-    valueRub: 31200000,
-    topSellingItem: "Крем для лица",
-    averageTurnover: "7 дней",
-    returns: 190,
-    inTransit: 1100
-  },
-  {
-    category: "Детские товары",
-    totalItems: 6500,
-    valueRub: 26000000,
-    topSellingItem: "Подгузники",
+  { 
+    category: "Женская одежда", 
+    totalItems: 12500, 
+    valueRub: 28500000, 
+    topSellingItem: "Платье летнее",
     averageTurnover: "5 дней",
-    returns: 110,
-    inTransit: 950
+    returns: 320,
+    inTransit: 580
+  },
+  { 
+    category: "Мужская одежда", 
+    totalItems: 9800, 
+    valueRub: 22400000, 
+    topSellingItem: "Джинсы классические",
+    averageTurnover: "7 дней",
+    returns: 245,
+    inTransit: 420
+  },
+  { 
+    category: "Детская одежда", 
+    totalItems: 7200, 
+    valueRub: 14500000, 
+    topSellingItem: "Комбинезон детский",
+    averageTurnover: "6 дней",
+    returns: 180,
+    inTransit: 350
+  },
+  { 
+    category: "Обувь", 
+    totalItems: 6400, 
+    valueRub: 19800000, 
+    topSellingItem: "Кроссовки спортивные",
+    averageTurnover: "10 дней",
+    returns: 210,
+    inTransit: 290
+  },
+  { 
+    category: "Аксессуары", 
+    totalItems: 8900, 
+    valueRub: 9700000, 
+    topSellingItem: "Сумка женская",
+    averageTurnover: "12 дней",
+    returns: 150,
+    inTransit: 320
+  },
+  { 
+    category: "Спортивная одежда", 
+    totalItems: 5300, 
+    valueRub: 15200000, 
+    topSellingItem: "Костюм спортивный",
+    averageTurnover: "8 дней",
+    returns: 130,
+    inTransit: 240
+  },
+  { 
+    category: "Верхняя одежда", 
+    totalItems: 4200, 
+    valueRub: 18900000, 
+    topSellingItem: "Куртка зимняя",
+    averageTurnover: "15 дней",
+    returns: 95,
+    inTransit: 180
   }
 ];
+
+// Данные для аналитики складов
+export const warehouseAnalyticsData = {
+  utilizationByWarehouse: [
+    { name: "Московский", value: 85 },
+    { name: "Санкт-Петербургский", value: 72 },
+    { name: "Новосибирский", value: 68 },
+    { name: "Екатеринбургский", value: 65 },
+    { name: "Казанский", value: 45 },
+    { name: "Ростовский", value: 38 },
+    { name: "Краснодарский", value: 78 },
+    { name: "Владивостокский", value: 62 }
+  ],
+  processingTimeByWarehouse: [
+    { name: "Московский", time: 5 },
+    { name: "Санкт-Петербургский", time: 4.5 },
+    { name: "Новосибирский", time: 6 },
+    { name: "Екатеринбургский", time: 5.5 },
+    { name: "Казанский", time: 7 },
+    { name: "Ростовский", time: 6.5 },
+    { name: "Краснодарский", time: 4 },
+    { name: "Владивостокский", time: 8 }
+  ],
+  monthlyShipments: [
+    { month: "Январь", count: 12500 },
+    { month: "Февраль", count: 13200 },
+    { month: "Март", count: 14800 },
+    { month: "Апрель", count: 16300 },
+    { month: "Май", count: 15700 }
+  ],
+  warehouseCosts: [
+    { warehouse: "Московский", rent: 1200000, staff: 850000, utilities: 350000, maintenance: 180000 },
+    { warehouse: "Санкт-Петербургский", rent: 980000, staff: 720000, utilities: 280000, maintenance: 150000 },
+    { warehouse: "Новосибирский", rent: 650000, staff: 580000, utilities: 210000, maintenance: 120000 },
+    { warehouse: "Екатеринбургский", rent: 580000, staff: 520000, utilities: 190000, maintenance: 110000 },
+    { warehouse: "Казанский", rent: 520000, staff: 480000, utilities: 170000, maintenance: 100000 },
+    { warehouse: "Ростовский", rent: 480000, staff: 450000, utilities: 150000, maintenance: 90000 },
+    { warehouse: "Краснодарский", rent: 550000, staff: 490000, utilities: 180000, maintenance: 105000 },
+    { warehouse: "Владивостокский", rent: 420000, staff: 390000, utilities: 140000, maintenance: 85000 }
+  ],
+  topPerformingWarehouses: [
+    { name: "Краснодарский", ordersPerDay: 520, accuracy: 98.2, processingCost: 95 },
+    { name: "Санкт-Петербургский", ordersPerDay: 780, accuracy: 97.8, processingCost: 102 },
+    { name: "Московский", ordersPerDay: 1250, accuracy: 97.5, processingCost: 108 }
+  ]
+};
+
+// Обновленные данные об удержаниях - теперь только ненулевые значения с отрицательными значениями, где нужно
+export const deductionsData = [
+  { name: "Услуги доставки транзитных поставок", value: 17265.33 },
+  { name: "Штраф за перенос поставки", value: -1079.00 },
+  { name: "Штраф за недопоставку", value: -2345.67 },
+  { name: "Компенсация клиенту за брак", value: -1587.45 },
+  { name: "Недостача товара", value: -3254.89 }
+];
+
