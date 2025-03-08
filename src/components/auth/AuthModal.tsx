@@ -23,12 +23,12 @@ const AuthModal = ({ open, onClose, initialMode = 'login' }: AuthModalProps) => 
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="text-center text-2xl font-bold">
-            {activeTab === 'login' ? 'Вход в аккаунт' : 'Регистрация'}
+            {activeTab === 'login' ? 'Добро пожаловать!' : 'Присоединяйтесь к Zerofy'}
           </DialogTitle>
         </DialogHeader>
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Вход</TabsTrigger>
+            <TabsTrigger value="login">Войти</TabsTrigger>
             <TabsTrigger value="register">Регистрация</TabsTrigger>
           </TabsList>
           <TabsContent value="login">

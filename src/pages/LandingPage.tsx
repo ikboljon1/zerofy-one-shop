@@ -19,94 +19,94 @@ const LandingPage = () => {
   const features = [
     {
       icon: <BarChart2 className="h-6 w-6 text-primary" />,
-      title: "Полная аналитика",
-      description: "Подробная аналитика продаж, доходов и расходов для принятия взвешенных решений. Отслеживайте динамику и выявляйте тренды."
+      title: "Интеллектуальная аналитика",
+      description: "Превратите данные в золото с нашей передовой аналитикой. Отслеживайте динамику продаж, выявляйте скрытые тренды и принимайте стратегические решения на основе точных данных в режиме реального времени."
     },
     {
       icon: <Package className="h-6 w-6 text-primary" />,
-      title: "Управление товарами",
-      description: "Удобное управление каталогом товаров, отслеживание остатков и поставок. Автоматизация рутинных процессов."
+      title: "Умное управление товарами",
+      description: "Возьмите полный контроль над вашим ассортиментом. Наша система не просто отслеживает остатки — она прогнозирует спрос, оптимизирует закупки и автоматизирует рутинные процессы управления каталогом."
     },
     {
       icon: <Users className="h-6 w-6 text-primary" />,
-      title: "Многопользовательский доступ",
-      description: "Предоставление доступа команде с разными уровнями прав. Совместная работа над проектами и задачами."
+      title: "Командная синергия",
+      description: "Объединяйте усилия вашей команды с продвинутой системой разграничения прав доступа. Создавайте уникальные роли, назначайте задачи и наблюдайте, как эффективность вашего бизнеса растет в геометрической прогрессии."
     },
     {
       icon: <ShieldCheck className="h-6 w-6 text-primary" />,
-      title: "Безопасность данных",
-      description: "Защита информации и регулярное резервное копирование. Шифрование данных и контроль доступа."
+      title: "Непробиваемая защита данных",
+      description: "Ваша бизнес-информация под надежной защитой. Многоуровневое шифрование, регулярное резервное копирование и строгий контроль доступа обеспечивают безопасность ваших самых ценных активов — ваших данных."
     },
     {
       icon: <Rocket className="h-6 w-6 text-primary" />,
-      title: "Автоматизация процессов",
-      description: "Автоматическое обновление данных, генерация отчетов и уведомления о важных событиях. Экономия времени на рутинных задачах."
+      title: "Революционная автоматизация",
+      description: "Забудьте о рутинных задачах. Наша система автоматически обновляет данные, генерирует отчеты и отправляет уведомления о критически важных событиях, позволяя вам сосредоточиться на стратегическом развитии бизнеса."
     },
     {
       icon: <Clock className="h-6 w-6 text-primary" />,
-      title: "Планирование поставок",
-      description: "Прогнозирование спроса и оптимизация складских запасов. Автоматическое планирование поставок на основе данных продаж."
+      title: "Точное планирование поставок",
+      description: "Прощайте, неликвиды и упущенные продажи! Наши алгоритмы машинного обучения анализируют историю продаж и сезонные тренды, создавая оптимальный график поставок и идеальный баланс складских запасов."
     },
     {
       icon: <Settings className="h-6 w-6 text-primary" />,
-      title: "Гибкие настройки",
-      description: "Настройка интерфейса и функций под ваши бизнес-процессы. Персонализация отчетов и метрик."
+      title: "Безграничная персонализация",
+      description: "Настраивайте систему под уникальные потребности вашего бизнеса. От пользовательского интерфейса до сложных бизнес-процессов — Zerofy адаптируется к вам, а не наоборот, обеспечивая максимальную эффективность."
     },
     {
       icon: <CreditCard className="h-6 w-6 text-primary" />,
-      title: "Финансовая аналитика",
-      description: "Детальный анализ расходов, доходов и прибыли. Учет всех комиссий и удержаний маркетплейсов."
+      title: "Кристальная финансовая аналитика",
+      description: "Трансформируйте хаос финансовых данных в четкую картину. Отслеживайте каждую копейку: от валовой выручки до чистой прибыли, с учетом всех комиссий, налогов и скрытых расходов маркетплейсов."
     }
   ];
 
   const pricing = [
     {
-      name: "Базовый",
+      name: "Стартап",
       price: "0",
-      description: "Идеально для начинающих продавцов",
+      description: "Идеальный выбор для амбициозных начинающих продавцов",
       features: [
-        "До 100 товаров",
-        "Базовая аналитика",
-        "1 пользователь",
-        "Email поддержка",
-        "Ограниченная история данных (30 дней)",
-        "Основные отчеты"
+        "Управление до 100 SKU",
+        "Базовая аналитика эффективности",
+        "Один пользовательский аккаунт",
+        "Приоритетная email-поддержка",
+        "30-дневная история данных",
+        "Основные аналитические отчеты"
       ],
       popular: false,
       buttonVariant: "outline" as const
     },
     {
-      name: "Стандарт",
+      name: "Бизнес",
       price: "1999",
-      description: "Для растущего бизнеса",
+      description: "Оптимальное решение для растущего бизнеса",
       features: [
-        "До 1000 товаров",
-        "Расширенная аналитика",
-        "До 3 пользователей",
-        "Приоритетная поддержка",
-        "Интеграция с 1С",
-        "История данных за 6 месяцев",
-        "Прогнозирование продаж",
-        "Уведомления в реальном времени"
+        "Управление до 1000 SKU",
+        "Продвинутая аналитика и прогнозирование",
+        "До 3 пользовательских аккаунтов",
+        "Приоритетная поддержка с гарантией ответа",
+        "Бесшовная интеграция с 1С",
+        "Полная история данных за 6 месяцев",
+        "Интеллектуальное прогнозирование спроса",
+        "Мгновенные уведомления о важных событиях"
       ],
       popular: true,
       buttonVariant: "default" as const
     },
     {
-      name: "Бизнес",
+      name: "Корпоративный",
       price: "4999",
-      description: "Полный контроль над бизнесом",
+      description: "Максимальные возможности для серьезного бизнеса",
       features: [
         "Неограниченное количество товаров",
-        "Премиум аналитика",
+        "Премиум-аналитика с ИИ-рекомендациями",
         "Неограниченное число пользователей",
-        "24/7 поддержка",
-        "Все интеграции",
-        "API доступ",
-        "Полная история данных",
-        "Индивидуальные отчеты",
-        "Персональный менеджер",
-        "Обучение сотрудников"
+        "Круглосуточная поддержка 24/7",
+        "Полная интеграционная экосистема",
+        "Расширенный API-доступ",
+        "Неограниченная история данных",
+        "Конструктор индивидуальных отчетов",
+        "Персональный менеджер успеха клиента",
+        "Обучение и сертификация сотрудников"
       ],
       popular: false,
       buttonVariant: "outline" as const
@@ -115,17 +115,17 @@ const LandingPage = () => {
 
   const testimonials = [
     {
-      quote: "Zerofy помог нам увеличить продажи на 35% за три месяца благодаря точной аналитике и автоматизации процессов.",
+      quote: "После внедрения Zerofy наши продажи выросли на 35% всего за три месяца. Точная аналитика помогла выявить неочевидные точки роста, а автоматизация освободила команду от рутины. Это был настоящий прорыв!",
       author: "Анна М.",
       company: "Модный бутик 'Стиль'"
     },
     {
-      quote: "Раньше мы тратили 2 дня на подготовку отчетов, теперь все данные доступны в реальном времени. Это изменило наш подход к бизнесу.",
+      quote: "Раньше подготовка отчетности занимала у нас до 2 дней ежемесячно. С Zerofy все критически важные данные доступны в любой момент. Теперь мы принимаем решения молниеносно, опережая конкурентов.",
       author: "Сергей К.",
       company: "ТехноМаркет"
     },
     {
-      quote: "Благодаря Zerofy мы оптимизировали складские запасы и сократили издержки на 22%. Отличный инструмент!",
+      quote: "Благодаря интеллектуальной системе планирования поставок Zerofy, мы сократили складские издержки на 22% и полностью избавились от проблемы неликвидов. При этом доступность товаров выросла до 98%. Фантастический результат!",
       author: "Елена В.",
       company: "Детские игрушки 'Радость'"
     }
@@ -144,7 +144,7 @@ const LandingPage = () => {
               Войти
             </Button>
             <Button onClick={() => handleAuthClick('register')}>
-              Регистрация
+              Начать бесплатно
             </Button>
           </div>
         </div>
@@ -155,11 +155,11 @@ const LandingPage = () => {
         <section className="py-20 px-4 bg-gradient-to-b from-background to-muted/30">
           <div className="container mx-auto max-w-5xl text-center">
             <h1 className="text-4xl font-bold md:text-6xl mb-6">
-              Управляйте своим бизнесом на маркетплейсах эффективно
+              Превратите свой бизнес на маркетплейсах в финансовую империю
             </h1>
             <p className="text-xl mb-10 text-muted-foreground max-w-3xl mx-auto">
-              Zerofy — платформа для аналитики и управления продажами на Wildberries, Ozon и других маркетплейсах. 
-              Увеличьте прибыль, оптимизируйте процессы и получите полный контроль над вашим бизнесом.
+              Zerofy — интеллектуальная платформа для увеличения прибыли и масштабирования продаж на Wildberries, Ozon и других маркетплейсах. 
+              Преобразите хаос данных в ясные стратегические решения и возьмите полный контроль над вашим растущим бизнесом.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" onClick={() => handleAuthClick('register')}>
@@ -172,14 +172,14 @@ const LandingPage = () => {
         {/* Features */}
         <section className="py-20 px-4 bg-muted/50">
           <div className="container mx-auto max-w-6xl">
-            <h2 className="text-3xl font-bold text-center mb-4">Возможности платформы</h2>
+            <h2 className="text-3xl font-bold text-center mb-4">Инновационные возможности платформы</h2>
             <p className="text-center text-muted-foreground mb-12 max-w-3xl mx-auto">
-              Наши инструменты созданы, чтобы помочь вам управлять всеми аспектами вашего бизнеса на маркетплейсах.
-              От аналитики продаж до управления поставками — всё в одном месте.
+              Мы создали комплексную экосистему инструментов для полного контроля над вашим бизнесом на маркетплейсах.
+              От глубинной аналитики до интеллектуального управления поставками — весь ваш бизнес на одной платформе.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {features.map((feature, index) => (
-                <div key={index} className="bg-card p-6 rounded-lg shadow-sm border">
+                <div key={index} className="bg-card p-6 rounded-lg shadow-sm border hover:border-primary/50 transition-all duration-300 hover:shadow-md">
                   <div className="mb-4">{feature.icon}</div>
                   <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
                   <p className="text-muted-foreground">{feature.description}</p>
@@ -192,30 +192,30 @@ const LandingPage = () => {
         {/* Why Choose Us */}
         <section className="py-20 px-4">
           <div className="container mx-auto max-w-6xl">
-            <h2 className="text-3xl font-bold text-center mb-4">Почему выбирают Zerofy</h2>
+            <h2 className="text-3xl font-bold text-center mb-4">Почему лидеры выбирают Zerofy</h2>
             <p className="text-center text-muted-foreground mb-12 max-w-3xl mx-auto">
-              Мы помогаем продавцам на маркетплейсах принимать решения на основе данных и улучшать бизнес-показатели
+              Мы предоставляем не просто инструменты, а полноценную экосистему для принятия стратегических решений и трансформации вашего бизнеса
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="bg-card p-6 rounded-lg shadow-sm border flex flex-col items-center text-center">
+              <div className="bg-card p-6 rounded-lg shadow-sm border flex flex-col items-center text-center hover:border-primary/50 transition-all duration-300 hover:shadow-md">
                 <HeartHandshake className="h-12 w-12 text-primary mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Дружелюбный интерфейс</h3>
+                <h3 className="text-xl font-semibold mb-2">Интуитивно понятный интерфейс</h3>
                 <p className="text-muted-foreground">
-                  Интуитивно понятный дизайн без лишних сложностей. Вы начнете работать с платформой без длительного обучения.
+                  Мы создали элегантный и простой интерфейс, в котором удобно разберется даже новичок. Забудьте о долгом обучении — начните получать результаты с первого дня.
                 </p>
               </div>
-              <div className="bg-card p-6 rounded-lg shadow-sm border flex flex-col items-center text-center">
+              <div className="bg-card p-6 rounded-lg shadow-sm border flex flex-col items-center text-center hover:border-primary/50 transition-all duration-300 hover:shadow-md">
                 <MessageSquare className="h-12 w-12 text-primary mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Поддержка реальных людей</h3>
+                <h3 className="text-xl font-semibold mb-2">Экспертная поддержка 24/7</h3>
                 <p className="text-muted-foreground">
-                  Наши специалисты всегда готовы помочь и ответить на ваши вопросы. Мы ценим каждого клиента.
+                  За каждым клиентом закреплен персональный менеджер с опытом в e-commerce. Мы не просто решаем технические вопросы, но и помогаем выстраивать стратегию роста.
                 </p>
               </div>
-              <div className="bg-card p-6 rounded-lg shadow-sm border flex flex-col items-center text-center">
+              <div className="bg-card p-6 rounded-lg shadow-sm border flex flex-col items-center text-center hover:border-primary/50 transition-all duration-300 hover:shadow-md">
                 <Rocket className="h-12 w-12 text-primary mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Регулярные обновления</h3>
+                <h3 className="text-xl font-semibold mb-2">Постоянное развитие</h3>
                 <p className="text-muted-foreground">
-                  Мы постоянно развиваем платформу, добавляя новые функции и улучшая существующие на основе отзывов пользователей.
+                  Мы внедряем новые функции ежемесячно, основываясь на обратной связи от клиентов и анализе рынка. С Zerofy вы всегда на шаг впереди изменений на маркетплейсах.
                 </p>
               </div>
             </div>
@@ -225,10 +225,10 @@ const LandingPage = () => {
         {/* Testimonials */}
         <section className="py-20 px-4 bg-muted/30">
           <div className="container mx-auto max-w-6xl">
-            <h2 className="text-3xl font-bold text-center mb-12">Отзывы клиентов</h2>
+            <h2 className="text-3xl font-bold text-center mb-12">Истории успеха наших клиентов</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {testimonials.map((testimonial, index) => (
-                <div key={index} className="bg-card p-6 rounded-lg shadow-sm border">
+                <div key={index} className="bg-card p-6 rounded-lg shadow-sm border hover:border-primary/50 transition-all duration-300 hover:shadow-md">
                   <p className="text-muted-foreground mb-4 italic">"{testimonial.quote}"</p>
                   <div>
                     <p className="font-semibold">{testimonial.author}</p>
@@ -243,22 +243,22 @@ const LandingPage = () => {
         {/* Pricing */}
         <section className="py-20 px-4">
           <div className="container mx-auto max-w-6xl">
-            <h2 className="text-3xl font-bold text-center mb-4">Тарифы</h2>
+            <h2 className="text-3xl font-bold text-center mb-4">Инвестиции в ваш успех</h2>
             <p className="text-center text-muted-foreground mb-12 max-w-3xl mx-auto">
-              Выберите план, который подходит для вашего бизнеса. Вы всегда можете изменить его по мере роста.
+              Выберите оптимальный план, соответствующий вашим амбициям. Начните бесплатно и масштабируйтесь вместе с ростом вашего бизнеса.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {pricing.map((plan, index) => (
                 <div 
                   key={index} 
                   className={cn(
-                    "bg-card p-6 rounded-lg shadow-sm border relative", 
+                    "bg-card p-6 rounded-lg shadow-sm border relative hover:transform hover:-translate-y-1 transition-all duration-300", 
                     plan.popular && "border-primary shadow-md"
                   )}
                 >
                   {plan.popular && (
                     <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium">
-                      Популярный
+                      Выбор лидеров
                     </div>
                   )}
                   <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
@@ -281,7 +281,7 @@ const LandingPage = () => {
                     variant={plan.buttonVariant}
                     onClick={() => handleAuthClick('register')}
                   >
-                    Выбрать тариф
+                    {plan.price === "0" ? "Начать бесплатно" : "Выбрать тариф"}
                   </Button>
                 </div>
               ))}
@@ -292,12 +292,12 @@ const LandingPage = () => {
         {/* CTA Section */}
         <section className="py-20 px-4 bg-primary/10">
           <div className="container mx-auto max-w-3xl text-center">
-            <h2 className="text-3xl font-bold mb-6">Готовы начать?</h2>
+            <h2 className="text-3xl font-bold mb-6">Готовы к трансформации бизнеса?</h2>
             <p className="text-xl mb-8 text-muted-foreground">
-              Присоединяйтесь к сотням продавцов, которые уже оптимизировали свой бизнес с помощью Zerofy
+              Присоединяйтесь к сообществу успешных предпринимателей, которые уже увеличили прибыльность своего бизнеса с помощью Zerofy
             </p>
-            <Button size="lg" onClick={() => handleAuthClick('register')}>
-              Создать бесплатный аккаунт
+            <Button size="lg" onClick={() => handleAuthClick('register')} className="animate-pulse-slow">
+              Начать бесплатно прямо сейчас
             </Button>
           </div>
         </section>
@@ -312,40 +312,40 @@ const LandingPage = () => {
                 <span className="text-lg font-semibold">Zerofy</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                Платформа для аналитики и управления продажами на маркетплейсах
+                Революционная платформа для масштабирования вашего бизнеса на маркетплейсах через интеллектуальную аналитику
               </p>
             </div>
             <div>
-              <h4 className="font-medium mb-4">Возможности</h4>
+              <h4 className="font-medium mb-4">Экосистема решений</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>Аналитика</li>
-                <li>Управление товарами</li>
-                <li>Складской учет</li>
-                <li>Реклама</li>
+                <li>Многомерная аналитика</li>
+                <li>Интеллектуальный товарный менеджмент</li>
+                <li>Оптимизация складской логистики</li>
+                <li>Управление рекламными кампаниями</li>
               </ul>
             </div>
             <div>
-              <h4 className="font-medium mb-4">Компания</h4>
+              <h4 className="font-medium mb-4">О компании</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>О нас</li>
-                <li>Блог</li>
-                <li>Карьера</li>
-                <li>Контакты</li>
+                <li>Наша миссия</li>
+                <li>База знаний</li>
+                <li>Карьера в Zerofy</li>
+                <li>Связаться с нами</li>
               </ul>
             </div>
             <div>
-              <h4 className="font-medium mb-4">Поддержка</h4>
+              <h4 className="font-medium mb-4">Клиентская поддержка</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>Центр помощи</li>
-                <li>Документация</li>
-                <li>API</li>
-                <li>Сообщество</li>
+                <li>Центр помощи 24/7</li>
+                <li>Техническая документация</li>
+                <li>API для разработчиков</li>
+                <li>Сообщество селлеров</li>
               </ul>
             </div>
           </div>
           <div className="border-t pt-8 flex flex-col md:flex-row justify-between items-center">
             <div className="text-sm text-muted-foreground mb-4 md:mb-0">
-              © {new Date().getFullYear()} Zerofy. Все права защищены.
+              © {new Date().getFullYear()} Zerofy. Все права защищены. Инвестируйте в свой успех.
             </div>
             <div className="space-x-4">
               <Button variant="ghost" size="sm">Политика конфиденциальности</Button>
