@@ -11,6 +11,8 @@ export interface User {
   storeCount?: number;
   trialEndDate?: string;
   isInTrial?: boolean;
+  subscriptionEndDate?: string;
+  isSubscriptionActive?: boolean;
 }
 
 const mockUsers: User[] = [
@@ -25,7 +27,9 @@ const mockUsers: User[] = [
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex',
     tariffId: '3',
     storeCount: 2,
-    isInTrial: false
+    isInTrial: false,
+    isSubscriptionActive: true,
+    subscriptionEndDate: '2024-12-31T23:59:59Z'
   },
   {
     id: '2',
@@ -38,7 +42,9 @@ const mockUsers: User[] = [
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Kate',
     tariffId: '2',
     storeCount: 1,
-    isInTrial: false
+    isInTrial: false,
+    isSubscriptionActive: true,
+    subscriptionEndDate: '2024-10-25T23:59:59Z'
   },
   {
     id: '3',
@@ -51,7 +57,8 @@ const mockUsers: User[] = [
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Michael',
     tariffId: '1',
     storeCount: 1,
-    isInTrial: false
+    isInTrial: false,
+    isSubscriptionActive: false
   },
   {
     id: '4',
@@ -64,7 +71,9 @@ const mockUsers: User[] = [
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Anna',
     tariffId: '2',
     storeCount: 2,
-    isInTrial: false
+    isInTrial: false,
+    isSubscriptionActive: true,
+    subscriptionEndDate: '2024-11-05T23:59:59Z'
   },
   {
     id: '5',
@@ -77,7 +86,8 @@ const mockUsers: User[] = [
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Dmitry',
     tariffId: '1',
     storeCount: 0,
-    isInTrial: false
+    isInTrial: false,
+    isSubscriptionActive: false
   }
 ];
 
@@ -96,10 +106,23 @@ const calculateTrialEndDate = (): string => {
   return trialEndDate.toISOString();
 };
 
+const calculateSubscriptionEndDate = (months: number = 1): string => {
+  const endDate = new Date();
+  endDate.setMonth(endDate.getMonth() + months);
+  return endDate.toISOString();
+};
+
 const isUserInTrial = (trialEndDate?: string): boolean => {
   if (!trialEndDate) return false;
   const now = new Date();
   const endDate = new Date(trialEndDate);
+  return now < endDate;
+};
+
+const isSubscriptionActive = (subscriptionEndDate?: string): boolean => {
+  if (!subscriptionEndDate) return false;
+  const now = new Date();
+  const endDate = new Date(subscriptionEndDate);
   return now < endDate;
 };
 
@@ -199,7 +222,8 @@ export const registerUser = (name: string, email: string, password: string): Pro
         tariffId: DEFAULT_TARIFF_ID,
         storeCount: 0,
         trialEndDate: trialEndDate,
-        isInTrial: true
+        isInTrial: true,
+        isSubscriptionActive: false
       };
 
       users.push(newUser);
@@ -213,11 +237,20 @@ export const registerUser = (name: string, email: string, password: string): Pro
   });
 };
 
-const updateUsersTrialStatus = (usersList: User[]): User[] => {
+const updateUsersTrialAndSubscriptionStatus = (usersList: User[]): User[] => {
   return usersList.map(user => {
     if (user.trialEndDate) {
       user.isInTrial = isUserInTrial(user.trialEndDate);
     }
+    
+    if (user.subscriptionEndDate) {
+      user.isSubscriptionActive = isSubscriptionActive(user.subscriptionEndDate);
+      
+      if (!user.isSubscriptionActive) {
+        user.tariffId = DEFAULT_TARIFF_ID;
+      }
+    }
+    
     return user;
   });
 };
@@ -226,7 +259,7 @@ export const getUsers = (): Promise<User[]> => {
   return new Promise((resolve) => {
     users = JSON.parse(localStorage.getItem('mockUsers') || JSON.stringify(users));
     
-    const updatedUsers = updateUsersTrialStatus([...users]);
+    const updatedUsers = updateUsersTrialAndSubscriptionStatus([...users]);
     
     users = updatedUsers;
     saveUsers();
@@ -251,6 +284,11 @@ export const updateUser = (id: string, updates: Partial<User>): Promise<User | u
     setTimeout(() => {
       const index = users.findIndex(user => user.id === id);
       if (index !== -1) {
+        if (updates.isSubscriptionActive && users[index].isInTrial) {
+          updates.isInTrial = false;
+          updates.trialEndDate = undefined;
+        }
+        
         users[index] = { ...users[index], ...updates };
         saveUsers();
         resolve({...users[index]});
@@ -364,5 +402,117 @@ export const getTrialDaysRemaining = (userId: string): Promise<number> => {
       
       resolve(daysDiff);
     }, 300);
+  });
+};
+
+export const activateSubscription = (
+  userId: string, 
+  tariffId: string, 
+  months: number = 1
+): Promise<{success: boolean; user?: User; message?: string}> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const userIndex = users.findIndex(u => u.id === userId);
+      
+      if (userIndex === -1) {
+        resolve({
+          success: false,
+          message: "Пользователь не найден"
+        });
+        return;
+      }
+      
+      const subscriptionEndDate = calculateSubscriptionEndDate(months);
+      
+      users[userIndex] = {
+        ...users[userIndex],
+        tariffId,
+        isInTrial: false,
+        trialEndDate: undefined,
+        isSubscriptionActive: true,
+        subscriptionEndDate
+      };
+      
+      saveUsers();
+      
+      resolve({
+        success: true,
+        user: {...users[userIndex]},
+        message: `Подписка активирована до ${new Date(subscriptionEndDate).toLocaleDateString('ru-RU')}`
+      });
+    }, 500);
+  });
+};
+
+export const getSubscriptionStatus = (userId: string): Promise<{
+  isActive: boolean;
+  daysRemaining: number;
+  endDate?: string;
+  tariffId?: string;
+}> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const user = users.find(u => u.id === userId);
+      
+      if (!user || !user.subscriptionEndDate) {
+        resolve({
+          isActive: false,
+          daysRemaining: 0
+        });
+        return;
+      }
+      
+      const now = new Date();
+      const endDate = new Date(user.subscriptionEndDate);
+      const isActive = now < endDate;
+      
+      let daysRemaining = 0;
+      if (isActive) {
+        const timeDiff = endDate.getTime() - now.getTime();
+        daysRemaining = Math.ceil(timeDiff / (1000 * 3600 * 24));
+      }
+      
+      resolve({
+        isActive,
+        daysRemaining,
+        endDate: user.subscriptionEndDate,
+        tariffId: user.tariffId
+      });
+    }, 300);
+  });
+};
+
+export const renewSubscription = (
+  userId: string, 
+  months: number = 1
+): Promise<{success: boolean; user?: User; message?: string}> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const userIndex = users.findIndex(u => u.id === userId);
+      
+      if (userIndex === -1) {
+        resolve({
+          success: false,
+          message: "Пользователь не найден"
+        });
+        return;
+      }
+      
+      const subscriptionEndDate = calculateSubscriptionEndDate(months);
+      
+      users[userIndex] = {
+        ...users[userIndex],
+        isSubscriptionActive: true,
+        subscriptionEndDate
+      };
+      
+      saveUsers();
+      
+      resolve({
+        success: true,
+        user: {...users[userIndex]},
+        message: `Подписка продлена до ${new Date(subscriptionEndDate).toLocaleDateString('ru-RU')}`
+      });
+    }, 500);
   });
 };

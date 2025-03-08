@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,8 +18,13 @@ import {
   Trash2,
   CheckCircle2,
   Loader2,
+  AlertTriangle,
+  Clock,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState("profile");
@@ -28,8 +34,27 @@ const Profile = () => {
   const [expiryDate, setExpiryDate] = useState("");
   const [cvv, setCvv] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [currentSubscription, setCurrentSubscription] = useState<{
+    plan: string;
+    endDate: string;
+    daysRemaining: number;
+    isActive: boolean;
+  } | null>(null);
   const isMobile = useIsMobile();
   const { toast } = useToast();
+
+  // Simulate fetching subscription data on component mount
+  useEffect(() => {
+    // In a real app, this would come from the backend
+    const mockSubscriptionData = {
+      plan: "Бизнес",
+      endDate: "2024-12-31T23:59:59Z",
+      daysRemaining: 30,
+      isActive: true
+    };
+    
+    setCurrentSubscription(mockSubscriptionData);
+  }, []);
 
   const userData = {
     name: "Иван Иванов",
@@ -160,10 +185,27 @@ const Profile = () => {
       // Here we'll later integrate with the payment system
       await new Promise(resolve => setTimeout(resolve, 1500)); // Simulating API call
       
+      // Update the current subscription with the new plan
+      if (currentSubscription) {
+        // Calculate new end date (1 month from now)
+        const newEndDate = new Date();
+        newEndDate.setMonth(newEndDate.getMonth() + 1);
+        
+        setCurrentSubscription({
+          plan: selectedPlan,
+          endDate: newEndDate.toISOString(),
+          daysRemaining: 30,
+          isActive: true
+        });
+      }
+      
       toast({
         title: "Успешно",
         description: `Подписка ${selectedPlan} успешно оформлена`,
       });
+      
+      // Navigate to subscription tab to show the new subscription
+      setActiveTab("subscription");
     } catch (error) {
       toast({
         title: "Ошибка",
@@ -173,6 +215,24 @@ const Profile = () => {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).format(date);
+  };
+
+  const getSubscriptionProgress = (): number => {
+    if (!currentSubscription) return 0;
+    
+    // Calculate subscription progress
+    const daysInMonth = 30; // Approximation
+    const daysElapsed = daysInMonth - currentSubscription.daysRemaining;
+    return Math.min(100, Math.max(0, (daysElapsed / daysInMonth) * 100));
   };
 
   return (
@@ -259,6 +319,69 @@ const Profile = () => {
 
         <TabsContent value="subscription">
           <div className="space-y-6">
+            {/* Current Subscription Status */}
+            {currentSubscription && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Ваша текущая подписка</span>
+                    {currentSubscription.isActive ? (
+                      <Badge className="bg-green-600">Активна</Badge>
+                    ) : (
+                      <Badge variant="destructive">Истекла</Badge>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Тарифный план:</span>
+                    <span className="text-lg font-bold">{currentSubscription.plan}</span>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span>Прогресс подписки</span>
+                      <span>{Math.round(getSubscriptionProgress())}%</span>
+                    </div>
+                    <Progress value={getSubscriptionProgress()} className="h-2" />
+                  </div>
+                  
+                  <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Дата окончания:</span>
+                      <span className="font-medium">{formatDate(currentSubscription.endDate)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Осталось дней:</span>
+                      <Badge variant="outline">
+                        {currentSubscription.daysRemaining}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  {!currentSubscription.isActive && (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        Ваша подписка истекла. Некоторые функции могут быть недоступны. 
+                        Пожалуйста, продлите подписку.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  <Button 
+                    className="w-full mt-2"
+                    onClick={() => {
+                      setSelectedPlan(currentSubscription.plan);
+                      setActiveTab("payment");
+                    }}
+                  >
+                    {currentSubscription.isActive ? "Изменить тариф" : "Продлить подписку"}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {subscriptionPlans.map((plan) => (
                 <Card 
@@ -422,6 +545,22 @@ const Profile = () => {
                           {subscriptionPlans.find(plan => plan.name === selectedPlan)?.price}
                         </span>
                       </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Период:</span>
+                        <span className="font-medium">1 месяц</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Автопродление:</span>
+                        <span className="font-medium">Включено</span>
+                      </div>
+                      
+                      <Alert className="mt-2 bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-300">
+                        <Clock className="h-4 w-4" />
+                        <AlertDescription>
+                          С вашей карты будет автоматически списываться оплата каждый месяц.
+                          Вы можете отключить автопродление в любое время.
+                        </AlertDescription>
+                      </Alert>
                     </div>
                   </div>
                   

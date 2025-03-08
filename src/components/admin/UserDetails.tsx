@@ -1,6 +1,12 @@
 
 import { useState, useEffect } from "react";
-import { User, updateUser, getTrialDaysRemaining } from "@/services/userService";
+import { 
+  User, 
+  updateUser, 
+  getTrialDaysRemaining,
+  activateSubscription,
+  getSubscriptionStatus
+} from "@/services/userService";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +24,8 @@ import {
   AlertTriangle,
   BadgeDollarSign,
   Badge as BadgeIcon,
-  TimerReset
+  TimerReset,
+  CheckCircle2
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -37,6 +44,12 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
   const [formData, setFormData] = useState<User>(user);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [trialDaysRemaining, setTrialDaysRemaining] = useState<number | null>(null);
+  const [subscriptionData, setSubscriptionData] = useState<{
+    isActive: boolean;
+    daysRemaining: number;
+    endDate?: string;
+  } | null>(null);
+  const [isActivatingSubscription, setIsActivatingSubscription] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -45,6 +58,12 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
     if (user.trialEndDate) {
       getTrialDaysRemaining(user.id).then(days => {
         setTrialDaysRemaining(days);
+      });
+    }
+    
+    if (user.subscriptionEndDate) {
+      getSubscriptionStatus(user.id).then(data => {
+        setSubscriptionData(data);
       });
     }
   }, [user]);
@@ -78,6 +97,47 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
       title: "Пробный период продлен",
       description: "Пробный период продлен на 7 дней",
     });
+  };
+
+  const handleActivateSubscription = async () => {
+    if (!formData.tariffId) {
+      toast({
+        title: "Ошибка",
+        description: "Выберите тарифный план",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsActivatingSubscription(true);
+    
+    try {
+      const result = await activateSubscription(formData.id, formData.tariffId, 1);
+      
+      if (result.success && result.user) {
+        setFormData(result.user);
+        onUserUpdated(result.user);
+        
+        getSubscriptionStatus(formData.id).then(data => {
+          setSubscriptionData(data);
+        });
+        
+        toast({
+          title: "Подписка активирована",
+          description: result.message,
+        });
+      } else {
+        throw new Error(result.message || "Ошибка активации подписки");
+      }
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось активировать подписку",
+        variant: "destructive"
+      });
+    } finally {
+      setIsActivatingSubscription(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -140,11 +200,37 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
     return Math.min(100, Math.max(0, (elapsed / trialDuration) * 100));
   };
 
+  const getSubscriptionProgress = (): number => {
+    if (!formData.subscriptionEndDate) return 0;
+    
+    // If we don't know when subscription started, assume it's one month before end date
+    const endDate = new Date(formData.subscriptionEndDate);
+    const startDate = new Date(endDate);
+    startDate.setMonth(startDate.getMonth() - 1);
+    
+    const currentDate = new Date();
+    const subscriptionDuration = endDate.getTime() - startDate.getTime();
+    const elapsed = currentDate.getTime() - startDate.getTime();
+    
+    return Math.min(100, Math.max(0, (elapsed / subscriptionDuration) * 100));
+  };
+
   const getTrialStatus = () => {
     if (!formData.trialEndDate) return 'not-applicable';
+    if (!formData.isInTrial) return 'not-applicable';
     
     const now = new Date();
     const endDate = new Date(formData.trialEndDate);
+    
+    if (now > endDate) return 'expired';
+    return 'active';
+  };
+
+  const getSubscriptionStatus = (): 'active' | 'expired' | 'not-applicable' => {
+    if (!formData.subscriptionEndDate) return 'not-applicable';
+    
+    const now = new Date();
+    const endDate = new Date(formData.subscriptionEndDate);
     
     if (now > endDate) return 'expired';
     return 'active';
@@ -163,6 +249,7 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
   };
 
   const trialStatus = getTrialStatus();
+  const subscriptionStatus = getSubscriptionStatus();
 
   return (
     <Card className="h-full overflow-hidden border border-gray-800 shadow-xl rounded-3xl bg-gray-900">
@@ -267,7 +354,7 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
           <div className="space-y-4">
             <h3 className="text-lg font-semibold flex items-center gap-2">
               <BadgeDollarSign className="h-5 w-5 text-blue-500" />
-              Тарифный план и пробный период
+              Тарифный план и подписка
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -301,97 +388,204 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
                     </Badge>
                   </div>
                 </div>
+                
+                {/* Subscription Activation Button */}
+                <Button
+                  type="button"
+                  className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={handleActivateSubscription}
+                  disabled={isActivatingSubscription}
+                >
+                  {isActivatingSubscription ? (
+                    <span className="flex items-center gap-2">
+                      <span className="animate-spin">&#8230;</span>
+                      Активация...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Активировать подписку на 1 месяц
+                    </span>
+                  )}
+                </Button>
               </div>
               
-              <div className="border border-gray-800 rounded-xl p-5 bg-gray-800 shadow-sm">
-                <div className="flex items-center gap-2 mb-3">
-                  <AlertTriangle className={`h-5 w-5 ${
-                    trialStatus === 'active' ? 'text-yellow-500' : 
-                    trialStatus === 'expired' ? 'text-red-500' : 
-                    'text-green-500'
-                  }`} />
-                  <span className="font-medium">Пробный период</span>
+              {/* Trial Period Card */}
+              {formData.isInTrial && (
+                <div className="border border-gray-800 rounded-xl p-5 bg-gray-800 shadow-sm">
+                  <div className="flex items-center gap-2 mb-3">
+                    <AlertTriangle className={`h-5 w-5 ${
+                      trialStatus === 'active' ? 'text-yellow-500' : 
+                      trialStatus === 'expired' ? 'text-red-500' : 
+                      'text-green-500'
+                    }`} />
+                    <span className="font-medium">Пробный период</span>
+                    
+                    {trialStatus === 'active' && (
+                      <Badge className="ml-auto bg-yellow-500">
+                        Активен
+                      </Badge>
+                    )}
+                    
+                    {trialStatus === 'expired' && (
+                      <Badge className="ml-auto bg-red-500">
+                        Истек
+                      </Badge>
+                    )}
+                  </div>
                   
-                  {trialStatus === 'active' && (
-                    <Badge className="ml-auto bg-yellow-500">
-                      Активен
-                    </Badge>
-                  )}
-                  
-                  {trialStatus === 'expired' && (
-                    <Badge className="ml-auto bg-red-500">
-                      Истек
-                    </Badge>
+                  {formData.trialEndDate && (
+                    <>
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-sm mb-1">
+                          <span>Прогресс</span>
+                          <span>{Math.round(getTrialProgress())}%</span>
+                        </div>
+                        <Progress 
+                          value={getTrialProgress()} 
+                          className={trialStatus === 'expired' ? "h-2 bg-red-950" : "h-2"}
+                        />
+                        
+                        {trialStatus === 'active' && (
+                          <Alert className="bg-yellow-900/30 border-yellow-800/30 text-yellow-300 mt-3">
+                            <AlertDescription className="flex flex-col gap-1">
+                              <div className="flex justify-between items-center">
+                                <span>Осталось дней:</span>
+                                <Badge variant="outline" className="bg-yellow-900/50 border-yellow-700 text-yellow-300">
+                                  {trialDaysRemaining !== null ? trialDaysRemaining : '...'}
+                                </Badge>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span>Дата окончания:</span>
+                                <span className="font-medium">{formatDate(formData.trialEndDate)}</span>
+                              </div>
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                        
+                        {trialStatus === 'expired' && (
+                          <Alert className="bg-red-900/30 border-red-800/30 text-red-300 mt-3">
+                            <AlertDescription className="flex flex-col gap-2">
+                              <div className="flex justify-between items-center">
+                                <span>Дата окончания:</span>
+                                <span className="font-medium">{formatDate(formData.trialEndDate)}</span>
+                              </div>
+                              <div>
+                                <span className="text-red-300">
+                                  Пробный период истек. {formData.status === 'active' ? 
+                                  'Пользователь может продолжать пользоваться системой с текущим тарифом.' : 
+                                  'Доступ пользователя ограничен из-за неактивного статуса.'}
+                                </span>
+                              </div>
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm" 
+                                className="mt-1 gap-1 bg-red-900/30 border-red-700 text-red-300 hover:bg-red-800/50"
+                                onClick={handleExtendTrial}
+                              >
+                                <TimerReset className="h-4 w-4" />
+                                <span>Продлить пробный период</span>
+                              </Button>
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
-                
-                {formData.trialEndDate ? (
-                  <>
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>Прогресс</span>
-                        <span>{Math.round(getTrialProgress())}%</span>
-                      </div>
-                      <Progress 
-                        value={getTrialProgress()} 
-                        className="h-2"
-                        indicator={trialStatus === 'expired' ? "bg-red-500" : undefined}
-                      />
-                      
-                      {trialStatus === 'active' && (
-                        <Alert className="bg-yellow-900/30 border-yellow-800/30 text-yellow-300 mt-3">
-                          <AlertDescription className="flex flex-col gap-1">
-                            <div className="flex justify-between items-center">
-                              <span>Осталось дней:</span>
-                              <Badge variant="outline" className="bg-yellow-900/50 border-yellow-700 text-yellow-300">
-                                {trialDaysRemaining !== null ? trialDaysRemaining : '...'}
-                              </Badge>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span>Дата окончания:</span>
-                              <span className="font-medium">{formatDate(formData.trialEndDate)}</span>
-                            </div>
-                          </AlertDescription>
-                        </Alert>
-                      )}
-                      
-                      {trialStatus === 'expired' && (
-                        <Alert className="bg-red-900/30 border-red-800/30 text-red-300 mt-3">
-                          <AlertDescription className="flex flex-col gap-2">
-                            <div className="flex justify-between items-center">
-                              <span>Дата окончания:</span>
-                              <span className="font-medium">{formatDate(formData.trialEndDate)}</span>
-                            </div>
-                            <div>
-                              <span className="text-red-300">
-                                Пробный период истек. {formData.status === 'active' ? 
-                                'Пользователь может продолжать пользоваться системой с текущим тарифом.' : 
-                                'Доступ пользователя ограничен из-за неактивного статуса.'}
-                              </span>
-                            </div>
-                            <Button 
-                              type="button" 
-                              variant="outline" 
-                              size="sm" 
-                              className="mt-1 gap-1 bg-red-900/30 border-red-700 text-red-300 hover:bg-red-800/50"
-                              onClick={handleExtendTrial}
-                            >
-                              <TimerReset className="h-4 w-4" />
-                              <span>Продлить пробный период</span>
-                            </Button>
-                          </AlertDescription>
-                        </Alert>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <div className="bg-gray-700 p-4 rounded-lg text-center">
-                    <span className="text-sm text-muted-foreground">
-                      Пробный период неактивен или истек
-                    </span>
+              )}
+              
+              {/* Subscription Status Card */}
+              {formData.subscriptionEndDate && (
+                <div className={`border border-gray-800 rounded-xl p-5 bg-gray-800 shadow-sm ${!formData.isInTrial ? 'md:col-span-2' : ''}`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <BadgeDollarSign className={`h-5 w-5 ${
+                      subscriptionStatus === 'active' ? 'text-green-500' : 'text-red-500'
+                    }`} />
+                    <span className="font-medium">Подписка</span>
+                    
+                    {subscriptionStatus === 'active' && (
+                      <Badge className="ml-auto bg-green-600">
+                        Активна
+                      </Badge>
+                    )}
+                    
+                    {subscriptionStatus === 'expired' && (
+                      <Badge className="ml-auto bg-red-500">
+                        Истекла
+                      </Badge>
+                    )}
                   </div>
-                )}
-              </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Прогресс подписки</span>
+                      <span>{Math.round(getSubscriptionProgress())}%</span>
+                    </div>
+                    <Progress 
+                      value={getSubscriptionProgress()} 
+                      className={subscriptionStatus === 'expired' ? "h-2 bg-red-950" : "h-2"}
+                    />
+                    
+                    {subscriptionStatus === 'active' && (
+                      <Alert className="bg-green-900/30 border-green-800/30 text-green-300 mt-3">
+                        <AlertDescription className="flex flex-col gap-1">
+                          <div className="flex justify-between items-center">
+                            <span>Тариф:</span>
+                            <Badge variant="outline" className="bg-green-900/50 border-green-700 text-green-300">
+                              {getTariffName(formData.tariffId)}
+                            </Badge>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span>Дата окончания:</span>
+                            <span className="font-medium">{formatDate(formData.subscriptionEndDate)}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span>Осталось дней:</span>
+                            <Badge variant="outline" className="bg-green-900/50 border-green-700 text-green-300">
+                              {subscriptionData?.daysRemaining || '...'}
+                            </Badge>
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    
+                    {subscriptionStatus === 'expired' && (
+                      <Alert className="bg-red-900/30 border-red-800/30 text-red-300 mt-3">
+                        <AlertDescription className="flex flex-col gap-2">
+                          <div className="flex justify-between items-center">
+                            <span>Дата окончания:</span>
+                            <span className="font-medium">{formatDate(formData.subscriptionEndDate)}</span>
+                          </div>
+                          <div>
+                            <span className="text-red-300">
+                              Подписка истекла. {formData.status === 'active' ? 
+                              'Пользователь может продолжать пользоваться системой с базовым тарифом.' : 
+                              'Доступ пользователя ограничен из-за неактивного статуса.'}
+                            </span>
+                          </div>
+                          <Button 
+                            type="button"
+                            onClick={handleActivateSubscription}
+                            disabled={isActivatingSubscription}
+                            className="mt-1 gap-1 bg-red-900/30 border-red-700 text-red-300 hover:bg-red-800/50"
+                          >
+                            {isActivatingSubscription ? (
+                              <span className="animate-spin">&#8230;</span>
+                            ) : (
+                              <>
+                                <BadgeDollarSign className="h-4 w-4" />
+                                <span>Продлить подписку</span>
+                              </>
+                            )}
+                          </Button>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           
@@ -431,11 +625,11 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
                 </div>
               )}
               
-              {formData.status === 'active' && trialStatus === 'expired' && (
+              {formData.status === 'active' && subscriptionStatus === 'expired' && !formData.isInTrial && (
                 <div className="col-span-1 sm:col-span-2">
                   <Alert className="bg-blue-900/20 border-blue-800/30">
                     <AlertDescription>
-                      Пробный период истек, но пользователь может продолжать использовать систему с выбранным тарифом: <strong>{getTariffName(formData.tariffId)}</strong>.
+                      Подписка истекла, но пользователь может продолжать использовать систему с базовым функционалом. Для восстановления полного доступа необходимо продлить подписку.
                     </AlertDescription>
                   </Alert>
                 </div>
