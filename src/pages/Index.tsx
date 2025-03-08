@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Chart from "@/components/Chart";
@@ -13,11 +13,21 @@ import MainLayout from "@/components/layout/MainLayout";
 import AnalyticsSection from "@/components/analytics/AnalyticsSection";
 import Dashboard from "@/components/dashboard/Dashboard";
 import { getProductProfitabilityData } from "@/utils/storeUtils";
+import { User } from "@/services/userService";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
   const isMobile = useIsMobile();
   const [selectedStore, setSelectedStore] = useState<{id: string; apiKey: string} | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    // Load user data from localStorage
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
 
   const getProductsData = () => {
     const selectedStore = getSelectedStore();
@@ -58,6 +68,10 @@ const Index = () => {
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
+  };
+
+  const handleUserUpdated = (updatedUser: User) => {
+    setUser(updatedUser);
   };
 
   const renderContent = () => {
@@ -132,7 +146,7 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <Profile />
+            <Profile user={user} onUserUpdated={handleUserUpdated} />
           </motion.div>
         );
       default:
