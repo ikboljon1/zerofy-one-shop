@@ -42,6 +42,13 @@ import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 
+interface SavedCard {
+  cardNumber: string;
+  expiryDate: string;
+  cvv: string;
+  lastFour: string;
+}
+
 const Profile = () => {
   const [activeTab, setActiveTab] = useState("profile");
   const [selectedPlan, setSelectedPlan] = useState("");
@@ -49,6 +56,7 @@ const Profile = () => {
   const [cardNumber, setCardNumber] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [cvv, setCvv] = useState("");
+  const [savedCard, setSavedCard] = useState<SavedCard | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentSubscription, setCurrentSubscription] = useState<{
     plan: string;
@@ -77,6 +85,11 @@ const Profile = () => {
       
       setCurrentSubscription(mockSubscriptionData);
       setIsSubscriptionExpired(!mockSubscriptionData.isActive);
+    }
+    
+    const storedCard = localStorage.getItem('savedCard');
+    if (storedCard) {
+      setSavedCard(JSON.parse(storedCard));
     }
   }, []);
 
@@ -197,6 +210,25 @@ const Profile = () => {
     setActiveTab("payment");
   };
 
+  const formatCardNumber = (value: string): string => {
+    const digits = value.replace(/\D/g, '');
+    const formatted = digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+    return formatted.substring(0, 19);
+  };
+
+  const formatExpiryDate = (value: string): string => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length > 2) {
+      return `${digits.substring(0, 2)}/${digits.substring(2, 4)}`;
+    }
+    return digits;
+  };
+
+  const getLastFourDigits = (cardNum: string): string => {
+    const digits = cardNum.replace(/\D/g, '');
+    return digits.slice(-4);
+  };
+
   const handleAddCard = async () => {
     if (isAddingCard) {
       if (!cardNumber || !expiryDate || !cvv) {
@@ -208,14 +240,54 @@ const Profile = () => {
         return;
       }
 
+      const cardDigits = cardNumber.replace(/\s/g, '');
+      if (cardDigits.length !== 16 || !/^\d+$/.test(cardDigits)) {
+        toast({
+          title: "Ошибка",
+          description: "Пожалуйста, введите корректный номер карты (16 цифр)",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!/^\d{2}\/\d{2}$/.test(expiryDate)) {
+        toast({
+          title: "Ошибка",
+          description: "Пожалуйста, введите дату в формате ММ/ГГ",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (cvv.length !== 3 || !/^\d+$/.test(cvv)) {
+        toast({
+          title: "Ошибка",
+          description: "CVV должен состоять из 3 цифр",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setIsProcessing(true);
       
       try {
         await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        const newCard: SavedCard = {
+          cardNumber: cardNumber.replace(/\s/g, ''),
+          expiryDate,
+          cvv,
+          lastFour: getLastFourDigits(cardNumber)
+        };
+        
+        localStorage.setItem('savedCard', JSON.stringify(newCard));
+        setSavedCard(newCard);
+        
         toast({
           title: "Карта добавлена",
           description: "Ваша карта успешно добавлена",
         });
+        
         setIsAddingCard(false);
         setCardNumber("");
         setExpiryDate("");
@@ -232,6 +304,15 @@ const Profile = () => {
     } else {
       setIsAddingCard(true);
     }
+  };
+
+  const handleDeleteCard = () => {
+    localStorage.removeItem('savedCard');
+    setSavedCard(null);
+    toast({
+      title: "Карта удалена",
+      description: "Ваша карта успешно удалена",
+    });
   };
 
   const handlePayment = async () => {
@@ -766,7 +847,42 @@ const Profile = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {!isAddingCard ? (
+              {savedCard ? (
+                <div className="space-y-4">
+                  <div className="bg-card rounded-lg p-4 border">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                          <CreditCard className="h-6 w-6 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium">Карта **** **** **** {savedCard.lastFour}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Срок действия: {savedCard.expiryDate}
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="destructive" 
+                        size="sm" 
+                        className="flex items-center gap-2"
+                        onClick={handleDeleteCard}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Удалить
+                      </Button>
+                    </div>
+                  </div>
+                  <Button 
+                    className="w-full flex items-center justify-center gap-2"
+                    onClick={() => setIsAddingCard(true)}
+                    variant="outline"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Добавить еще одну карту
+                  </Button>
+                </div>
+              ) : !isAddingCard ? (
                 <div className="space-y-4">
                   <div className="bg-card rounded-lg p-4 border">
                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -810,7 +926,8 @@ const Profile = () => {
                       id="cardNumber"
                       placeholder="1234 5678 9012 3456"
                       value={cardNumber}
-                      onChange={(e) => setCardNumber(e.target.value)}
+                      onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
+                      maxLength={19}
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -820,7 +937,8 @@ const Profile = () => {
                         id="expiryDate"
                         placeholder="MM/YY"
                         value={expiryDate}
-                        onChange={(e) => setExpiryDate(e.target.value)}
+                        onChange={(e) => setExpiryDate(formatExpiryDate(e.target.value))}
+                        maxLength={5}
                       />
                     </div>
                     <div className="space-y-2">
@@ -831,7 +949,7 @@ const Profile = () => {
                         maxLength={3}
                         placeholder="123"
                         value={cvv}
-                        onChange={(e) => setCvv(e.target.value)}
+                        onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').substring(0, 3))}
                       />
                     </div>
                   </div>
@@ -911,7 +1029,7 @@ const Profile = () => {
                   <Button 
                     className="w-full"
                     onClick={handlePayment}
-                    disabled={isProcessing}
+                    disabled={isProcessing || (!savedCard && !isAddingCard)}
                   >
                     {isProcessing ? (
                       <>
@@ -925,6 +1043,15 @@ const Profile = () => {
                       </>
                     )}
                   </Button>
+                  
+                  {!savedCard && !isAddingCard && (
+                    <Alert variant="destructive" className="mt-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        Для оплаты необходимо добавить карту
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </div>
               )}
             </CardContent>
