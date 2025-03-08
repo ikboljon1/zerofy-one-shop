@@ -18,6 +18,7 @@ import ProductList from "./components/ProductList";
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
 import { getAdvertCosts, getAdvertBalance, getAdvertPayments } from "@/services/advertisingApi";
 import { formatCurrency, roundToTwoDecimals } from "@/utils/formatCurrency";
+import { getAnalyticsData } from "@/utils/storeUtils";
 
 interface AnalyticsData {
   currentPeriod: {
@@ -144,12 +145,30 @@ const AnalyticsSection = () => {
       const selectedStore = getSelectedStore();
       
       if (!selectedStore) {
-        toast.error({
+        toast({
           title: "Внимание",
           description: "Выберите основной магазин в разделе 'Магазины'"
         });
         setIsLoading(false);
         setHasError(true);
+        return;
+      }
+
+      const cachedData = getAnalyticsData(selectedStore.id);
+      const shouldRefresh = !cachedData.data || 
+                           (Date.now() - cachedData.timestamp > 5 * 60 * 1000);
+      
+      if (!shouldRefresh && cachedData.data) {
+        console.log('Using cached analytics data');
+        setData(cachedData.data);
+        setPenalties(cachedData.penalties || []);
+        setDeductions(cachedData.deductions || []);
+        setReturns(cachedData.returns || []);
+        setDeductionsTimeline(cachedData.deductionsTimeline || []);
+        setProductAdvertisingData(cachedData.productAdvertisingData || []);
+        setAdvertisingBreakdown(cachedData.advertisingBreakdown || { search: 0 });
+        setDataTimestamp(cachedData.timestamp);
+        setIsLoading(false);
         return;
       }
 
@@ -312,9 +331,24 @@ const AnalyticsSection = () => {
         
         setDeductionsTimeline(newDeductionsTimeline);
         
+        const analyticsDataToCache = {
+          data: modifiedData,
+          penalties: roundedPenalties || [],
+          deductions: roundedDeductions || [],
+          returns: roundedReturns || [],
+          deductionsTimeline: newDeductionsTimeline,
+          productAdvertisingData: topProducts || [],
+          advertisingBreakdown: { search: totalAdvertisingCost },
+          timestamp: Date.now(),
+          dateFrom: dateFrom.toISOString(),
+          dateTo: dateTo.toISOString()
+        };
+        
+        localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsDataToCache));
+        
         setDataTimestamp(Date.now());
         
-        toast.success({
+        toast({
           title: "Успех",
           description: "Аналитические данные успешно обновлены",
         });
@@ -322,7 +356,7 @@ const AnalyticsSection = () => {
     } catch (error) {
       console.error('Error fetching analytics data:', error);
       setHasError(true);
-      toast.error({
+      toast({
         title: "Ошибка",
         description: "Не удалось загрузить аналитические данные",
       });
@@ -370,6 +404,12 @@ const AnalyticsSection = () => {
       setDeductions([]);
       setProductAdvertisingData([]);
       setReturns([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedStoreId) {
+      fetchData();
     }
   }, [selectedStoreId]);
 
