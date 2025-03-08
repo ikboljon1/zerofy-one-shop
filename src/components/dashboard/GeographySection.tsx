@@ -1,10 +1,10 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
-import { Package, Info, ShoppingBag, MapPin, DollarSign } from "lucide-react";
+import { Package, Info, ShoppingBag, MapPin, Tag } from "lucide-react";
 import { WildberriesSale } from "@/types/store";
 import { format, subDays } from "date-fns";
-import { productAdvertisingData } from "@/components/analytics/data/productAdvertisingData";
 
 interface ProductSalesDistribution {
   name: string;
@@ -20,7 +20,15 @@ interface GeographySectionProps {
 
 const COLORS = ["#8B5CF6", "#EC4899", "#10B981", "#FF8042", "#A86EE7"];
 
-// Sample advertising data by date
+// Sample advertising data by cabinet and date
+const advertisingExpensesByCabinet = [
+  { name: "Кабинет №1", value: 15000 },
+  { name: "Кабинет №2", value: 8700 },
+  { name: "Кабинет №3", value: 5300 },
+  { name: "Кабинет №4", value: 3200 },
+  { name: "Другие кабинеты", value: 1800 }
+];
+
 const advertisingExpensesByDate = [
   { date: format(subDays(new Date(), 6), 'dd.MM'), value: 2100 },
   { date: format(subDays(new Date(), 5), 'dd.MM'), value: 2500 },
@@ -103,20 +111,15 @@ const GeographySection: React.FC<GeographySectionProps> = ({
 
   // Render advertising expenses by cabinet as pie chart
   const renderAdvertisingExpensesByCabinet = () => {
-    if (!productAdvertisingData || productAdvertisingData.length === 0) {
+    if (!advertisingExpensesByCabinet || advertisingExpensesByCabinet.length === 0) {
       return <p className="text-muted-foreground text-center py-4">Нет данных</p>;
     }
-
-    const cabinetData = productAdvertisingData.map(item => ({
-      name: item.name,
-      value: item.value
-    }));
 
     return (
       <ResponsiveContainer width="100%" height={280}>
         <PieChart>
           <Pie
-            data={cabinetData}
+            data={advertisingExpensesByCabinet}
             cx="50%"
             cy="50%"
             labelLine={false}
@@ -127,8 +130,8 @@ const GeographySection: React.FC<GeographySectionProps> = ({
             nameKey="name"
             label={({ name, value }) => `${name}: ${value} ₽`}
           >
-            {cabinetData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
+            {advertisingExpensesByCabinet.map((_, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
           <Tooltip 
@@ -187,22 +190,22 @@ const GeographySection: React.FC<GeographySectionProps> = ({
 
   // Render advertising expenses distribution list
   const renderAdvertisingExpensesList = () => {
-    if (!productAdvertisingData || productAdvertisingData.length === 0) {
+    const data = activeView === 'cabinets' ? advertisingExpensesByCabinet : [];
+    
+    if (!data || data.length === 0) {
       return <p className="text-muted-foreground text-center py-4">Нет данных</p>;
     }
 
-    const totalValue = productAdvertisingData.reduce((sum, item) => sum + item.value, 0);
-
     return (
       <div className="space-y-4">
-        {productAdvertisingData.map((item, index) => (
+        {data.map((item, index) => (
           <div key={index} className="flex justify-between items-center">
             <div className="flex-1">
               <div className="text-sm font-medium">{item.name}</div>
               <div className="text-xs text-muted-foreground">{item.value} ₽</div>
             </div>
             <div className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/20 text-purple-800 dark:text-purple-300">
-              {((item.value / totalValue) * 100).toFixed(1)}%
+              {((item.value / data.reduce((sum, i) => sum + i.value, 0)) * 100).toFixed(1)}%
             </div>
           </div>
         ))}
@@ -234,8 +237,8 @@ const GeographySection: React.FC<GeographySectionProps> = ({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
-              <DollarSign className="mr-2 h-5 w-5" />
-              Расходы на рекламу по кабинетам
+              <Tag className="mr-2 h-5 w-5" />
+              Расходы на рекламу по товарам
             </CardTitle>
             <CardDescription>
               <div className="flex justify-between items-center">
