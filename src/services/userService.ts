@@ -103,7 +103,19 @@ export const authenticate = (email: string, password: string): Promise<{ success
         return;
       }
       
-      // If not admin, could implement regular user auth here
+      // Check if user exists in mockUsers
+      const user = mockUsers.find(u => u.email === email);
+      if (user) {
+        // In a real app, we would check the password here
+        // For the demo, we'll just accept any password for existing users
+        user.lastLogin = new Date().toISOString();
+        resolve({ 
+          success: true, 
+          user 
+        });
+        return;
+      }
+      
       resolve({ 
         success: false, 
         errorMessage: 'Неверный логин или пароль' 
@@ -112,12 +124,49 @@ export const authenticate = (email: string, password: string): Promise<{ success
   });
 };
 
+// Function to register a new user
+export const registerUser = (name: string, email: string, password: string): Promise<{ success: boolean; user?: User; errorMessage?: string }> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      // Check if user already exists
+      const existingUser = mockUsers.find(u => u.email === email);
+      if (existingUser) {
+        resolve({
+          success: false,
+          errorMessage: 'Пользователь с таким email уже существует'
+        });
+        return;
+      }
+
+      // Create new user
+      const newUser: User = {
+        id: String(mockUsers.length + 1),
+        name,
+        email,
+        role: 'user',
+        status: 'active',
+        registeredAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name.replace(/\s/g, '')}`
+      };
+
+      // Add to users array
+      mockUsers.push(newUser);
+
+      resolve({
+        success: true,
+        user: newUser
+      });
+    }, 800);
+  });
+};
+
 // Function to get all users
 export const getUsers = (): Promise<User[]> => {
   return new Promise((resolve) => {
     // Simulate API delay
     setTimeout(() => {
-      resolve(mockUsers);
+      resolve([...mockUsers]);
     }, 500);
   });
 };
@@ -127,7 +176,7 @@ export const getUserById = (id: string): Promise<User | undefined> => {
   return new Promise((resolve) => {
     setTimeout(() => {
       const user = mockUsers.find(user => user.id === id);
-      resolve(user);
+      resolve(user ? {...user} : undefined);
     }, 300);
   });
 };
@@ -139,7 +188,7 @@ export const updateUser = (id: string, updates: Partial<User>): Promise<User | u
       const index = mockUsers.findIndex(user => user.id === id);
       if (index !== -1) {
         mockUsers[index] = { ...mockUsers[index], ...updates };
-        resolve(mockUsers[index]);
+        resolve({...mockUsers[index]});
       } else {
         resolve(undefined);
       }
@@ -153,10 +202,11 @@ export const addUser = (user: Omit<User, 'id'>): Promise<User> => {
     setTimeout(() => {
       const newUser = {
         ...user,
-        id: String(mockUsers.length + 1)
+        id: String(mockUsers.length + 1),
+        registeredAt: user.registeredAt || new Date().toISOString()
       };
       mockUsers.push(newUser);
-      resolve(newUser);
+      resolve({...newUser});
     }, 500);
   });
 };

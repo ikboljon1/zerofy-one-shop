@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { User } from "@/services/userService";
+import { useState, useEffect } from "react";
+import { User, getUsers } from "@/services/userService";
 import UserList from "@/components/admin/UserList";
 import UserDetails from "@/components/admin/UserDetails";
 import AddUserModal from "@/components/admin/AddUserModal";
@@ -14,13 +14,22 @@ import {
   FileText, 
   Users,
   User as UserIcon,
+  BadgeDollarSign,
+  Tag,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import TariffSection from "@/components/admin/TariffSection";
 
 export default function Admin() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("users");
+  const [userCount, setUserCount] = useState(0);
+
+  useEffect(() => {
+    // Fetch the user count
+    getUsers().then(users => setUserCount(users.length));
+  }, []);
 
   const handleSelectUser = (user: User) => {
     setSelectedUser(user);
@@ -31,13 +40,15 @@ export default function Admin() {
   };
 
   const handleUserUpdated = (user: User) => {
-    // In a real app, we might update a central state or refetch users
     setSelectedUser(user);
+    // Refresh user count
+    getUsers().then(users => setUserCount(users.length));
   };
 
   const handleUserAdded = (user: User) => {
-    // In a real app, we might update a central state or refetch users
     setSelectedUser(null);
+    // Refresh user count
+    getUsers().then(users => setUserCount(users.length));
   };
 
   // Check if admin is logged in
@@ -81,8 +92,8 @@ export default function Admin() {
       >
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Панель администратора</h1>
-            <p className="text-muted-foreground">Управление пользователями и системными настройками</p>
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Панель администратора</h1>
+            <p className="text-gray-600 dark:text-gray-300">Управление пользователями и системными настройками</p>
           </div>
         </div>
 
@@ -91,6 +102,13 @@ export default function Admin() {
             <TabsTrigger value="users" className="flex items-center gap-2 data-[state=active]:bg-blue-50 dark:data-[state=active]:bg-blue-900/30">
               <Users className="h-4 w-4" />
               <span>Пользователи</span>
+              <span className="ml-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100 text-xs rounded-full px-2 py-0.5">
+                {userCount}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="tariffs" className="flex items-center gap-2 data-[state=active]:bg-blue-50 dark:data-[state=active]:bg-blue-900/30">
+              <BadgeDollarSign className="h-4 w-4" />
+              <span>Тарифы</span>
             </TabsTrigger>
             <TabsTrigger value="roles" className="flex items-center gap-2 data-[state=active]:bg-blue-50 dark:data-[state=active]:bg-blue-900/30">
               <ShieldAlert className="h-4 w-4" />
@@ -131,8 +149,12 @@ export default function Admin() {
             </div>
           </TabsContent>
 
+          <TabsContent value="tariffs">
+            <TariffSection />
+          </TabsContent>
+
           <TabsContent value="roles">
-            <div className="flex flex-col items-center justify-center h-[50vh] text-muted-foreground">
+            <div className="flex flex-col items-center justify-center h-[50vh] text-gray-500 dark:text-gray-400">
               <ShieldAlert className="h-16 w-16 mb-4 opacity-30" />
               <h3 className="text-xl font-medium">Управление ролями и правами</h3>
               <p className="mt-2">Этот раздел находится в разработке</p>
@@ -140,7 +162,7 @@ export default function Admin() {
           </TabsContent>
 
           <TabsContent value="logs">
-            <div className="flex flex-col items-center justify-center h-[50vh] text-muted-foreground">
+            <div className="flex flex-col items-center justify-center h-[50vh] text-gray-500 dark:text-gray-400">
               <FileText className="h-16 w-16 mb-4 opacity-30" />
               <h3 className="text-xl font-medium">Журналы действий</h3>
               <p className="mt-2">Этот раздел находится в разработке</p>
@@ -148,7 +170,7 @@ export default function Admin() {
           </TabsContent>
 
           <TabsContent value="database">
-            <div className="flex flex-col items-center justify-center h-[50vh] text-muted-foreground">
+            <div className="flex flex-col items-center justify-center h-[50vh] text-gray-500 dark:text-gray-400">
               <Database className="h-16 w-16 mb-4 opacity-30" />
               <h3 className="text-xl font-medium">Управление базой данных</h3>
               <p className="mt-2">Этот раздел находится в разработке</p>
@@ -156,7 +178,7 @@ export default function Admin() {
           </TabsContent>
 
           <TabsContent value="settings">
-            <div className="flex flex-col items-center justify-center h-[50vh] text-muted-foreground">
+            <div className="flex flex-col items-center justify-center h-[50vh] text-gray-500 dark:text-gray-400">
               <Settings className="h-16 w-16 mb-4 opacity-30" />
               <h3 className="text-xl font-medium">Настройки системы</h3>
               <p className="mt-2">Этот раздел находится в разработке</p>
@@ -164,7 +186,7 @@ export default function Admin() {
           </TabsContent>
 
           <TabsContent value="statistics">
-            <div className="flex flex-col items-center justify-center h-[50vh] text-muted-foreground">
+            <div className="flex flex-col items-center justify-center h-[50vh] text-gray-500 dark:text-gray-400">
               <BarChart3 className="h-16 w-16 mb-4 opacity-30" />
               <h3 className="text-xl font-medium">Статистика использования</h3>
               <p className="mt-2">Этот раздел находится в разработке</p>
