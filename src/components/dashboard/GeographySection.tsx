@@ -108,11 +108,11 @@ const GeographySection: React.FC<GeographySectionProps> = ({
       return <p className="text-muted-foreground text-center py-4">Нет данных</p>;
     }
 
-    // Include color property explicitly when mapping the data
+    // Include all properties from productAdvertisingData, including color
     const cabinetData = productAdvertisingData.map(item => ({
       name: item.name,
       value: item.value,
-      color: item.color // Now TypeScript knows this exists because we're specifically mapping it
+      color: item.color
     }));
 
     return (
