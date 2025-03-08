@@ -17,7 +17,8 @@ import {
   Clock,
   AlertTriangle,
   BadgeDollarSign,
-  Badge as BadgeIcon
+  Badge as BadgeIcon,
+  TimerReset
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -41,7 +42,7 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
   useEffect(() => {
     setFormData(user);
     
-    if (user.isInTrial && user.trialEndDate) {
+    if (user.trialEndDate) {
       getTrialDaysRemaining(user.id).then(days => {
         setTrialDaysRemaining(days);
       });
@@ -59,6 +60,24 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
 
   const handleStatusChange = (checked: boolean) => {
     setFormData(prev => ({ ...prev, status: checked ? 'active' : 'inactive' }));
+  };
+
+  const handleExtendTrial = () => {
+    // Calculate new trial end date (extend by 7 days)
+    const currentDate = new Date();
+    const newTrialEndDate = new Date();
+    newTrialEndDate.setDate(currentDate.getDate() + 7);
+    
+    setFormData(prev => ({ 
+      ...prev, 
+      isInTrial: true,
+      trialEndDate: newTrialEndDate.toISOString() 
+    }));
+    
+    toast({
+      title: "Пробный период продлен",
+      description: "Пробный период продлен на 7 дней",
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -115,10 +134,20 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
     const endDate = new Date(formData.trialEndDate);
     const currentDate = new Date();
     
-    const trialDuration = 3 * 24 * 60 * 60 * 1000;
+    const trialDuration = endDate.getTime() - startDate.getTime();
     const elapsed = currentDate.getTime() - startDate.getTime();
     
     return Math.min(100, Math.max(0, (elapsed / trialDuration) * 100));
+  };
+
+  const getTrialStatus = () => {
+    if (!formData.trialEndDate) return 'not-applicable';
+    
+    const now = new Date();
+    const endDate = new Date(formData.trialEndDate);
+    
+    if (now > endDate) return 'expired';
+    return 'active';
   };
 
   const getTariffName = (tariffId?: string): string => {
@@ -132,6 +161,8 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
       default: return `Тариф ${tariffId}`;
     }
   };
+
+  const trialStatus = getTrialStatus();
 
   return (
     <Card className="h-full overflow-hidden border border-gray-800 shadow-xl rounded-3xl bg-gray-900">
@@ -274,38 +305,83 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
               
               <div className="border border-gray-800 rounded-xl p-5 bg-gray-800 shadow-sm">
                 <div className="flex items-center gap-2 mb-3">
-                  <AlertTriangle className={`h-5 w-5 ${formData.isInTrial ? 'text-yellow-500' : 'text-green-500'}`} />
+                  <AlertTriangle className={`h-5 w-5 ${
+                    trialStatus === 'active' ? 'text-yellow-500' : 
+                    trialStatus === 'expired' ? 'text-red-500' : 
+                    'text-green-500'
+                  }`} />
                   <span className="font-medium">Пробный период</span>
-                  {formData.isInTrial && (
+                  
+                  {trialStatus === 'active' && (
                     <Badge className="ml-auto bg-yellow-500">
                       Активен
                     </Badge>
                   )}
+                  
+                  {trialStatus === 'expired' && (
+                    <Badge className="ml-auto bg-red-500">
+                      Истек
+                    </Badge>
+                  )}
                 </div>
                 
-                {formData.isInTrial && formData.trialEndDate ? (
+                {formData.trialEndDate ? (
                   <>
                     <div className="space-y-3">
                       <div className="flex justify-between text-sm mb-1">
                         <span>Прогресс</span>
                         <span>{Math.round(getTrialProgress())}%</span>
                       </div>
-                      <Progress value={getTrialProgress()} className="h-2" />
+                      <Progress 
+                        value={getTrialProgress()} 
+                        className="h-2"
+                        indicator={trialStatus === 'expired' ? "bg-red-500" : undefined}
+                      />
                       
-                      <Alert className="bg-yellow-900/30 border-yellow-800/30 text-yellow-300 mt-3">
-                        <AlertDescription className="flex flex-col gap-1">
-                          <div className="flex justify-between items-center">
-                            <span>Осталось дней:</span>
-                            <Badge variant="outline" className="bg-yellow-900/50 border-yellow-700 text-yellow-300">
-                              {trialDaysRemaining !== null ? trialDaysRemaining : '...'}
-                            </Badge>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span>Дата окончания:</span>
-                            <span className="font-medium">{formatDate(formData.trialEndDate)}</span>
-                          </div>
-                        </AlertDescription>
-                      </Alert>
+                      {trialStatus === 'active' && (
+                        <Alert className="bg-yellow-900/30 border-yellow-800/30 text-yellow-300 mt-3">
+                          <AlertDescription className="flex flex-col gap-1">
+                            <div className="flex justify-between items-center">
+                              <span>Осталось дней:</span>
+                              <Badge variant="outline" className="bg-yellow-900/50 border-yellow-700 text-yellow-300">
+                                {trialDaysRemaining !== null ? trialDaysRemaining : '...'}
+                              </Badge>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span>Дата окончания:</span>
+                              <span className="font-medium">{formatDate(formData.trialEndDate)}</span>
+                            </div>
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                      
+                      {trialStatus === 'expired' && (
+                        <Alert className="bg-red-900/30 border-red-800/30 text-red-300 mt-3">
+                          <AlertDescription className="flex flex-col gap-2">
+                            <div className="flex justify-between items-center">
+                              <span>Дата окончания:</span>
+                              <span className="font-medium">{formatDate(formData.trialEndDate)}</span>
+                            </div>
+                            <div>
+                              <span className="text-red-300">
+                                Пробный период истек. {formData.status === 'active' ? 
+                                'Пользователь может продолжать пользоваться системой с текущим тарифом.' : 
+                                'Доступ пользователя ограничен из-за неактивного статуса.'}
+                              </span>
+                            </div>
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              size="sm" 
+                              className="mt-1 gap-1 bg-red-900/30 border-red-700 text-red-300 hover:bg-red-800/50"
+                              onClick={handleExtendTrial}
+                            >
+                              <TimerReset className="h-4 w-4" />
+                              <span>Продлить пробный период</span>
+                            </Button>
+                          </AlertDescription>
+                        </Alert>
+                      )}
                     </div>
                   </>
                 ) : (
@@ -343,6 +419,27 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
                 </div>
                 <p className="font-medium">{formData.lastLogin ? formatDate(formData.lastLogin) : "Нет данных"}</p>
               </div>
+              
+              {formData.status === 'inactive' && (
+                <div className="col-span-1 sm:col-span-2">
+                  <Alert className="bg-gray-800 border-gray-700">
+                    <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                    <AlertDescription>
+                      Аккаунт пользователя неактивен. Пользователь не может войти в систему.
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
+              
+              {formData.status === 'active' && trialStatus === 'expired' && (
+                <div className="col-span-1 sm:col-span-2">
+                  <Alert className="bg-blue-900/20 border-blue-800/30">
+                    <AlertDescription>
+                      Пробный период истек, но пользователь может продолжать использовать систему с выбранным тарифом: <strong>{getTariffName(formData.tariffId)}</strong>.
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
