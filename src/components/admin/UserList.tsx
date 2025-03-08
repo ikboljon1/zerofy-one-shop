@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { User, getUsers } from "@/services/userService";
@@ -169,8 +170,8 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
   };
 
   return (
-    <Card className="h-full overflow-hidden border shadow-xl rounded-2xl bg-white dark:bg-gray-900">
-      <CardHeader className="p-5 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-950 border-b">
+    <Card className="h-full overflow-hidden border border-gray-800 shadow-xl rounded-2xl bg-gray-900">
+      <CardHeader className="p-5 bg-gradient-to-br from-gray-900 to-gray-950 border-b border-gray-800">
         <div className="flex justify-between items-center">
           <CardTitle className="text-xl font-bold flex items-center gap-2">
             <UserCheck className="h-5 w-5 text-blue-500" />
@@ -182,75 +183,75 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
                 <Button 
                   variant="outline" 
                   size="icon" 
-                  className="rounded-full"
+                  className="rounded-full bg-gray-800 border-gray-700 hover:bg-gray-700"
                 >
                   <Filter className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuContent align="end" className="w-56 bg-gray-800 border-gray-700">
                 <DropdownMenuLabel>Фильтры</DropdownMenuLabel>
-                <DropdownMenuSeparator />
+                <DropdownMenuSeparator className="bg-gray-700" />
                 
                 <DropdownMenuLabel className="text-xs text-muted-foreground">Статус</DropdownMenuLabel>
                 <DropdownMenuItem 
                   onClick={() => setStatusFilter("all")}
-                  className={statusFilter === "all" ? "bg-blue-50 dark:bg-blue-900/30" : ""}
+                  className={statusFilter === "all" ? "bg-blue-900/30" : "hover:bg-gray-700"}
                 >
                   Все
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => setStatusFilter("active")}
-                  className={statusFilter === "active" ? "bg-blue-50 dark:bg-blue-900/30" : ""}
+                  className={statusFilter === "active" ? "bg-blue-900/30" : "hover:bg-gray-700"}
                 >
                   Активные
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => setStatusFilter("inactive")}
-                  className={statusFilter === "inactive" ? "bg-blue-50 dark:bg-blue-900/30" : ""}
+                  className={statusFilter === "inactive" ? "bg-blue-900/30" : "hover:bg-gray-700"}
                 >
                   Неактивные
                 </DropdownMenuItem>
                 
-                <DropdownMenuSeparator />
+                <DropdownMenuSeparator className="bg-gray-700" />
                 
                 <DropdownMenuLabel className="text-xs text-muted-foreground">Роль</DropdownMenuLabel>
                 <DropdownMenuItem 
                   onClick={() => setRoleFilter("all")}
-                  className={roleFilter === "all" ? "bg-blue-50 dark:bg-blue-900/30" : ""}
+                  className={roleFilter === "all" ? "bg-blue-900/30" : "hover:bg-gray-700"}
                 >
                   Все
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => setRoleFilter("admin")}
-                  className={roleFilter === "admin" ? "bg-blue-50 dark:bg-blue-900/30" : ""}
+                  className={roleFilter === "admin" ? "bg-blue-900/30" : "hover:bg-gray-700"}
                 >
                   Администраторы
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => setRoleFilter("user")}
-                  className={roleFilter === "user" ? "bg-blue-50 dark:bg-blue-900/30" : ""}
+                  className={roleFilter === "user" ? "bg-blue-900/30" : "hover:bg-gray-700"}
                 >
                   Пользователи
                 </DropdownMenuItem>
                 
-                <DropdownMenuSeparator />
+                <DropdownMenuSeparator className="bg-gray-700" />
                 
                 <DropdownMenuLabel className="text-xs text-muted-foreground">Пробный период</DropdownMenuLabel>
                 <DropdownMenuItem 
                   onClick={() => setTrialFilter("all")}
-                  className={trialFilter === "all" ? "bg-blue-50 dark:bg-blue-900/30" : ""}
+                  className={trialFilter === "all" ? "bg-blue-900/30" : "hover:bg-gray-700"}
                 >
                   Все
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => setTrialFilter("trial")}
-                  className={trialFilter === "trial" ? "bg-blue-50 dark:bg-blue-900/30" : ""}
+                  className={trialFilter === "trial" ? "bg-blue-900/30" : "hover:bg-gray-700"}
                 >
                   На пробном периоде
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => setTrialFilter("notrial")}
-                  className={trialFilter === "notrial" ? "bg-blue-50 dark:bg-blue-900/30" : ""}
+                  className={trialFilter === "notrial" ? "bg-blue-900/30" : "hover:bg-gray-700"}
                 >
                   Без пробного периода
                 </DropdownMenuItem>
@@ -262,7 +263,7 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
                 <Button 
                   variant="outline" 
                   size="icon" 
-                  className="rounded-full"
+                  className="rounded-full bg-gray-800 border-gray-700 hover:bg-gray-700"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-layout">
                     <rect width="18" height="18" x="3" y="3" rx="2" />
@@ -271,11 +272,11 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
                   </svg>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setView("list")} className={view === "list" ? "bg-blue-50 dark:bg-blue-900/30" : ""}>
+              <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700">
+                <DropdownMenuItem onClick={() => setView("list")} className={view === "list" ? "bg-blue-900/30" : "hover:bg-gray-700"}>
                   Список
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setView("table")} className={view === "table" ? "bg-blue-50 dark:bg-blue-900/30" : ""}>
+                <DropdownMenuItem onClick={() => setView("table")} className={view === "table" ? "bg-blue-900/30" : "hover:bg-gray-700"}>
                   Таблица
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -296,12 +297,12 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
             placeholder="Поиск пользователей..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-white dark:bg-gray-800"
+            className="pl-9 bg-gray-800 border-gray-700"
           />
         </div>
       </CardHeader>
 
-      <CardContent className="p-0 h-[calc(100%-14rem)] overflow-auto">
+      <CardContent className="p-0 h-[calc(100%-14rem)] overflow-auto bg-gray-900">
         <AnimatePresence mode="wait">
           {loading ? (
             <div className="flex items-center justify-center py-20">
@@ -315,7 +316,7 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
               transition={{ duration: 0.2 }}
             >
               {view === "list" ? (
-                <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                <div className="divide-y divide-gray-800">
                   {paginatedUsers.map((user) => (
                     <motion.div
                       key={user.id}
@@ -323,13 +324,13 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.2 }}
-                      className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
+                      className="p-4 hover:bg-gray-800/50 cursor-pointer transition-colors"
                       onClick={() => onSelectUser(user)}
                     >
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
+                        <Avatar className="h-12 w-12 border-2 border-gray-700 shadow-sm">
                           <AvatarImage src={user.avatar} alt={user.name} />
-                          <AvatarFallback className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
+                          <AvatarFallback className="bg-blue-900 text-blue-100">
                             {getInitials(user.name)}
                           </AvatarFallback>
                         </Avatar>
@@ -344,7 +345,7 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
                                       <AlertTriangle className="h-4 w-4 text-yellow-500" />
                                     </div>
                                   </TooltipTrigger>
-                                  <TooltipContent>
+                                  <TooltipContent className="bg-gray-800 border-gray-700">
                                     <p>Пробный период активен</p>
                                   </TooltipContent>
                                 </Tooltip>
@@ -361,7 +362,7 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
                             <Badge variant={user.status === 'active' ? "success" : "destructive"}>
                               {user.status === 'active' ? 'Активен' : 'Неактивен'}
                             </Badge>
-                            <Badge variant="outline" className="bg-gray-50">
+                            <Badge variant="outline" className="bg-gray-800 border-gray-700">
                               {getTariffName(user.tariffId)}
                             </Badge>
                             {user.isInTrial && (
@@ -380,15 +381,15 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-gray-800">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                          <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700">
                             <DropdownMenuItem onClick={(e) => {
                               e.stopPropagation();
                               onSelectUser(user);
-                            }}>
+                            }} className="hover:bg-gray-700">
                               Подробнее
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => {
@@ -397,7 +398,7 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
                                 title: "Действие",
                                 description: `${user.status === 'active' ? 'Блокировка' : 'Разблокировка'} пользователя ${user.name}`,
                               });
-                            }}>
+                            }} className="hover:bg-gray-700">
                               {user.status === 'active' ? 'Заблокировать' : 'Разблокировать'}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -409,8 +410,8 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
               ) : (
                 <div className="p-4">
                   <Table>
-                    <TableHeader>
-                      <TableRow>
+                    <TableHeader className="bg-gray-800/50">
+                      <TableRow className="border-gray-800 hover:bg-gray-800">
                         <TableHead>Пользователь</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Роль</TableHead>
@@ -423,12 +424,12 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
                     </TableHeader>
                     <TableBody>
                       {paginatedUsers.map((user) => (
-                        <TableRow key={user.id} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50" onClick={() => onSelectUser(user)}>
+                        <TableRow key={user.id} className="cursor-pointer hover:bg-gray-800/50 border-gray-800" onClick={() => onSelectUser(user)}>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
-                              <Avatar className="h-8 w-8">
+                              <Avatar className="h-8 w-8 border border-gray-700">
                                 <AvatarImage src={user.avatar} alt={user.name} />
-                                <AvatarFallback className="text-xs">{getInitials(user.name)}</AvatarFallback>
+                                <AvatarFallback className="text-xs bg-blue-900 text-blue-100">{getInitials(user.name)}</AvatarFallback>
                               </Avatar>
                               {user.name}
                             </div>
@@ -460,15 +461,15 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
                           <TableCell className="text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-gray-700" onClick={(e) => e.stopPropagation()}>
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
+                              <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700">
                                 <DropdownMenuItem onClick={(e) => {
                                   e.stopPropagation();
                                   onSelectUser(user);
-                                }}>
+                                }} className="hover:bg-gray-700">
                                   Подробнее
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={(e) => {
@@ -477,7 +478,7 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
                                     title: "Действие",
                                     description: `${user.status === 'active' ? 'Блокировка' : 'Разблокировка'} пользователя ${user.name}`,
                                   });
-                                }}>
+                                }} className="hover:bg-gray-700">
                                   {user.status === 'active' ? 'Заблокировать' : 'Разблокировать'}
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
@@ -491,7 +492,7 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
               )}
               
               {totalPages > 1 && (
-                <div className="py-4 border-t">
+                <div className="py-4 border-t border-gray-800">
                   <Pagination>
                     <PaginationContent>
                       <PaginationItem>
@@ -506,6 +507,7 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
                           <PaginationLink 
                             isActive={page === i + 1}
                             onClick={() => setPage(i + 1)}
+                            className={page === i + 1 ? "bg-blue-900" : "bg-gray-800 hover:bg-gray-700"}
                           >
                             {i + 1}
                           </PaginationLink>
@@ -525,9 +527,9 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
             </motion.div>
           ) : (
             <div className="flex flex-col items-center justify-center py-12">
-              <UserX className="h-16 w-16 text-gray-300 mb-4" />
-              <h3 className="text-lg font-medium text-gray-500">Пользователи не найдены</h3>
-              <p className="text-sm text-gray-400 mt-1">
+              <UserX className="h-16 w-16 text-gray-600 mb-4" />
+              <h3 className="text-lg font-medium text-gray-400">Пользователи не найдены</h3>
+              <p className="text-sm text-gray-500 mt-1">
                 {searchQuery || statusFilter !== "all" || roleFilter !== "all" || trialFilter !== "all"
                   ? "Попробуйте изменить параметры поиска или фильтры" 
                   : "В системе еще нет зарегистрированных пользователей"}
