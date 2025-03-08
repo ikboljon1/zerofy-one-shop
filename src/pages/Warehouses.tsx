@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import WarehouseMap from '@/components/WarehouseMap';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,8 +18,24 @@ import {
   processStocksByCategory,
   processStocksByWarehouse
 } from '@/services/suppliesApi';
-
-const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1'];
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from '@/components/ui/use-toast';
+import { 
+  InventoryDetails, 
+  SupplyForm, 
+  SupplyOptionsResults, 
+  WarehouseCoefficientsTable 
+} from '@/components/supplies';
+import { 
+  WarehouseCoefficient, 
+  SupplyOptionsResponse, 
+  SupplyFormData, 
+  WildberriesStock,
+  StocksByCategory,
+  StocksByWarehouse
+} from '@/types/supplies';
+import { WarehouseData as WBWarehouse } from '@/services/warehouseApi';
 
 const Warehouses: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
