@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   name: string;
@@ -14,8 +13,18 @@ export interface User {
   isInTrial?: boolean;
   subscriptionEndDate?: string;
   isSubscriptionActive?: boolean;
-  phone?: string; // Add phone field to the User interface
-  company?: string; // Add company field to the User interface
+  phone?: string;
+  company?: string;
+}
+
+export interface PaymentHistoryItem {
+  id: string;
+  date: string;
+  amount: string;
+  description: string;
+  status: string;
+  tariff: string;
+  period: string;
 }
 
 const mockUsers: User[] = [
@@ -294,6 +303,15 @@ export const updateUser = (id: string, updates: Partial<User>): Promise<User | u
         
         users[index] = { ...users[index], ...updates };
         saveUsers();
+        
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          const currentUser = JSON.parse(storedUser);
+          if (currentUser.id === id) {
+            localStorage.setItem('user', JSON.stringify({...currentUser, ...updates}));
+          }
+        }
+        
         resolve({...users[index]});
       } else {
         resolve(undefined);
@@ -438,6 +456,15 @@ export const activateSubscription = (
       
       saveUsers();
       
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const currentUser = JSON.parse(storedUser);
+        if (currentUser.id === userId) {
+          const updatedUser = {...users[userIndex]};
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
+      }
+      
       resolve({
         success: true,
         user: {...users[userIndex]},
@@ -517,5 +544,58 @@ export const renewSubscription = (
         message: `Подписка продлена до ${new Date(subscriptionEndDate).toLocaleDateString('ru-RU')}`
       });
     }, 500);
+  });
+};
+
+const initializePaymentHistory = () => {
+  const storedHistory = localStorage.getItem('paymentHistory');
+  if (!storedHistory) {
+    return [];
+  }
+  return JSON.parse(storedHistory);
+};
+
+let paymentHistory: PaymentHistoryItem[] = initializePaymentHistory();
+
+const savePaymentHistory = () => {
+  localStorage.setItem('paymentHistory', JSON.stringify(paymentHistory));
+};
+
+export const getPaymentHistory = (userId: string): Promise<PaymentHistoryItem[]> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve([...paymentHistory]);
+    }, 300);
+  });
+};
+
+export const addPaymentRecord = (
+  userId: string,
+  tariffId: string,
+  amount: number,
+  period: number = 1
+): Promise<PaymentHistoryItem> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const tariffName = 
+        tariffId === "3" ? "Премиум" : 
+        tariffId === "2" ? "Бизнес" : 
+        tariffId === "4" ? "Корпоративный" : "Стартовый";
+      
+      const newPayment: PaymentHistoryItem = {
+        id: String(Date.now()),
+        date: new Date().toISOString().split('T')[0],
+        amount: `${amount} ₽`,
+        description: `Подписка ${tariffName}`,
+        status: "Оплачено",
+        tariff: tariffName,
+        period: `${period} месяц${period > 1 ? 'а' : ''}`
+      };
+      
+      paymentHistory.unshift(newPayment);
+      savePaymentHistory();
+      
+      resolve(newPayment);
+    }, 300);
   });
 };

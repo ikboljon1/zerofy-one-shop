@@ -49,6 +49,16 @@ interface SavedCard {
   lastFour: string;
 }
 
+interface PaymentHistoryItem {
+  id: string;
+  date: string;
+  amount: string;
+  description: string;
+  status: string;
+  tariff: string;
+  period: string;
+}
+
 const Profile = () => {
   const [activeTab, setActiveTab] = useState("profile");
   const [selectedPlan, setSelectedPlan] = useState("");
@@ -66,6 +76,8 @@ const Profile = () => {
   } | null>(null);
   const [isSubscriptionExpired, setIsSubscriptionExpired] = useState(false);
   const [userProfile, setUserProfile] = useState<UserType | null>(null);
+  const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryItem[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -77,7 +89,9 @@ const Profile = () => {
       setUserProfile(user);
       
       const mockSubscriptionData = {
-        plan: user.tariffId === "3" ? "Премиум" : user.tariffId === "2" ? "Бизнес" : "Стартовый",
+        plan: user.tariffId === "3" ? "Премиум" : 
+              user.tariffId === "2" ? "Бизнес" : 
+              user.tariffId === "4" ? "Корпоративный" : "Стартовый",
         endDate: user.subscriptionEndDate || "2024-12-31T23:59:59Z",
         daysRemaining: 30,
         isActive: user.isSubscriptionActive || true
@@ -85,6 +99,14 @@ const Profile = () => {
       
       setCurrentSubscription(mockSubscriptionData);
       setIsSubscriptionExpired(!mockSubscriptionData.isActive);
+      
+      setIsLoadingHistory(true);
+      import('@/services/userService').then(({ getPaymentHistory }) => {
+        getPaymentHistory(user.id).then((history) => {
+          setPaymentHistory(history);
+          setIsLoadingHistory(false);
+        });
+      });
     }
     
     const storedCard = localStorage.getItem('savedCard');
@@ -102,36 +124,6 @@ const Profile = () => {
     subscriptionEnd: "31.12.2024",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ivan"
   };
-
-  const paymentHistory = [
-    {
-      id: 1,
-      date: "2024-05-20",
-      amount: "5000 ₽",
-      description: "Подписка Бизнес",
-      status: "Оплачено",
-      tariff: "Бизнес",
-      period: "1 месяц"
-    },
-    {
-      id: 2,
-      date: "2024-04-20",
-      amount: "5000 ₽",
-      description: "Подписка Бизнес",
-      status: "Оплачено",
-      tariff: "Бизнес",
-      period: "1 месяц"
-    },
-    {
-      id: 3,
-      date: "2024-03-20",
-      amount: "2000 ₽",
-      description: "Подписка Стартовый",
-      status: "Оплачено",
-      tariff: "Стартовый",
-      period: "1 месяц"
-    },
-  ];
 
   const subscriptionPlans = [
     {
@@ -329,31 +321,48 @@ const Profile = () => {
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      if (currentSubscription || isSubscriptionExpired) {
-        const newEndDate = new Date();
-        newEndDate.setMonth(newEndDate.getMonth() + 1);
+      if (!userProfile) {
+        throw new Error("Пользователь не найден");
+      }
+      
+      const selectedPlanObject = subscriptionPlans.find(plan => plan.name === selectedPlan);
+      
+      if (!selectedPlanObject) {
+        throw new Error("Тариф не найден");
+      }
+      
+      const { activateSubscription, addPaymentRecord } = await import('@/services/userService');
+      
+      const result = await activateSubscription(
+        userProfile.id, 
+        selectedPlanObject.id, 
+        1 // 1 month
+      );
+      
+      if (result.success && result.user) {
+        await addPaymentRecord(
+          userProfile.id,
+          selectedPlanObject.id,
+          selectedPlanObject.priceValue,
+          1 // 1 month
+        );
         
-        const selectedPlanObject = subscriptionPlans.find(plan => plan.name === selectedPlan);
+        setUserProfile(result.user);
+        localStorage.setItem('user', JSON.stringify(result.user));
         
         setCurrentSubscription({
           plan: selectedPlan,
-          endDate: newEndDate.toISOString(),
+          endDate: result.user.subscriptionEndDate || new Date().toISOString(),
           daysRemaining: 30,
           isActive: true
         });
         
-        if (userProfile && selectedPlanObject) {
-          const updatedUser = {
-            ...userProfile,
-            tariffId: selectedPlanObject.id,
-            isSubscriptionActive: true,
-            subscriptionEndDate: newEndDate.toISOString()
-          };
-          localStorage.setItem('user', JSON.stringify(updatedUser));
-          setUserProfile(updatedUser);
-        }
-        
         setIsSubscriptionExpired(false);
+        
+        const history = await import('@/services/userService').then(({ getPaymentHistory }) => 
+          getPaymentHistory(userProfile.id)
+        );
+        setPaymentHistory(history);
       }
       
       toast({
@@ -363,6 +372,7 @@ const Profile = () => {
       
       setActiveTab("subscription");
     } catch (error) {
+      console.error("Payment error:", error);
       toast({
         title: "Ошибка",
         description: "Не удалось выполнить платеж",
@@ -690,7 +700,7 @@ const Profile = () => {
                 <Alert variant="destructive" className="mt-4">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
-                    Редактирование профиля недоступно. Пожалуйста, продлите подписку.
+                    Редактирование профиля недоступно. Пожалуйст��, продлите подписку.
                   </AlertDescription>
                 </Alert>
               )}
@@ -1071,7 +1081,11 @@ const Profile = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {paymentHistory.length === 0 ? (
+                {isLoadingHistory ? (
+                  <div className="flex justify-center items-center p-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : paymentHistory.length === 0 ? (
                   <div className="text-center p-8">
                     <p className="text-muted-foreground">У вас пока нет истории платежей</p>
                   </div>
@@ -1087,6 +1101,7 @@ const Profile = () => {
                             <Badge className={`${
                               payment.tariff === "Премиум" ? "bg-amber-500" : 
                               payment.tariff === "Бизнес" ? "bg-purple-600" : 
+                              payment.tariff === "Корпоративный" ? "bg-emerald-600" :
                               "bg-blue-600"
                             }`}>
                               {payment.tariff}
