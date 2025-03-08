@@ -24,7 +24,8 @@ import {
   WildberriesStock,
   StocksByCategory,
   StocksByWarehouse,
-  SupplyItem
+  SupplyItem,
+  SupplyFormData
 } from '@/services/suppliesApi';
 import { 
   SupplyForm, 
@@ -33,67 +34,7 @@ import {
   InventoryDetails
 } from '@/components/supplies';
 
-import { toast } from '@/components/ui/use-toast';
-
-interface SupplyFormData {
-  items: SupplyItem[];
-  selectedWarehouse: string;
-}
-
-interface SupplyItem {
-  article: string;
-  quantity: number;
-}
-
-interface Warehouse {
-  ID: string;
-  name: string;
-  address: string;
-  workTime: string;
-  acceptsQR: boolean;
-}
-
-interface WarehouseCoefficient {
-  warehouse_id: string;
-  warehouse_name: string;
-  coefficients: {
-    [key: string]: number;
-  };
-}
-
-interface SupplyOptionsResponse {
-  result: Array<{
-    article: string;
-    isError: boolean;
-    errorText?: string;
-    sizes?: any[];
-  }>;
-  warehouse: {
-    id: string;
-    name: string;
-  };
-}
-
-interface WildberriesStock {
-  id: string;
-  name: string;
-  article: string;
-  barcode: string;
-  category: string;
-  warehouse: string;
-  quantity: number;
-  dateUpdate: string;
-}
-
-interface StocksByCategory {
-  name: string;
-  count: number;
-}
-
-interface StocksByWarehouse {
-  name: string;
-  count: number;
-}
+import { toast } from '@/hooks/use-toast';
 
 const warehouseAnalyticsData = {
   utilizationByWarehouse: [

@@ -1,18 +1,16 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
-  SupplyFormData, 
-  BoxType, 
-  BOX_TYPES, 
-  SupplyItem, 
-  Warehouse
-} from '@/types/supplies';
+  Warehouse,
+  SupplyItem,
+  SupplyFormData
+} from '@/services/suppliesApi';
 import { Plus, Trash2, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 
 interface SupplyFormProps {
   warehouses: Warehouse[];
@@ -21,28 +19,20 @@ interface SupplyFormProps {
 
 const SupplyForm: React.FC<SupplyFormProps> = ({ warehouses, onSupplySubmit }) => {
   const [formData, setFormData] = useState<SupplyFormData>({
-    selectedWarehouse: null,
-    selectedBoxType: 'Короба',
-    items: [{ barcode: '', quantity: 1 }]
+    selectedWarehouse: '',
+    items: [{ article: '', quantity: 1 }]
   });
 
   const handleWarehouseChange = (warehouseId: string) => {
     setFormData(prev => ({
       ...prev,
-      selectedWarehouse: parseInt(warehouseId)
-    }));
-  };
-
-  const handleBoxTypeChange = (boxType: string) => {
-    setFormData(prev => ({
-      ...prev,
-      selectedBoxType: boxType as BoxType
+      selectedWarehouse: warehouseId
     }));
   };
 
   const handleBarcodeChange = (index: number, value: string) => {
     const newItems = [...formData.items];
-    newItems[index].barcode = value;
+    newItems[index].article = value;
     setFormData(prev => ({ ...prev, items: newItems }));
   };
 
@@ -55,18 +45,26 @@ const SupplyForm: React.FC<SupplyFormProps> = ({ warehouses, onSupplySubmit }) =
 
   const addItem = () => {
     if (formData.items.length >= 5000) {
-      toast.error('Превышено максимальное количество товаров (5000)');
+      toast({
+        title: "Внимание",
+        description: "Превышено максимальное количество товаров (5000)",
+        variant: "destructive"
+      });
       return;
     }
     setFormData(prev => ({
       ...prev,
-      items: [...prev.items, { barcode: '', quantity: 1 }]
+      items: [...prev.items, { article: '', quantity: 1 }]
     }));
   };
 
   const removeItem = (index: number) => {
     if (formData.items.length <= 1) {
-      toast.error('Должен быть хотя бы один товар');
+      toast({
+        title: "Внимание",
+        description: "Должен быть хотя бы один товар",
+        variant: "destructive"
+      });
       return;
     }
     const newItems = formData.items.filter((_, i) => i !== index);
@@ -78,12 +76,20 @@ const SupplyForm: React.FC<SupplyFormProps> = ({ warehouses, onSupplySubmit }) =
     
     // Проверка валидности данных
     if (!formData.selectedWarehouse) {
-      toast.error('Выберите склад');
+      toast({
+        title: "Внимание",
+        description: "Выберите склад",
+        variant: "destructive"
+      });
       return;
     }
 
-    if (formData.items.some(item => !item.barcode.trim())) {
-      toast.error('Заполните все баркоды');
+    if (formData.items.some(item => !item.article.trim())) {
+      toast({
+        title: "Внимание",
+        description: "Заполните все баркоды",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -100,7 +106,7 @@ const SupplyForm: React.FC<SupplyFormProps> = ({ warehouses, onSupplySubmit }) =
           <div className="space-y-2">
             <label htmlFor="warehouse" className="text-sm font-medium">Склад назначения</label>
             <Select 
-              value={formData.selectedWarehouse?.toString() || ''} 
+              value={formData.selectedWarehouse || ''} 
               onValueChange={handleWarehouseChange}
             >
               <SelectTrigger id="warehouse">
@@ -108,27 +114,8 @@ const SupplyForm: React.FC<SupplyFormProps> = ({ warehouses, onSupplySubmit }) =
               </SelectTrigger>
               <SelectContent>
                 {warehouses.map(warehouse => (
-                  <SelectItem key={warehouse.ID} value={warehouse.ID.toString()}>
+                  <SelectItem key={warehouse.ID} value={warehouse.ID}>
                     {warehouse.name} ({warehouse.acceptsQR ? 'QR' : 'Стандарт'})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="boxType" className="text-sm font-medium">Тип упаковки</label>
-            <Select 
-              value={formData.selectedBoxType} 
-              onValueChange={handleBoxTypeChange}
-            >
-              <SelectTrigger id="boxType">
-                <SelectValue placeholder="Выберите тип упаковки" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.keys(BOX_TYPES).map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -154,7 +141,7 @@ const SupplyForm: React.FC<SupplyFormProps> = ({ warehouses, onSupplySubmit }) =
                 <div key={index} className="flex items-center gap-2">
                   <Input
                     placeholder="Баркод"
-                    value={item.barcode}
+                    value={item.article}
                     onChange={(e) => handleBarcodeChange(index, e.target.value)}
                     className="flex-grow"
                   />

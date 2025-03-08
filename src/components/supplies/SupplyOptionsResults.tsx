@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { SupplyOptionsResponse, Warehouse } from '@/types/supplies';
+import { SupplyOptionsResponse, Warehouse } from '@/services/suppliesApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -14,14 +14,14 @@ interface SupplyOptionsResultsProps {
 
 const SupplyOptionsResults: React.FC<SupplyOptionsResultsProps> = ({ results, warehouses }) => {
   // Найти название склада по ID
-  const getWarehouseName = (id: number): string => {
+  const getWarehouseName = (id: string): string => {
     const warehouse = warehouses.find(w => w.ID === id);
     return warehouse ? warehouse.name : `Склад #${id}`;
   };
 
   // Подсчет количества доступных складов для всех товаров
   const availableWarehousesCount = results.result.reduce((count, item) => {
-    if (!item.isError && item.warehouses && item.warehouses.length > 0) {
+    if (!item.isError) {
       count++;
     }
     return count;
@@ -57,19 +57,18 @@ const SupplyOptionsResults: React.FC<SupplyOptionsResultsProps> = ({ results, wa
               <TableRow>
                 <TableHead>Баркод</TableHead>
                 <TableHead>Статус</TableHead>
-                <TableHead>Доступные склады</TableHead>
-                <TableHead>Доступные типы упаковки</TableHead>
+                <TableHead>Комментарий</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {results.result.map((item, index) => (
                 <TableRow key={index}>
-                  <TableCell className="font-medium">{item.barcode}</TableCell>
+                  <TableCell className="font-medium">{item.article}</TableCell>
                   <TableCell>
                     {item.isError ? (
                       <div className="flex items-center text-red-500">
                         <XCircle className="h-4 w-4 mr-1" />
-                        <span>{item.error?.detail || "Ошибка"}</span>
+                        <span>Ошибка</span>
                       </div>
                     ) : (
                       <div className="flex items-center text-green-500">
@@ -79,33 +78,8 @@ const SupplyOptionsResults: React.FC<SupplyOptionsResultsProps> = ({ results, wa
                     )}
                   </TableCell>
                   <TableCell>
-                    {item.warehouses ? (
-                      <div className="flex flex-wrap gap-1">
-                        {item.warehouses.map((wh, idx) => (
-                          <Badge key={idx} variant="outline">
-                            {getWarehouseName(wh.warehouseID)}
-                          </Badge>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">Нет доступных складов</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {item.warehouses ? (
-                      <div className="space-y-1">
-                        {item.warehouses.some(wh => wh.canBox) && (
-                          <Badge variant="secondary" className="mr-1">Короба</Badge>
-                        )}
-                        {item.warehouses.some(wh => wh.canMonopallet) && (
-                          <Badge variant="secondary" className="mr-1">Монопаллеты</Badge>
-                        )}
-                        {item.warehouses.some(wh => wh.canSupersafe) && (
-                          <Badge variant="secondary">Суперсейф</Badge>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
+                    {item.errorText || (
+                      <span className="text-muted-foreground">Можно отправить на {getWarehouseName(results.warehouse.id)}</span>
                     )}
                   </TableCell>
                 </TableRow>

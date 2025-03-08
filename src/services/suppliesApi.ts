@@ -1,15 +1,18 @@
+
 import axios from 'axios';
 import { 
-  WarehouseCoefficient as TypesWarehouseCoefficient,
-  SupplyOptionsResponse as TypesSupplyOptionsResponse,
-  SupplyItem as TypesSupplyItem,
-  Warehouse as TypesWarehouse,
-  WildberriesStock as TypesWildberriesStock,
-  StocksByCategory as TypesStocksByCategory,
-  StocksByWarehouse as TypesStocksByWarehouse
+  WarehouseCoefficient as ApiWarehouseCoefficient,
+  SupplyOptionsResponse as ApiSupplyOptionsResponse,
+  SupplyItem as ApiSupplyItem,
+  Warehouse as ApiWarehouse,
+  WildberriesStock as ApiWildberriesStock,
+  StocksByCategory as ApiStocksByCategory,
+  StocksByWarehouse as ApiStocksByWarehouse,
+  SupplyFormData as ApiSupplyFormData,
+  SupplyItemResponse as ApiSupplyItemResponse
 } from '@/types/supplies';
 
-// Define local interfaces to match the actual component usage
+// Define component interfaces to match the actual component usage
 export interface WarehouseCoefficient {
   warehouse_id: string;
   warehouse_name: string;
@@ -75,11 +78,16 @@ export interface SupplyOptionsResponse {
   };
 }
 
+export interface SupplyFormData {
+  selectedWarehouse: string;
+  items: SupplyItem[];
+}
+
 // Базовый URL для API поставок
 const SUPPLIES_API_BASE_URL = 'https://supplies-api.wildberries.ru/api/v1';
 
-// Helper functions to convert between types
-const convertToLocalWarehouseCoefficient = (data: TypesWarehouseCoefficient[]): WarehouseCoefficient[] => {
+// Helper functions to convert between API types and component types
+const convertToComponentWarehouseCoefficient = (data: ApiWarehouseCoefficient[]): WarehouseCoefficient[] => {
   return data.map(coef => ({
     warehouse_id: String(coef.warehouseID),
     warehouse_name: coef.warehouseName,
@@ -89,7 +97,7 @@ const convertToLocalWarehouseCoefficient = (data: TypesWarehouseCoefficient[]): 
   }));
 };
 
-const convertToLocalWildberriesStock = (data: TypesWildberriesStock[]): WildberriesStock[] => {
+const convertToComponentWildberriesStock = (data: ApiWildberriesStock[]): WildberriesStock[] => {
   return data.map(stock => ({
     id: String(stock.nmId),
     name: stock.subject,
@@ -102,21 +110,31 @@ const convertToLocalWildberriesStock = (data: TypesWildberriesStock[]): Wildberr
   }));
 };
 
-const convertToLocalStocksByCategory = (data: TypesStocksByCategory[]): StocksByCategory[] => {
+const convertToComponentStocksByCategory = (data: ApiStocksByCategory[]): StocksByCategory[] => {
   return data.map(cat => ({
     name: cat.category,
     count: cat.totalItems
   }));
 };
 
-const convertToLocalStocksByWarehouse = (data: TypesStocksByWarehouse[]): StocksByWarehouse[] => {
+const convertToComponentStocksByWarehouse = (data: ApiStocksByWarehouse[]): StocksByWarehouse[] => {
   return data.map(wh => ({
     name: wh.warehouseName,
     count: wh.totalItems
   }));
 };
 
-const convertSupplyItemsToAPI = (items: SupplyItem[]): TypesSupplyItem[] => {
+const convertApiToComponentWarehouse = (data: ApiWarehouse[]): Warehouse[] => {
+  return data.map(wh => ({
+    ID: String(wh.ID), // Convert number to string for component compatibility
+    name: wh.name,
+    address: wh.address,
+    workTime: wh.workTime,
+    acceptsQR: wh.acceptsQR
+  }));
+};
+
+const convertComponentToApiSupplyItem = (items: SupplyItem[]): ApiSupplyItem[] => {
   return items.map(item => ({
     barcode: item.article, // use article as barcode
     quantity: item.quantity
@@ -138,7 +156,7 @@ export const fetchAcceptanceCoefficients = async (
     console.log(`Запрос коэффициентов приемки для складов: ${warehouseIDs?.join(', ') || 'всех'}`);
     
     // Имитация запроса
-    const mockCoefficients: TypesWarehouseCoefficient[] = [
+    const mockCoefficients: ApiWarehouseCoefficient[] = [
       {
         date: new Date().toISOString(),
         coefficient: 0,
@@ -189,7 +207,7 @@ export const fetchAcceptanceCoefficients = async (
       }
     ];
     
-    return convertToLocalWarehouseCoefficient(mockCoefficients);
+    return convertToComponentWarehouseCoefficient(mockCoefficients);
   } catch (error) {
     console.error('Ошибка при получении коэффициентов приемки:', error);
     throw error;
@@ -275,14 +293,14 @@ export const fetchWarehouses = async (apiKey: string): Promise<Warehouse[]> => {
   }
 };
 
-// Функция для получения списка складов
+// Функция для получения списка товаров на складах
 export const fetchStocks = async (apiKey: string, dateFrom: string = '2020-01-01'): Promise<WildberriesStock[]> => {
   // In real environment, this would make an API call to the Wildberries API
   // For demonstration purposes, we'll return mock data
   console.log(`Fetching stocks with API key: ${apiKey} from date: ${dateFrom}`);
   
   // Mock data based on the example response
-  const mockStocks: TypesWildberriesStock[] = [
+  const mockStocks: ApiWildberriesStock[] = [
     {
       lastChangeDate: "2023-07-05T11:13:35",
       warehouseName: "Краснодар",
@@ -485,7 +503,7 @@ export const fetchStocks = async (apiKey: string, dateFrom: string = '2020-01-01
     }
   ];
   
-  return convertToLocalWildberriesStock(mockStocks);
+  return convertToComponentWildberriesStock(mockStocks);
 };
 
 // Transform raw stocks data into category-based summary
