@@ -1,6 +1,7 @@
 
 import * as React from "react"
 import { format } from "date-fns"
+import { ru } from "date-fns/locale"
 import { Calendar as CalendarIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -12,8 +13,8 @@ import {
 } from "@/components/ui/popover"
 
 interface DatePickerProps {
-  value?: Date
-  onValueChange?: (date?: Date) => void
+  value?: Date;
+  onValueChange?: (date?: Date) => void;
 }
 
 export function DatePicker({ value, onValueChange }: DatePickerProps) {
@@ -28,16 +29,16 @@ export function DatePicker({ value, onValueChange }: DatePickerProps) {
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {value ? format(value, "PPP") : <span>Выберите дату</span>}
+          {value ? format(value, "PPP", { locale: ru }) : <span>Выберите дату</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto p-0">
         <Calendar
           mode="single"
           selected={value}
           onSelect={onValueChange}
           initialFocus
-          className="pointer-events-auto p-3"
+          locale={ru}
         />
       </PopoverContent>
     </Popover>

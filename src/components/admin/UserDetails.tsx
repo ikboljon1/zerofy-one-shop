@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -52,8 +53,8 @@ const UserDetails = ({ user, onBack, onUserUpdated }: UserDetailsProps) => {
         setSubscriptionEndDate(user.subscriptionEndDate ? new Date(user.subscriptionEndDate) : undefined);
         setSelectedTariff(user.tariffId);
         
-        const subscriptionData = await getUserSubscriptionData(user.id);
-        setSubscriptionData(subscriptionData);
+        const subData = await getUserSubscriptionData(user.id);
+        setSubscriptionData(subData);
         
         if (user.isInTrial) {
           const trialDays = getTrialDaysRemaining(user);
@@ -86,8 +87,8 @@ const UserDetails = ({ user, onBack, onUserUpdated }: UserDetailsProps) => {
       if (result.success && result.user) {
         onUserUpdated(result.user);
         
-        const subscriptionData = await getUserSubscriptionData(user.id);
-        setSubscriptionData(subscriptionData);
+        const subData = await getUserSubscriptionData(user.id);
+        setSubscriptionData(subData);
         
         toast({
           title: "Успешно",
