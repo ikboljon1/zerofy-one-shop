@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Card,
@@ -49,6 +50,7 @@ import { getAdvertCosts, getAdvertStats, getAdvertPayments, getAdvFullStats } fr
 import { ProductStats } from "@/services/advertisingApi";
 import KeywordStatisticsComponent from "./advertising/KeywordStatistics";
 import { formatCurrency } from "@/utils/formatCurrency";
+import DateRangePicker from "./analytics/components/DateRangePicker";
 
 interface CampaignDetailsProps {
   campaignId: number;
@@ -151,15 +153,17 @@ const CampaignDetails: React.FC<CampaignDetailsProps> = ({
           const productId = item.nmId.toString();
           if (!productStatsMap[productId]) {
             productStatsMap[productId] = {
-              id: item.nmId,
+              nmId: item.nmId,
               name: item.name,
               clicks: 0,
               shows: 0,
+              views: 0,
               orders: 0,
               ctr: 0,
               cr: 0,
               cpc: 0,
               cost: 0,
+              sum: 0,
               profit: 0,
               roi: 0,
               imageUrl: ''
@@ -168,8 +172,10 @@ const CampaignDetails: React.FC<CampaignDetailsProps> = ({
 
           productStatsMap[productId].clicks += item.clicks;
           productStatsMap[productId].shows += item.shows;
+          productStatsMap[productId].views = productStatsMap[productId].shows; // Ensure views is set
           productStatsMap[productId].orders += item.orders;
           productStatsMap[productId].cost += item.cost;
+          productStatsMap[productId].sum = productStatsMap[productId].cost; // Ensure sum is set
           productStatsMap[productId].profit += item.profit;
           productStatsMap[productId].imageUrl = item.imageUrl;
         });
@@ -210,7 +216,7 @@ const CampaignDetails: React.FC<CampaignDetailsProps> = ({
         getAdvertCosts(dateFrom, dateTo, apiKey),
         getAdvertStats(dateFrom, dateTo, apiKey),
         getAdvertPayments(dateFrom, dateTo, apiKey),
-        getAdvFullStats(dateFrom, dateTo, apiKey)
+        getAdvFullStats(dateFrom, dateTo, campaignId, apiKey)
       ]);
 
       setCosts(costsData || []);
@@ -242,15 +248,17 @@ const CampaignDetails: React.FC<CampaignDetailsProps> = ({
           const productId = item.nmId.toString();
           if (!productStatsMap[productId]) {
             productStatsMap[productId] = {
-              id: item.nmId,
+              nmId: item.nmId,
               name: item.name,
               clicks: 0,
               shows: 0,
+              views: 0,
               orders: 0,
               ctr: 0,
               cr: 0,
               cpc: 0,
               cost: 0,
+              sum: 0,
               profit: 0,
               roi: 0,
               imageUrl: ''
@@ -259,8 +267,10 @@ const CampaignDetails: React.FC<CampaignDetailsProps> = ({
 
           productStatsMap[productId].clicks += item.clicks;
           productStatsMap[productId].shows += item.shows;
+          productStatsMap[productId].views = productStatsMap[productId].shows; // Ensure views is set
           productStatsMap[productId].orders += item.orders;
           productStatsMap[productId].cost += item.cost;
+          productStatsMap[productId].sum = productStatsMap[productId].cost; // Ensure sum is set
           productStatsMap[productId].profit += item.profit;
           productStatsMap[productId].imageUrl = item.imageUrl;
         });
@@ -343,6 +353,10 @@ const CampaignDetails: React.FC<CampaignDetailsProps> = ({
 
   const totalPayments = calculateTotal(payments, "amount");
   const totalCost = calculateTotal(costs, "updSum");
+
+  const handleApplyDateRange = () => {
+    fetchData();
+  };
 
   return (
     <div className="space-y-6">
@@ -605,8 +619,8 @@ const CampaignDetails: React.FC<CampaignDetailsProps> = ({
                     placeholder="Поиск по названию" 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    prefix={<Search className="h-4 w-4 text-gray-500" />}
                   />
+                  <Search className="h-4 w-4 text-gray-500 -ml-10" />
                 </div>
               </div>
 

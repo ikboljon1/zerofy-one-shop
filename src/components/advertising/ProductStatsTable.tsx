@@ -12,13 +12,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "../ui/button";
+import { Progress } from "../ui/progress";
 
 interface ProductStatsTableProps {
-  products: ProductStats[];
+  productStats: ProductStats[];
+  loading?: boolean;
+  showProgressBar?: boolean;
 }
 
-const ProductStatsTable = ({ products }: ProductStatsTableProps) => {
-  if (!products || products.length === 0) {
+const ProductStatsTable = ({ productStats, loading, showProgressBar }: ProductStatsTableProps) => {
+  if (loading || !productStats || productStats.length === 0) {
     return (
       <Card className="p-6">
         <div className="text-center py-8">
@@ -47,7 +50,7 @@ const ProductStatsTable = ({ products }: ProductStatsTableProps) => {
           </div>
           <div className="flex justify-between">
             <span className="text-sm text-gray-500">Показы:</span>
-            <span className="font-medium">{product.views.toLocaleString('ru-RU')}</span>
+            <span className="font-medium">{(product.views || product.shows || 0).toLocaleString('ru-RU')}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-sm text-gray-500">Клики:</span>
@@ -66,7 +69,7 @@ const ProductStatsTable = ({ products }: ProductStatsTableProps) => {
         <div className="space-y-2">
           <div className="flex justify-between">
             <span className="text-sm text-gray-500">Добавлено в корзину:</span>
-            <span className="font-medium">{product.atbs.toLocaleString('ru-RU')}</span>
+            <span className="font-medium">{(product.atbs || 0).toLocaleString('ru-RU')}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-sm text-gray-500">Заказы:</span>
@@ -78,11 +81,11 @@ const ProductStatsTable = ({ products }: ProductStatsTableProps) => {
           </div>
           <div className="flex justify-between">
             <span className="text-sm text-gray-500">Продано шт.:</span>
-            <span className="font-medium">{product.shks.toLocaleString('ru-RU')}</span>
+            <span className="font-medium">{(product.shks || 0).toLocaleString('ru-RU')}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-sm text-gray-500">Сумма заказов:</span>
-            <span className="font-medium">{product.sum_price.toLocaleString('ru-RU')} ₽</span>
+            <span className="font-medium">{(product.sum_price || 0).toLocaleString('ru-RU')} ₽</span>
           </div>
         </div>
       </div>
@@ -91,7 +94,7 @@ const ProductStatsTable = ({ products }: ProductStatsTableProps) => {
         <div>
           <div className="text-sm font-semibold">Затраты на рекламу:</div>
           <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
-            {product.sum.toLocaleString('ru-RU')} ₽
+            {(product.cost || product.sum || 0).toLocaleString('ru-RU')} ₽
           </div>
         </div>
         
@@ -154,7 +157,7 @@ const ProductStatsTable = ({ products }: ProductStatsTableProps) => {
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-indigo-100 dark:divide-indigo-900/20">
-            {products.map((product, index) => (
+            {productStats.map((product, index) => (
               <TableRow key={index} className="hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10">
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
@@ -164,14 +167,14 @@ const ProductStatsTable = ({ products }: ProductStatsTableProps) => {
                     <span className="line-clamp-1">{product.name}</span>
                   </div>
                 </TableCell>
-                <TableCell className="text-right">{product.views.toLocaleString('ru-RU')}</TableCell>
+                <TableCell className="text-right">{(product.views || product.shows || 0).toLocaleString('ru-RU')}</TableCell>
                 <TableCell className="text-right">{product.clicks.toLocaleString('ru-RU')}</TableCell>
                 <TableCell className="text-right">{product.ctr.toFixed(2)}%</TableCell>
                 <TableCell className="text-right">{product.cpc.toFixed(2)} ₽</TableCell>
-                <TableCell className="text-right">{product.atbs.toLocaleString('ru-RU')}</TableCell>
+                <TableCell className="text-right">{(product.atbs || 0).toLocaleString('ru-RU')}</TableCell>
                 <TableCell className="text-right">{product.orders.toLocaleString('ru-RU')}</TableCell>
                 <TableCell className="text-right">{product.cr.toFixed(2)}%</TableCell>
-                <TableCell className="text-right">{product.sum.toLocaleString('ru-RU')} ₽</TableCell>
+                <TableCell className="text-right">{(product.cost || product.sum || 0).toLocaleString('ru-RU')} ₽</TableCell>
                 <TableCell className="text-center">
                   <Dialog>
                     <DialogTrigger asChild>

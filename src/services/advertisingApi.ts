@@ -103,18 +103,24 @@ interface AppStats {
 }
 
 export interface ProductStats {
-  views: number;
-  clicks: number;
-  ctr: number;
-  cpc: number;
-  sum: number;
-  atbs: number;
-  orders: number;
-  cr: number;
-  shks: number;
-  sum_price: number;
+  id?: number;
   name: string;
   nmId: number;
+  clicks: number;
+  views?: number;
+  shows?: number;
+  orders: number;
+  ctr: number;
+  cr: number;
+  cpc: number;
+  cost?: number;
+  sum?: number;
+  profit?: number;
+  roi?: number;
+  imageUrl?: string;
+  atbs?: number;
+  shks?: number;
+  sum_price?: number;
 }
 
 interface BoosterStats {
@@ -220,19 +226,13 @@ export const getAdvertCosts = async (dateFrom: Date, dateTo: Date, apiKey: strin
 export const getAdvertStats = async (
   dateFrom: Date,
   dateTo: Date,
-  campaignIds: number[],
   apiKey: string
 ): Promise<AdvertStats[]> => {
   try {
-    if (!campaignIds.length) {
-      return [];
-    }
-
     const api = createApiInstance(apiKey);
     const params = {
       from: dateFrom.toISOString().split('T')[0],
-      to: dateTo.toISOString().split('T')[0],
-      campaignIds: campaignIds.join(',')
+      to: dateTo.toISOString().split('T')[0]
     };
     
     const response = await api.get(`/v1/stats`, { params });
@@ -262,6 +262,36 @@ export const getAdvertPayments = async (dateFrom: Date, dateTo: Date, apiKey: st
     };
     
     const response = await api.get(`/v1/payments`, { params });
+    return response.data || [];
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const getAdvFullStats = async (
+  dateFrom: Date, 
+  dateTo: Date, 
+  campaignId: number,
+  apiKey: string
+): Promise<CampaignFullStats[]> => {
+  try {
+    const api = createApiInstance(apiKey);
+    
+    const dates: string[] = [];
+    const currentDate = new Date(dateFrom);
+    const endDate = new Date(dateTo);
+    
+    while (currentDate <= endDate) {
+      dates.push(currentDate.toISOString().split('T')[0]);
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    const payload: CampaignStatsRequest[] = [{
+      id: campaignId,
+      dates
+    }];
+    
+    const response = await api.post(`/v2/fullstats`, payload);
     return response.data || [];
   } catch (error) {
     return handleApiError(error);
