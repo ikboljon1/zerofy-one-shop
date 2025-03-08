@@ -1,5 +1,5 @@
-
 import axios from 'axios';
+import { warehousesData, logisticsRoutes, inventoryData } from '@/components/analytics/data/demoData';
 
 interface WarehouseData {
   id: number;
@@ -57,8 +57,7 @@ export const fetchWarehouses = async (apiKey: string): Promise<WarehouseData[]> 
       return JSON.parse(storedWarehouses);
     }
     
-    // Если данных нет в localStorage, импортируем из файла с демо-данными
-    const { warehousesData } = await import('@/components/analytics/data/demoData');
+    // Если данных нет в localStorage, используем импортированные демо-данные
     
     // Приведение типов для coordinates, чтобы они соответствовали [number, number]
     const typedWarehouses = warehousesData.map(warehouse => ({
@@ -89,8 +88,7 @@ export const fetchLogisticsRoutes = async (apiKey: string): Promise<LogisticsRou
       return JSON.parse(storedRoutes);
     }
     
-    // Если данных нет в localStorage, импортируем из файла с демо-данными
-    const { logisticsRoutes } = await import('@/components/analytics/data/demoData');
+    // Если данных нет в localStorage, используем импортированные демо-данные
     
     // Приведение типов для status, чтобы они соответствовали 'active' | 'delayed'
     const typedRoutes = logisticsRoutes.map(route => ({
@@ -120,8 +118,7 @@ export const fetchInventory = async (apiKey: string): Promise<InventoryCategory[
       return JSON.parse(storedInventory);
     }
     
-    // Если данных нет в localStorage, импортируем из файла с демо-данными
-    const { inventoryData } = await import('@/components/analytics/data/demoData');
+    // Если данных нет в localStorage, возвращаем импортированные демо-данные
     return inventoryData;
   } catch (error) {
     console.error('Error fetching inventory data:', error);

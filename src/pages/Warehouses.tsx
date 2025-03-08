@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import WarehouseMap from '@/components/WarehouseMap';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,24 +17,6 @@ import {
   processStocksByCategory,
   processStocksByWarehouse
 } from '@/services/suppliesApi';
-import { 
-  SupplyForm, 
-  WarehouseCoefficientsTable, 
-  SupplyOptionsResults,
-  InventoryDetails
-} from '@/components/supplies';
-import { 
-  SupplyFormData, 
-  WarehouseCoefficient, 
-  Warehouse as WBWarehouse,
-  SupplyOptionsResponse,
-  WildberriesStock,
-  StocksByCategory,
-  StocksByWarehouse
-} from '@/types/supplies';
-import { toast } from 'sonner';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
 
 const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1'];
 
@@ -55,7 +36,6 @@ const Warehouses: React.FC = () => {
     inventory: false
   });
 
-  // Эмуляция API-ключа (в реальном приложении должен быть получен от пользователя)
   const apiKey = "test_api_key";
 
   useEffect(() => {
@@ -99,7 +79,6 @@ const Warehouses: React.FC = () => {
       const stocksData = await fetchStocks(apiKey);
       setStocks(stocksData);
       
-      // Process the stocks data
       const categoryData = processStocksByCategory(stocksData);
       const warehouseData = processStocksByWarehouse(stocksData);
       
@@ -124,7 +103,6 @@ const Warehouses: React.FC = () => {
         return;
       }
       
-      // Проверка доступности товаров на выбранном складе
       const optionsResponse = await fetchAcceptanceOptions(
         apiKey,
         data.items,
@@ -133,7 +111,6 @@ const Warehouses: React.FC = () => {
       
       setSupplyResults(optionsResponse);
       
-      // Проверка на наличие ошибок
       const hasErrors = optionsResponse.result.some(item => item.isError);
       
       if (hasErrors) {
