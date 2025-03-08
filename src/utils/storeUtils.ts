@@ -10,57 +10,12 @@ export const getLastWeekDateRange = () => {
 };
 
 export const loadStores = (): Store[] => {
-  try {
-    const savedStores = localStorage.getItem(STORES_STORAGE_KEY);
-    return savedStores ? JSON.parse(savedStores) : [];
-  } catch (error) {
-    console.error("Error loading stores from localStorage:", error);
-    return [];
-  }
+  const savedStores = localStorage.getItem(STORES_STORAGE_KEY);
+  return savedStores ? JSON.parse(savedStores) : [];
 };
 
 export const saveStores = (stores: Store[]): void => {
-  try {
-    localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(stores));
-  } catch (error) {
-    console.error("Error saving stores to localStorage:", error);
-    // Если превышена квота, удаляем старые данные или сжимаем существующие
-    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-      // Очищаем некоторые старые данные и пробуем снова
-      clearOldStoreData();
-      try {
-        localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(stores));
-      } catch (retryError) {
-        console.error("Still unable to save stores after clearing old data:", retryError);
-      }
-    }
-  }
-};
-
-// Функция для очистки старых данных
-const clearOldStoreData = () => {
-  try {
-    // Удаляем старые данные статистики, заказов и продаж
-    const allKeys = Object.keys(localStorage);
-    const statsKeys = allKeys.filter(key => 
-      key.startsWith(`${STATS_STORAGE_KEY}_`) || 
-      key.startsWith(`${ORDERS_STORAGE_KEY}_`) || 
-      key.startsWith(`${SALES_STORAGE_KEY}_`) ||
-      key.startsWith(`marketplace_analytics_`) ||
-      key.startsWith(`products_detailed_`)
-    );
-    
-    // Сортируем по дате последнего изменения (возможно это не самый эффективный способ, но должен работать)
-    const oldestKeys = statsKeys.slice(0, Math.ceil(statsKeys.length / 2));
-    
-    oldestKeys.forEach(key => {
-      localStorage.removeItem(key);
-    });
-    
-    console.log(`Cleared ${oldestKeys.length} old store data items from localStorage`);
-  } catch (error) {
-    console.error("Error clearing old store data:", error);
-  }
+  localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(stores));
 };
 
 export const refreshStoreStats = async (store: Store): Promise<Store | null> => {
@@ -97,82 +52,62 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
         // Генерируем уникальный timestamp для данных, чтобы предотвратить кэширование
         const timestamp = Date.now();
         
-        try {
-          // Сохраняем полные данные статистики, включая топовые продукты с их изображениями
-          localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify({
+        // Сохраняем полные данные статистики, включая топовые продукты с их изображениями
+        localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify({
+          storeId: store.id,
+          dateFrom: from.toISOString(),
+          dateTo: to.toISOString(),
+          stats: stats,
+          deductionsTimeline: deductionsTimeline,
+          timestamp: timestamp
+        }));
+        
+        // Также сохраняем данные для аналитики и раздела товаров с тем же timestamp
+        localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify({
+          storeId: store.id,
+          dateFrom: from.toISOString(),
+          dateTo: to.toISOString(),
+          data: stats,
+          deductionsTimeline: deductionsTimeline,
+          penalties: [],
+          returns: [],
+          productAdvertisingData: [],
+          advertisingBreakdown: { search: stats.currentPeriod.expenses.advertising || 0 },
+          timestamp: timestamp
+        }));
+        
+        // Сохраняем данные о заказах отдельно
+        if (stats.orders && stats.orders.length > 0) {
+          localStorage.setItem(`${ORDERS_STORAGE_KEY}_${store.id}`, JSON.stringify({
             storeId: store.id,
             dateFrom: from.toISOString(),
             dateTo: to.toISOString(),
-            stats: stats,
-            deductionsTimeline: deductionsTimeline,
+            orders: stats.orders,
+            warehouseDistribution: stats.warehouseDistribution || [],
+            regionDistribution: stats.regionDistribution || [],
             timestamp: timestamp
           }));
-          
-          // Также сохраняем данные для аналитики и раздела товаров с тем же timestamp
-          localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify({
+        }
+        
+        // Сохраняем данные о продажах отдельно
+        if (stats.sales && stats.sales.length > 0) {
+          localStorage.setItem(`${SALES_STORAGE_KEY}_${store.id}`, JSON.stringify({
             storeId: store.id,
             dateFrom: from.toISOString(),
             dateTo: to.toISOString(),
-            data: stats,
-            deductionsTimeline: deductionsTimeline,
-            penalties: [],
-            returns: [],
-            productAdvertisingData: [],
-            advertisingBreakdown: { search: stats.currentPeriod.expenses.advertising || 0 },
+            sales: stats.sales,
             timestamp: timestamp
           }));
-          
-          // Сохраняем данные о заказах отдельно
-          if (stats.orders && stats.orders.length > 0) {
-            localStorage.setItem(`${ORDERS_STORAGE_KEY}_${store.id}`, JSON.stringify({
-              storeId: store.id,
-              dateFrom: from.toISOString(),
-              dateTo: to.toISOString(),
-              orders: stats.orders,
-              warehouseDistribution: stats.warehouseDistribution || [],
-              regionDistribution: stats.regionDistribution || [],
-              timestamp: timestamp
-            }));
-          }
-          
-          // Сохраняем данные о продажах отдельно
-          if (stats.sales && stats.sales.length > 0) {
-            localStorage.setItem(`${SALES_STORAGE_KEY}_${store.id}`, JSON.stringify({
-              storeId: store.id,
-              dateFrom: from.toISOString(),
-              dateTo: to.toISOString(),
-              sales: stats.sales,
-              timestamp: timestamp
-            }));
-          }
-          
-          // Детализированные данные по продуктам для раздела товаров с тем же timestamp
-          if (stats.topProfitableProducts || stats.topUnprofitableProducts) {
-            localStorage.setItem(`products_detailed_${store.id}`, JSON.stringify({
-              profitableProducts: stats.topProfitableProducts || [],
-              unprofitableProducts: stats.topUnprofitableProducts || [],
-              updateDate: new Date().toISOString(),
-              timestamp: timestamp
-            }));
-          }
-        } catch (storageError) {
-          // Обработка ошибок localStorage
-          console.error('Error saving data to localStorage:', storageError);
-          if (storageError instanceof DOMException && storageError.name === 'QuotaExceededError') {
-            clearOldStoreData();
-            // Пытаемся сохранить только самые важные данные после очистки
-            try {
-              localStorage.setItem(`${STATS_STORAGE_KEY}_${store.id}`, JSON.stringify({
-                storeId: store.id,
-                dateFrom: from.toISOString(),
-                dateTo: to.toISOString(),
-                stats: stats,
-                timestamp: timestamp
-              }));
-            } catch (retryError) {
-              console.error('Still unable to save data after clearing storage:', retryError);
-            }
-          }
+        }
+        
+        // Детализированные данные по продуктам для раздела товаров с тем же timestamp
+        if (stats.topProfitableProducts || stats.topUnprofitableProducts) {
+          localStorage.setItem(`products_detailed_${store.id}`, JSON.stringify({
+            profitableProducts: stats.topProfitableProducts || [],
+            unprofitableProducts: stats.topUnprofitableProducts || [],
+            updateDate: new Date().toISOString(),
+            timestamp: timestamp
+          }));
         }
         
         return updatedStore;
@@ -214,11 +149,11 @@ export const getSalesData = (storeId: string) => {
   }
 };
 
-// Загрузка и обновление данных о заказах с учетом периода
-export const fetchAndUpdateOrders = async (store: Store, startDate?: Date) => {
+// Загрузка и обновление данных о заказах
+export const fetchAndUpdateOrders = async (store: Store) => {
   if (store.marketplace === "Wildberries") {
     try {
-      const { from } = startDate ? { from: startDate } : getLastWeekDateRange();
+      const { from } = getLastWeekDateRange();
       const orders = await fetchWildberriesOrders(store.apiKey, from);
       
       if (orders && orders.length > 0) {
@@ -259,37 +194,16 @@ export const fetchAndUpdateOrders = async (store: Store, startDate?: Date) => {
           .sort((a, b) => b.count - a.count)
           .slice(0, 5);
         
-        try {
-          // Сохраняем данные в localStorage
-          localStorage.setItem(`${ORDERS_STORAGE_KEY}_${store.id}`, JSON.stringify({
-            storeId: store.id,
-            dateFrom: from.toISOString(),
-            dateTo: new Date().toISOString(),
-            orders,
-            warehouseDistribution,
-            regionDistribution,
-            timestamp: Date.now()
-          }));
-        } catch (storageError) {
-          console.error('Error saving orders to localStorage:', storageError);
-          if (storageError instanceof DOMException && storageError.name === 'QuotaExceededError') {
-            clearOldStoreData();
-            // Пытаемся сохранить снова после очистки
-            try {
-              localStorage.setItem(`${ORDERS_STORAGE_KEY}_${store.id}`, JSON.stringify({
-                storeId: store.id,
-                dateFrom: from.toISOString(),
-                dateTo: new Date().toISOString(),
-                orders,
-                warehouseDistribution,
-                regionDistribution,
-                timestamp: Date.now()
-              }));
-            } catch (retryError) {
-              console.error('Still unable to save orders after clearing storage:', retryError);
-            }
-          }
-        }
+        // Сохраняем данные в localStorage
+        localStorage.setItem(`${ORDERS_STORAGE_KEY}_${store.id}`, JSON.stringify({
+          storeId: store.id,
+          dateFrom: from.toISOString(),
+          dateTo: new Date().toISOString(),
+          orders,
+          warehouseDistribution,
+          regionDistribution,
+          timestamp: Date.now()
+        }));
         
         return {
           orders,
@@ -304,41 +218,22 @@ export const fetchAndUpdateOrders = async (store: Store, startDate?: Date) => {
   return null;
 };
 
-// Загрузка и обновление данных о продажах с учетом периода
-export const fetchAndUpdateSales = async (store: Store, startDate?: Date) => {
+// Загрузка и обновление данных о продажах
+export const fetchAndUpdateSales = async (store: Store) => {
   if (store.marketplace === "Wildberries") {
     try {
-      const { from } = startDate ? { from: startDate } : getLastWeekDateRange();
+      const { from } = getLastWeekDateRange();
       const sales = await fetchWildberriesSales(store.apiKey, from);
       
       if (sales && sales.length > 0) {
-        try {
-          // Сохраняем данные в localStorage
-          localStorage.setItem(`${SALES_STORAGE_KEY}_${store.id}`, JSON.stringify({
-            storeId: store.id,
-            dateFrom: from.toISOString(),
-            dateTo: new Date().toISOString(),
-            sales,
-            timestamp: Date.now()
-          }));
-        } catch (storageError) {
-          console.error('Error saving sales to localStorage:', storageError);
-          if (storageError instanceof DOMException && storageError.name === 'QuotaExceededError') {
-            clearOldStoreData();
-            // Пытаемся сохранить снова после очистки
-            try {
-              localStorage.setItem(`${SALES_STORAGE_KEY}_${store.id}`, JSON.stringify({
-                storeId: store.id,
-                dateFrom: from.toISOString(),
-                dateTo: new Date().toISOString(),
-                sales,
-                timestamp: Date.now()
-              }));
-            } catch (retryError) {
-              console.error('Still unable to save sales after clearing storage:', retryError);
-            }
-          }
-        }
+        // Сохраняем данные в localStorage
+        localStorage.setItem(`${SALES_STORAGE_KEY}_${store.id}`, JSON.stringify({
+          storeId: store.id,
+          dateFrom: from.toISOString(),
+          dateTo: new Date().toISOString(),
+          sales,
+          timestamp: Date.now()
+        }));
         
         return sales;
       }
@@ -383,14 +278,13 @@ export const getProductProfitabilityData = (storeId: string) => {
 };
 
 // Получение данных аналитики с проверкой обязательных полей и принудительным обновлением при наличии параметра forceRefresh
-export const getAnalyticsData = (storeId: string, forceRefresh?: boolean, customDateRange?: { from: Date, to: Date }) => {
+export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
   try {
     const key = `marketplace_analytics_${storeId}`;
     const storedData = localStorage.getItem(key);
     
-    // Если данные отсутствуют или запрошено принудительное обновление, или указан пользовательский диапазон дат,
-    // возвращаем пустую структуру и отмечаем, что нужно загрузить новые данные
-    if (!storedData || forceRefresh || customDateRange) {
+    // Если данные отсутствуют или запрошено принудительное обновление, возвращаем пустую структуру
+    if (!storedData || forceRefresh) {
       console.log('Analytics data not found or forced refresh requested, returning default structure');
       // Возвращаем базовую структуру с демо-данными
       return {
@@ -407,9 +301,7 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean, custom
         })),
         productAdvertisingData: [],
         advertisingBreakdown: { search: 0 },
-        timestamp: Date.now(), // Добавляем текущий timestamp
-        needsRefresh: true, // Флаг, указывающий на необходимость обновления данных
-        customDateRange // Добавляем пользовательский диапазон дат, если он указан
+        timestamp: Date.now() // Добавляем текущий timestamp
       };
     }
     
@@ -483,120 +375,7 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean, custom
       })),
       productAdvertisingData: [],
       advertisingBreakdown: { search: 0 },
-      timestamp: Date.now(), // Добавляем текущий timestamp
-      needsRefresh: true // Флаг, указывающий на необходимость обновления данных
-    };
-  }
-};
-
-// Обновляем данные аналитики и сохраняем их
-export const updateAnalyticsData = (storeId: string, data: any) => {
-  try {
-    localStorage.setItem(`marketplace_analytics_${storeId}`, JSON.stringify({
-      ...data,
-      timestamp: Date.now()
-    }));
-    return true;
-  } catch (error) {
-    console.error('Error updating analytics data:', error);
-    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-      clearOldStoreData();
-      try {
-        localStorage.setItem(`marketplace_analytics_${storeId}`, JSON.stringify({
-          ...data,
-          timestamp: Date.now()
-        }));
-        return true;
-      } catch (retryError) {
-        console.error('Still unable to save analytics data after clearing storage:', retryError);
-      }
-    }
-    return false;
-  }
-};
-
-// Получаем данные о расходах на рекламу для конкретного периода
-export const getExpensesForPeriod = (storeId: string, period: string) => {
-  try {
-    const analyticsData = getAnalyticsData(storeId);
-    if (!analyticsData || !analyticsData.data || !analyticsData.data.currentPeriod) {
-      return {
-        logistics: 0,
-        storage: 0,
-        penalties: 0,
-        acceptance: 0,
-        advertising: 0,
-        total: 0
-      };
-    }
-
-    // Фильтруем deductionsTimeline по периоду, если он указан
-    let filteredData = analyticsData.deductionsTimeline;
-    let totalDays = filteredData.length;
-
-    if (period !== 'all') {
-      const now = new Date();
-      const periodDays = {
-        'today': 1,
-        'yesterday': 1,
-        'week': 7,
-        '2weeks': 14,
-        '4weeks': 28
-      }[period] || 7;
-      
-      const cutoffDate = new Date(now);
-      cutoffDate.setDate(now.getDate() - periodDays);
-      
-      filteredData = analyticsData.deductionsTimeline.filter((item: any) => {
-        const itemDate = new Date(item.date);
-        return itemDate >= cutoffDate;
-      });
-      
-      totalDays = filteredData.length || 1;
-    }
-
-    // Если нет данных после фильтрации, возвращаем нули
-    if (filteredData.length === 0) {
-      return {
-        logistics: 0,
-        storage: 0,
-        penalties: 0,
-        acceptance: 0,
-        advertising: 0,
-        total: 0
-      };
-    }
-
-    // Суммируем расходы по всем дням в отфильтрованном периоде
-    const sumExpenses = filteredData.reduce((acc: any, item: any) => {
-      return {
-        logistic: acc.logistic + (item.logistic || 0),
-        storage: acc.storage + (item.storage || 0),
-        penalties: acc.penalties + (item.penalties || 0),
-        acceptance: acc.acceptance + (item.acceptance || 0),
-        advertising: acc.advertising + (item.advertising || 0)
-      };
-    }, { logistic: 0, storage: 0, penalties: 0, acceptance: 0, advertising: 0 });
-
-    const total = sumExpenses.logistic + sumExpenses.storage + sumExpenses.penalties + sumExpenses.acceptance + sumExpenses.advertising;
-
-    return {
-      logistics: sumExpenses.logistic,
-      storage: sumExpenses.storage,
-      penalties: sumExpenses.penalties,
-      acceptance: sumExpenses.acceptance,
-      advertising: sumExpenses.advertising,
-      total: total
-    };
-  } catch (error) {
-    console.error('Error getting expenses for period:', error);
-    return {
-      logistics: 0,
-      storage: 0,
-      penalties: 0,
-      acceptance: 0,
-      advertising: 0,
-      total: 0
+      timestamp: Date.now() // Добавляем текущий timestamp
     };
   }
 };
