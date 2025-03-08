@@ -5,7 +5,7 @@ import {
   updateUser, 
   getTrialDaysRemaining,
   activateSubscription,
-  getSubscriptionStatus
+  getSubscriptionStatus as fetchSubscriptionStatus
 } from "@/services/userService";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -64,7 +64,7 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
     
     if (user.subscriptionEndDate) {
       // Fetch subscription status
-      getSubscriptionStatus(user.id).then(data => {
+      fetchSubscriptionStatus(user.id).then(data => {
         setSubscriptionData(data);
       });
     }
@@ -250,7 +250,7 @@ export default function UserDetails({ user, onBack, onUserUpdated }: UserDetails
     }
   };
 
-  // Directly compute the trial and subscription status instead of treating them as async
+  // Directly compute the trial and subscription status
   const trialStatus = getTrialStatus();
   const subscriptionStatus = getSubscriptionStatus();
 
