@@ -1,7 +1,6 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Zap, ChevronRight, Users, ShieldCheck, BarChart2, Package, CircleCheck, Rocket, Clock, Settings, CreditCard, HeartHandshake, MessageSquare } from "lucide-react";
+import { Zap, ChevronRight, ShieldCheck, BarChart2, Package, CircleCheck, Rocket, Clock, Settings, CreditCard, HeartHandshake, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import AuthModal from "@/components/auth/AuthModal";
@@ -26,11 +25,6 @@ const LandingPage = () => {
       icon: <Package className="h-6 w-6 text-primary" />,
       title: "Умное управление товарами",
       description: "Возьмите полный контроль над вашим ассортиментом. Наша система не просто отслеживает остатки — она прогнозирует спрос, оптимизирует закупки и автоматизирует рутинные процессы управления каталогом."
-    },
-    {
-      icon: <Users className="h-6 w-6 text-primary" />,
-      title: "Командная синергия",
-      description: "Объединяйте усилия вашей команды с продвинутой системой разграничения прав доступа. Создавайте уникальные роли, назначайте задачи и наблюдайте, как эффективность вашего бизнеса растет в геометрической прогрессии."
     },
     {
       icon: <ShieldCheck className="h-6 w-6 text-primary" />,
