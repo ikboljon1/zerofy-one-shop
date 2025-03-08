@@ -320,7 +320,7 @@ export const getSubscriptionStatus = (user: User): SubscriptionData => {
       status: 'trial',
       endDate: user.trialEndDate,
       daysRemaining: getTrialDaysRemaining(user),
-      tariffId: user.tariffId
+      tariffId: '3'
     };
   }
   

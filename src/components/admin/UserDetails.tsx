@@ -257,7 +257,7 @@ const UserDetails = ({ user, onBack, onUserUpdated }: UserDetailsProps) => {
           {user.isInTrial && (
             <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
               <h3 className="font-medium">Пробный период</h3>
-              <p>Активирован с тарифом "{getTariffName(user.tariffId)}"</p>
+              <p>Активирован с тарифом "{getTariffName('3')}"</p>
               <p>Осталось дней: {trialDaysRemaining}</p>
             </div>
           )}
