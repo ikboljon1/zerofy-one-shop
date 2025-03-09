@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   name: string;
@@ -244,12 +243,10 @@ export const activateSubscription = async (
   const currentDate = new Date();
   let endDate = new Date();
   
-  if (user.isSubscriptionActive && user.subscriptionEndDate) {
+  if (user.isSubscriptionActive && user.subscriptionEndDate && user.tariffId === tariffId) {
     const existingEndDate = new Date(user.subscriptionEndDate);
     if (existingEndDate > currentDate) {
       endDate = new Date(existingEndDate);
-    } else {
-      endDate = new Date(); // Reset to current date if subscription already expired
     }
   }
   
@@ -389,13 +386,6 @@ export const addPaymentRecord = async (
   months: number
 ): Promise<PaymentHistoryItem> => {
   await new Promise(resolve => setTimeout(resolve, 600)); // Simulate network delay
-  
-  const tariffNames: Record<string, string> = {
-    '1': 'Стартовый',
-    '2': 'Бизнес',
-    '3': 'Премиум',
-    '4': 'Корпоративный'
-  };
   
   const newPayment: PaymentHistoryItem = {
     id: Date.now().toString(),
