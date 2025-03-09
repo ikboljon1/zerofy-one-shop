@@ -1,4 +1,3 @@
-
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
@@ -15,7 +14,6 @@ app.use(bodyParser.json());
 const db = new sqlite3.Database('./database.sqlite');
 
 db.serialize(() => {
-  // Сохраняем основные таблицы для пользователей и их данных
   db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT UNIQUE NOT NULL,
@@ -24,18 +22,6 @@ db.serialize(() => {
     status TEXT DEFAULT 'active',
     subscription_type TEXT DEFAULT 'free',
     subscription_expiry DATETIME
-  )`);
-
-  // Добавляем таблицу stores для хранения магазинов пользователей
-  db.run(`CREATE TABLE IF NOT EXISTS stores (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    marketplace TEXT NOT NULL,
-    api_key TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS email_settings (
@@ -66,6 +52,62 @@ db.serialize(() => {
     subscription_type TEXT NOT NULL,
     payment_method TEXT,
     FOREIGN KEY (user_id) REFERENCES users(id)
+  )`);
+
+  // Создаем таблицы для хранения данных от API
+  db.run(`CREATE TABLE IF NOT EXISTS store_stats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    store_id TEXT NOT NULL,
+    date_from TEXT NOT NULL,
+    date_to TEXT NOT NULL,
+    data TEXT NOT NULL,
+    timestamp INTEGER NOT NULL
+  )`);
+
+  // Таблица для хранения заказов
+  db.run(`CREATE TABLE IF NOT EXISTS orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    store_id TEXT NOT NULL,
+    date_from TEXT NOT NULL,
+    date_to TEXT NOT NULL,
+    orders TEXT NOT NULL,
+    warehouse_distribution TEXT NOT NULL,
+    region_distribution TEXT NOT NULL,
+    timestamp INTEGER NOT NULL
+  )`);
+
+  // Таблица для хранения продаж
+  db.run(`CREATE TABLE IF NOT EXISTS sales (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    store_id TEXT NOT NULL,
+    date_from TEXT NOT NULL,
+    date_to TEXT NOT NULL,
+    sales TEXT NOT NULL,
+    timestamp INTEGER NOT NULL
+  )`);
+
+  // Таблица для хранения данных о товарах
+  db.run(`CREATE TABLE IF NOT EXISTS products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    store_id TEXT NOT NULL,
+    products TEXT NOT NULL,
+    timestamp INTEGER NOT NULL
+  )`);
+
+  // Таблица для хранения детальной аналитики
+  db.run(`CREATE TABLE IF NOT EXISTS analytics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    store_id TEXT NOT NULL,
+    date_from TEXT NOT NULL,
+    date_to TEXT NOT NULL,
+    data TEXT NOT NULL,
+    penalties TEXT NOT NULL,
+    returns TEXT NOT NULL,
+    deductions TEXT NOT NULL,
+    deductions_timeline TEXT NOT NULL,
+    product_advertising_data TEXT NOT NULL,
+    advertising_breakdown TEXT NOT NULL,
+    timestamp INTEGER NOT NULL
   )`);
 });
 
@@ -320,179 +362,277 @@ app.get('/api/payment-history/:user_id', (req, res) => {
   });
 });
 
-// API для работы с магазинами
-
-// Добавление нового магазина
-app.post('/api/stores', (req, res) => {
-  const { user_id, name, marketplace, api_key } = req.body;
+// API для работы с данными от Wildberries
+// Сохранение статистики магазина
+app.post('/api/store-stats', (req, res) => {
+  const { storeId, dateFrom, dateTo, data } = req.body;
   
-  if (!user_id || !name || !marketplace || !api_key) {
-    return res.status(400).json({ error: 'Все поля обязательны для заполнения' });
+  if (!storeId || !data) {
+    return res.status(400).json({ error: 'Необходимо указать storeId и data' });
   }
+
+  const timestamp = Date.now();
+  const query = `INSERT INTO store_stats (store_id, date_from, date_to, data, timestamp) 
+                 VALUES (?, ?, ?, ?, ?)`;
   
-  const query = `INSERT INTO stores (user_id, name, marketplace, api_key, created_at, last_updated) 
-                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`;
-  
-  db.run(query, [user_id, name, marketplace, api_key], function(err) {
+  db.run(query, [storeId, dateFrom, dateTo, JSON.stringify(data), timestamp], function(err) {
     if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Ошибка при добавлении магазина' });
+      console.error('Error saving store stats:', err);
+      return res.status(500).json({ error: 'Ошибка при сохранении статистики магазина' });
     }
-    
-    res.status(201).json({ 
-      id: this.lastID,
-      message: 'Магазин успешно добавлен',
-      store: {
-        id: this.lastID,
-        user_id,
-        name,
-        marketplace,
-        created_at: new Date().toISOString()
-      }
-    });
+
+    res.json({ success: true, id: this.lastID });
   });
 });
 
-// Получение всех магазинов пользователя
-app.get('/api/stores/user/:user_id', (req, res) => {
-  const userId = req.params.user_id;
+// Получение статистики магазина
+app.get('/api/store-stats/:storeId', (req, res) => {
+  const { storeId } = req.params;
   
-  const query = 'SELECT id, name, marketplace, created_at, last_updated FROM stores WHERE user_id = ?';
-  
-  db.all(query, [userId], (err, rows) => {
+  db.get('SELECT * FROM store_stats WHERE store_id = ? ORDER BY timestamp DESC LIMIT 1', [storeId], (err, row) => {
     if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Ошибка при получении списка магазинов' });
+      console.error('Error getting store stats:', err);
+      return res.status(500).json({ error: 'Ошибка при получении статистики магазина' });
     }
-    
-    res.json(rows);
-  });
-});
 
-// Получение информации о конкретном магазине
-app.get('/api/stores/:id', (req, res) => {
-  const storeId = req.params.id;
-  
-  const query = 'SELECT id, user_id, name, marketplace, created_at, last_updated FROM stores WHERE id = ?';
-  
-  db.get(query, [storeId], (err, row) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Ошибка при получении информации о магазине' });
-    }
-    
     if (!row) {
-      return res.status(404).json({ error: 'Магазин не найден' });
+      return res.status(404).json({ error: 'Статистика не найдена' });
     }
-    
-    res.json(row);
+
+    try {
+      row.data = JSON.parse(row.data);
+      res.json(row);
+    } catch (e) {
+      console.error('Error parsing JSON data:', e);
+      res.status(500).json({ error: 'Ошибка при обработке данных' });
+    }
   });
 });
 
-// Обновление информации о магазине
-app.put('/api/stores/:id', (req, res) => {
-  const storeId = req.params.id;
-  const { name, marketplace, api_key } = req.body;
+// Сохранение заказов
+app.post('/api/orders', (req, res) => {
+  const { storeId, dateFrom, dateTo, orders, warehouseDistribution, regionDistribution } = req.body;
   
-  // Проверяем, что хотя бы одно из полей для обновления присутствует в запросе
-  if (!name && !marketplace && !api_key) {
-    return res.status(400).json({ error: 'Необходимо указать хотя бы одно поле для обновления' });
+  if (!storeId || !orders) {
+    return res.status(400).json({ error: 'Необходимо указать storeId и orders' });
   }
+
+  const timestamp = Date.now();
+  const query = `INSERT INTO orders (store_id, date_from, date_to, orders, warehouse_distribution, region_distribution, timestamp) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`;
   
-  let query = 'UPDATE stores SET last_updated = CURRENT_TIMESTAMP';
-  const values = [];
-  
-  if (name) {
-    query += ', name = ?';
-    values.push(name);
-  }
-  
-  if (marketplace) {
-    query += ', marketplace = ?';
-    values.push(marketplace);
-  }
-  
-  if (api_key) {
-    query += ', api_key = ?';
-    values.push(api_key);
-  }
-  
-  query += ' WHERE id = ?';
-  values.push(storeId);
-  
-  db.run(query, values, function(err) {
+  db.run(query, [
+    storeId, 
+    dateFrom, 
+    dateTo, 
+    JSON.stringify(orders), 
+    JSON.stringify(warehouseDistribution || []), 
+    JSON.stringify(regionDistribution || []), 
+    timestamp
+  ], function(err) {
     if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Ошибка при обновлении информации о магазине' });
+      console.error('Error saving orders:', err);
+      return res.status(500).json({ error: 'Ошибка при сохранении заказов' });
     }
-    
-    if (this.changes === 0) {
-      return res.status(404).json({ error: 'Магазин не найден' });
-    }
-    
-    res.json({ message: 'Информация о магазине успешно обновлена' });
+
+    res.json({ success: true, id: this.lastID });
   });
 });
 
-// Удаление магазина
-app.delete('/api/stores/:id', (req, res) => {
-  const storeId = req.params.id;
-  const userId = req.query.user_id; // Используется для проверки прав
+// Получение заказов
+app.get('/api/orders/:storeId', (req, res) => {
+  const { storeId } = req.params;
   
-  // Проверяем, принадлежит ли магазин указанному пользователю
-  if (userId) {
-    const checkQuery = 'SELECT * FROM stores WHERE id = ? AND user_id = ?';
-    
-    db.get(checkQuery, [storeId, userId], (err, row) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'Ошибка при проверке магазина' });
-      }
-      
-      if (!row) {
-        return res.status(403).json({ error: 'У вас нет прав на удаление этого магазина' });
-      }
-      
-      // Проверка условия: магазин можно удалить только через месяц после регистрации
-      const createdAt = new Date(row.created_at);
-      const now = new Date();
-      const oneMonthLater = new Date(createdAt);
-      oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
-      
-      if (now < oneMonthLater) {
-        const daysRemaining = Math.ceil((oneMonthLater.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        return res.status(403).json({ 
-          error: 'Магазин можно удалить только через месяц после создания',
-          daysRemaining: daysRemaining
-        });
-      }
-      
-      // Если проверки пройдены, удаляем магазин
-      deleteStore(storeId, res);
-    });
-  } else {
-    // Если user_id не указан, просто удаляем магазин (например, для админа)
-    deleteStore(storeId, res);
-  }
-});
-
-// Функция для удаления магазина
-function deleteStore(storeId, res) {
-  const query = 'DELETE FROM stores WHERE id = ?';
-  
-  db.run(query, [storeId], function(err) {
+  db.get('SELECT * FROM orders WHERE store_id = ? ORDER BY timestamp DESC LIMIT 1', [storeId], (err, row) => {
     if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Ошибка при удалении магазина' });
+      console.error('Error getting orders:', err);
+      return res.status(500).json({ error: 'Ошибка при получении заказов' });
     }
-    
-    if (this.changes === 0) {
-      return res.status(404).json({ error: 'Магазин не найден' });
+
+    if (!row) {
+      return res.status(404).json({ error: 'Заказы не найдены' });
     }
-    
-    res.json({ message: 'Магазин успешно удален' });
+
+    try {
+      row.orders = JSON.parse(row.orders);
+      row.warehouse_distribution = JSON.parse(row.warehouse_distribution);
+      row.region_distribution = JSON.parse(row.region_distribution);
+      res.json(row);
+    } catch (e) {
+      console.error('Error parsing JSON data:', e);
+      res.status(500).json({ error: 'Ошибка при обработке данных' });
+    }
   });
-}
+});
+
+// Сохранение продаж
+app.post('/api/sales', (req, res) => {
+  const { storeId, dateFrom, dateTo, sales } = req.body;
+  
+  if (!storeId || !sales) {
+    return res.status(400).json({ error: 'Необходимо указать storeId и sales' });
+  }
+
+  const timestamp = Date.now();
+  const query = `INSERT INTO sales (store_id, date_from, date_to, sales, timestamp) 
+                 VALUES (?, ?, ?, ?, ?)`;
+  
+  db.run(query, [storeId, dateFrom, dateTo, JSON.stringify(sales), timestamp], function(err) {
+    if (err) {
+      console.error('Error saving sales:', err);
+      return res.status(500).json({ error: 'Ошибка при сохранении продаж' });
+    }
+
+    res.json({ success: true, id: this.lastID });
+  });
+});
+
+// Получение продаж
+app.get('/api/sales/:storeId', (req, res) => {
+  const { storeId } = req.params;
+  
+  db.get('SELECT * FROM sales WHERE store_id = ? ORDER BY timestamp DESC LIMIT 1', [storeId], (err, row) => {
+    if (err) {
+      console.error('Error getting sales:', err);
+      return res.status(500).json({ error: 'Ошибка при получении продаж' });
+    }
+
+    if (!row) {
+      return res.status(404).json({ error: 'Продажи не найдены' });
+    }
+
+    try {
+      row.sales = JSON.parse(row.sales);
+      res.json(row);
+    } catch (e) {
+      console.error('Error parsing JSON data:', e);
+      res.status(500).json({ error: 'Ошибка при обработке данных' });
+    }
+  });
+});
+
+// Сохранение товаров
+app.post('/api/products', (req, res) => {
+  const { storeId, products } = req.body;
+  
+  if (!storeId || !products) {
+    return res.status(400).json({ error: 'Необходимо указать storeId и products' });
+  }
+
+  const timestamp = Date.now();
+  const query = `INSERT INTO products (store_id, products, timestamp) 
+                 VALUES (?, ?, ?)`;
+  
+  db.run(query, [storeId, JSON.stringify(products), timestamp], function(err) {
+    if (err) {
+      console.error('Error saving products:', err);
+      return res.status(500).json({ error: 'Ошибка при сохранении товаров' });
+    }
+
+    res.json({ success: true, id: this.lastID });
+  });
+});
+
+// Получение товаров
+app.get('/api/products/:storeId', (req, res) => {
+  const { storeId } = req.params;
+  
+  db.get('SELECT * FROM products WHERE store_id = ? ORDER BY timestamp DESC LIMIT 1', [storeId], (err, row) => {
+    if (err) {
+      console.error('Error getting products:', err);
+      return res.status(500).json({ error: 'Ошибка при получении товаров' });
+    }
+
+    if (!row) {
+      return res.status(404).json({ error: 'Товары не найдены' });
+    }
+
+    try {
+      row.products = JSON.parse(row.products);
+      res.json(row);
+    } catch (e) {
+      console.error('Error parsing JSON data:', e);
+      res.status(500).json({ error: 'Ошибка при обработке данных' });
+    }
+  });
+});
+
+// Сохранение аналитики
+app.post('/api/analytics', (req, res) => {
+  const { 
+    storeId, 
+    dateFrom, 
+    dateTo, 
+    data, 
+    penalties, 
+    returns, 
+    deductions,
+    deductionsTimeline, 
+    productAdvertisingData, 
+    advertisingBreakdown 
+  } = req.body;
+  
+  if (!storeId || !data) {
+    return res.status(400).json({ error: 'Необходимо указать storeId и data' });
+  }
+
+  const timestamp = Date.now();
+  const query = `INSERT INTO analytics (
+    store_id, date_from, date_to, data, penalties, returns, deductions,
+    deductions_timeline, product_advertising_data, advertising_breakdown, timestamp
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  
+  db.run(query, [
+    storeId, 
+    dateFrom, 
+    dateTo, 
+    JSON.stringify(data), 
+    JSON.stringify(penalties || []), 
+    JSON.stringify(returns || []),
+    JSON.stringify(deductions || []),
+    JSON.stringify(deductionsTimeline || []), 
+    JSON.stringify(productAdvertisingData || []), 
+    JSON.stringify(advertisingBreakdown || {}),
+    timestamp
+  ], function(err) {
+    if (err) {
+      console.error('Error saving analytics:', err);
+      return res.status(500).json({ error: 'Ошибка при сохранении аналитики' });
+    }
+
+    res.json({ success: true, id: this.lastID });
+  });
+});
+
+// Получение аналитики
+app.get('/api/analytics/:storeId', (req, res) => {
+  const { storeId } = req.params;
+  
+  db.get('SELECT * FROM analytics WHERE store_id = ? ORDER BY timestamp DESC LIMIT 1', [storeId], (err, row) => {
+    if (err) {
+      console.error('Error getting analytics:', err);
+      return res.status(500).json({ error: 'Ошибка при получении аналитики' });
+    }
+
+    if (!row) {
+      return res.status(404).json({ error: 'Аналитика не найдена' });
+    }
+
+    try {
+      row.data = JSON.parse(row.data);
+      row.penalties = JSON.parse(row.penalties);
+      row.returns = JSON.parse(row.returns);
+      row.deductions = JSON.parse(row.deductions);
+      row.deductions_timeline = JSON.parse(row.deductions_timeline);
+      row.product_advertising_data = JSON.parse(row.product_advertising_data);
+      row.advertising_breakdown = JSON.parse(row.advertising_breakdown);
+      res.json(row);
+    } catch (e) {
+      console.error('Error parsing JSON data:', e);
+      res.status(500).json({ error: 'Ошибка при обработке данных' });
+    }
+  });
+});
 
 app.listen(port, () => {
   console.log(`Сервер запущен на порту ${port}`);

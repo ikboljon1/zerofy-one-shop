@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ShoppingBag, Store, Package2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -133,7 +132,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       const updatedStore = await refreshStoreStats(store);
       const storeToAdd = updatedStore || store;
       
-      // Сохраняем данные для аналитики в localStorage
+      // Также сохраняем данные для использования в Analytics и Dashboard
       if (updatedStore && updatedStore.stats) {
         const analyticsData = {
           storeId: store.id,
@@ -143,6 +142,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
           timestamp: Date.now()
         };
         
+        // Сохраняем данные для использования в аналитике
         localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
       }
       
@@ -204,7 +204,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         setStores(updatedStores);
         saveStores(updatedStores);
         
-        // Обновляем данные для использования в аналитике
+        // Также обновляем данные для использования в Analytics и Dashboard
         if (updatedStore.stats) {
           const analyticsData = {
             storeId: store.id,
@@ -214,6 +214,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
             timestamp: Date.now()
           };
           
+          // Сохраняем данные для использования в аналитике
           localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
         }
         

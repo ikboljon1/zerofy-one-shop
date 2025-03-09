@@ -1,5 +1,5 @@
 
-import { WildberriesResponse } from "@/services/wildberriesApi";
+import { WildberriesResponse as ApiWildberriesResponse } from "@/services/wildberriesApi";
 
 export type Marketplace = "Wildberries" | "Ozon" | "Yandexmarket" | "Uzum";
 
@@ -21,6 +21,9 @@ export const ORDERS_STORAGE_KEY = 'marketplace_orders';
 export const SALES_STORAGE_KEY = 'marketplace_sales';
 
 export const marketplaces: Marketplace[] = ["Wildberries", "Ozon", "Yandexmarket", "Uzum"];
+
+// Re-export the WildberriesResponse from the API to avoid duplicate definitions
+export type WildberriesResponse = ApiWildberriesResponse;
 
 // Интерфейс для возвратов по nmId, используемый в Python-скрипте
 export interface ReturnsByNmId {

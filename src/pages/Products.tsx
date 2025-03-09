@@ -176,11 +176,13 @@ const Products = ({ selectedStore }: ProductsProps) => {
         </Card>
       ) : (
         <>
+          {/* Render improved Products component with profitable/unprofitable products */}
           <ProductsComponent 
             topProfitableProducts={profitableProducts} 
             topUnprofitableProducts={unprofitableProducts} 
           />
           
+          {/* Original product list below */}
           <ProductsList selectedStore={selectedStore} />
         </>
       )}

@@ -23,56 +23,14 @@ interface SalesChartProps {
   };
 }
 
-// Добавим компонент для обработки данных из продаж Wildberries
-interface SalesProps {
-  sales: Array<{
-    date: string;
-    orderNumber: string;
-    productName: string;
-    price: number;
-    commission: number;
-    status: string;
-  }>;
-}
-
-const SalesChart = ({ data, sales }: SalesChartProps & Partial<SalesProps>) => {
+const SalesChart = ({ data }: SalesChartProps) => {
   const isMobile = useIsMobile();
-  
-  // Преобразуем данные продаж Wildberries в формат для графика, если они переданы
-  const processWildberriesSales = () => {
-    if (sales && sales.length > 0) {
-      // Группируем продажи по датам и суммируем
-      const salesByDate: Record<string, number> = {};
-      
-      sales.forEach(sale => {
-        const dateKey = sale.date.split('T')[0]; // Получаем только дату
-        if (!salesByDate[dateKey]) {
-          salesByDate[dateKey] = 0;
-        }
-        salesByDate[dateKey] += sale.price;
-      });
-      
-      // Преобразуем в массив для графика
-      const dailySales = Object.keys(salesByDate).map(date => ({
-        date,
-        sales: salesByDate[date]
-      }))
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-      
-      return { dailySales };
-    }
-    return null;
-  };
-  
-  // Используем данные из props или преобразованные данные продаж
-  const chartData = data || processWildberriesSales();
-  
   // Check if data is valid and has sales data
-  const hasSalesData = chartData && chartData.dailySales && chartData.dailySales.length > 0;
+  const hasSalesData = data && data.dailySales && data.dailySales.length > 0;
   
   // Calculate average sales
   const avgSales = hasSalesData 
-    ? chartData.dailySales.reduce((sum, item) => sum + item.sales, 0) / chartData.dailySales.length
+    ? data.dailySales.reduce((sum, item) => sum + item.sales, 0) / data.dailySales.length
     : 0;
   
   if (!hasSalesData) {
@@ -103,7 +61,7 @@ const SalesChart = ({ data, sales }: SalesChartProps & Partial<SalesProps>) => {
       </div>
       <div className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData.dailySales} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+          <AreaChart data={data.dailySales} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8}/>
