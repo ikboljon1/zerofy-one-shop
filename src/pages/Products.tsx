@@ -1,13 +1,15 @@
 
 import { useState, useEffect } from "react";
-import { Package, RefreshCw, TrendingUp, TrendingDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Package, RefreshCw, TrendingUp, TrendingDown, ArrowUp, ArrowDown, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import ProductsList from "@/components/ProductsList";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { formatCurrency } from "@/utils/formatCurrency";
-import { getProductProfitabilityData } from "@/utils/storeUtils";
+import { getProductProfitabilityData, getProductProfitability30Days } from "@/utils/storeUtils";
 import { Badge } from "@/components/ui/badge";
+import Products from "@/components/Products";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ProductsProps {
   selectedStore?: {
@@ -21,20 +23,24 @@ interface ProductData {
   price: string;
   profit: string;
   image: string;
+  quantitySold?: number;
+  margin?: number;
+  returnCount?: number;
+  category?: string;
 }
 
-const Products = ({ selectedStore }: ProductsProps) => {
+const ProductsPage = ({ selectedStore }: ProductsProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
   const [profitableProducts, setProfitableProducts] = useState<ProductData[]>([]);
   const [unprofitableProducts, setUnprofitableProducts] = useState<ProductData[]>([]);
   const [lastUpdateDate, setLastUpdateDate] = useState<string | null>(null);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (selectedStore) {
       loadProductProfitabilityData();
-      // Auto-sync products when store is selected
-      handleSync();
     } else {
       setProfitableProducts([]);
       setUnprofitableProducts([]);
@@ -48,10 +54,12 @@ const Products = ({ selectedStore }: ProductsProps) => {
     const profitabilityData = getProductProfitabilityData(selectedStore.id);
     
     if (profitabilityData) {
-      // Ensure we're only taking the top profitable and unprofitable products
-      setProfitableProducts(profitabilityData.profitableProducts?.slice(0, 3) || []);
-      setUnprofitableProducts(profitabilityData.unprofitableProducts?.slice(0, 3) || []);
+      setProfitableProducts(profitabilityData.profitableProducts || []);
+      setUnprofitableProducts(profitabilityData.unprofitableProducts || []);
       setLastUpdateDate(profitabilityData.updateDate);
+    } else {
+      // Если данных нет - запускаем анализ за 30 дней
+      handleAnalyze30Days();
     }
   };
 
@@ -99,7 +107,7 @@ const Products = ({ selectedStore }: ProductsProps) => {
         description: "Товары успешно синхронизированы",
       });
       
-      // Повторно загружаем данные о прибыльности
+      // Повторно загружаем данные о прибыльности или запускаем анализ
       loadProductProfitabilityData();
     } catch (error) {
       console.error("Error syncing products:", error);
@@ -113,74 +121,47 @@ const Products = ({ selectedStore }: ProductsProps) => {
     }
   };
 
-  const ProductProfitabilityCard = ({ 
-    products, 
-    isProfitable,
-    title 
-  }: {
-    products: ProductData[], 
-    isProfitable: boolean,
-    title: string
-  }) => {
-    if (!products || products.length === 0) return null;
-    
-    const IconComponent = isProfitable ? TrendingUp : TrendingDown;
-    const textColorClass = isProfitable ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
-    const bgClass = isProfitable 
-      ? "bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-green-100 dark:border-green-800/30" 
-      : "bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-950/30 dark:to-rose-950/30 border-red-100 dark:border-red-800/30";
-    
-    return (
-      <Card>
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold">{title}</CardTitle>
-            <div className={`p-2 rounded-md ${isProfitable ? 'bg-green-100 dark:bg-green-900/60' : 'bg-red-100 dark:bg-red-900/60'}`}>
-              <IconComponent className={`h-4 w-4 ${isProfitable ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {products.map((product, index) => {
-              const profit = parseFloat(product.profit);
-              const formattedProfit = isProfitable
-                ? `+${formatCurrency(profit)}`
-                : formatCurrency(profit);
-              
-              return (
-                <div 
-                  key={index} 
-                  className={`flex items-center p-3 rounded-lg border ${bgClass}`}
-                >
-                  <div className="w-12 h-12 rounded overflow-hidden mr-4 bg-gray-100 dark:bg-gray-800">
-                    <img 
-                      src={product.image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"} 
-                      alt={product.name} 
-                      className="w-full h-full object-cover" 
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium">{product.name || "Неизвестный товар"}</h4>
-                    <p className="text-sm text-muted-foreground">Цена: {formatCurrency(parseFloat(product.price))}</p>
-                  </div>
-                  <div className="text-right flex items-center">
-                    <span className={`${textColorClass} font-semibold mr-1`}>
-                      {formattedProfit}
-                    </span>
-                    {isProfitable ? (
-                      <ArrowUp className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <ArrowDown className="h-4 w-4 text-red-500" />
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-    );
+  const handleAnalyze30Days = async () => {
+    if (!selectedStore) {
+      toast({
+        title: "Ошибка",
+        description: "Пожалуйста, выберите магазин для анализа товаров",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAnalyticsLoading(true);
+    try {
+      // Анализируем эффективность товаров за 30 дней
+      const result = await getProductProfitability30Days(selectedStore);
+      
+      if (result) {
+        setProfitableProducts(result.profitableProducts || []);
+        setUnprofitableProducts(result.unprofitableProducts || []);
+        setLastUpdateDate(result.updateDate);
+        
+        toast({
+          title: "Анализ завершен",
+          description: "Данные о прибыльности товаров за 30 дней обновлены",
+        });
+      } else {
+        toast({
+          title: "Предупреждение",
+          description: "Не удалось выполнить анализ. Возможно, недостаточно данных.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error analyzing products:", error);
+      toast({
+        title: "Ошибка",
+        description: "Произошла ошибка при анализе товаров",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyticsLoading(false);
+    }
   };
 
   return (
@@ -190,13 +171,27 @@ const Products = ({ selectedStore }: ProductsProps) => {
           <Package className="h-5 w-5" />
           <h1 className="text-2xl font-semibold">Товары</h1>
         </div>
-        <Button 
-          onClick={handleSync} 
-          disabled={isLoading || !selectedStore}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-          Синхронизировать
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleAnalyze30Days} 
+            disabled={isAnalyticsLoading || !selectedStore}
+          >
+            {isAnalyticsLoading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <TrendingUp className="h-4 w-4 mr-2" />
+            )}
+            Анализ за 30 дней
+          </Button>
+          <Button 
+            onClick={handleSync} 
+            disabled={isLoading || !selectedStore}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Синхронизировать
+          </Button>
+        </div>
       </div>
       
       {lastUpdateDate && (
@@ -214,19 +209,57 @@ const Products = ({ selectedStore }: ProductsProps) => {
             <p className="text-muted-foreground">Выберите магазин для просмотра товаров</p>
           </CardContent>
         </Card>
+      ) : isAnalyticsLoading ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+            <Loader2 className="h-12 w-12 text-primary animate-spin mb-4" />
+            <p className="text-muted-foreground">Анализируем эффективность товаров за 30 дней...</p>
+            <p className="text-xs text-muted-foreground mt-2">Это может занять некоторое время</p>
+          </CardContent>
+        </Card>
+      ) : profitableProducts.length === 0 && unprofitableProducts.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+            <AlertCircle className="h-12 w-12 text-amber-500 mb-4" />
+            <p className="text-muted-foreground">Нет данных о прибыльности товаров</p>
+            <p className="text-xs text-muted-foreground mt-2">Нажмите "Анализ за 30 дней" для расчета</p>
+          </CardContent>
+        </Card>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <ProductProfitabilityCard 
-              title="Самые прибыльные товары" 
-              products={profitableProducts} 
-              isProfitable={true} 
-            />
-            <ProductProfitabilityCard 
-              title="Самые убыточные товары" 
-              products={unprofitableProducts} 
-              isProfitable={false} 
-            />
+          <Products 
+            topProfitableProducts={profitableProducts} 
+            topUnprofitableProducts={unprofitableProducts} 
+          />
+          
+          <div className={`mt-8 p-4 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-100 dark:border-blue-800/30 ${isMobile ? '' : 'p-6'}`}>
+            <h3 className="text-lg font-semibold mb-2">Рекомендации по оптимизации</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card className="bg-white/80 dark:bg-gray-900/80">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Для прибыльных товаров</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm">
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Увеличьте рекламный бюджет для этих позиций</li>
+                    <li>Рассмотрите возможность расширения ассортимента в этой категории</li>
+                    <li>Оптимизируйте описания для повышения конверсии</li>
+                  </ul>
+                </CardContent>
+              </Card>
+              <Card className="bg-white/80 dark:bg-gray-900/80">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Для убыточных товаров</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm">
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Пересмотрите ценовую политику</li>
+                    <li>Снизьте расходы на хранение за счет уменьшения остатков</li>
+                    <li>Рассмотрите вопрос о снятии товара с продажи, если убыточность сохраняется</li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
           </div>
           
           <ProductsList selectedStore={selectedStore} />
@@ -236,4 +269,4 @@ const Products = ({ selectedStore }: ProductsProps) => {
   );
 };
 
-export default Products;
+export default ProductsPage;
