@@ -23,6 +23,7 @@ import OrderMetrics from "./OrderMetrics";
 import SalesMetrics from "./SalesMetrics";
 import OrdersChart from "./OrdersChart";
 import SalesChart from "./SalesChart";
+import TipsSection from "./TipsSection";
 
 const Dashboard = () => {
   const { toast } = useToast();
@@ -234,6 +235,7 @@ const Dashboard = () => {
 
         <TabsContent value="overview" className="space-y-4">
           <Stats />
+          <TipsSection />
         </TabsContent>
 
         <TabsContent value="orders" className="space-y-4">
