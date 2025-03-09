@@ -1,6 +1,6 @@
+
 import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY, ORDERS_STORAGE_KEY, SALES_STORAGE_KEY, WildberriesOrder, WildberriesSale } from "@/types/store";
 import { fetchWildberriesStats, fetchWildberriesOrders, fetchWildberriesSales } from "@/services/wildberriesApi";
-import axios from "axios";
 
 export const getLastWeekDateRange = () => {
   const now = new Date();
@@ -81,21 +81,8 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           timestamp: Date.now()
         };
         
-        // Сохраняем данные в базу через API
-        try {
-          await axios.post('http://localhost:3001/api/store-stats', {
-            storeId: store.id,
-            dateFrom: from.toISOString(),
-            dateTo: to.toISOString(),
-            data: stats
-          });
-          
-          await axios.post('http://localhost:3001/api/analytics', analyticsData);
-        } catch (error) {
-          console.error('Error saving stats to DB:', error);
-          // В случае ошибки сохраняем в localStorage как резервный вариант
-          localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
-        }
+        // Сохраняем данные только в localStorage (не в БД)
+        localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
         
         return updatedStore;
       }
@@ -109,42 +96,26 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
 
 export const getOrdersData = async (storeId: string) => {
   try {
-    // Пытаемся получить данные из БД
-    const response = await axios.get(`http://localhost:3001/api/orders/${storeId}`);
-    if (response.data) {
-      return {
-        orders: response.data.orders,
-        warehouseDistribution: response.data.warehouse_distribution,
-        regionDistribution: response.data.region_distribution
-      };
-    }
-  } catch (error) {
-    console.error('Error fetching orders from DB:', error);
-    // Если не удалось получить из БД, используем localStorage
+    // Используем только localStorage
     const storedData = localStorage.getItem(`${ORDERS_STORAGE_KEY}_${storeId}`);
     if (storedData) {
       return JSON.parse(storedData);
     }
+  } catch (error) {
+    console.error('Error fetching orders from localStorage:', error);
   }
   return null;
 };
 
 export const getSalesData = async (storeId: string) => {
   try {
-    // Пытаемся получить данные из БД
-    const response = await axios.get(`http://localhost:3001/api/sales/${storeId}`);
-    if (response.data) {
-      return {
-        sales: response.data.sales
-      };
-    }
-  } catch (error) {
-    console.error('Error fetching sales from DB:', error);
-    // Если не удалось получить из БД, используем localStorage
+    // Используем только localStorage
     const storedData = localStorage.getItem(`${SALES_STORAGE_KEY}_${storeId}`);
     if (storedData) {
       return JSON.parse(storedData);
     }
+  } catch (error) {
+    console.error('Error fetching sales from localStorage:', error);
   }
   return null;
 };
@@ -201,14 +172,8 @@ export const fetchAndUpdateOrders = async (store: Store) => {
           timestamp: Date.now()
         };
         
-        // Сохраняем в БД
-        try {
-          await axios.post('http://localhost:3001/api/orders', ordersData);
-        } catch (error) {
-          console.error('Error saving orders to DB:', error);
-          // Если не удалось сохранить в БД, используем localStorage
-          localStorage.setItem(`${ORDERS_STORAGE_KEY}_${store.id}`, JSON.stringify(ordersData));
-        }
+        // Сохраняем только в localStorage (не в БД)
+        localStorage.setItem(`${ORDERS_STORAGE_KEY}_${store.id}`, JSON.stringify(ordersData));
         
         return {
           orders,
@@ -238,14 +203,8 @@ export const fetchAndUpdateSales = async (store: Store) => {
           timestamp: Date.now()
         };
         
-        // Сохраняем в БД
-        try {
-          await axios.post('http://localhost:3001/api/sales', salesData);
-        } catch (error) {
-          console.error('Error saving sales to DB:', error);
-          // Если не удалось сохранить в БД, используем localStorage
-          localStorage.setItem(`${SALES_STORAGE_KEY}_${store.id}`, JSON.stringify(salesData));
-        }
+        // Сохраняем только в localStorage (не в БД)
+        localStorage.setItem(`${SALES_STORAGE_KEY}_${store.id}`, JSON.stringify(salesData));
         
         return sales;
       }
@@ -258,7 +217,7 @@ export const fetchAndUpdateSales = async (store: Store) => {
 
 export const getProductProfitabilityData = (storeId: string) => {
   try {
-    // Try to get data from localStorage first (for faster response)
+    // Получаем данные только из localStorage
     try {
       const storedData = localStorage.getItem(`products_detailed_${storeId}`);
       if (storedData) {
@@ -282,26 +241,6 @@ export const getProductProfitabilityData = (storeId: string) => {
     } catch (innerError) {
       console.error('Error parsing local storage data:', innerError);
     }
-    
-    // Then try to fetch from the API (results will be used in next render)
-    axios.get(`http://localhost:3001/api/analytics/${storeId}`)
-      .then(response => {
-        if (response.data && response.data.data) {
-          const data = {
-            profitableProducts: response.data.data.topProfitableProducts?.slice(0, 3) || [],
-            unprofitableProducts: response.data.data.topUnprofitableProducts?.slice(0, 3) || [],
-            updateDate: response.data.date_to
-          };
-          // Cache the data for future use
-          localStorage.setItem(`products_detailed_${storeId}`, JSON.stringify(data));
-          return data;
-        }
-        return null;
-      })
-      .catch(error => {
-        console.error('Error fetching product profitability data from DB:', error);
-        return null;
-      });
   } catch (error) {
     console.error('Error in getProductProfitabilityData:', error);
   }
@@ -337,7 +276,7 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
   }
   
   try {
-    // Try to get data from localStorage first
+    // Получаем данные только из localStorage
     try {
       const key = `marketplace_analytics_${storeId}`;
       const storedData = localStorage.getItem(key);
@@ -403,44 +342,6 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
     } catch (localError) {
       console.error('Error parsing localStorage analytics data:', localError);
     }
-    
-    // Then try to fetch from the API (results will be used in next render)
-    axios.get(`http://localhost:3001/api/analytics/${storeId}`)
-      .then(response => {
-        if (response.data) {
-          const parsedData = {
-            data: response.data.data,
-            penalties: response.data.penalties || [],
-            returns: response.data.returns || [],
-            deductions: response.data.deductions || [],
-            deductionsTimeline: response.data.deductions_timeline || [],
-            productAdvertisingData: response.data.product_advertising_data || [],
-            advertisingBreakdown: response.data.advertising_breakdown || { search: 0 },
-            timestamp: response.data.timestamp
-          };
-          
-          if (!parsedData.deductionsTimeline || !Array.isArray(parsedData.deductionsTimeline) || parsedData.deductionsTimeline.length === 0) {
-            parsedData.deductionsTimeline = Array.from({ length: 7 }, (_, i) => ({
-              date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-              logistic: 0,
-              storage: 0, 
-              penalties: 0,
-              acceptance: 0,
-              advertising: 0,
-              deductions: 0
-            }));
-          }
-          
-          // Cache the data for future use
-          localStorage.setItem(`marketplace_analytics_${storeId}`, JSON.stringify(parsedData));
-          return parsedData;
-        }
-        return null;
-      })
-      .catch(error => {
-        console.error('Error fetching analytics data from DB:', error);
-        return null;
-      });
   } catch (error) {
     console.error('Error in getAnalyticsData:', error);
   }

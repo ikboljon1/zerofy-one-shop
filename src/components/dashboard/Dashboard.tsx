@@ -140,14 +140,14 @@ const Dashboard = () => {
         setSelectedStoreId(selectedStore.id);
       }
 
-      // Всегда запрашиваем новые данные
+      // Запрашиваем новые данные через API
       const ordersResult = await fetchAndUpdateOrders(selectedStore);
       if (ordersResult) {
         setOrders(ordersResult.orders);
         setWarehouseDistribution(ordersResult.warehouseDistribution);
         setRegionDistribution(ordersResult.regionDistribution);
       } else {
-        // Если не удалось получить данные, пробуем загрузить из базы данных
+        // Если не удалось получить данные, пробуем загрузить из localStorage
         const savedOrdersData = await getOrdersData(selectedStore.id);
         if (savedOrdersData) {
           setOrders(savedOrdersData.orders || []);
@@ -160,7 +160,7 @@ const Dashboard = () => {
       if (salesResult) {
         setSales(salesResult);
       } else {
-        // Если не удалось получить данные, пробуем загрузить из базы данных
+        // Если не удалось получить данные, пробуем загрузить из localStorage
         const savedSalesData = await getSalesData(selectedStore.id);
         if (savedSalesData) {
           setSales(savedSalesData.sales || []);
