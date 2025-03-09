@@ -7,5 +7,4 @@ export { default as PieChartCard } from './PieChartCard';
 export { default as ProductList } from './ProductList';
 export { default as ProductsAnalytics } from './ProductsAnalytics';
 export { default as SalesChart } from './SalesChart';
-export { default as ProfitabilityTips } from './ProfitabilityTips';
 export { default as AdvertisingOptimization } from './AdvertisingOptimization';
