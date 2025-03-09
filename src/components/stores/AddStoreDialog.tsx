@@ -58,31 +58,26 @@ export function AddStoreDialog({
       const weekAgo = new Date(today);
       weekAgo.setDate(weekAgo.getDate() - 7);
       
-      // Direct call to validate the API key with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-      
-      const result = await fetchWildberriesStats(apiKey, weekAgo, today, controller.signal);
-      clearTimeout(timeoutId);
+      // Direct call to validate the API key
+      const result = await fetchWildberriesStats(apiKey, weekAgo, today);
       
       setIsValidating(false);
       
-      // Robust check to ensure the API key is valid and returned the expected structure
+      // Make a more robust check to ensure the API key is valid
+      // Check if result exists and has the expected data structure
       if (result && 
           result.currentPeriod && 
-          typeof result.currentPeriod.sales === 'number' &&
-          result.dailySales && 
-          Array.isArray(result.dailySales)) {
+          typeof result.currentPeriod.sales === 'number') {
         console.log("API key validation successful:", result);
         return true;
       } else {
-        console.log("API key validation failed - invalid response structure:", result);
-        setValidationError("Не удалось получить корректные данные с API. Проверьте ключ и попробуйте снова.");
+        console.log("API key validation failed - invalid response:", result);
+        setValidationError("Не удалось получить данные с API. Проверьте ключ и попробуйте снова.");
         return false;
       }
     } catch (error) {
       console.error("Ошибка при валидации API ключа:", error);
-      setValidationError("Неверный API ключ или сервер не отвечает. Пожалуйста, проверьте и попробуйте снова.");
+      setValidationError("Неверный API ключ. Пожалуйста, проверьте и попробуйте снова.");
       setIsValidating(false);
       return false;
     }
