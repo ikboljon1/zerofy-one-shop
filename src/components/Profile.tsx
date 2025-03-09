@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -50,8 +49,7 @@ import {
   User as UserType,
   PaymentHistoryItem,
   activateSubscription,
-  addPaymentRecord,
-  getPaymentHistory
+  addPaymentRecord
 } from "@/services/userService";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -70,1004 +68,1266 @@ interface ProfileProps {
   onUserUpdated?: (user: UserType) => void;
 }
 
-const Profile = ({ user, onUserUpdated }: ProfileProps) => {
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [company, setCompany] = useState("");
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState("1");
-  const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
-  const [newCard, setNewCard] = useState<SavedCard>({
-    cardNumber: "",
-    expiryDate: "",
-    cvv: "",
-    lastFour: ""
-  });
-  const [showCardForm, setShowCardForm] = useState(false);
-  const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
-  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedTariff, setSelectedTariff] = useState<string>("basic");
+const Profile = ({ user: propUser, onUserUpdated }: ProfileProps) => {
+  const [activeTab, setActiveTab] = useState("profile");
+  const [selectedPlan, setSelectedPlan] = useState("");
+  const [isAddingCard, setIsAddingCard] = useState(false);
+  const [cardNumber, setCardNumber] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+  const [cvv, setCvv] = useState("");
+  const [savedCard, setSavedCard] = useState<SavedCard | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [currentSubscription, setCurrentSubscription] = useState<{
+    plan: string;
+    endDate: string;
+    daysRemaining: number;
+    isActive: boolean;
+  } | null>(null);
+  const [isSubscriptionExpired, setIsSubscriptionExpired] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserType | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryItem[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  
-  // Price configuration
-  const tariffPrices = {
-    basic: 349,
-    pro: 649,
-    business: 1299
-  };
-  
-  // Tariff limits configuration
-  const tariffLimits = {
-    basic: {
-      stores: 1,
-      products: 1000,
-      analytics: true,
-      automation: false,
-      advertising: false,
-      support: "email"
-    },
-    pro: {
-      stores: 3,
-      products: 5000,
-      analytics: true,
-      automation: true,
-      advertising: true,
-      support: "priority"
-    },
-    business: {
-      stores: 10,
-      products: "unlimited",
-      analytics: true,
-      automation: true,
-      advertising: true,
-      support: "dedicated"
-    }
-  };
+  const isMobile = useIsMobile();
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (user) {
-      setName(user.name || "");
-      setEmail(user.email || "");
-      setPhone(user.phone || "");
-      setCompany(user.company || "");
-      setSelectedTariff(user.subscription?.plan || "basic");
-
-      // Get trial days remaining
-      const days = getTrialDaysRemaining(user.id);
-      setDaysRemaining(days);
-
-      // Get subscription status
-      const status = getSubscriptionStatus(user.id);
-      setSubscriptionStatus(status);
-
-      // Fetch payment history
-      fetchPaymentHistory();
-
-      // Load saved cards from localStorage (in a real app, would be from API)
-      const savedCardsData = localStorage.getItem('savedCards');
-      if (savedCardsData) {
-        try {
-          setSavedCards(JSON.parse(savedCardsData));
-        } catch (error) {
-          console.error('Error parsing saved cards:', error);
-        }
-      }
-    }
-  }, [user]);
-
-  const fetchPaymentHistory = async () => {
-    if (!user) return;
-    
-    setIsLoadingHistory(true);
-    try {
-      const history = await getPaymentHistory(user.id);
-      setPaymentHistory(history);
-    } catch (error) {
-      console.error('Error fetching payment history:', error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось загрузить историю платежей",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoadingHistory(false);
-    }
-  };
-
-  const handleUpdateProfile = async () => {
-    if (!user) return;
-    
-    setIsUpdating(true);
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    if (propUser) {
+      setUserProfile(propUser);
       
-      const updatedUser = {
-        ...user,
-        name,
-        email,
-        phone,
-        company
+      const mockSubscriptionData = {
+        plan: propUser.tariffId === "3" ? "Премиум" : 
+              propUser.tariffId === "2" ? "Бизнес" : 
+              propUser.tariffId === "4" ? "Корпоративный" : "Стартовый",
+        endDate: propUser.subscriptionEndDate || "2024-12-31T23:59:59Z",
+        daysRemaining: 30,
+        isActive: propUser.isSubscriptionActive || propUser.isInTrial || false
       };
       
-      // Update in localStorage
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+      setCurrentSubscription(mockSubscriptionData);
+      setIsSubscriptionExpired(!mockSubscriptionData.isActive);
       
-      if (onUserUpdated) {
-        onUserUpdated(updatedUser);
+      setIsLoadingHistory(true);
+      getPaymentHistory(propUser.id).then((history) => {
+        setPaymentHistory(history);
+        setIsLoadingHistory(false);
+      });
+    } else {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+        setUserProfile(user);
+        
+        const mockSubscriptionData = {
+          plan: user.tariffId === "3" ? "Премиум" : 
+                user.tariffId === "2" ? "Бизнес" : 
+                user.tariffId === "4" ? "Корпоративный" : "Стартовый",
+          endDate: user.subscriptionEndDate || "2024-12-31T23:59:59Z",
+          daysRemaining: 30,
+          isActive: user.isSubscriptionActive || user.isInTrial || false
+        };
+        
+        setCurrentSubscription(mockSubscriptionData);
+        setIsSubscriptionExpired(!mockSubscriptionData.isActive);
+        
+        setIsLoadingHistory(true);
+        getPaymentHistory(user.id).then((history) => {
+          setPaymentHistory(history);
+          setIsLoadingHistory(false);
+        });
       }
-      
-      toast({
-        title: "Профиль обновлен",
-        description: "Ваши данные успешно сохранены",
-      });
-    } catch (error) {
-      toast({
-        title: "Ошибка",
-        description: "Не удалось обновить профиль",
-        variant: "destructive"
-      });
-    } finally {
-      setIsUpdating(false);
     }
+    
+    const storedCard = localStorage.getItem('savedCard');
+    if (storedCard) {
+      setSavedCard(JSON.parse(storedCard));
+    }
+  }, [propUser]);
+
+  const userData = userProfile || {
+    name: "Иван Иванов",
+    email: "ivan@example.com",
+    phone: "+7 (999) 123-45-67",
+    company: "ООО Компания",
+    subscription: "Бизнес",
+    subscriptionEnd: "31.12.2024",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ivan"
   };
 
-  const handleLogout = () => {
-    // Clear user data from localStorage
-    localStorage.removeItem('user');
-    
-    // Redirect to home page
-    navigate('/');
-    
+  const subscriptionPlans = [
+    {
+      id: "1",
+      name: "Стартовый",
+      price: "2000 ₽/мес",
+      priceValue: 2000,
+      color: "bg-blue-600",
+      features: ["1 магазин", "Базовая аналитика", "Email поддержка"],
+      icon: ShoppingBag
+    },
+    {
+      id: "2",
+      name: "Бизнес",
+      price: "5000 ₽/мес",
+      priceValue: 5000,
+      color: "bg-purple-600",
+      features: [
+        "До 3 магазинов",
+        "Расширенная аналитика",
+        "Приоритетная поддержка",
+        "API доступ",
+      ],
+      icon: Star
+    },
+    {
+      id: "3",
+      name: "Премиум",
+      price: "10000 ₽/мес",
+      priceValue: 10000,
+      color: "bg-amber-500",
+      features: [
+        "До 10 магазинов",
+        "Полная аналитика",
+        "24/7 поддержка",
+        "API доступ",
+        "Персональный менеджер",
+      ],
+      icon: Award
+    },
+    {
+      id: "4",
+      name: "Корпоративный",
+      price: "30000 ₽/мес",
+      priceValue: 30000,
+      color: "bg-emerald-600",
+      features: [
+        "Неограниченное количество магазинов",
+        "Корпоративные отчеты",
+        "Выделенная линия поддержки",
+        "Полный API доступ",
+        "Команда персональных менеджеров",
+        "Интеграция с корпоративными системами"
+      ],
+      icon: ShieldCheck
+    }
+  ];
+
+  const handleSelectPlan = (planName: string) => {
+    setSelectedPlan(planName);
     toast({
-      title: "Вы вышли из системы",
-      description: "Успешно выполнен выход из аккаунта",
+      title: "Подписка выбрана",
+      description: `Вы выбрали тариф ${planName}`,
     });
   };
 
-  const handleAddCard = () => {
-    // Validate card info
-    if (newCard.cardNumber.length < 16 || !newCard.expiryDate || newCard.cvv.length < 3) {
+  const handleProceedToPayment = () => {
+    if (!selectedPlan) {
       toast({
-        title: "Ошибка",
-        description: "Пожалуйста, заполните все поля корректно",
-        variant: "destructive"
+        title: "Выберите тариф",
+        description: "Пожалуйста, выберите тариф для продолжения",
+        variant: "destructive",
       });
       return;
     }
-    
-    // Format card and add to saved cards
-    const lastFour = newCard.cardNumber.slice(-4);
-    const formattedCard = {
-      ...newCard,
-      cardNumber: "**** **** **** " + lastFour,
-      lastFour
-    };
-    
-    const updatedCards = [...savedCards, formattedCard];
-    setSavedCards(updatedCards);
-    
-    // Save to localStorage (in a real app, would be to API)
-    localStorage.setItem('savedCards', JSON.stringify(updatedCards));
-    
-    // Reset form
-    setNewCard({
-      cardNumber: "",
-      expiryDate: "",
-      cvv: "",
-      lastFour: ""
-    });
-    
-    setShowCardForm(false);
-    
-    toast({
-      title: "Карта добавлена",
-      description: `Карта с номером ****${lastFour} успешно добавлена`,
-    });
+    setActiveTab("payment");
   };
 
-  const handleDeleteCard = (index: number) => {
-    const updatedCards = [...savedCards];
-    updatedCards.splice(index, 1);
-    setSavedCards(updatedCards);
-    
-    // Save to localStorage
-    localStorage.setItem('savedCards', JSON.stringify(updatedCards));
-    
+  const formatCardNumber = (value: string): string => {
+    const digits = value.replace(/\D/g, '');
+    const formatted = digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+    return formatted.substring(0, 19);
+  };
+
+  const formatExpiryDate = (value: string): string => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length > 2) {
+      return `${digits.substring(0, 2)}/${digits.substring(2, 4)}`;
+    }
+    return digits;
+  };
+
+  const getLastFourDigits = (cardNum: string): string => {
+    const digits = cardNum.replace(/\D/g, '');
+    return digits.slice(-4);
+  };
+
+  const handleAddCard = async () => {
+    if (isAddingCard) {
+      if (!cardNumber || !expiryDate || !cvv) {
+        toast({
+          title: "Ошибка",
+          description: "Пожалуйста, заполните все поля карты",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const cardDigits = cardNumber.replace(/\s/g, '');
+      if (cardDigits.length !== 16 || !/^\d+$/.test(cardDigits)) {
+        toast({
+          title: "Ошибка",
+          description: "Пожалуйста, введите корректный номер карты (16 цифр)",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!/^\d{2}\/\d{2}$/.test(expiryDate)) {
+        toast({
+          title: "Ошибка",
+          description: "Пожалуйста, введите дату в форм��те ММ/ГГ",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (cvv.length !== 3 || !/^\d+$/.test(cvv)) {
+        toast({
+          title: "Ошибка",
+          description: "CVV должен состоять из 3 цифр",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setIsProcessing(true);
+      
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        const newCard: SavedCard = {
+          cardNumber: cardNumber.replace(/\s/g, ''),
+          expiryDate,
+          cvv,
+          lastFour: getLastFourDigits(cardNumber)
+        };
+        
+        localStorage.setItem('savedCard', JSON.stringify(newCard));
+        setSavedCard(newCard);
+        
+        toast({
+          title: "Карта добавлена",
+          description: "Ваша карта успешно добавлена",
+        });
+        
+        setIsAddingCard(false);
+        setCardNumber("");
+        setExpiryDate("");
+        setCvv("");
+      } catch (error) {
+        toast({
+          title: "Ошибка",
+          description: "Не удалось добавить карту",
+          variant: "destructive",
+        });
+      } finally {
+        setIsProcessing(false);
+      }
+    } else {
+      setIsAddingCard(true);
+    }
+  };
+
+  const handleDeleteCard = () => {
+    localStorage.removeItem('savedCard');
+    setSavedCard(null);
     toast({
       title: "Карта удалена",
-      description: "Платежная карта успешно удалена",
+      description: "Ваша карта успешно удалена",
     });
   };
 
-  const handleSubscribe = async () => {
-    if (!user) return;
-    
-    setIsLoading(true);
-    
+  const handlePayment = async () => {
+    if (!selectedPlan) {
+      toast({
+        title: "Выберите тариф",
+        description: "Пожалуйста, выберите тариф для продолжения",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsProcessing(true);
     try {
-      // Calculate amount based on selected tariff and period
-      const basePrice = tariffPrices[selectedTariff as keyof typeof tariffPrices];
-      const period = parseInt(selectedPeriod);
-      let amount = basePrice * period;
-      
-      // Apply discount for longer periods
-      if (period === 3) {
-        amount = amount * 0.9; // 10% discount
-      } else if (period === 6) {
-        amount = amount * 0.8; // 20% discount
-      } else if (period === 12) {
-        amount = amount * 0.7; // 30% discount
-      }
-      
-      // Round to whole number
-      amount = Math.round(amount);
-      
-      // Simulate payment processing
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Add payment record
-      await addPaymentRecord({
-        id: `payment_${Date.now()}`,
-        userId: user.id,
-        tariff: selectedTariff,
-        amount: amount,
-        period: period,
-        date: new Date().toISOString(),
-        status: "completed"
-      });
-      
-      // Activate subscription
-      const updatedUser = await activateSubscription(user.id, {
-        plan: selectedTariff,
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + period * 30 * 24 * 60 * 60 * 1000).toISOString(),
-        status: "active"
-      });
-      
-      // Update user context if callback exists
-      if (onUserUpdated) {
-        onUserUpdated(updatedUser);
+      if (!userProfile) {
+        throw new Error("Пользователь не найден");
       }
       
-      // Update subscription status
-      setSubscriptionStatus("active");
+      const selectedPlanObject = subscriptionPlans.find(plan => plan.name === selectedPlan);
       
-      // Refresh payment history
-      fetchPaymentHistory();
+      if (!selectedPlanObject) {
+        throw new Error("Тариф не найден");
+      }
+      
+      const result = await activateSubscription(
+        userProfile.id, 
+        selectedPlanObject.id, 
+        selectedMonths // Use selected number of months
+      );
+      
+      if (result.success && result.user) {
+        await addPaymentRecord(
+          userProfile.id,
+          selectedPlanObject.id,
+          calculateTotalPrice(selectedPlanObject.id),
+          selectedMonths
+        );
+        
+        setUserProfile(result.user);
+        localStorage.setItem('user', JSON.stringify(result.user));
+        
+        // Call onUserUpdated callback if provided
+        if (onUserUpdated) {
+          onUserUpdated(result.user);
+        }
+        
+        setCurrentSubscription({
+          plan: selectedPlan,
+          endDate: result.user.subscriptionEndDate || new Date().toISOString(),
+          daysRemaining: 30 * selectedMonths, // Update days remaining based on months
+          isActive: true
+        });
+        
+        setIsSubscriptionExpired(false);
+        
+        const history = await getPaymentHistory(userProfile.id);
+        setPaymentHistory(history);
+      }
       
       toast({
-        title: "Подписка активирована",
-        description: `Тариф ${selectedTariff.toUpperCase()} успешно активирован на ${period} месяц${period > 1 ? 'а' : ''}`,
+        title: "Успешно",
+        description: `Подписка ${selectedPlan} успешно оформлена на ${selectedMonths} ${
+          selectedMonths === 1 ? 'месяц' : selectedMonths <= 4 ? 'месяца' : 'месяцев'
+        }`,
       });
+      
+      setActiveTab("subscription");
     } catch (error) {
-      console.error('Subscription error:', error);
+      console.error("Payment error:", error);
       toast({
         title: "Ошибка",
-        description: "Не удалось активировать подписку. Попробуйте позже.",
-        variant: "destructive"
+        description: "Не удалось выполнить платеж",
+        variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsProcessing(false);
     }
   };
 
-  const getStatusBadge = () => {
-    if (!subscriptionStatus) return null;
+  const calculateTotalPrice = (planId: string): number => {
+    const plan = subscriptionPlans.find(p => p.id === planId);
+    if (!plan) return 0;
     
-    switch (subscriptionStatus) {
-      case "trial":
-        return (
-          <Badge variant="warning" className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            Пробный период ({daysRemaining} дн.)
-          </Badge>
-        );
-      case "active":
-        return (
-          <Badge variant="success" className="flex items-center gap-1">
-            <CheckCircle2 className="h-3 w-3" />
-            Активна
-          </Badge>
-        );
-      case "expired":
-        return (
-          <Badge variant="destructive" className="flex items-center gap-1">
-            <AlertTriangle className="h-3 w-3" />
-            Истекла
-          </Badge>
-        );
-      default:
-        return null;
+    let price = plan.priceValue * selectedMonths;
+    
+    // Apply discount
+    if (discountPercentage > 0) {
+      price = price * (1 - discountPercentage / 100);
+    }
+    
+    return Math.round(price);
+  };
+
+  const handleMonthsChange = (months: number) => {
+    setSelectedMonths(months);
+    
+    // Calculate discount
+    if (months === 3) {
+      setDiscountPercentage(10); // 10% discount for 3 months
+    } else if (months === 6) {
+      setDiscountPercentage(15); // 15% discount for 6 months
+    } else if (months === 12) {
+      setDiscountPercentage(25); // 25% discount for 12 months
+    } else {
+      setDiscountPercentage(0); // No discount for 1 month
     }
   };
 
-  if (!user) {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).format(date);
+  };
+
+  const getSubscriptionProgress = (): number => {
+    if (!currentSubscription) return 0;
+    if (!currentSubscription.isActive) return 100;
+    
+    const daysInMonth = 30;
+    const daysElapsed = daysInMonth - currentSubscription.daysRemaining;
+    return Math.min(100, Math.max(0, (daysElapsed / daysInMonth) * 100));
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    toast({
+      title: "Вы вышли из системы",
+      description: "Перенаправление на страницу входа...",
+    });
+    
+    setTimeout(() => {
+      navigate('/');
+    }, 1000);
+  };
+
+  const SubscriptionExpiredAlert = () => {
+    if (!isSubscriptionExpired) return null;
+    
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center">
-              <h2 className="text-lg font-semibold mb-2">Вы не авторизованы</h2>
-              <p className="text-muted-foreground mb-4">Пожалуйста, войдите в систему для доступа к профилю</p>
-              <Button onClick={() => navigate('/')}>
-                На главную
+      <Alert variant="destructive" className="mb-6">
+        <Lock className="h-5 w-5" />
+        <AlertDescription>
+          <div className="font-bold text-lg">Ваша подписка истекла!</div>
+          <p>Доступ к функциям системы ограничен. Пожалуйста, продлите подписку для восстановления полного доступа.</p>
+          <Button 
+            className="mt-2 w-full sm:w-auto" 
+            onClick={() => setActiveTab("subscription")}
+          >
+            Продлить подписку
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  };
+
+  const getStoreLimit = () => {
+    if (!userProfile || !userProfile.tariffId) return 1;
+    return userProfile.tariffId in TARIFF_STORE_LIMITS ? TARIFF_STORE_LIMITS[userProfile.tariffId] : 1;
+  };
+
+  const TariffCard = ({ plan, onClick, isSelected }: { 
+    plan: typeof subscriptionPlans[0], 
+    onClick: () => void, 
+    isSelected: boolean 
+  }) => {
+    const Icon = plan.icon;
+    return (
+      <Card 
+        className={`cursor-pointer transition-all hover:border-primary ${
+          isSelected ? 'border-2 border-primary shadow-md' : ''
+        }`}
+        onClick={onClick}
+      >
+        <div className={`h-2 ${plan.color}`}></div>
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-xl flex items-center gap-2">
+              <Icon className={`h-5 w-5 ${plan.color.replace('bg-', 'text-')}`} />
+              {plan.name}
+            </CardTitle>
+            {isSelected && (
+              <Badge variant="outline" className="bg-primary/20 text-primary border-primary/30">
+                <Check className="h-3 w-3 mr-1" />
+                Выбрано
+              </Badge>
+            )}
+          </div>
+          <CardDescription>{plan.price}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ul className="space-y-2">
+            {plan.features.map((feature, index) => (
+              <li key={index} className="flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span className="text-sm">{feature}</span>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+        <CardFooter>
+          <Button 
+            variant={isSelected ? "default" : "outline"} 
+            className="w-full flex items-center justify-center gap-2"
+            onClick={onClick}
+          >
+            {isSelected ? (
+              <>
+                <Check className="h-4 w-4" />
+                Выбрано
+              </>
+            ) : (
+              <>
+                Выбрать план
+                <ArrowRight className="h-4 w-4" />
+              </>
+            )}
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  };
+
+  return (
+    <div className="container mx-auto p-4 md:p-6 max-w-5xl">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold">Личный кабинет</h1>
+          <p className="text-muted-foreground">Управление вашим профилем и подпиской</p>
+        </div>
+        
+        <Button 
+          variant="destructive" 
+          className="flex items-center gap-2"
+          onClick={handleLogout}
+        >
+          <LogOut className="h-4 w-4" />
+          Выйти из системы
+        </Button>
+      </div>
+      
+      {userProfile?.isInTrial && (
+        <Alert className="mb-6 bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-300">
+          <Star className="h-5 w-5" />
+          <AlertDescription className="flex flex-col">
+            <div className="font-bold text-lg">Пробный период</div>
+            <p>У вас активирован пробный период с тарифом "Премиум". Вы можете использовать все функции системы.</p>
+            <div className="flex items-center gap-2 mt-2">
+              <span>Осталось дней:</span>
+              <Badge variant="outline" className="bg-amber-500/20 border-amber-500/30">
+                {userProfile?.trialEndDate ? Math.max(0, Math.ceil((new Date(userProfile.trialEndDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : 0}
+              </Badge>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {isSubscriptionExpired && !userProfile?.isInTrial && (
+        <Alert variant="destructive" className="mb-6">
+          <Lock className="h-5 w-5" />
+          <AlertDescription>
+            <div className="font-bold text-lg">Ваша подписка истекла!</div>
+            <p>Доступ к функциям системы ограничен. Пожалуйста, продлите подписку для восстановления полного доступа.</p>
+            <Button 
+              className="mt-2 w-full sm:w-auto" 
+              onClick={() => setActiveTab("subscription")}
+            >
+              Продлить подписку
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+        <Card className="lg:col-span-1">
+          <CardHeader className="text-center pb-2">
+            <div className="flex justify-center mb-4">
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={userProfile?.avatar} alt={userProfile?.name} />
+                <AvatarFallback>{userProfile?.name?.charAt(0) || "U"}</AvatarFallback>
+              </Avatar>
+            </div>
+            <CardTitle className="text-xl">{userProfile?.name}</CardTitle>
+            <CardDescription className="flex items-center justify-center gap-1 mt-1">
+              <Mail className="h-3.5 w-3.5" />
+              {userProfile?.email}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <div className="flex flex-col space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Тариф:</span>
+                <Badge className={`${
+                  userProfile?.tariffId === "3" ? "bg-amber-500/90" : 
+                  userProfile?.tariffId === "2" ? "bg-purple-600/90" : 
+                  userProfile?.tariffId === "4" ? "bg-emerald-600/90" :
+                  "bg-blue-600/90"
+                }`}>
+                  {currentSubscription?.plan || "Стартовый"}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Магазины:</span>
+                <Badge variant="outline" className="flex items-center gap-1.5 bg-blue-950/30 text-blue-400 border-blue-800">
+                  <ShoppingBag className="h-3 w-3" />
+                  <span>{userProfile?.storeCount || 0}/{getStoreLimit()}</span>
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Статус:</span>
+                {userProfile?.isInTrial ? (
+                  <Badge className="bg-amber-500">Пробный</Badge>
+                ) : isSubscriptionExpired ? (
+                  <Badge variant="destructive">Истекла</Badge>
+                ) : (
+                  <Badge className="bg-green-600">Активна</Badge>
+                )}
+              </div>
+              <Separator className="my-2" />
+              <Button 
+                onClick={() => setActiveTab("profile")}
+                variant="outline" 
+                className="w-full flex items-center justify-center gap-2"
+              >
+                <UserCog className="h-4 w-4" />
+                Редактировать профиль
               </Button>
             </div>
           </CardContent>
         </Card>
+        
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Информация о подписке</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {currentSubscription && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-lg">Тарифный план:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold">{currentSubscription.plan}</span>
+                    {userProfile?.isInTrial ? (
+                      <Badge className="bg-amber-500">Пробный</Badge>
+                    ) : currentSubscription.isActive ? (
+                      <Badge className="bg-green-600">Активна</Badge>
+                    ) : (
+                      <Badge variant="destructive">Истекла</Badge>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span>Прогресс подписки</span>
+                    <span>{Math.round(getSubscriptionProgress())}%</span>
+                  </div>
+                  <Progress 
+                    value={getSubscriptionProgress()} 
+                    className={!currentSubscription.isActive && !userProfile?.isInTrial ? "h-2 bg-red-950" : "h-2"} 
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                  <div className="bg-card rounded-lg p-4 border flex flex-col items-center justify-center space-y-1 text-center">
+                    <CalendarIcon className="h-5 w-5 text-muted-foreground mb-1" />
+                    <span className="text-sm text-muted-foreground">Дата окончания</span>
+                    <span className="font-medium">
+                      {userProfile?.isInTrial 
+                        ? (userProfile.trialEndDate ? formatDate(userProfile.trialEndDate) : 'N/A')
+                        : formatDate(currentSubscription.endDate)
+                      }
+                    </span>
+                  </div>
+                  
+                  <div className="bg-card rounded-lg p-4 border flex flex-col items-center justify-center space-y-1 text-center">
+                    <Clock className="h-5 w-5 text-muted-foreground mb-1" />
+                    <span className="text-sm text-muted-foreground">Осталось дней</span>
+                    <Badge variant="outline" className="font-medium mt-1">
+                      {userProfile?.isInTrial 
+                        ? (userProfile.trialEndDate ? Math.max(0, Math.ceil((new Date(userProfile.trialEndDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : 0)
+                        : currentSubscription.daysRemaining
+                      }
+                    </Badge>
+                  </div>
+                  
+                  <div className="bg-card rounded-lg p-4 border flex flex-col items-center justify-center space-y-1 text-center">
+                    <ShoppingBag className="h-5 w-5 text-muted-foreground mb-1" />
+                    <span className="text-sm text-muted-foreground">Лимит магазинов</span>
+                    <Badge variant="outline" className="font-medium mt-1">
+                      {getStoreLimit()}
+                    </Badge>
+                  </div>
+                </div>
+                
+                <div className="flex flex-col md:flex-row gap-2 mt-4">
+                  <Button 
+                    className="flex items-center gap-2"
+                    onClick={() => setActiveTab("subscription")}
+                  >
+                    <Star className="h-4 w-4" />
+                    {currentSubscription.isActive || userProfile?.isInTrial ? "Изменить тариф" : "Активировать подписку"}
+                  </Button>
+                  <Button 
+                    className="flex items-center gap-2"
+                    variant="outline"
+                    onClick={() => setActiveTab("payment")}
+                  >
+                    <CreditCardIcon className="h-4 w-4" />
+                    Управление платежами
+                  </Button>
+                  <Button 
+                    className="flex items-center gap-2"
+                    variant="outline"
+                    onClick={() => setActiveTab("history")}
+                  >
+                    <History className="h-4 w-4" />
+                    История платежей
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
-    );
-  }
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-2 md:gap-4 w-full">
+          <TabsTrigger value="profile" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            <span className={isMobile ? 'text-sm' : ''}>Профиль</span>
+          </TabsTrigger>
+          <TabsTrigger value="password" className="flex items-center gap-2">
+            <KeyRound className="h-4 w-4" />
+            <span className={isMobile ? 'text-sm' : ''}>Пароль</span>
+          </TabsTrigger>
+          <TabsTrigger value="subscription" className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4" />
+            <span className={isMobile ? 'text-sm' : ''}>Подписка</span>
+          </TabsTrigger>
+          <TabsTrigger value="payment" className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4" />
+            <span className={isMobile ? 'text-sm' : ''}>Оплата</span>
+          </TabsTrigger>
+          <TabsTrigger value="history" className="flex items-center gap-2">
+            <History className="h-4 w-4" />
+            <span className={isMobile ? 'text-sm' : ''}>История</span>
+          </TabsTrigger>
+        </TabsList>
 
-  return (
-    <div className="container pb-12">
-      <div className="flex flex-col gap-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold tracking-tight">Профиль</h1>
-          <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2">
-            <LogOut className="h-4 w-4" />
-            Выйти
-          </Button>
-        </div>
+        <TabsContent value="profile">
+          <Card>
+            <CardHeader>
+              <CardTitle>Личные данные</CardTitle>
+              <CardDescription>
+                Обновите информацию о себе и вашей компании
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">ФИО</Label>
+                  <div className="relative">
+                    <Input
+                      id="name"
+                      defaultValue={userProfile?.name}
+                      className="pl-10"
+                    />
+                    <User className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <div className="relative">
+                    <Input
+                      id="email"
+                      type="email"
+                      defaultValue={userProfile?.email}
+                      className="pl-10"
+                    />
+                    <Mail className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Телефон</Label>
+                  <div className="relative">
+                    <Input
+                      id="phone"
+                      defaultValue={userProfile?.phone || ''}
+                      className="pl-10"
+                    />
+                    <Phone className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="company">Компания</Label>
+                  <div className="relative">
+                    <Input
+                      id="company"
+                      defaultValue={userProfile?.company || ''}
+                      className="pl-10"
+                    />
+                    <Building className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-between items-center mt-6">
+                <Button 
+                  className="w-full md:w-auto" 
+                  disabled={isSubscriptionExpired && !userProfile?.isInTrial}
+                >
+                  <Check className="mr-2 h-4 w-4" />
+                  Сохранить изменения
+                  {isSubscriptionExpired && !userProfile?.isInTrial && (
+                    <Lock className="ml-2 h-4 w-4" />
+                  )}
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  className="w-full md:w-auto ml-2 hidden md:flex"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Выйти из системы
+                </Button>
+              </div>
+              
+              {isSubscriptionExpired && !userProfile?.isInTrial && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    Редактирование профиля недоступно. Пожалуйста, продлите подписку.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="w-full justify-start mb-8">
-            <TabsTrigger value="profile" className="flex gap-1.5">
-              <User className="h-4 w-4" />
-              Профиль
-            </TabsTrigger>
-            <TabsTrigger value="billing" className="flex gap-1.5">
-              <CreditCard className="h-4 w-4" />
-              Подписка
-            </TabsTrigger>
-            <TabsTrigger value="history" className="flex gap-1.5">
-              <History className="h-4 w-4" />
-              История
-            </TabsTrigger>
-            <TabsTrigger value="password" className="flex gap-1.5">
-              <Lock className="h-4 w-4" />
-              Пароль
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="profile">
-            <div className="grid gap-6">
-              <Card>
+        <TabsContent value="password">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5 text-blue-500" />
+                Смена пароля
+              </CardTitle>
+              <CardDescription>
+                Обновите пароль для входа в личный кабинет
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {userProfile ? (
+                <PasswordChangeForm userId={userProfile.id} />
+              ) : (
+                <div className="flex justify-center items-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              )}
+              
+              {isSubscriptionExpired && !userProfile?.isInTrial && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    Изменение пароля недоступно. Пожалуйста, продлите подписку.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="subscription">
+          <div className="space-y-6">
+            {currentSubscription && (
+              <Card className="mb-6 overflow-hidden">
+                <div className={`h-2 ${
+                  userProfile?.tariffId === "3" ? "bg-amber-500" : 
+                  userProfile?.tariffId === "2" ? "bg-purple-600" : 
+                  userProfile?.tariffId === "4" ? "bg-emerald-600" :
+                  "bg-blue-600"
+                }`}></div>
                 <CardHeader>
-                  <CardTitle>Данные профиля</CardTitle>
-                  <CardDescription>
-                    Управляйте вашими персональными данными
-                  </CardDescription>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Ваша текущая подписка</span>
+                    {userProfile?.isInTrial ? (
+                      <Badge className="bg-amber-500">Пробный период</Badge>
+                    ) : currentSubscription.isActive ? (
+                      <Badge className="bg-green-600">Активна</Badge>
+                    ) : (
+                      <Badge variant="destructive">Истекла</Badge>
+                    )}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center space-x-4">
-                    <Avatar className="h-20 w-20">
-                      <AvatarImage src={user.avatar || undefined} />
-                      <AvatarFallback>{name.slice(0, 2).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h3 className="text-xl font-semibold">{name || "Пользователь"}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {user.subscription?.plan ? (
-                          <Badge variant="outline" className="mt-1">
-                            Тариф {user.subscription?.plan.toUpperCase()}
-                          </Badge>
-                        ) : (
-                          "Базовый аккаунт"
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Имя</Label>
-                        <div className="flex">
-                          <Input 
-                            id="name" 
-                            placeholder="Ваше имя" 
-                            value={name} 
-                            onChange={(e) => setName(e.target.value)}
-                            className="flex-1"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <div className="flex">
-                          <div className="flex-1 flex">
-                            <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">
-                              <Mail className="h-4 w-4" />
-                            </span>
-                            <Input
-                              id="email"
-                              type="email"
-                              placeholder="your@email.com"
-                              value={email}
-                              onChange={(e) => setEmail(e.target.value)}
-                              className="rounded-l-none flex-1"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Телефон</Label>
-                        <div className="flex">
-                          <div className="flex-1 flex">
-                            <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">
-                              <Phone className="h-4 w-4" />
-                            </span>
-                            <Input
-                              id="phone"
-                              type="tel"
-                              placeholder="+7 (999) 123-45-67"
-                              value={phone}
-                              onChange={(e) => setPhone(e.target.value)}
-                              className="rounded-l-none flex-1"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="company">Компания</Label>
-                        <div className="flex">
-                          <div className="flex-1 flex">
-                            <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">
-                              <Building className="h-4 w-4" />
-                            </span>
-                            <Input
-                              id="company"
-                              placeholder="Название компании"
-                              value={company}
-                              onChange={(e) => setCompany(e.target.value)}
-                              className="rounded-l-none flex-1"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    onClick={handleUpdateProfile} 
-                    disabled={isUpdating}
-                  >
-                    {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Сохранить изменения
-                  </Button>
-                </CardFooter>
-              </Card>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="billing">
-            <div className="grid gap-6">
-              <Card>
-                <CardHeader>
                   <div className="flex justify-between items-center">
-                    <div>
-                      <CardTitle>Управление подпиской</CardTitle>
-                      <CardDescription>
-                        Выберите тариф, который подходит вам лучше всего
-                      </CardDescription>
+                    <span className="font-medium">Тарифный план:</span>
+                    <span className="text-lg font-bold">{currentSubscription.plan}</span>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span>Прогресс подписки</span>
+                      <span>{Math.round(getSubscriptionProgress())}%</span>
                     </div>
-                    {getStatusBadge()}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Subscription Plans */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Basic Plan */}
-                    <Card className={`border-2 ${selectedTariff === "basic" ? "border-primary" : "border-border"}`}>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-xl flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <ShoppingBag className="h-5 w-5 text-muted-foreground" />
-                            Basic
-                          </div>
-                          {selectedTariff === "basic" && <Check className="h-5 w-5 text-primary" />}
-                        </CardTitle>
-                        <div className="mt-1 flex items-baseline">
-                          <span className="text-3xl font-bold tracking-tight">
-                            {tariffPrices.basic}₽
-                          </span>
-                          <span className="ml-1 text-sm text-muted-foreground">/ мес</span>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pb-6 pt-2">
-                        <ul className="space-y-2 text-sm">
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
-                            {tariffLimits.basic.stores} магазин
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
-                            До {tariffLimits.basic.products} товаров
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
-                            Базовая аналитика
-                          </li>
-                          <li className="flex items-center gap-2 text-muted-foreground">
-                            <AlertTriangle className="h-4 w-4" />
-                            Нет автоматизации
-                          </li>
-                          <li className="flex items-center gap-2 text-muted-foreground">
-                            <AlertTriangle className="h-4 w-4" />
-                            Нет рекламных инструментов
-                          </li>
-                        </ul>
-                        <Button 
-                          className="mt-4 w-full"
-                          variant={selectedTariff === "basic" ? "secondary" : "outline"}
-                          onClick={() => setSelectedTariff("basic")}
-                        >
-                          {selectedTariff === "basic" ? "Выбрано" : "Выбрать"}
-                        </Button>
-                      </CardContent>
-                    </Card>
-                    
-                    {/* Pro Plan */}
-                    <Card className={`border-2 ${selectedTariff === "pro" ? "border-primary" : "border-border"}`}>
-                      <CardHeader className="pb-3">
-                        <div className="flex justify-between items-center">
-                          <CardTitle className="text-xl flex items-center gap-2">
-                            <BadgePercent className="h-5 w-5 text-primary" />
-                            Pro
-                          </CardTitle>
-                          {selectedTariff === "pro" && <Check className="h-5 w-5 text-primary" />}
-                        </div>
-                        <div className="mt-1 flex items-baseline">
-                          <span className="text-3xl font-bold tracking-tight">
-                            {tariffPrices.pro}₽
-                          </span>
-                          <span className="ml-1 text-sm text-muted-foreground">/ мес</span>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pb-6 pt-2">
-                        <ul className="space-y-2 text-sm">
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
-                            До {tariffLimits.pro.stores} магазинов
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
-                            До {tariffLimits.pro.products} товаров
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
-                            Расширенная аналитика
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
-                            Автоматизация процессов
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
-                            Рекламные инструменты
-                          </li>
-                        </ul>
-                        <Button 
-                          className="mt-4 w-full"
-                          variant={selectedTariff === "pro" ? "secondary" : "outline"}
-                          onClick={() => setSelectedTariff("pro")}
-                        >
-                          {selectedTariff === "pro" ? "Выбрано" : "Выбрать"}
-                        </Button>
-                      </CardContent>
-                    </Card>
-                    
-                    {/* Business Plan */}
-                    <Card className={`border-2 ${selectedTariff === "business" ? "border-primary" : "border-border"}`}>
-                      <CardHeader className="pb-3">
-                        <div className="flex justify-between items-center">
-                          <CardTitle className="text-xl flex items-center gap-2">
-                            <GemIcon className="h-5 w-5 text-violet-500" />
-                            Business
-                          </CardTitle>
-                          {selectedTariff === "business" && <Check className="h-5 w-5 text-primary" />}
-                        </div>
-                        <div className="mt-1 flex items-baseline">
-                          <span className="text-3xl font-bold tracking-tight">
-                            {tariffPrices.business}₽
-                          </span>
-                          <span className="ml-1 text-sm text-muted-foreground">/ мес</span>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pb-6 pt-2">
-                        <ul className="space-y-2 text-sm">
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
-                            До {tariffLimits.business.stores} магазинов
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <TrophyIcon className="h-4 w-4 text-yellow-500" />
-                            {tariffLimits.business.products} товаров
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
-                            Премиум аналитика
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
-                            Полная автоматизация
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
-                            Расширенные рекламные инструменты
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
-                            Выделенная поддержка
-                          </li>
-                        </ul>
-                        <Button 
-                          className="mt-4 w-full"
-                          variant={selectedTariff === "business" ? "secondary" : "outline"}
-                          onClick={() => setSelectedTariff("business")}
-                        >
-                          {selectedTariff === "business" ? "Выбрано" : "Выбрать"}
-                        </Button>
-                      </CardContent>
-                    </Card>
+                    <Progress 
+                      value={getSubscriptionProgress()} 
+                      className={!currentSubscription.isActive && !userProfile?.isInTrial ? "h-2 bg-red-950" : "h-2"} 
+                    />
                   </div>
                   
-                  <Separator />
-                  
-                  {/* Period Selection */}
-                  <div>
-                    <h3 className="text-lg font-medium mb-3">Выберите период подписки</h3>
-                    <RadioGroup 
-                      value={selectedPeriod} 
-                      onValueChange={setSelectedPeriod}
-                      className="grid grid-cols-1 md:grid-cols-4 gap-3"
-                    >
-                      <div>
-                        <RadioGroupItem 
-                          value="1" 
-                          id="period-1" 
-                          className="peer sr-only" 
-                        />
-                        <Label
-                          htmlFor="period-1"
-                          className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-background p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
-                        >
-                          <span className="text-xl font-bold">1</span>
-                          <span className="text-sm text-muted-foreground">месяц</span>
-                          <Badge variant="outline" className="mt-2">
-                            Без скидки
-                          </Badge>
-                        </Label>
-                      </div>
-                      
-                      <div>
-                        <RadioGroupItem 
-                          value="3" 
-                          id="period-3" 
-                          className="peer sr-only" 
-                        />
-                        <Label
-                          htmlFor="period-3"
-                          className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-background p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
-                        >
-                          <span className="text-xl font-bold">3</span>
-                          <span className="text-sm text-muted-foreground">месяца</span>
-                          <Badge variant="success" className="mt-2">
-                            Скидка 10%
-                          </Badge>
-                        </Label>
-                      </div>
-                      
-                      <div>
-                        <RadioGroupItem 
-                          value="6" 
-                          id="period-6" 
-                          className="peer sr-only" 
-                        />
-                        <Label
-                          htmlFor="period-6"
-                          className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-background p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
-                        >
-                          <span className="text-xl font-bold">6</span>
-                          <span className="text-sm text-muted-foreground">месяцев</span>
-                          <Badge variant="success" className="mt-2">
-                            Скидка 20%
-                          </Badge>
-                        </Label>
-                      </div>
-                      
-                      <div>
-                        <RadioGroupItem 
-                          value="12" 
-                          id="period-12" 
-                          className="peer sr-only" 
-                        />
-                        <Label
-                          htmlFor="period-12"
-                          className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-background p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
-                        >
-                          <span className="text-xl font-bold">12</span>
-                          <span className="text-sm text-muted-foreground">месяцев</span>
-                          <Badge variant="success" className="mt-2">
-                            Скидка 30%
-                          </Badge>
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-                  
-                  <Separator />
-                  
-                  {/* Payment Summary */}
-                  <div className="bg-muted/50 p-4 rounded-lg">
-                    <h3 className="text-lg font-medium mb-3">Сводка платежа</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Тариф:</span>
-                        <span className="font-medium">{selectedTariff.toUpperCase()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Период:</span>
-                        <span className="font-medium">{selectedPeriod} {
-                          Number(selectedPeriod) === 1 ? 'месяц' : 
-                          Number(selectedPeriod) < 5 ? 'месяца' : 'месяцев'
-                        }</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Базовая стоимость:</span>
-                        <span className="font-medium">
-                          {tariffPrices[selectedTariff as keyof typeof tariffPrices] * parseInt(selectedPeriod)}₽
-                        </span>
-                      </div>
-                      
-                      {selectedPeriod !== "1" && (
-                        <div className="flex justify-between text-green-600">
-                          <span>Скидка:</span>
-                          <span>
-                            {selectedPeriod === "3" ? "10%" : selectedPeriod === "6" ? "20%" : "30%"}
-                          </span>
-                        </div>
-                      )}
-                      
-                      <Separator />
-                      
-                      <div className="flex justify-between text-lg font-bold">
-                        <span>Итого:</span>
-                        <span>
-                          {(() => {
-                            const basePrice = tariffPrices[selectedTariff as keyof typeof tariffPrices];
-                            const period = parseInt(selectedPeriod);
-                            let amount = basePrice * period;
-                            
-                            if (period === 3) {
-                              amount = amount * 0.9; // 10% discount
-                            } else if (period === 6) {
-                              amount = amount * 0.8; // 20% discount
-                            } else if (period === 12) {
-                              amount = amount * 0.7; // 30% discount
-                            }
-                            
-                            return Math.round(amount);
-                          })()}₽
-                        </span>
-                      </div>
+                  <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Дата окончания:</span>
+                      <span className="font-medium">
+                        {userProfile?.isInTrial 
+                          ? (userProfile.trialEndDate ? formatDate(userProfile.trialEndDate) : 'N/A')
+                          : formatDate(currentSubscription.endDate)
+                        }
+                      </span>
                     </div>
-                  </div>
-                  
-                  {/* Payment method selection */}
-                  <div>
-                    <h3 className="text-lg font-medium mb-3">Способ оплаты</h3>
-                    
-                    {savedCards.length > 0 && (
-                      <div className="space-y-3 mb-4">
-                        <div className="text-sm text-muted-foreground mb-2">Сохраненные карты</div>
-                        {savedCards.map((card, index) => (
-                          <div key={index} className="flex items-center justify-between border rounded-md p-3">
-                            <div className="flex items-center gap-3">
-                              <CreditCardIcon className="h-5 w-5 text-muted-foreground" />
-                              <div>
-                                <div className="font-medium">{card.cardNumber}</div>
-                                <div className="text-xs text-muted-foreground">Истекает {card.expiryDate}</div>
-                              </div>
-                            </div>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleDeleteCard(index)}
-                            >
-                              <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                            </Button>
-                          </div>
-                        ))}
+                    {(currentSubscription.isActive || userProfile?.isInTrial) && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Осталось дней:</span>
+                        <Badge variant="outline">
+                          {userProfile?.isInTrial 
+                            ? (userProfile.trialEndDate ? Math.max(0, Math.ceil((new Date(userProfile.trialEndDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : 0)
+                            : currentSubscription.daysRemaining
+                          }
+                        </Badge>
                       </div>
                     )}
-                    
-                    {!showCardForm ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowCardForm(true)}
-                        className="gap-1"
-                      >
-                        <Plus className="h-4 w-4" />
-                        Добавить новую карту
-                      </Button>
-                    ) : (
-                      <Card className="border-dashed">
-                        <CardContent className="pt-6">
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="cardNumber">Номер карты</Label>
-                              <Input
-                                id="cardNumber"
-                                placeholder="1234 5678 9012 3456"
-                                value={newCard.cardNumber}
-                                onChange={(e) => setNewCard({ ...newCard, cardNumber: e.target.value })}
-                              />
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="expiryDate">Срок действия</Label>
-                                <Input
-                                  id="expiryDate"
-                                  placeholder="MM/YY"
-                                  value={newCard.expiryDate}
-                                  onChange={(e) => setNewCard({ ...newCard, expiryDate: e.target.value })}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="cvv">CVV</Label>
-                                <Input
-                                  id="cvv"
-                                  placeholder="123"
-                                  type="password"
-                                  value={newCard.cvv}
-                                  onChange={(e) => setNewCard({ ...newCard, cvv: e.target.value })}
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="flex justify-end gap-3 mt-4">
-                              <Button
-                                variant="ghost"
-                                onClick={() => setShowCardForm(false)}
-                              >
-                                Отмена
-                              </Button>
-                              <Button onClick={handleAddCard}>
-                                Сохранить карту
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
                   </div>
-                </CardContent>
-                <CardFooter className="flex justify-between">
-                  <Button variant="outline" onClick={() => navigate('/')}>
-                    Вернуться на главную
-                  </Button>
-                  <Button 
-                    onClick={handleSubscribe} 
-                    disabled={isLoading}
-                    className="gap-2"
-                  >
-                    {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                    Активировать подписку
-                  </Button>
-                </CardFooter>
-              </Card>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="history">
-            <div className="grid gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>История платежей</CardTitle>
-                  <CardDescription>
-                    Информация о ваших платежах и продлениях подписки
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {isLoadingHistory ? (
-                    <div className="flex justify-center py-8">
-                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : paymentHistory.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground space-y-4">
-                      <History className="h-12 w-12 mx-auto opacity-20" />
-                      <p>У вас пока нет платежей</p>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => document.querySelector('button[value="billing"]')?.click()}
-                        className="gap-2"
-                      >
-                        <CreditCard className="h-4 w-4" />
-                        Перейти к подписке
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {paymentHistory.map((payment) => (
-                        <div 
-                          key={payment.id} 
-                          className="flex justify-between items-start border-b pb-4 last:border-0 last:pb-0"
-                        >
-                          <div className="space-y-1">
-                            <div className="font-medium flex items-center gap-2">
-                              Тариф {payment.tariff.toUpperCase()}
-                              {payment.status === "completed" ? (
-                                <Badge variant="success" className="text-xs">Оплачено</Badge>
-                              ) : payment.status === "pending" ? (
-                                <Badge variant="warning" className="text-xs">В обработке</Badge>
-                              ) : (
-                                <Badge variant="destructive" className="text-xs">Отменено</Badge>
-                              )}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {new Date(payment.date).toLocaleDateString('ru-RU', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
-                              })}
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-4">
-                            <Badge variant="outline" className="flex items-center gap-1">
-                              <CalendarClock className="h-3 w-3" />
-                              {payment.period} {
-                                Number(payment.period) === 1 ? 'месяц' : 
-                                Number(payment.period) < 5 ? 'месяца' : 'месяцев'
-                              }
-                            </Badge>
-                            <span className="font-bold text-lg">
-                              {payment.amount.toLocaleString('ru-RU')} ₽
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                  
+                  {userProfile?.isInTrial && (
+                    <Alert className="bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-300">
+                      <Star className="h-4 w-4" />
+                      <AlertDescription>
+                        У вас активирован пробный период с тарифом "Премиум". После его окончания вы будете переведены на тариф "Стартовый".
+                      </AlertDescription>
+                    </Alert>
                   )}
                 </CardContent>
               </Card>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="password">
-            <div className="grid gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Изменение пароля</CardTitle>
-                  <CardDescription>
-                    Обновите ваш пароль для обеспечения безопасности
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <PasswordChangeForm userId={user.id} />
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
+            )}
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Выберите тариф</CardTitle>
+                <CardDescription>Выберите подходящий тариф для вашего бизнеса</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {subscriptionPlans.map((plan) => (
+                    <TariffCard 
+                      key={plan.id}
+                      plan={plan}
+                      onClick={() => handleSelectPlan(plan.name)}
+                      isSelected={selectedPlan === plan.name}
+                    />
+                  ))}
+                </div>
+                
+                {selectedPlan && (
+                  <div className="mt-6 space-y-4">
+                    <Separator />
+                    <h3 className="text-lg font-medium">Выберите период подписки</h3>
+                    
+                    <RadioGroup value={selectedMonths.toString()} onValueChange={(value) => handleMonthsChange(parseInt(value))}>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="1" id="m1" />
+                          <Label htmlFor="m1" className="flex-1">1 месяц</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="3" id="m3" />
+                          <Label htmlFor="m3" className="flex-1">
+                            3 месяца
+                            <Badge className="ml-2 bg-green-600">-10%</Badge>
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="6" id="m6" />
+                          <Label htmlFor="m6" className="flex-1">
+                            6 месяцев
+                            <Badge className="ml-2 bg-green-600">-15%</Badge>
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="12" id="m12" />
+                          <Label htmlFor="m12" className="flex-1">
+                            1 год
+                            <Badge className="ml-2 bg-green-600">-25%</Badge>
+                          </Label>
+                        </div>
+                      </div>
+                    </RadioGroup>
+                    
+                    {discountPercentage > 0 && (
+                      <Alert className="bg-green-100 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-900/30 dark:text-green-400">
+                        <BadgePercent className="h-4 w-4" />
+                        <AlertDescription>
+                          Вы получаете скидку {discountPercentage}% при оплате на {selectedMonths} {
+                            selectedMonths === 1 ? 'месяц' : 
+                            selectedMonths <= 4 ? 'месяца' : 'месяцев'
+                          }
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    
+                    <div className="flex justify-between items-center bg-muted/50 p-4 rounded-lg">
+                      <div>
+                        <div className="text-sm text-muted-foreground">Итоговая стоимость:</div>
+                        <div className="text-xl font-bold">
+                          {calculateTotalPrice(subscriptionPlans.find(p => p.name === selectedPlan)?.id || "1")} ₽
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          за {selectedMonths} {
+                            selectedMonths === 1 ? 'месяц' : 
+                            selectedMonths <= 4 ? 'месяца' : 'месяцев'
+                          }
+                        </div>
+                      </div>
+                      
+                      <Button size="lg" onClick={handleProceedToPayment}>
+                        Перейти к оплате
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="payment">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCardIcon className="h-5 w-5 text-blue-500" />
+                {savedCard ? "Управление способами оплаты" : "Добавление способа оплаты"}
+              </CardTitle>
+              <CardDescription>
+                {selectedPlan 
+                  ? `Оплата тарифа "${selectedPlan}" на период ${selectedMonths} ${
+                      selectedMonths === 1 ? 'месяц' : selectedMonths <= 4 ? 'месяца' : 'месяцев'
+                    }`
+                  : "Добавьте способ оплаты для продления подписки"
+                }
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {savedCard ? (
+                <div className="space-y-6">
+                  <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-6 rounded-lg text-white">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="text-sm opacity-80 mb-4">Банковская карта</div>
+                        <div className="text-xl font-mono">**** **** **** {savedCard.lastFour}</div>
+                      </div>
+                      <CreditCardIcon className="h-8 w-8 opacity-80" />
+                    </div>
+                    <div className="mt-6 text-sm">
+                      <div className="flex justify-between">
+                        <span className="opacity-80">Срок действия</span>
+                        <span>{savedCard.expiryDate}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-4">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setIsAddingCard(true)}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Добавить новую карту
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      className="flex-1"
+                      onClick={handleDeleteCard}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Удалить карту
+                    </Button>
+                  </div>
+                  
+                  {selectedPlan && (
+                    <div className="space-y-6 mt-8">
+                      <Separator />
+                      
+                      <div className="bg-muted/50 p-4 rounded-lg space-y-4">
+                        <h3 className="font-medium">Информация о платеже</h3>
+                        
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Тариф:</span>
+                            <span>{selectedPlan}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Период:</span>
+                            <span>{selectedMonths} {
+                              selectedMonths === 1 ? 'месяц' : 
+                              selectedMonths <= 4 ? 'месяца' : 'месяцев'
+                            }</span>
+                          </div>
+                          {discountPercentage > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Скидка:</span>
+                              <Badge className="bg-green-600">{discountPercentage}%</Badge>
+                            </div>
+                          )}
+                          <Separator className="my-2" />
+                          <div className="flex justify-between font-medium">
+                            <span>Итого к оплате:</span>
+                            <span className="text-lg">
+                              {calculateTotalPrice(subscriptionPlans.find(p => p.name === selectedPlan)?.id || "1")} ₽
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <Button 
+                        className="w-full" 
+                        size="lg"
+                        onClick={handlePayment}
+                        disabled={isProcessing}
+                      >
+                        {isProcessing ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Выполняется платеж...
+                          </>
+                        ) : (
+                          <>
+                            Оплатить {calculateTotalPrice(subscriptionPlans.find(p => p.name === selectedPlan)?.id || "1")} ₽
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : isAddingCard ? (
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="cardNumber">Номер карты</Label>
+                      <Input
+                        id="cardNumber"
+                        placeholder="0000 0000 0000 0000"
+                        value={cardNumber}
+                        onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
+                        maxLength={19}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="expiryDate">Срок д��йствия</Label>
+                        <Input
+                          id="expiryDate"
+                          placeholder="MM/YY"
+                          value={expiryDate}
+                          onChange={(e) => setExpiryDate(formatExpiryDate(e.target.value))}
+                          maxLength={5}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="cvv">CVV</Label>
+                        <Input
+                          id="cvv"
+                          type="password"
+                          placeholder="•••"
+                          value={cvv}
+                          onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').substring(0, 3))}
+                          maxLength={3}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setIsAddingCard(false)}
+                      disabled={isProcessing}
+                    >
+                      Отменить
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      onClick={handleAddCard}
+                      disabled={isProcessing}
+                    >
+                      {isProcessing ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Сохранение...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          Сохранить карту
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="text-center p-6 border border-dashed rounded-lg">
+                    <CreditCardIcon className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">У вас еще нет сохраненных карт</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Добавьте карту для быстрой оплаты подписки
+                    </p>
+                    <Button onClick={() => setIsAddingCard(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Добавить карту
+                    </Button>
+                  </div>
+                  
+                  {selectedPlan && (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        Для оплаты тарифа "{selectedPlan}" необходимо добавить карту
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="history">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-5 w-5 text-blue-500" />
+                История платежей
+              </CardTitle>
+              <CardDescription>
+                История ваших платежей и транзакций
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingHistory ? (
+                <div className="flex justify-center items-center p-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : paymentHistory.length > 0 ? (
+                <div className="space-y-4">
+                  {paymentHistory.map((payment) => (
+                    <div key={payment.id} className="flex flex-col md:flex-row justify-between border rounded-lg p-4">
+                      <div className="space-y-1 mb-3 md:mb-0">
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-green-600">Успешно</Badge>
+                          <span className="font-medium">{payment.description}</span>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Тариф: {payment.tariff}, Период: {payment.period}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {formatDate(payment.date)}
+                        </div>
+                      </div>
+                      <div className="text-xl font-bold">
+                        {payment.amount} ₽
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center p-12 border border-dashed rounded-lg">
+                  <History className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">История платежей пуста</h3>
+                  <p className="text-muted-foreground">
+                    У вас пока нет истории платежей
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
