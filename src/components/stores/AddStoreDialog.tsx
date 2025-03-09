@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -5,9 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NewStore, marketplaces } from "@/types/store";
-import { PlusCircle, ShoppingBag, AlertTriangle, Package2, Clock } from "lucide-react";
+import { PlusCircle, ShoppingBag, AlertTriangle, Package2, Clock, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { validateApiKey } from "@/utils/storeUtils";
 
 interface AddStoreDialogProps {
   isOpen: boolean;
@@ -29,15 +31,61 @@ export function AddStoreDialog({
   const [storeName, setStoreName] = useState("");
   const [marketplace, setMarketplace] = useState<string>("Wildberries");
   const [apiKey, setApiKey] = useState("");
+  const [isValidating, setIsValidating] = useState(false);
+  const [apiKeyValidated, setApiKeyValidated] = useState<boolean | null>(null);
+  const [apiKeyMessage, setApiKeyMessage] = useState("");
 
   useEffect(() => {
     if (isOpen) {
       setMarketplace("Wildberries");
+      resetValidation();
     }
   }, [isOpen]);
 
+  const resetValidation = () => {
+    setApiKeyValidated(null);
+    setApiKeyMessage("");
+  };
+
+  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setApiKey(e.target.value);
+    resetValidation();
+  };
+
+  const validateKey = async () => {
+    if (!apiKey) {
+      setApiKeyMessage("Пожалуйста, введите API ключ");
+      return;
+    }
+
+    setIsValidating(true);
+    setApiKeyMessage("Проверка API ключа...");
+    
+    try {
+      const isValid = await validateApiKey(marketplace, apiKey);
+      setApiKeyValidated(isValid);
+      
+      if (isValid) {
+        setApiKeyMessage("API ключ действителен");
+      } else {
+        setApiKeyMessage("Недействительный API ключ. Пожалуйста, проверьте и попробуйте снова.");
+      }
+    } catch (error) {
+      setApiKeyValidated(false);
+      setApiKeyMessage("Ошибка при проверке API ключа");
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!apiKeyValidated) {
+      validateKey();
+      return;
+    }
+    
     onAddStore({
       name: storeName,
       marketplace: marketplace as any,
@@ -49,6 +97,7 @@ export function AddStoreDialog({
     setStoreName("");
     setMarketplace("Wildberries");
     setApiKey("");
+    resetValidation();
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -134,12 +183,38 @@ export function AddStoreDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="apiKey">API ключ</Label>
-              <Input
-                id="apiKey"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Введите API ключ"
-              />
+              <div className="space-y-2">
+                <Input
+                  id="apiKey"
+                  value={apiKey}
+                  onChange={handleApiKeyChange}
+                  placeholder="Введите API ключ"
+                  className={apiKeyValidated === true ? "border-green-500" : apiKeyValidated === false ? "border-red-500" : ""}
+                />
+                <div className="flex justify-between">
+                  {apiKeyMessage && (
+                    <div className={`text-sm flex items-center gap-1.5 ${
+                      apiKeyValidated === true ? "text-green-500" : 
+                      apiKeyValidated === false ? "text-red-500" : 
+                      "text-muted-foreground"
+                    }`}>
+                      {apiKeyValidated === true && <CheckCircle2 className="h-4 w-4" />}
+                      {apiKeyValidated === false && <AlertCircle className="h-4 w-4" />}
+                      <span>{apiKeyMessage}</span>
+                    </div>
+                  )}
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={validateKey}
+                    disabled={isValidating || !apiKey}
+                    className="ml-auto"
+                  >
+                    {isValidating ? "Проверка..." : "Проверить"}
+                  </Button>
+                </div>
+              </div>
             </div>
             
             {!isLoading && (
@@ -155,8 +230,11 @@ export function AddStoreDialog({
               <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)} className="mr-2">
                 Отмена
               </Button>
-              <Button type="submit" disabled={isLoading || !storeName || !marketplace || !apiKey}>
-                {isLoading ? "Добавление..." : "Добавить"}
+              <Button 
+                type="submit" 
+                disabled={isLoading || !storeName || !marketplace || !apiKey || isValidating || (apiKey.length > 0 && apiKeyValidated !== true)}
+              >
+                {isLoading ? "Добавление..." : apiKeyValidated === null && apiKey ? "Проверить и добавить" : "Добавить"}
               </Button>
             </div>
           </form>
