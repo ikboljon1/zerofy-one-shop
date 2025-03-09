@@ -45,6 +45,21 @@ export interface SmtpSettings {
   fromName: string;
 }
 
+export interface Pop3Settings {
+  host: string;
+  port: number;
+  secure: boolean;
+  username: string;
+  password: string;
+  leaveOnServer: boolean;
+  autoCheckInterval: number;
+}
+
+export interface EmailSettings {
+  smtp: SmtpSettings;
+  pop3?: Pop3Settings;
+}
+
 export const TARIFF_STORE_LIMITS: Record<string, number> = {
   "1": 1,  // Стартовый
   "2": 3,  // Бизнес
@@ -281,87 +296,42 @@ export const activateSubscription = async (
   };
 };
 
-export const changePassword = async (
-  userId: string,
-  currentPassword: string,
-  newPassword: string
-): Promise<{ success: boolean; message?: string }> => {
-  await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
-  
-  const users = await getUsers();
-  const userIndex = users.findIndex(user => user.id === userId);
-  
-  if (userIndex === -1) {
-    return { success: false, message: "Пользователь не найден" };
-  }
-  
-  const user = users[userIndex];
-  
-  // Check if the current password is correct (for admin)
-  if (user.role === 'admin' && currentPassword === 'admin') {
-    // Admin user with default 'admin' password
-    user.password = newPassword;
-    users[userIndex] = user;
-    localStorage.setItem('users', JSON.stringify(users));
-    
-    // Also update the logged-in user data in localStorage
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      const loggedInUser = JSON.parse(storedUser);
-      if (loggedInUser.id === userId) {
-        loggedInUser.password = newPassword;
-        localStorage.setItem('user', JSON.stringify(loggedInUser));
-      }
-    }
-    
-    return { success: true };
-  } else if (user.password && user.password === currentPassword) {
-    // Regular user with matching stored password
-    user.password = newPassword;
-    users[userIndex] = user;
-    localStorage.setItem('users', JSON.stringify(users));
-    
-    // Also update the logged-in user data in localStorage
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      const loggedInUser = JSON.parse(storedUser);
-      if (loggedInUser.id === userId) {
-        loggedInUser.password = newPassword;
-        localStorage.setItem('user', JSON.stringify(loggedInUser));
-      }
-    }
-    
-    return { success: true };
-  } else {
-    return { success: false, message: "Неверный текущий пароль" };
-  }
-};
-
-export const getSmtpSettings = async (): Promise<SmtpSettings | null> => {
+export const getSmtpSettings = async (): Promise<EmailSettings | null> => {
   await new Promise(resolve => setTimeout(resolve, 300)); // Simulate network delay
   
-  const storedSettings = localStorage.getItem('smtp_settings');
+  const storedSettings = localStorage.getItem('email_settings');
   if (storedSettings) {
     return JSON.parse(storedSettings);
   }
   
-  const defaultSettings: SmtpSettings = {
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: true,
-    username: "",
-    password: "",
-    fromEmail: "",
-    fromName: "Zerofy System"
+  const defaultSettings: EmailSettings = {
+    smtp: {
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: true,
+      username: "",
+      password: "",
+      fromEmail: "",
+      fromName: "Zerofy System"
+    },
+    pop3: {
+      host: "pop.gmail.com",
+      port: 995,
+      secure: true,
+      username: "",
+      password: "",
+      leaveOnServer: true,
+      autoCheckInterval: 15
+    }
   };
   
   return defaultSettings;
 };
 
-export const saveSmtpSettings = async (settings: SmtpSettings): Promise<void> => {
+export const saveSmtpSettings = async (settings: EmailSettings): Promise<void> => {
   await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
   
-  localStorage.setItem('smtp_settings', JSON.stringify(settings));
+  localStorage.setItem('email_settings', JSON.stringify(settings));
 };
 
 export const testSmtpConnection = async (settings: SmtpSettings): Promise<{ success: boolean; message: string }> => {
@@ -391,12 +361,26 @@ export const testSmtpConnection = async (settings: SmtpSettings): Promise<{ succ
       return { success: false, message: "Email отправителя не указан" };
     }
     
-    // This would typically involve connecting to the SMTP server
-    // For Gmail, particularly note:
-    // 1. For Gmail accounts, you need to use an App Password if 2FA is enabled
-    // 2. Less secure app access must be enabled if not using an App Password
+    // In a real application, we would actually test the connection
+    // For this demo, we'll simulate a successful connection only with specific credentials
+    // or simulate failures for common issues
     
-    // For demo purposes, we'll add validation for common email providers
+    // For demo purposes: Simulate a failed connection with specific error messages
+    if (settings.host === "smtp.gmail.com" && settings.password === "wrongpassword") {
+      return { 
+        success: false, 
+        message: "Ошибка аутентификации: неверное имя пользователя или пароль" 
+      };
+    }
+    
+    if (settings.host === "mail.qr-falcon.kg" && settings.password !== "Ik507727280$@") {
+      return { 
+        success: false, 
+        message: "Ошибка аутентификации: неверное имя пользователя или пароль" 
+      };
+    }
+    
+    // Common validation for email providers
     if (settings.host.includes('gmail.com')) {
       if (settings.secure && settings.port !== 465) {
         return { 
@@ -429,6 +413,53 @@ export const testSmtpConnection = async (settings: SmtpSettings): Promise<{ succ
   }
 };
 
+export const testPop3Connection = async (settings: Pop3Settings): Promise<{ success: boolean; message: string }> => {
+  await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
+  
+  try {
+    console.log("Testing POP3 connection with settings:", settings);
+    
+    // Validation of required fields
+    if (!settings.host) {
+      return { success: false, message: "Неверный хост POP3-сервера" };
+    }
+    
+    if (!settings.port || settings.port <= 0) {
+      return { success: false, message: "Неверный порт POP3-сервера" };
+    }
+    
+    if (!settings.username) {
+      return { success: false, message: "Имя пользователя POP3-сервера не указано" };
+    }
+    
+    if (!settings.password) {
+      return { success: false, message: "Пароль POP3-сервера не указан" };
+    }
+    
+    // Simulate a failed connection with specific error message for wrong password
+    if (settings.host === "pop.gmail.com" && settings.password === "wrongpassword") {
+      return { 
+        success: false, 
+        message: "Ошибка аутентификации: неверное имя пользователя или пароль" 
+      };
+    }
+    
+    if (settings.host === "mail.qr-falcon.kg" && settings.password !== "Ik507727280$@") {
+      return { 
+        success: false, 
+        message: "Ошибка аутентификации: неверное имя пользователя или пароль" 
+      };
+    }
+    
+    return { success: true, message: "Соединение успешно установлено" };
+  } catch (error) {
+    return { 
+      success: false, 
+      message: error instanceof Error ? error.message : "Неизвестная ошибка при подключении к POP3-серверу" 
+    };
+  }
+};
+
 export const sendEmail = async (
   to: string,
   subject: string,
@@ -437,9 +468,16 @@ export const sendEmail = async (
   await new Promise(resolve => setTimeout(resolve, 800)); // Simulate network delay
   
   try {
-    const smtpSettings = await getSmtpSettings();
-    if (!smtpSettings) {
+    const emailSettings = await getSmtpSettings();
+    if (!emailSettings || !emailSettings.smtp) {
       return { success: false, message: "SMTP настройки не найдены" };
+    }
+    
+    const smtpSettings = emailSettings.smtp;
+    
+    // Validate that SMTP settings are complete
+    if (!smtpSettings.host || !smtpSettings.username || !smtpSettings.password || !smtpSettings.fromEmail) {
+      return { success: false, message: "SMTP настройки неполные" };
     }
     
     console.log(`
@@ -451,7 +489,27 @@ export const sendEmail = async (
       Using SMTP server: ${smtpSettings.host}:${smtpSettings.port}
     `);
     
-    return { success: true, message: "Email отправлен успешно" };
+    // In a real application, we would actually send the email
+    // For our demo, simulate the result based on the settings
+    
+    // Simulate a failure for specific email domains or hosts
+    if (smtpSettings.host.includes('invalid') || to.includes('invalid')) {
+      return { 
+        success: false, 
+        message: "Не удалось отправить email: недействительный домен" 
+      };
+    }
+    
+    // For demo, only simulate successful sending to certain domains to match our test credentials
+    if ((smtpSettings.host === "mail.qr-falcon.kg" && smtpSettings.password === "Ik507727280$@") ||
+        (smtpSettings.host !== "mail.qr-falcon.kg")) {
+      return { success: true, message: "Email отправлен успешно" };
+    } else {
+      return { 
+        success: false, 
+        message: "Ошибка отправки email: проверьте настройки SMTP и учетные данные" 
+      };
+    }
   } catch (error) {
     return { 
       success: false, 
@@ -687,3 +745,72 @@ export const getUserSubscriptionData = async (userId: string): Promise<Subscript
   
   return getSubscriptionStatus(user);
 };
+
+export const changePassword = async (
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+): Promise<{ success: boolean; message?: string }> => {
+  await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+  
+  const users = await getUsers();
+  const userIndex = users.findIndex(user => user.id === userId);
+  
+  if (userIndex === -1) {
+    return { success: false, message: "Пользователь не найден" };
+  }
+  
+  const user = users[userIndex];
+  
+  // Check if the current password is correct (for admin)
+  if (user.role === 'admin' && currentPassword === 'admin') {
+    // Admin user with default 'admin' password
+    user.password = newPassword;
+    users[userIndex] = user;
+    localStorage.setItem('users', JSON.stringify(users));
+    
+    // Also update the logged-in user data in localStorage
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const loggedInUser = JSON.parse(storedUser);
+      if (loggedInUser.id === userId) {
+        loggedInUser.password = newPassword;
+        localStorage.setItem('user', JSON.stringify(loggedInUser));
+      }
+    }
+    
+    return { success: true };
+  } else if (user.password && user.password === currentPassword) {
+    // Regular user with matching stored password
+    user.password = newPassword;
+    users[userIndex] = user;
+    localStorage.setItem('users', JSON.stringify(users));
+    
+    // Also update the logged-in user data in localStorage
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const loggedInUser = JSON.parse(storedUser);
+      if (loggedInUser.id === userId) {
+        loggedInUser.password = newPassword;
+        localStorage.setItem('user', JSON.stringify(loggedInUser));
+      }
+    }
+    
+    return { success: true };
+  } else {
+    return { success: false, message: "Неверный текущий пароль" };
+  }
+};
+
+export { 
+  TARIFF_STORE_LIMITS, 
+  requestPasswordReset, 
+  resetPassword, 
+  getTrialDaysRemaining, 
+  getSubscriptionStatus, 
+  getPaymentHistory, 
+  addPaymentRecord, 
+  getUserSubscriptionData 
+};
+
+export type { User, SubscriptionData, PaymentHistoryItem };
