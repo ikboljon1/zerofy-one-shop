@@ -33,7 +33,7 @@ export interface ProductData {
   sku: string;
   sales: number;
   income: number;
-  profit: number;
+  profit: number | string; // Modified to accept both number and string to fix type errors
   price: string; // Changed from optional to required
   image: string; // Changed from optional to required
   quantitySold?: number;
@@ -179,7 +179,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
         sku: `SKU${100000 + i}`,
         sales: productSales,
         income,
-        profit,
+        profit: String(profit), // Convert to string to match expected type
         price: `${Math.floor(Math.random() * 5000) + 1000}`,
         image: `https://images.wbstatic.net/big/new/${10000000 + i}/${10000000 + i + 1}-1.jpg`,
       });
@@ -202,7 +202,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       sku: `SKU${200000 + i}`,
       sales: Math.floor(Math.random() * 200) + 50,
       income: Math.floor(Math.random() * 200000) + 50000,
-      profit: Math.floor(Math.random() * 100000) + 20000,
+      profit: String(Math.floor(Math.random() * 100000) + 20000), // Convert to string
       price: `${Math.floor(Math.random() * 5000) + 1000}`,
       image: `https://images.wbstatic.net/big/new/${10000000 + i}/${10000000 + i + 1}-1.jpg`,
       quantitySold: Math.floor(Math.random() * 100) + 20,
@@ -216,7 +216,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       sku: `SKU${300000 + i}`,
       sales: Math.floor(Math.random() * 50) + 5,
       income: Math.floor(Math.random() * 20000) + 5000,
-      profit: -1 * (Math.floor(Math.random() * 10000) + 1000),
+      profit: String(-1 * (Math.floor(Math.random() * 10000) + 1000)), // Convert to string with negative value
       price: `${Math.floor(Math.random() * 3000) + 500}`,
       image: `https://images.wbstatic.net/big/new/${20000000 + i}/${20000000 + i + 1}-1.jpg`,
       quantitySold: Math.floor(Math.random() * 20) + 1,
