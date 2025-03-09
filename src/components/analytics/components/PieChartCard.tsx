@@ -17,12 +17,12 @@ interface PieChartCardProps {
   data: Array<{
     name: string;
     value: number;
-    count?: number; // Поле для количества
-    isNegative?: boolean; // Флаг для отрицательных значений
+    count?: number;
+    isNegative?: boolean;
   }>;
   valueLabel?: string;
-  showCount?: boolean; // Флаг для отображения количества
-  emptyMessage?: string; // Сообщение при отсутствии данных
+  showCount?: boolean;
+  emptyMessage?: string;
 }
 
 const PieChartCard = ({ 

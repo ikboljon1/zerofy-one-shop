@@ -444,7 +444,9 @@ const AnalyticsSection = () => {
           <DateRangePicker 
             dateFrom={dateFrom} 
             dateTo={dateTo} 
-            onDateRangeChange={handleDateRangeChange}
+            setDateFrom={setDateFrom}
+            setDateTo={setDateTo}
+            onApplyDateRange={handleRefreshData}
             quickSelectOpen={quickSelectOpen}
             setQuickSelectOpen={setQuickSelectOpen}
           />
@@ -467,17 +469,18 @@ const AnalyticsSection = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
-        <KeyMetrics data={data} isLoading={isLoading} />
+        <KeyMetrics data={data} />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
-        <SalesChart data={data.dailySales} isLoading={isLoading} />
-        <DeductionsChart data={deductionsTimeline} isLoading={isLoading} />
+        <SalesChart dailySales={data.dailySales} />
+        <DeductionsChart data={deductionsTimeline} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-6">
         <PieChartCard 
           title="Структура расходов" 
+          icon={<AlertCircle className="h-4 w-4 text-primary" />}
           data={[
             { name: 'Логистика', value: data.currentPeriod.expenses.logistics },
             { name: 'Хранение', value: data.currentPeriod.expenses.storage },
@@ -485,36 +488,29 @@ const AnalyticsSection = () => {
             { name: 'Приемка', value: data.currentPeriod.expenses.acceptance || 0 },
             { name: 'Реклама', value: data.currentPeriod.expenses.advertising },
             { name: 'Вычеты', value: data.currentPeriod.expenses.deductions || 0 }
-          ]} 
-          isLoading={isLoading}
-          dataKey="value"
-          nameKey="name"
-          colors={['#4f46e5', '#0ea5e9', '#f59e0b', '#f43f5e', '#10b981', '#8b5cf6']}
+          ]}
+          valueLabel="₽"
         />
 
         <ExpenseBreakdown 
-          title="Рекламные расходы" 
-          total={data.currentPeriod.expenses.advertising}
-          data={productAdvertisingData} 
-          isLoading={isLoading}
+          data={data}
+          advertisingBreakdown={advertisingBreakdown}
         />
 
         <PieChartCard 
           title="Структура возвратов" 
-          data={returns} 
-          isLoading={isLoading}
-          dataKey="value"
-          nameKey="name"
-          colors={['#4f46e5', '#0ea5e9', '#f59e0b', '#f43f5e', '#10b981', '#8b5cf6']}
-          emptyText="Нет данных о возвратах"
+          icon={<PackageX className="h-4 w-4 text-primary" />}
+          data={returns}
+          valueLabel="₽"
+          emptyMessage="Нет данных о возвратах"
         />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
         <ProductList
-          profitableProducts={data.topProfitableProducts || []}
-          unprofitableProducts={data.topUnprofitableProducts || []}
-          isLoading={isLoading}
+          title="Прибыльные товары"
+          products={data.topProfitableProducts || []}
+          isProfitable={true}
         />
         <AdvertisingOptimization 
           data={data}

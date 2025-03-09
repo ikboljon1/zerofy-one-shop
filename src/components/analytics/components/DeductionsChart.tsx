@@ -1,7 +1,4 @@
-
-import { useIsMobile } from "@/hooks/use-mobile";
 import { Card } from "@/components/ui/card";
-import { TrendingDown } from "../icons";
 import {
   ResponsiveContainer,
   BarChart,
@@ -10,23 +7,20 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
-  ReferenceLine,
-  Label
+  Legend
 } from "recharts";
 import { formatCurrency } from "@/utils/formatCurrency";
 
-interface DeductionsData {
-  date: string;
-  logistic: number;
-  storage: number;
-  penalties: number;
-  acceptance?: number;
-  advertising?: number;
-}
-
 interface DeductionsChartProps {
-  data: DeductionsData[];
+  data: Array<{
+    date: string;
+    logistic: number;
+    storage: number;
+    penalties: number;
+    acceptance: number;
+    advertising: number;
+    deductions?: number;
+  }>;
 }
 
 const DeductionsChart = ({ data }: DeductionsChartProps) => {

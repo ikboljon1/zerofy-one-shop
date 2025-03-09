@@ -17,6 +17,8 @@ interface DateRangePickerProps {
   onApplyDateRange?: () => void;
   onUpdate?: () => void;
   forceRefresh?: boolean;
+  quickSelectOpen?: boolean;
+  setQuickSelectOpen?: (open: boolean) => void;
 }
 
 const DateRangePicker = ({ 
@@ -26,7 +28,9 @@ const DateRangePicker = ({
   setDateTo,
   onApplyDateRange,
   onUpdate,
-  forceRefresh = true
+  forceRefresh = true,
+  quickSelectOpen,
+  setQuickSelectOpen
 }: DateRangePickerProps) => {
   const [fromOpen, setFromOpen] = useState(false);
   const [toOpen, setToOpen] = useState(false);
