@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   name: string;
@@ -362,27 +361,20 @@ export const testSmtpConnection = async (settings: SmtpSettings): Promise<{ succ
       return { success: false, message: "Email отправителя не указан" };
     }
     
-    // In a real application, we would actually test the connection
-    // For this demo, we'll simulate a successful connection only with specific credentials
-    // or simulate failures for common issues
-    
-    // For demo purposes: Simulate a failed connection with specific error messages
-    if (settings.host === "smtp.gmail.com" && settings.password === "wrongpassword") {
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(settings.fromEmail)) {
       return { 
         success: false, 
-        message: "Ошибка аутентификации: неверное имя пользователя или пароль" 
+        message: "Неверный формат email отправителя" 
       };
     }
     
-    if (settings.host === "mail.qr-falcon.kg" && settings.password !== "Ik507727280$@") {
-      return { 
-        success: false, 
-        message: "Ошибка аутентификации: неверное имя пользователя или пароль" 
-      };
-    }
+    // For demo purposes: Simulate actual SMTP connection behavior with more realistic checks
     
-    // Common validation for email providers
+    // Check for known mail providers
     if (settings.host.includes('gmail.com')) {
+      // Gmail usually requires specific ports based on secure setting
       if (settings.secure && settings.port !== 465) {
         return { 
           success: false, 
@@ -394,14 +386,58 @@ export const testSmtpConnection = async (settings: SmtpSettings): Promise<{ succ
           message: "Для незащищенного соединения с Gmail рекомендуется использовать порт 587" 
         };
       }
+      
+      // Check for application-specific password format (simple simulation)
+      if (settings.password.length < 16 || !settings.password.match(/[a-z]/i) || !settings.password.match(/[0-9]/)) {
+        return {
+          success: false,
+          message: "Для Gmail требуется использовать пароль приложения. Проверьте формат пароля."
+        };
+      }
     }
     
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(settings.fromEmail)) {
+    // More realistic credential validation for mail.qr-falcon.kg
+    if (settings.host === "mail.qr-falcon.kg") {
+      // Only specific credentials work for this server in our demo
+      if (settings.username !== "notification@qr-falcon.kg" || settings.password !== "Ik507727280$@") {
+        return { 
+          success: false, 
+          message: "Ошибка аутентификации: неверное имя пользователя или пароль" 
+        };
+      }
+      
+      // Check username matches from email
+      if (settings.fromEmail !== settings.username) {
+        return {
+          success: false,
+          message: "Email отправителя должен совпадать с именем пользователя"
+        };
+      }
+    }
+    
+    // Generic checks for any server
+    if (settings.host === "smtp.invalid.com") {
       return { 
         success: false, 
-        message: "Неверный формат email отправителя" 
+        message: "Не удалось подключиться к серверу: хост не найден" 
+      };
+    }
+    
+    // Check username vs email domain
+    const emailDomain = settings.username.split('@')[1];
+    if (emailDomain && !settings.host.includes(emailDomain) && 
+        !settings.host.includes('smtp') && !settings.host.includes('mail')) {
+      return {
+        success: false,
+        message: "Имя пользователя не соответствует домену SMTP-сервера"
+      };
+    }
+    
+    // Add a random chance of failure to simulate network issues (10% chance)
+    if (Math.random() < 0.1) {
+      return {
+        success: false,
+        message: "Ошибка подключения: превышено время ожидания ответа от сервера"
       };
     }
     
@@ -437,18 +473,69 @@ export const testPop3Connection = async (settings: Pop3Settings): Promise<{ succ
       return { success: false, message: "Пароль POP3-сервера не указан" };
     }
     
-    // Simulate a failed connection with specific error message for wrong password
-    if (settings.host === "pop.gmail.com" && settings.password === "wrongpassword") {
+    // For demo: Simulate actual POP3 connection behavior
+    
+    // Check for known mail providers
+    if (settings.host.includes('gmail.com')) {
+      // Gmail typically uses port 995 for POP3 with SSL
+      if (settings.secure && settings.port !== 995) {
+        return { 
+          success: false, 
+          message: "Для защищенного соединения POP3 с Gmail рекомендуется использовать порт 995" 
+        };
+      }
+      
+      // Gmail requires app passwords for POP3 access with 2FA accounts
+      if (settings.password.length < 16 || !settings.password.match(/[a-z]/i) || !settings.password.match(/[0-9]/)) {
+        return {
+          success: false,
+          message: "Для Gmail требуется использовать пароль приложения. Проверьте формат пароля."
+        };
+      }
+    }
+    
+    // More realistic credential validation for mail.qr-falcon.kg
+    if (settings.host === "mail.qr-falcon.kg") {
+      if (settings.username !== "notification@qr-falcon.kg" || settings.password !== "Ik507727280$@") {
+        return { 
+          success: false, 
+          message: "Ошибка аутентификации: неверное имя пользователя или пароль" 
+        };
+      }
+    }
+    
+    // Generic checks for any server
+    if (settings.host === "pop.invalid.com") {
       return { 
         success: false, 
-        message: "Ошибка аутентификации: неверное имя пользователя или пароль" 
+        message: "Не удалось подключиться к серверу: хост не найден" 
       };
     }
     
-    if (settings.host === "mail.qr-falcon.kg" && settings.password !== "Ik507727280$@") {
+    // Check username format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(settings.username)) {
       return { 
         success: false, 
-        message: "Ошибка аутентификации: неверное имя пользователя или пароль" 
+        message: "Неверный формат email в имени пользователя" 
+      };
+    }
+    
+    // Check username vs email domain
+    const emailDomain = settings.username.split('@')[1];
+    if (emailDomain && !settings.host.includes(emailDomain) && 
+        !settings.host.includes('pop') && !settings.host.includes('mail')) {
+      return {
+        success: false,
+        message: "Имя пользователя не соответствует домену POP3-сервера"
+      };
+    }
+    
+    // Add a random chance of failure to simulate network issues (10% chance)
+    if (Math.random() < 0.1) {
+      return {
+        success: false,
+        message: "Ошибка подключения: превышено время ожидания ответа от сервера"
       };
     }
     
@@ -802,6 +889,3 @@ export const changePassword = async (
     return { success: false, message: "Неверный текущий пароль" };
   }
 };
-
-// No need for the duplicate exports at the end of the file
-// Removed the extra export statements that were causing the errors
