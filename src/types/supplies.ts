@@ -1,3 +1,4 @@
+
 export interface WarehouseCoefficient {
   date: string;
   coefficient: number;

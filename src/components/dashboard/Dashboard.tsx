@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
@@ -23,6 +24,8 @@ import OrderMetrics from "./OrderMetrics";
 import SalesMetrics from "./SalesMetrics";
 import OrdersChart from "./OrdersChart";
 import SalesChart from "./SalesChart";
+import WarehouseEfficiencyChart from "./WarehouseEfficiencyChart";
+import { WarehouseEfficiency } from "@/types/supplies";
 
 const Dashboard = () => {
   const { toast } = useToast();
@@ -36,6 +39,7 @@ const Dashboard = () => {
   const [sales, setSales] = useState<WildberriesSale[]>([]);
   const [warehouseDistribution, setWarehouseDistribution] = useState<any[]>([]);
   const [regionDistribution, setRegionDistribution] = useState<any[]>([]);
+  const [warehouseEfficiencies, setWarehouseEfficiencies] = useState<WarehouseEfficiency[]>([]);
 
   const filterDataByPeriod = (date: string, period: Period) => {
     const now = new Date();
@@ -119,6 +123,36 @@ const Dashboard = () => {
     }
   }, [period, orders]);
 
+  // Generate demo warehouse efficiency data
+  const generateWarehouseEfficiencyData = () => {
+    const warehouseNames = [
+      "Подольск", "Казань", "Электросталь", "Коледино", 
+      "Крёкшино", "Санкт-Петербург", "Екатеринбург", "Новосибирск"
+    ];
+    
+    const efficiencies: WarehouseEfficiency[] = warehouseNames.map((name, index) => {
+      return {
+        warehouseName: name,
+        totalItems: Math.floor(Math.random() * 5000) + 1000,
+        totalValue: Math.floor(Math.random() * 10000000) + 1000000,
+        turnoverRate: Math.random() * 5 + 0.5,
+        utilizationPercent: Math.floor(Math.random() * 60) + 40,
+        processingSpeed: Math.floor(Math.random() * 500) + 100,
+        rank: index + 1
+      };
+    });
+    
+    // Sort by a combined efficiency score for ranking
+    return efficiencies.sort((a, b) => {
+      const scoreA = (a.turnoverRate * 20) + (a.utilizationPercent / 2) + (a.processingSpeed / 100);
+      const scoreB = (b.turnoverRate * 20) + (b.utilizationPercent / 2) + (b.processingSpeed / 100);
+      return scoreB - scoreA;
+    }).map((item, index) => ({
+      ...item,
+      rank: index + 1
+    }));
+  };
+
   const fetchData = async () => {
     try {
       setIsLoading(true);
@@ -160,6 +194,10 @@ const Dashboard = () => {
           setSales(savedSalesData.sales || []);
         }
       }
+
+      // Generate warehouse efficiency data for demo purposes
+      // In a real application, this data would come from an API
+      setWarehouseEfficiencies(generateWarehouseEfficiencyData());
 
       toast({
         title: "Успех",
@@ -225,11 +263,12 @@ const Dashboard = () => {
       </div>
 
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className={`${isMobile ? 'w-full grid grid-cols-4 gap-1' : ''}`}>
+        <TabsList className={`${isMobile ? 'w-full grid grid-cols-5 gap-1' : ''}`}>
           <TabsTrigger value="overview" className={isMobile ? 'text-xs py-1 px-1' : ''}>Обзор</TabsTrigger>
           <TabsTrigger value="orders" className={isMobile ? 'text-xs py-1 px-1' : ''}>Заказы</TabsTrigger>
           <TabsTrigger value="sales" className={isMobile ? 'text-xs py-1 px-1' : ''}>Продажи</TabsTrigger>
           <TabsTrigger value="geography" className={isMobile ? 'text-xs py-1 px-1' : ''}>География</TabsTrigger>
+          <TabsTrigger value="efficiency" className={isMobile ? 'text-xs py-1 px-1' : ''}>Эффективность</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -280,6 +319,16 @@ const Dashboard = () => {
             warehouseDistribution={warehouseDistribution} 
             regionDistribution={regionDistribution}
             sales={getFilteredSales(sales)}
+          />
+        </TabsContent>
+
+        <TabsContent value="efficiency" className="space-y-4">
+          <div className={`mb-4 ${isMobile ? 'w-full' : 'flex items-center gap-4'}`}>
+            <PeriodSelector value={period} onChange={setPeriod} />
+            <div className="flex-grow"></div>
+          </div>
+          <WarehouseEfficiencyChart 
+            data={warehouseEfficiencies}
           />
         </TabsContent>
       </Tabs>
