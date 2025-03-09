@@ -9,6 +9,7 @@ import { NewStore, marketplaces } from "@/types/store";
 import { PlusCircle, ShoppingBag, AlertTriangle, Package2, Clock, CheckCircle, XCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { validateApiKey } from "@/utils/storeUtils";
 
 interface AddStoreDialogProps {
   isOpen: boolean;
@@ -34,7 +35,9 @@ export function AddStoreDialog({
 
   useEffect(() => {
     if (isOpen) {
+      setStoreName("");
       setMarketplace("Wildberries");
+      setApiKey("");
       setApiKeyValidationStatus("idle");
     }
   }, [isOpen]);
@@ -46,8 +49,24 @@ export function AddStoreDialog({
     }
   }, [apiKey]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validateKey = async () => {
+    if (!apiKey) return;
+    
+    setApiKeyValidationStatus("validating");
+    const isValid = await validateApiKey(apiKey);
+    setApiKeyValidationStatus(isValid ? "valid" : "invalid");
+    return isValid;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Проверка API ключа при отправке формы
+    const isValid = await validateKey();
+    if (!isValid) {
+      return;
+    }
+    
     onAddStore({
       name: storeName,
       marketplace: marketplace as any,
@@ -146,6 +165,11 @@ export function AddStoreDialog({
             <div className="space-y-2">
               <Label htmlFor="apiKey" className="flex items-center gap-2">
                 API ключ
+                {apiKeyValidationStatus === "validating" && (
+                  <Badge variant="outline" className="ml-1 px-2 py-0 h-5 bg-blue-950/20 text-blue-300 border-blue-800/50 text-xs flex items-center">
+                    <span className="animate-pulse">Проверка...</span>
+                  </Badge>
+                )}
                 {apiKeyValidationStatus === "valid" && (
                   <Badge variant="outline" className="ml-1 px-2 py-0 h-5 bg-green-950/20 text-green-300 border-green-800/50 text-xs flex items-center">
                     <CheckCircle className="h-3 w-3 mr-1 text-green-500" />
@@ -163,8 +187,14 @@ export function AddStoreDialog({
                 id="apiKey"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
+                onBlur={validateKey}
                 placeholder="Введите API ключ"
               />
+              {apiKeyValidationStatus === "invalid" && (
+                <p className="text-sm text-red-400 mt-1">
+                  API ключ не прошел проверку. Пожалуйста, убедитесь, что ключ корректен.
+                </p>
+              )}
             </div>
             
             {!isLoading && (
@@ -180,7 +210,10 @@ export function AddStoreDialog({
               <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)} className="mr-2">
                 Отмена
               </Button>
-              <Button type="submit" disabled={isLoading || !storeName || !marketplace || !apiKey}>
+              <Button 
+                type="submit" 
+                disabled={isLoading || !storeName || !marketplace || !apiKey || apiKeyValidationStatus === "validating" || apiKeyValidationStatus === "invalid"}
+              >
                 {isLoading ? "Добавление..." : "Добавить"}
               </Button>
             </div>
