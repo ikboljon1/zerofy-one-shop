@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
@@ -23,6 +22,9 @@ import OrderMetrics from "./OrderMetrics";
 import SalesMetrics from "./SalesMetrics";
 import OrdersChart from "./OrdersChart";
 import SalesChart from "./SalesChart";
+import SubscriptionInfo from "./SubscriptionInfo";
+import PasswordChangeForm from "@/components/PasswordChangeForm";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Dashboard = () => {
   const { toast } = useToast();
@@ -122,7 +124,6 @@ const Dashboard = () => {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      // Use the new function to ensure store selection persistence
       const stores = ensureStoreSelectionPersistence();
       const selectedStore = stores.find(s => s.isSelected);
       
@@ -135,19 +136,16 @@ const Dashboard = () => {
         return;
       }
 
-      // Проверяем, изменился ли выбранный магазин
       if (selectedStore.id !== selectedStoreId) {
         setSelectedStoreId(selectedStore.id);
       }
 
-      // Всегда запрашиваем новые данные
       const ordersResult = await fetchAndUpdateOrders(selectedStore);
       if (ordersResult) {
         setOrders(ordersResult.orders);
         setWarehouseDistribution(ordersResult.warehouseDistribution);
         setRegionDistribution(ordersResult.regionDistribution);
       } else {
-        // Если не удалось получить данные, пробуем загрузить из временного хранилища
         const savedOrdersData = getOrdersData(selectedStore.id);
         if (savedOrdersData) {
           setOrders(savedOrdersData.orders || []);
@@ -160,7 +158,6 @@ const Dashboard = () => {
       if (salesResult) {
         setSales(salesResult);
       } else {
-        // Если не удалось получить данные, пробуем загрузить из временного хранилища
         const savedSalesData = getSalesData(selectedStore.id);
         if (savedSalesData) {
           setSales(savedSalesData.sales || []);
@@ -184,21 +181,17 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    // Use the persistence function instead of just loadStores
     const stores = ensureStoreSelectionPersistence();
     const selectedStore = stores.find(s => s.isSelected);
     
     if (selectedStore) {
-      // Устанавливаем ID выбранного магазина
       if (selectedStore.id !== selectedStoreId) {
         setSelectedStoreId(selectedStore.id);
       }
       
-      // Запрашиваем данные при первой загрузке
       fetchData();
     }
 
-    // Add event listener for store selection changes
     const handleStoreSelectionChange = () => {
       console.log('Store selection changed, refreshing data...');
       fetchData();
@@ -217,12 +210,21 @@ const Dashboard = () => {
     };
   }, []);
 
-  // При изменении ID выбранного магазина обновляем данные
   useEffect(() => {
     if (selectedStoreId) {
       fetchData();
     }
   }, [selectedStoreId]);
+
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      setUserId(user.id);
+    }
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -237,14 +239,16 @@ const Dashboard = () => {
       </div>
 
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className={`${isMobile ? 'w-full grid grid-cols-4 gap-1' : ''}`}>
+        <TabsList className={`${isMobile ? 'w-full grid grid-cols-5 gap-1' : ''}`}>
           <TabsTrigger value="overview" className={isMobile ? 'text-xs py-1 px-1' : ''}>Обзор</TabsTrigger>
           <TabsTrigger value="orders" className={isMobile ? 'text-xs py-1 px-1' : ''}>Заказы</TabsTrigger>
           <TabsTrigger value="sales" className={isMobile ? 'text-xs py-1 px-1' : ''}>Продажи</TabsTrigger>
           <TabsTrigger value="geography" className={isMobile ? 'text-xs py-1 px-1' : ''}>География</TabsTrigger>
+          <TabsTrigger value="profile" className={isMobile ? 'text-xs py-1 px-1' : ''}>Профиль</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
+          {userId && <SubscriptionInfo userId={userId} />}
           <Stats />
         </TabsContent>
 
@@ -293,6 +297,19 @@ const Dashboard = () => {
             regionDistribution={regionDistribution}
             sales={getFilteredSales(sales)}
           />
+        </TabsContent>
+
+        <TabsContent value="profile" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Смена пароля</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {userId && <PasswordChangeForm userId={userId} />}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
