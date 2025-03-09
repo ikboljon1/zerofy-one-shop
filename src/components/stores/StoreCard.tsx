@@ -1,4 +1,3 @@
-
 import { Store } from "@/types/store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,25 +23,15 @@ export function StoreCard({
   isLoading,
   canDelete = true
 }: StoreCardProps) {
-  // Add a function to handle selection changes with additional side effects
   const handleSelectionChange = () => {
-    // Only allow selecting a store, not deselecting it
-    // This ensures the checkbox stays checked until another store is selected
     if (!store.isSelected) {
-      // Call the parent component's toggle selection handler
       onToggleSelection(store.id);
-      
-      // Also trigger a refresh of stats
       setTimeout(() => {
         onRefreshStats(store);
       }, 100);
-      
-      // Notify other components about the store selection change
       window.dispatchEvent(new CustomEvent('store-selection-changed', { 
         detail: { storeId: store.id, selected: true, timestamp: Date.now() } 
       }));
-      
-      // Save this selection to localStorage with timestamp to help with persistence
       localStorage.setItem('last_selected_store', JSON.stringify({
         storeId: store.id,
         timestamp: Date.now()
@@ -50,7 +39,6 @@ export function StoreCard({
     }
   };
 
-  // Check if this store has valid stats
   const hasValidStats = store.stats && Object.keys(store.stats).length > 0;
 
   return (
@@ -105,11 +93,7 @@ export function StoreCard({
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Чистая прибыль:</span>
                 <span className="font-medium">
-                  {formatCurrency(
-                    store.stats.currentPeriod.netProfit !== undefined
-                      ? store.stats.currentPeriod.netProfit
-                      : store.stats.currentPeriod.profit
-                  )}
+                  {formatCurrency(store.stats.currentPeriod.netProfit)}
                 </span>
               </div>
             </>
