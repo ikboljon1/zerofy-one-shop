@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { 
   TrendingUp, Target, Tag, ShoppingBag, 
-  Package, Truck, BadgePercent, DollarSign 
+  Package, Truck, BadgePercent, DollarSign,
+  BarChart2, BookOpen, PieChart, Clock, Users, Star
 } from 'lucide-react';
 
 const ProfitabilityTips = () => {
@@ -57,6 +58,18 @@ const ProfitabilityTips = () => {
                 </p>
               </div>
             </div>
+
+            <div className="flex items-start gap-3">
+              <div className="mt-1 flex-shrink-0 rounded-full bg-teal-100 p-1.5 dark:bg-teal-950">
+                <BarChart2 className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Сезонная стратегия</h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Планируйте запасы и кампании с учетом сезонности. Увеличивайте закупки перед пиковыми периодами и избегайте переизбытка товара в низкий сезон.
+                </p>
+              </div>
+            </div>
           </div>
           
           <div className="space-y-4">
@@ -95,6 +108,18 @@ const ProfitabilityTips = () => {
                 </p>
               </div>
             </div>
+
+            <div className="flex items-start gap-3">
+              <div className="mt-1 flex-shrink-0 rounded-full bg-cyan-100 p-1.5 dark:bg-cyan-950">
+                <Star className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Работа с отзывами</h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Активно собирайте и реагируйте на отзывы клиентов. Товары с высокими рейтингами получают больше продаж и требуют меньших вложений в рекламу.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -122,6 +147,30 @@ const ProfitabilityTips = () => {
             <li className="flex items-start gap-2">
               <span className="flex-shrink-0 text-indigo-600 dark:text-indigo-400">•</span>
               <span>Сосредоточьте рекламный бюджет на товарах с высоким рейтингом и хорошими отзывами для максимальной конверсии.</span>
+            </li>
+          </ul>
+        </div>
+
+        <Separator className="my-4" />
+        
+        <div>
+          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Финансовые показатели:</h3>
+          <ul className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+            <li className="flex items-start gap-2">
+              <span className="flex-shrink-0 text-emerald-600 dark:text-emerald-400">•</span>
+              <span>Отслеживайте ROI (возврат инвестиций) каждой партии товара, уделяя внимание не только выручке, но и чистой прибыли.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="flex-shrink-0 text-emerald-600 dark:text-emerald-400">•</span>
+              <span>Оптимизируйте оборачиваемость запасов — стремитесь к показателю 6-12 оборотов в год в зависимости от категории.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="flex-shrink-0 text-emerald-600 dark:text-emerald-400">•</span>
+              <span>Регулярно пересматривайте себестоимость и ищите способы её снижения без ущерба для качества.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="flex-shrink-0 text-emerald-600 dark:text-emerald-400">•</span>
+              <span>Устанавливайте минимальную желаемую маржинальность (25-40%) и исключайте товары, которые стабильно не достигают этого порога.</span>
             </li>
           </ul>
         </div>
