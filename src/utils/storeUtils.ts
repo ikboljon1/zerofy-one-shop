@@ -1,3 +1,4 @@
+
 import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY, ORDERS_STORAGE_KEY, SALES_STORAGE_KEY, WildberriesOrder, WildberriesSale } from "@/types/store";
 import { fetchWildberriesStats, fetchWildberriesOrders, fetchWildberriesSales } from "@/services/wildberriesApi";
 
@@ -14,24 +15,7 @@ export const loadStores = (): Store[] => {
 };
 
 export const saveStores = (stores: Store[]): void => {
-  const storesWithTimestamp = {
-    stores,
-    timestamp: new Date().toISOString()
-  };
   localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(stores));
-  localStorage.setItem(`${STORES_STORAGE_KEY}_timestamp`, Date.now().toString());
-  
-  const selectedStore = stores.find(s => s.isSelected);
-  if (selectedStore) {
-    localStorage.setItem('last_selected_store', JSON.stringify({
-      storeId: selectedStore.id,
-      timestamp: Date.now()
-    }));
-  }
-  
-  window.dispatchEvent(new CustomEvent('stores-updated', { 
-    detail: { stores, timestamp: Date.now() } 
-  }));
 };
 
 export const refreshStoreStats = async (store: Store): Promise<Store | null> => {
@@ -46,6 +30,7 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           lastFetchDate: new Date().toISOString() 
         };
         
+        // Создаем базовую структуру для deductionsTimeline, если она отсутствует
         const deductionsTimeline = stats.dailySales?.map((day: any) => {
           const daysCount = stats.dailySales.length || 1;
           const logistic = (stats.currentPeriod.expenses.logistics || 0) / daysCount;
@@ -64,6 +49,7 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           };
         }) || [];
         
+        // Сохраняем также аналитические данные в совместимом формате
         const analyticsData = {
           storeId: store.id,
           dateFrom: from.toISOString(),
@@ -83,14 +69,17 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
       }
     } catch (error) {
       console.error('Error refreshing stats:', error);
+      // Return store without stats on error
       return store;
     }
   }
   return store;
 };
 
+// Получение данных о заказах для конкретного магазина
 export const getOrdersData = (storeId: string) => {
   try {
+    // TODO: Здесь должен быть запрос к базе данных вместо localStorage
     const storedData = localStorage.getItem(`${ORDERS_STORAGE_KEY}_${storeId}`);
     if (storedData) {
       return JSON.parse(storedData);
@@ -102,8 +91,10 @@ export const getOrdersData = (storeId: string) => {
   }
 };
 
+// Получение данных о продажах для конкретного магазина
 export const getSalesData = (storeId: string) => {
   try {
+    // TODO: Здесь должен быть запрос к базе данных вместо localStorage
     const storedData = localStorage.getItem(`${SALES_STORAGE_KEY}_${storeId}`);
     if (storedData) {
       return JSON.parse(storedData);
@@ -115,6 +106,7 @@ export const getSalesData = (storeId: string) => {
   }
 };
 
+// Загрузка и обновление данных о заказах
 export const fetchAndUpdateOrders = async (store: Store) => {
   if (store.marketplace === "Wildberries") {
     try {
@@ -122,6 +114,7 @@ export const fetchAndUpdateOrders = async (store: Store) => {
       const orders = await fetchWildberriesOrders(store.apiKey, from);
       
       if (orders && orders.length > 0) {
+        // Рассчитываем распределение складов
         const warehouseCounts: Record<string, number> = {};
         const totalOrders = orders.length;
         
@@ -140,6 +133,7 @@ export const fetchAndUpdateOrders = async (store: Store) => {
           .sort((a, b) => b.count - a.count)
           .slice(0, 5);
         
+        // Рассчитываем распределение регионов
         const regionCounts: Record<string, number> = {};
         
         orders.forEach(order => {
@@ -157,6 +151,8 @@ export const fetchAndUpdateOrders = async (store: Store) => {
           .sort((a, b) => b.count - a.count)
           .slice(0, 5);
         
+        // Сохраняем данные в localStorage только временно
+        // TODO: Здесь должно быть сохранение в базу данных
         localStorage.setItem(`${ORDERS_STORAGE_KEY}_${store.id}`, JSON.stringify({
           storeId: store.id,
           dateFrom: from.toISOString(),
@@ -180,6 +176,7 @@ export const fetchAndUpdateOrders = async (store: Store) => {
   return null;
 };
 
+// Загрузка и обновление данных о продажах
 export const fetchAndUpdateSales = async (store: Store) => {
   if (store.marketplace === "Wildberries") {
     try {
@@ -187,6 +184,8 @@ export const fetchAndUpdateSales = async (store: Store) => {
       const sales = await fetchWildberriesSales(store.apiKey, from);
       
       if (sales && sales.length > 0) {
+        // Сохраняем данные в localStorage только временно
+        // TODO: Здесь должно быть сохранение в базу данных
         localStorage.setItem(`${SALES_STORAGE_KEY}_${store.id}`, JSON.stringify({
           storeId: store.id,
           dateFrom: from.toISOString(),
@@ -204,12 +203,14 @@ export const fetchAndUpdateSales = async (store: Store) => {
   return null;
 };
 
+// Получение данных о доходности товаров для конкретного магазина
 export const getProductProfitabilityData = (storeId: string) => {
   try {
     const storedData = localStorage.getItem(`products_detailed_${storeId}`);
     if (storedData) {
       const parsedData = JSON.parse(storedData);
       
+      // Ensure we're only returning the top profitable and unprofitable products
       return {
         profitableProducts: parsedData.profitableProducts?.slice(0, 3) || [],
         unprofitableProducts: parsedData.unprofitableProducts?.slice(0, 3) || [],
@@ -217,6 +218,7 @@ export const getProductProfitabilityData = (storeId: string) => {
       };
     }
     
+    // Также пробуем загрузить из аналитики, если специальные данные не найдены
     const analyticsData = localStorage.getItem(`marketplace_analytics_${storeId}`);
     if (analyticsData) {
       const parsedData = JSON.parse(analyticsData);
@@ -234,9 +236,12 @@ export const getProductProfitabilityData = (storeId: string) => {
   }
 };
 
+// Получение данных аналитики с проверкой обязательных полей и принудительным обновлением при наличии параметра forceRefresh
 export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
+  // Если forceRefresh = true, всегда возвращаем пустую структуру
   if (forceRefresh) {
     console.log('Forced refresh requested, returning default structure');
+    // Возвращаем базовую структуру
     return {
       data: null,
       penalties: [],
@@ -256,11 +261,14 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
   }
   
   try {
+    // TODO: Здесь должен быть запрос к базе данных вместо localStorage
     const key = `marketplace_analytics_${storeId}`;
     const storedData = localStorage.getItem(key);
     
+    // Если данные отсутствуют или запрошено принудительное обновление, возвращаем пустую структуру
     if (!storedData || forceRefresh) {
       console.log('Analytics data not found or forced refresh requested, returning default structure');
+      // Возвращаем базовую структуру с демо-данными
       return {
         data: null,
         penalties: [],
@@ -275,16 +283,18 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
         })),
         productAdvertisingData: [],
         advertisingBreakdown: { search: 0 },
-        timestamp: Date.now()
+        timestamp: Date.now() // Добавляем текущий timestamp
       };
     }
     
     let parsedData = JSON.parse(storedData);
     
+    // Добавляем timestamp, если отсутствует
     if (!parsedData.timestamp) {
       parsedData.timestamp = Date.now();
     }
     
+    // Проверяем наличие обязательных полей и устанавливаем значения по умолчанию
     if (!parsedData.deductionsTimeline || !Array.isArray(parsedData.deductionsTimeline) || parsedData.deductionsTimeline.length === 0) {
       console.log("Creating default deductionsTimeline data");
       parsedData.deductionsTimeline = Array.from({ length: 7 }, (_, i) => ({
@@ -296,6 +306,7 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
         advertising: 0
       }));
     } else {
+      // Ensure all items in deductionsTimeline have all required properties
       parsedData.deductionsTimeline = parsedData.deductionsTimeline.map((item: any) => ({
         date: item.date || new Date().toISOString().split('T')[0],
         logistic: item.logistic || 0,
@@ -323,6 +334,7 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
     }
     
     if (parsedData.data && parsedData.data.currentPeriod && parsedData.data.currentPeriod.expenses) {
+      // Ensure all expense fields exist
       parsedData.data.currentPeriod.expenses.advertising = parsedData.data.currentPeriod.expenses.advertising || 0;
       parsedData.data.currentPeriod.expenses.acceptance = parsedData.data.currentPeriod.expenses.acceptance || 0;
     }
@@ -330,6 +342,7 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
     return parsedData;
   } catch (error) {
     console.error('Error loading analytics data:', error);
+    // Возвращаем базовую структуру в случае ошибки
     return {
       data: null,
       penalties: [],
@@ -344,49 +357,7 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
       })),
       productAdvertisingData: [],
       advertisingBreakdown: { search: 0 },
-      timestamp: Date.now()
+      timestamp: Date.now() // Добавляем текущий timestamp
     };
   }
-};
-
-export const getStoresLastUpdateTime = (): number => {
-  const timestamp = localStorage.getItem(`${STORES_STORAGE_KEY}_timestamp`);
-  return timestamp ? parseInt(timestamp, 10) : 0;
-};
-
-export const ensureStoreSelectionPersistence = (): Store[] => {
-  const stores = loadStores();
-  
-  const hasSelectedStore = stores.some(store => store.isSelected);
-  
-  if (!hasSelectedStore && stores.length > 0) {
-    const lastSelectedStoreData = localStorage.getItem('last_selected_store');
-    
-    if (lastSelectedStoreData) {
-      try {
-        const { storeId } = JSON.parse(lastSelectedStoreData);
-        const updatedStores = stores.map(store => ({
-          ...store,
-          isSelected: store.id === storeId
-        }));
-        
-        saveStores(updatedStores);
-        return updatedStores;
-      } catch (error) {
-        console.error('Error restoring store selection:', error);
-      }
-    }
-    
-    if (stores.length > 0) {
-      const updatedStores = stores.map((store, index) => ({
-        ...store,
-        isSelected: index === 0
-      }));
-      
-      saveStores(updatedStores);
-      return updatedStores;
-    }
-  }
-  
-  return stores;
 };

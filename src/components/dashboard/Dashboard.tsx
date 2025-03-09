@@ -4,14 +4,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Button } from "@/components/ui/button";
 import { 
   loadStores,
   getOrdersData, 
   getSalesData, 
   fetchAndUpdateOrders, 
-  fetchAndUpdateSales,
-  ensureStoreSelectionPersistence
+  fetchAndUpdateSales 
 } from "@/utils/storeUtils";
 import OrdersTable from "./OrdersTable";
 import SalesTable from "./SalesTable";
@@ -122,8 +120,7 @@ const Dashboard = () => {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      // Use the new function to ensure store selection persistence
-      const stores = ensureStoreSelectionPersistence();
+      const stores = loadStores();
       const selectedStore = stores.find(s => s.isSelected);
       
       if (!selectedStore) {
@@ -184,8 +181,7 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    // Use the persistence function instead of just loadStores
-    const stores = ensureStoreSelectionPersistence();
+    const stores = loadStores();
     const selectedStore = stores.find(s => s.isSelected);
     
     if (selectedStore) {
@@ -198,23 +194,12 @@ const Dashboard = () => {
       fetchData();
     }
 
-    // Add event listener for store selection changes
-    const handleStoreSelectionChange = () => {
-      console.log('Store selection changed, refreshing data...');
-      fetchData();
-    };
-
-    window.addEventListener('store-selection-changed', handleStoreSelectionChange);
-
     const refreshInterval = setInterval(() => {
       console.log('Auto-refreshing data...');
       fetchData();
     }, 60000);
 
-    return () => {
-      window.removeEventListener('store-selection-changed', handleStoreSelectionChange);
-      clearInterval(refreshInterval);
-    };
+    return () => clearInterval(refreshInterval);
   }, []);
 
   // При изменении ID выбранного магазина обновляем данные
