@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag, Loader2, BadgePercent } from "lucide-react";
@@ -401,7 +402,6 @@ const AnalyticsSection = () => {
           
           setPenalties([]);
           setDeductions([]);
-          setProductAdvertisingData([]);
           setReturns([]);
         }
       } catch (dbError) {
@@ -419,7 +419,6 @@ const AnalyticsSection = () => {
         
         setPenalties([]);
         setDeductions([]);
-        setProductAdvertisingData([]);
         setReturns([]);
       }
     } finally {
@@ -516,30 +515,27 @@ const AnalyticsSection = () => {
         <KeyMetrics data={data} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <SalesChart data={data} valueLabel="₽" />
+          <SalesChart data={data} />
           <DeductionsChart data={deductionsTimeline} />
         </div>
 
+        {/* Profitability Tips Section */}
+        <ProfitabilityTips />
+
         {/* Advertising Optimization Section */}
-        <AdvertisingOptimization 
-          data={data}
-          advertisingBreakdown={advertisingBreakdown}
-          isLoading={isLoading}
-        />
+        <AdvertisingOptimization />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <PieChartCard 
             title="Детализация по штрафам"
             icon={<AlertCircle className="h-4 w-4 text-purple-600 dark:text-purple-400" />}
             data={penalties}
-            valueLabel="₽"
             emptyMessage="Штрафы отсутствуют"
           />
           <PieChartCard 
             title="Прочие удержания"
             icon={<BadgePercent className="h-4 w-4 text-orange-600 dark:text-orange-400" />}
             data={deductions}
-            valueLabel="₽"
             emptyMessage="Удержания отсутствуют"
           />
         </div>
@@ -549,7 +545,6 @@ const AnalyticsSection = () => {
             title="Возврат товаров"
             icon={<PackageX className="h-4 w-4 text-red-600 dark:text-red-400" />}
             data={returns}
-            valueLabel="₽"
             showCount={true}
             emptyMessage="Возвраты отсутствуют"
           />
@@ -558,16 +553,12 @@ const AnalyticsSection = () => {
               title="Расходы на рекламу по товарам"
               icon={<Tag className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
               data={productAdvertisingData}
-              valueLabel="₽"
               emptyMessage="Нет данных о расходах на рекламу"
             />
           )}
         </div>
 
-        <ExpenseBreakdown 
-          data={data} 
-          advertisingBreakdown={advertisingBreakdown} 
-        />
+        <ExpenseBreakdown data={data} advertisingBreakdown={advertisingBreakdown} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <ProductList 
