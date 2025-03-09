@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { WarehouseRemainItem, WarehouseEfficiency } from '@/types/supplies';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +12,11 @@ import {
 } from 'lucide-react';
 import { BarChart, ResponsiveContainer, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, PieChart, Pie, Legend, LineChart, Line } from 'recharts';
 import { formatCurrency } from '@/utils/formatCurrency';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent
+} from '@/components/ui/chart';
 
 interface WarehouseRemainsProps {
   data: WarehouseRemainItem[];
@@ -321,180 +327,392 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
           {processedData && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <Card>
+                <Card className="overflow-hidden">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center">
                       <BarChart3 className="h-5 w-5 mr-2 text-blue-500" />
                       Эффективность использования
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="h-[240px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                          data={processedData.warehouseEfficiency.slice(0, 5).map(wh => ({
-                            name: wh.warehouseName,
-                            value: wh.utilizationPercent
-                          }))}
-                          layout="vertical"
-                          margin={{ top: 5, right: 30, left: 60, bottom: 5 }}
+                  <CardContent className="p-0">
+                    <ChartContainer
+                      className="h-[240px]"
+                      config={{
+                        utilizationPercent: {
+                          label: "Загруженность склада",
+                          color: "#10B981"
+                        }
+                      }}
+                    >
+                      <BarChart
+                        data={processedData.warehouseEfficiency.slice(0, 5).map(wh => ({
+                          name: wh.warehouseName,
+                          utilizationPercent: wh.utilizationPercent
+                        }))}
+                        layout="vertical"
+                        margin={{ top: 20, right: 30, left: 60, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          type="number" 
+                          domain={[0, 100]} 
+                          tickFormatter={(value) => `${value}%`}
+                        />
+                        <YAxis type="category" dataKey="name" width={60} />
+                        <ChartTooltip
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const value = payload[0].value;
+                              return (
+                                <div className="rounded-lg border border-border/50 bg-background p-2 shadow-md">
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <span className="font-medium">Склад:</span>
+                                    <span>{payload[0].payload.name}</span>
+                                    <span className="font-medium">Загруженность:</span>
+                                    <span>{typeof value === 'number' ? value.toFixed(1) : '0'}%</span>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Bar 
+                          dataKey="utilizationPercent" 
+                          fill="var(--color-utilizationPercent)"
+                          radius={[0, 4, 4, 0]}
                         >
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis type="number" domain={[0, 100]} />
-                          <YAxis type="category" dataKey="name" width={60} />
-                          <Tooltip 
-                            formatter={(value) => {
-                              const numValue = Number(value);
-                              return [`${!isNaN(numValue) ? numValue.toFixed(1) : '0'}%`, 'Загруженность'];
-                            }} 
-                          />
-                          <Bar dataKey="value" fill="#10B981">
-                            {processedData.warehouseEfficiency.slice(0, 5).map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
+                          {processedData.warehouseEfficiency.slice(0, 5).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ChartContainer>
                   </CardContent>
                 </Card>
                 
-                <Card>
+                <Card className="overflow-hidden">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center">
                       <TrendingUp className="h-5 w-5 mr-2 text-green-500" />
                       Оборачиваемость (дни)
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="h-[240px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                          data={processedData.warehouseEfficiency.slice(0, 5).map(wh => ({
-                            name: wh.warehouseName,
-                            value: wh.turnoverRate
-                          }))}
-                          layout="vertical"
-                          margin={{ top: 5, right: 30, left: 60, bottom: 5 }}
+                  <CardContent className="p-0">
+                    <ChartContainer
+                      className="h-[240px]"
+                      config={{
+                        turnoverRate: {
+                          label: "Дней до оборота",
+                          color: "#F59E0B"
+                        }
+                      }}
+                    >
+                      <BarChart
+                        data={processedData.warehouseEfficiency.slice(0, 5).map(wh => ({
+                          name: wh.warehouseName,
+                          turnoverRate: wh.turnoverRate
+                        }))}
+                        layout="vertical"
+                        margin={{ top: 20, right: 30, left: 60, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          type="number" 
+                          tickFormatter={(value) => `${value} дн.`}
+                        />
+                        <YAxis type="category" dataKey="name" width={60} />
+                        <ChartTooltip
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const value = payload[0].value;
+                              return (
+                                <div className="rounded-lg border border-border/50 bg-background p-2 shadow-md">
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <span className="font-medium">Склад:</span>
+                                    <span>{payload[0].payload.name}</span>
+                                    <span className="font-medium">Оборачиваемость:</span>
+                                    <span>{typeof value === 'number' ? value.toFixed(1) : '0'} дней</span>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Bar 
+                          dataKey="turnoverRate" 
+                          fill="var(--color-turnoverRate)"
+                          radius={[0, 4, 4, 0]}
                         >
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis type="number" />
-                          <YAxis type="category" dataKey="name" width={60} />
-                          <Tooltip 
-                            formatter={(value) => {
-                              const numValue = Number(value);
-                              return [`${!isNaN(numValue) ? numValue.toFixed(1) : '0'} дн.`, 'Оборачиваемость'];
-                            }} 
-                          />
-                          <Bar dataKey="value" fill="#F59E0B">
-                            {processedData.warehouseEfficiency.slice(0, 5).map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[(index + 3) % COLORS.length]} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
+                          {processedData.warehouseEfficiency.slice(0, 5).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[(index + 3) % COLORS.length]} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ChartContainer>
                   </CardContent>
                 </Card>
                 
-                <Card>
+                <Card className="overflow-hidden">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center">
                       <Clock className="h-5 w-5 mr-2 text-purple-500" />
                       Скорость обработки (шт/день)
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="h-[240px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                          data={processedData.warehouseEfficiency.slice(0, 5).map(wh => ({
-                            name: wh.warehouseName,
-                            value: wh.processingSpeed
-                          }))}
-                          layout="vertical"
-                          margin={{ top: 5, right: 30, left: 60, bottom: 5 }}
+                  <CardContent className="p-0">
+                    <ChartContainer
+                      className="h-[240px]"
+                      config={{
+                        processingSpeed: {
+                          label: "Обработка в день",
+                          color: "#8B5CF6"
+                        }
+                      }}
+                    >
+                      <BarChart
+                        data={processedData.warehouseEfficiency.slice(0, 5).map(wh => ({
+                          name: wh.warehouseName,
+                          processingSpeed: wh.processingSpeed
+                        }))}
+                        layout="vertical"
+                        margin={{ top: 20, right: 30, left: 60, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          type="number" 
+                          tickFormatter={(value) => `${value} шт.`}
+                        />
+                        <YAxis type="category" dataKey="name" width={60} />
+                        <ChartTooltip
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const value = payload[0].value;
+                              return (
+                                <div className="rounded-lg border border-border/50 bg-background p-2 shadow-md">
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <span className="font-medium">Склад:</span>
+                                    <span>{payload[0].payload.name}</span>
+                                    <span className="font-medium">Скорость:</span>
+                                    <span>{typeof value === 'number' ? value.toFixed(0) : '0'} шт/день</span>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Bar 
+                          dataKey="processingSpeed" 
+                          fill="var(--color-processingSpeed)"
+                          radius={[0, 4, 4, 0]}
                         >
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis type="number" />
-                          <YAxis type="category" dataKey="name" width={60} />
-                          <Tooltip 
-                            formatter={(value) => {
-                              const numValue = Number(value);
-                              return [`${!isNaN(numValue) ? numValue.toFixed(0) : '0'} шт/день`, 'Скорость'];
-                            }} 
-                          />
-                          <Bar dataKey="value" fill="#8B5CF6">
-                            {processedData.warehouseEfficiency.slice(0, 5).map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[(index + 6) % COLORS.length]} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
+                          {processedData.warehouseEfficiency.slice(0, 5).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[(index + 6) % COLORS.length]} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ChartContainer>
                   </CardContent>
                 </Card>
               </div>
               
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Award className="h-5 w-5 mr-2 text-amber-500" />
-                    Самые эффективные склады
-                  </CardTitle>
-                  <CardDescription>
-                    Рейтинг складов по комплексным показателям эффективности
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12 text-center">Ранг</TableHead>
-                        <TableHead>Склад</TableHead>
-                        <TableHead className="text-right">Товары</TableHead>
-                        <TableHead className="text-right">Стоимость товаров</TableHead>
-                        <TableHead className="text-right">Оборачиваемость</TableHead>
-                        <TableHead className="text-right">Загруженность</TableHead>
-                        <TableHead className="text-right">Скорость обработки</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {processedData.warehouseEfficiency.slice(0, 10).map((wh, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="text-center font-semibold">
-                            <Badge variant={index < 3 ? "default" : "outline"} className={index < 3 ? "bg-amber-500" : ""}>
-                              {wh.rank}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-medium">{wh.warehouseName}</TableCell>
-                          <TableCell className="text-right">{wh.totalItems.toLocaleString()}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(wh.totalValue)}</TableCell>
-                          <TableCell className="text-right">{wh.turnoverRate.toFixed(1)} дн.</TableCell>
-                          <TableCell className="text-right">{wh.utilizationPercent.toFixed(1)}%</TableCell>
-                          <TableCell className="text-right">{wh.processingSpeed.toFixed(0)} шт/день</TableCell>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                <Card className="col-span-1 xl:col-span-2">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Award className="h-5 w-5 mr-2 text-amber-500" />
+                      Самые эффективные склады
+                    </CardTitle>
+                    <CardDescription>
+                      Рейтинг складов по комплексным показателям эффективности
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12 text-center">Ранг</TableHead>
+                          <TableHead>Склад</TableHead>
+                          <TableHead className="text-right">Товары</TableHead>
+                          <TableHead className="text-right">Стоимость товаров</TableHead>
+                          <TableHead className="text-right">Оборачиваемость</TableHead>
+                          <TableHead className="text-right">Загруженность</TableHead>
+                          <TableHead className="text-right">Скорость обработки</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-muted/50 border-dashed">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Как увеличить прибыль?</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <p className="font-medium">Рекомендации по оптимизации работы складов:</p>
-                  <ul className="list-disc list-inside space-y-1 ml-2">
-                    <li>Перераспределите товары с низкой оборачиваемостью на более эффективные склады</li>
-                    <li>Оптимизируйте загруженность складов до 70-85% для максимальной эффективности</li>
-                    <li>Отслеживайте показатели оборачиваемости и сокращайте их для увеличения оборота средств</li>
-                    <li>Повышайте скорость обработки заказов для улучшения пользовательского опыта</li>
-                    <li>Размещайте товары с высоким спросом на складах с лучшими показателями обработки заказов</li>
-                  </ul>
-                </CardContent>
-              </Card>
+                      </TableHeader>
+                      <TableBody>
+                        {processedData.warehouseEfficiency.slice(0, 10).map((wh, index) => (
+                          <TableRow key={index}>
+                            <TableCell className="text-center font-semibold">
+                              <Badge 
+                                variant={index < 3 ? "default" : "outline"} 
+                                className={index < 3 ? "bg-amber-500 hover:bg-amber-600" : ""}
+                              >
+                                {wh.rank}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-medium">{wh.warehouseName}</TableCell>
+                            <TableCell className="text-right">{wh.totalItems.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(wh.totalValue)}</TableCell>
+                            <TableCell className="text-right">{wh.turnoverRate.toFixed(1)} дн.</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full rounded-full" 
+                                    style={{ 
+                                      width: `${wh.utilizationPercent}%`,
+                                      backgroundColor: wh.utilizationPercent > 90 
+                                        ? '#EF4444' 
+                                        : wh.utilizationPercent > 70 
+                                          ? '#F59E0B' 
+                                          : '#10B981'
+                                    }}
+                                  ></div>
+                                </div>
+                                <span>{wh.utilizationPercent.toFixed(1)}%</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">{wh.processingSpeed.toFixed(0)} шт/день</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+                
+                <Card className="bg-muted/50 border-dashed">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Как увеличить прибыль?</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <p className="font-medium">Рекомендации по оптимизации работы складов:</p>
+                    <ul className="list-disc list-inside space-y-1 ml-2">
+                      <li>Перераспределите товары с низкой оборачиваемостью на более эффективные склады</li>
+                      <li>Оптимизируйте загруженность складов до 70-85% для максимальной эффективности</li>
+                      <li>Отслеживайте показатели оборачиваемости и сокращайте их для увеличения оборота средств</li>
+                      <li>Повышайте скорость обработки заказов для улучшения пользовательского опыта</li>
+                      <li>Размещайте товары с высоким спросом на складах с лучшими показателями обработки заказов</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Сравнительный анализ эффективности</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ChartContainer
+                      className="h-[300px]"
+                      config={{
+                        utilizationPercent: {
+                          label: "Загруженность",
+                          color: "#10B981"
+                        },
+                        turnoverRate: {
+                          label: "Оборачиваемость (дни)",
+                          color: "#F59E0B"
+                        },
+                        efficiency: {
+                          label: "Общая эффективность",
+                          color: "#8B5CF6"
+                        }
+                      }}
+                    >
+                      <LineChart
+                        data={processedData.warehouseEfficiency.slice(0, 5).map(wh => ({
+                          name: wh.warehouseName,
+                          utilizationPercent: wh.utilizationPercent / 100,
+                          turnoverRate: wh.turnoverRate / 25, // Нормализация для сравнения
+                          efficiency: (100 - wh.rank) / 100
+                        }))}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="name" 
+                          angle={-45}
+                          textAnchor="end"
+                          height={60}
+                          tick={{ dy: 20 }}
+                        />
+                        <YAxis 
+                          tickFormatter={(value) => `${(value * 100).toFixed(0)}%`}
+                        />
+                        <ChartTooltip
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <div className="rounded-lg border border-border/50 bg-background p-2 shadow-md">
+                                  <div className="text-sm font-semibold mb-1">{payload[0].payload.name}</div>
+                                  <div className="grid gap-1 text-xs">
+                                    {payload.map((entry, index) => {
+                                      let value: string;
+                                      let label: string;
+                                      
+                                      if (entry.dataKey === 'utilizationPercent') {
+                                        value = `${(Number(entry.value) * 100).toFixed(1)}%`;
+                                        label = 'Загруженность';
+                                      } else if (entry.dataKey === 'turnoverRate') {
+                                        value = `${(Number(entry.value) * 25).toFixed(1)} дней`;
+                                        label = 'Оборачиваемость';
+                                      } else {
+                                        value = `${(Number(entry.value) * 100).toFixed(0)}%`;
+                                        label = 'Общая эффективность';
+                                      }
+                                      
+                                      return (
+                                        <div key={index} className="flex items-center justify-between gap-4">
+                                          <div className="flex items-center">
+                                            <div 
+                                              className="w-2 h-2 rounded-full mr-1" 
+                                              style={{ backgroundColor: entry.color }}
+                                            ></div>
+                                            <span>{label}:</span>
+                                          </div>
+                                          <span className="font-medium">{value}</span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Legend />
+                        <Line 
+                          type="monotone" 
+                          dataKey="utilizationPercent" 
+                          stroke="var(--color-utilizationPercent)" 
+                          strokeWidth={2}
+                          dot={{ r: 4 }}
+                          activeDot={{ r: 6 }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="turnoverRate" 
+                          stroke="var(--color-turnoverRate)" 
+                          strokeWidth={2}
+                          dot={{ r: 4 }}
+                          activeDot={{ r: 6 }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="efficiency" 
+                          stroke="var(--color-efficiency)" 
+                          strokeWidth={2}
+                          dot={{ r: 4 }}
+                          activeDot={{ r: 6 }}
+                        />
+                      </LineChart>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+              </div>
             </>
           )}
         </TabsContent>
