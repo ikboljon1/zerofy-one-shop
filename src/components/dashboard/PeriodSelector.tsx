@@ -30,11 +30,12 @@ const PeriodSelector = ({ value, onChange }: PeriodSelectorProps) => {
           onValueChange={(val) => onChange(val as Period)} 
           className="w-full"
         >
-          <TabsList className="grid w-full grid-cols-4 h-9">
+          <TabsList className="grid w-full grid-cols-5 h-9">
             <TabsTrigger value="today" className="text-xs px-0">Сегодня</TabsTrigger>
             <TabsTrigger value="yesterday" className="text-xs px-0">Вчера</TabsTrigger>
             <TabsTrigger value="week" className="text-xs px-0">7 дней</TabsTrigger>
             <TabsTrigger value="2weeks" className="text-xs px-0">14 дней</TabsTrigger>
+            <TabsTrigger value="4weeks" className="text-xs px-0">28 дней</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
