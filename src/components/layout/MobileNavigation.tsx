@@ -1,65 +1,120 @@
 
-import React from "react";
-import { cn } from "@/lib/utils";
-import {
-  Home,
-  BarChart2,
-  Package,
-  Store,
-  Warehouse,
+import React, { useState } from "react";
+import { 
+  LayoutDashboard, 
+  BarChart2, 
+  ShoppingBag, 
   Megaphone,
   User,
-  Brain
+  Package,
+  WarehouseIcon,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
-
-interface NavigationItem {
-  id: string;
-  name: string;
-  icon: React.ReactNode;
-}
+import { motion, AnimatePresence } from "framer-motion";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface MobileNavigationProps {
-  items: NavigationItem[];
   activeTab: string;
-  onTabChange: (id: string) => void;
+  onTabChange: (tab: string) => void;
 }
 
-const MobileNavigation = ({
-  items,
-  activeTab,
-  onTabChange,
-}: MobileNavigationProps) => {
-  // Map для быстрого доступа к значкам по ID (на случай, если items не содержит все возможные вкладки)
-  const defaultIcons: Record<string, React.ReactNode> = {
-    home: <Home className="h-5 w-5" />,
-    analytics: <BarChart2 className="h-5 w-5" />,
-    products: <Package className="h-5 w-5" />,
-    stores: <Store className="h-5 w-5" />,
-    warehouses: <Warehouse className="h-5 w-5" />,
-    advertising: <Megaphone className="h-5 w-5" />,
-    ai_models: <Brain className="h-5 w-5" />,
-    profile: <User className="h-5 w-5" />,
-  };
+const MobileNavigation = ({ activeTab, onTabChange }: MobileNavigationProps) => {
+  const [showStoresSubmenu, setShowStoresSubmenu] = useState(false);
+  const isMobile = useIsMobile();
+
+  if (!isMobile) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 border-t bg-background">
-      <div className="grid grid-cols-5 py-2">
-        {items.slice(0, 5).map((item) => (
-          <button
-            key={item.id}
-            className={cn(
-              "flex flex-col items-center justify-center px-2 py-1",
-              activeTab === item.id ? "text-primary" : "text-muted-foreground"
-            )}
-            onClick={() => onTabChange(item.id)}
+    <>
+      <AnimatePresence>
+        {showStoresSubmenu && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-16 left-0 right-0 border-t bg-background/95 backdrop-blur z-50"
           >
-            {item.icon || defaultIcons[item.id] || <div className="h-5 w-5" />}
-            <span className="mt-1 text-[10px]">{item.name}</span>
+            <div className="container flex items-center justify-around py-3">
+              <button
+                className={`flex flex-col items-center space-y-1 ${activeTab === "products" ? "text-primary" : "text-muted-foreground"}`}
+                onClick={() => {
+                  onTabChange("products");
+                  setShowStoresSubmenu(false);
+                }}
+              >
+                <Package className="h-5 w-5" />
+                <span className="text-xs">Товары</span>
+              </button>
+              <button
+                className={`flex flex-col items-center space-y-1 ${activeTab === "warehouses" ? "text-primary" : "text-muted-foreground"}`}
+                onClick={() => {
+                  onTabChange("warehouses");
+                  setShowStoresSubmenu(false);
+                }}
+              >
+                <WarehouseIcon className="h-5 w-5" />
+                <span className="text-xs">Склады</span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      <nav className="fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur z-40 pb-safe">
+        <div className="container flex items-center justify-around py-2">
+          <button
+            className={`flex flex-col items-center space-y-1 ${activeTab === "home" ? "text-primary" : "text-muted-foreground"}`}
+            onClick={() => onTabChange("home")}
+          >
+            <LayoutDashboard className="h-5 w-5" />
+            <span className="text-xs">Дашборд</span>
           </button>
-        ))}
-      </div>
-    </div>
+          <button
+            className={`flex flex-col items-center space-y-1 ${activeTab === "analytics" ? "text-primary" : "text-muted-foreground"}`}
+            onClick={() => onTabChange("analytics")}
+          >
+            <BarChart2 className="h-5 w-5" />
+            <span className="text-xs">Аналитика</span>
+          </button>
+          <button
+            className={`flex flex-col items-center space-y-1 ${(activeTab === "stores" || activeTab === "products" || activeTab === "warehouses") ? "text-primary" : "text-muted-foreground"}`}
+            onClick={() => {
+              if (activeTab !== "stores" && activeTab !== "products" && activeTab !== "warehouses") {
+                onTabChange("stores");
+              }
+              setShowStoresSubmenu(!showStoresSubmenu);
+            }}
+          >
+            <div className="relative">
+              <ShoppingBag className="h-5 w-5" />
+              {showStoresSubmenu ? (
+                <ChevronUp className="absolute -right-3 -top-1 h-3 w-3" />
+              ) : (
+                <ChevronDown className="absolute -right-3 -top-1 h-3 w-3" />
+              )}
+            </div>
+            <span className="text-xs">Магазин</span>
+          </button>
+          <button
+            className={`flex flex-col items-center space-y-1 ${activeTab === "advertising" ? "text-primary" : "text-muted-foreground"}`}
+            onClick={() => onTabChange("advertising")}
+          >
+            <Megaphone className="h-5 w-5" />
+            <span className="text-xs">Реклама</span>
+          </button>
+          <button
+            className={`flex flex-col items-center space-y-1 ${activeTab === "profile" ? "text-primary" : "text-muted-foreground"}`}
+            onClick={() => onTabChange("profile")}
+          >
+            <User className="h-5 w-5" />
+            <span className="text-xs">Профиль</span>
+          </button>
+        </div>
+      </nav>
+    </>
   );
-}
+};
 
 export default MobileNavigation;
