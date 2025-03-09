@@ -55,25 +55,27 @@ const PasswordResetForm = ({
     setIsLoading(true);
 
     try {
+      // Выполняем запрос на сброс пароля
       const result = await resetPassword(email, token, data.password);
       
       if (result.success) {
         toast({
           title: "Пароль сброшен",
-          description: result.message,
+          description: "Ваш пароль был успешно изменен. Теперь вы можете войти в систему.",
         });
         onSuccess();
       } else {
         toast({
           title: "Ошибка",
-          description: result.message,
+          description: result.message || "Произошла ошибка при сбросе пароля",
           variant: "destructive",
         });
       }
     } catch (error) {
+      console.error("Ошибка при сбросе пароля:", error);
       toast({
         title: "Ошибка",
-        description: "Произошла ошибка при сбросе пароля",
+        description: "Произошла ошибка при сбросе пароля. Пожалуйста, попробуйте позже.",
         variant: "destructive",
       });
     } finally {

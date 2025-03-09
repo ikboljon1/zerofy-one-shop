@@ -44,26 +44,28 @@ const PasswordResetRequestForm = ({
     setIsLoading(true);
 
     try {
+      // Получаем реальный результат отправки запроса сброса пароля
       const result = await requestPasswordReset(data.email);
       
       if (result.success) {
         setSuccess(true);
         toast({
           title: "Запрос отправлен",
-          description: result.message,
+          description: "Инструкции по восстановлению пароля отправлены на указанный email",
         });
         onResetSent(data.email);
       } else {
         toast({
           title: "Ошибка",
-          description: result.message,
+          description: result.message || "Произошла ошибка при обработке запроса",
           variant: "destructive",
         });
       }
     } catch (error) {
+      console.error("Ошибка при запросе сброса пароля:", error);
       toast({
         title: "Ошибка",
-        description: "Произошла ошибка при обработке запроса",
+        description: "Произошла ошибка при обработке запроса. Проверьте настройки SMTP.",
         variant: "destructive",
       });
     } finally {
@@ -89,8 +91,8 @@ const PasswordResetRequestForm = ({
       {success ? (
         <Alert>
           <AlertDescription>
-            Если указанный email зарегистрирован в системе, инструкции по восстановлению
-            пароля будут отправлены на него.
+            Инструкции по восстановлению пароля отправлены на указанный email.
+            Пожалуйста, проверьте вашу почту и следуйте инструкциям.
           </AlertDescription>
         </Alert>
       ) : (
