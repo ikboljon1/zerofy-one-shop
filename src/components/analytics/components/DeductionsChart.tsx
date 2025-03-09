@@ -1,272 +1,194 @@
-import { Card } from "@/components/ui/card";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend
-} from "recharts";
-import { formatCurrency } from "@/utils/formatCurrency";
 
-interface DeductionsChartProps {
-  data: Array<{
-    date: string;
-    logistic: number;
-    storage: number;
-    penalties: number;
-    acceptance: number;
-    advertising: number;
-    deductions?: number;
-  }>;
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Label, ReferenceLine } from 'recharts';
+import { ArrowUpIcon, ArrowDownIcon, TrendingDown, TrendingUp } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+
+interface DeductionsTimelineItem {
+  date: string;
+  logistic: number;
+  storage: number;
+  penalties: number;
+  acceptance: number;
+  advertising: number;
+  deductions?: number;
 }
 
-const DeductionsChart = ({ data }: DeductionsChartProps) => {
+interface DeductionsChartProps {
+  data: DeductionsTimelineItem[];
+  isLoading?: boolean;
+}
+
+const DeductionsChart = ({ data, isLoading = false }: DeductionsChartProps) => {
   const isMobile = useIsMobile();
   
-  // Calculate totals for each category including acceptance and advertising
-  const totals = data.reduce(
-    (acc, item) => {
-      acc.logistic += item.logistic || 0;
-      acc.storage += item.storage || 0;
-      acc.penalties += item.penalties || 0;
-      acc.acceptance += item.acceptance || 0;
-      acc.advertising += item.advertising || 0;
-      return acc;
-    },
-    { logistic: 0, storage: 0, penalties: 0, acceptance: 0, advertising: 0 }
-  );
+  if (isLoading) {
+    return (
+      <Card className="shadow-md">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center">
+            <TrendingUp className="mr-2 h-5 w-5 text-blue-500" />
+            <span>Структура расходов по дням</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-4 flex flex-col items-center justify-center h-80">
+          <div className="animate-pulse bg-gray-200 dark:bg-gray-700 rounded-md h-full w-full"></div>
+        </CardContent>
+      </Card>
+    );
+  }
 
-  // Calculate average per day for reference line
-  const days = data.length || 1;
-  const avgLogistic = totals.logistic / days;
-  const avgStorage = totals.storage / days;
-  const avgPenalties = totals.penalties / days;
+  const getTotal = (item: DeductionsTimelineItem) => {
+    return item.logistic + item.storage + item.penalties + item.acceptance + item.advertising + (item.deductions || 0);
+  };
 
-  // Calculate totals for percentage calculations
-  const grandTotal = totals.logistic + totals.storage + totals.penalties + 
-                    totals.acceptance + totals.advertising;
+  const getAverageTotal = () => {
+    const totalSum = data.reduce((sum, item) => sum + getTotal(item), 0);
+    return totalSum / data.length;
+  };
+
+  const getMaxTotal = () => {
+    return Math.max(...data.map(item => getTotal(item)));
+  };
 
   return (
-    <Card className="p-4 sm:p-6 shadow-xl border-0 rounded-xl overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-blue-950/30">
-      <div className="flex items-center justify-between mb-4 sm:mb-6">
-        <div>
-          <h3 className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-700 dark:from-blue-400 dark:to-indigo-400`}>
-            Структура удержаний по дням
-          </h3>
-          {!isMobile && (
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Детализация удержаний за выбранный период
-            </p>
-          )}
-        </div>
-        <div className="bg-red-100 dark:bg-red-900/60 p-2 sm:p-3 rounded-full shadow-inner">
-          <TrendingDown className={`${isMobile ? 'h-4 w-4' : 'h-6 w-6'} text-red-600 dark:text-red-400`} />
-        </div>
-      </div>
-
-      {/* Summary cards - stacked in mobile view, grid in desktop */}
-      <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-1 lg:grid-cols-3 gap-4'} mb-4 sm:mb-6`}>
-        <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-gray-500">Логистика</span>
-            <span className={`${isMobile ? 'text-sm' : 'text-md'} font-semibold text-violet-600 dark:text-violet-400`}>
-              {formatCurrency(totals.logistic)}
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-            <div 
-              className="bg-violet-600 dark:bg-violet-500 h-2.5 rounded-full" 
-              style={{ width: `${grandTotal > 0 ? (totals.logistic / grandTotal) * 100 : 0}%` }}
-            ></div>
-          </div>
-          {isMobile && (
-            <div className="mt-1 text-xs text-gray-500">
-              {grandTotal > 0 ? ((totals.logistic / grandTotal) * 100).toFixed(1) : '0'}% от общей суммы
-            </div>
-          )}
-        </div>
-        
-        <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-gray-500">Хранение</span>
-            <span className={`${isMobile ? 'text-sm' : 'text-md'} font-semibold text-emerald-600 dark:text-emerald-400`}>
-              {formatCurrency(totals.storage)}
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-            <div 
-              className="bg-emerald-600 dark:bg-emerald-500 h-2.5 rounded-full" 
-              style={{ width: `${grandTotal > 0 ? (totals.storage / grandTotal) * 100 : 0}%` }}
-            ></div>
-          </div>
-          {isMobile && (
-            <div className="mt-1 text-xs text-gray-500">
-              {grandTotal > 0 ? ((totals.storage / grandTotal) * 100).toFixed(1) : '0'}% от общей суммы
-            </div>
-          )}
-        </div>
-        
-        <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-gray-500">Штрафы</span>
-            <span className={`${isMobile ? 'text-sm' : 'text-md'} font-semibold text-pink-600 dark:text-pink-400`}>
-              {formatCurrency(totals.penalties)}
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-            <div 
-              className="bg-pink-600 dark:bg-pink-500 h-2.5 rounded-full" 
-              style={{ width: `${grandTotal > 0 ? (totals.penalties / grandTotal) * 100 : 0}%` }}
-            ></div>
-          </div>
-          {isMobile && (
-            <div className="mt-1 text-xs text-gray-500">
-              {grandTotal > 0 ? ((totals.penalties / grandTotal) * 100).toFixed(1) : '0'}% от общей суммы
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className={`h-[${isMobile ? '250px' : '350px'}]`}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart 
-            data={data} 
-            barSize={isMobile ? 16 : 24}
-            barGap={isMobile ? 0 : 2}
-            margin={{
-              top: 20,
-              right: isMobile ? 10 : 30,
-              left: isMobile ? 0 : 20,
-              bottom: 30,
-            }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.4} />
-            <XAxis 
-              dataKey="date" 
-              stroke="#9ca3af" 
-              axisLine={false}
-              tickLine={false}
-              padding={{ left: 10, right: 10 }}
-              tick={{ fontSize: isMobile ? 10 : 12 }}
-              tickFormatter={isMobile ? (value) => value.split('.').pop() || value : undefined} // Only show day in mobile
-            />
-            <YAxis 
-              stroke="#9ca3af" 
-              tickFormatter={(value) => value >= 1000 ? `${value/1000}k` : value} 
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: isMobile ? 10 : 12 }}
-              width={isMobile ? 30 : 40}
-            />
-            <Tooltip
-              formatter={(value: any) => [`${formatCurrency(value)}`, '']}
-              contentStyle={{ 
-                background: 'rgba(255, 255, 255, 0.97)', 
-                borderRadius: '8px', 
-                border: '1px solid #e5e7eb',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                padding: isMobile ? '8px 10px' : '10px 14px',
-                fontSize: isMobile ? '12px' : '14px'
+    <Card className="shadow-md">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg flex items-center">
+          <TrendingUp className="mr-2 h-5 w-5 text-blue-500" />
+          <span>Структура расходов по дням</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-4">
+        <div className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={data}
+              margin={{
+                top: 10,
+                right: 30,
+                left: 0,
+                bottom: 0,
               }}
-              cursor={{ fill: 'rgba(224, 231, 255, 0.2)' }}
-            />
-            {!isMobile && (
-              <Legend 
-                iconType="circle" 
-                iconSize={8}
-                wrapperStyle={{
-                  paddingTop: '20px'
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="date"
+                tick={{ fontSize: 12 }}
+                tickFormatter={(value) => {
+                  // Convert YYYY-MM-DD to DD.MM
+                  const parts = value.split('-');
+                  if (parts.length === 3) {
+                    return `${parts[2]}.${parts[1]}`;
+                  }
+                  return value;
                 }}
               />
-            )}
-            {/* Hide reference lines on mobile to avoid clutter */}
-            {!isMobile && (
-              <>
-                <ReferenceLine y={avgLogistic} stroke="#8B5CF6" strokeDasharray="3 3">
-                  <Label value="Средняя логистика" position="insideTopRight" fill="#8B5CF6" fontSize={10} />
-                </ReferenceLine>
-                <ReferenceLine y={avgStorage} stroke="#10B981" strokeDasharray="3 3">
-                  <Label value="Среднее хранение" position="insideTopLeft" fill="#10B981" fontSize={10} />
-                </ReferenceLine>
-              </>
-            )}
-            <Bar 
-              dataKey="logistic" 
-              name="Логистика" 
-              fill="#8B5CF6" 
-              radius={[4, 4, 0, 0]} 
-              animationDuration={1500}
-              animationEasing="ease-in-out"
-            />
-            <Bar 
-              dataKey="storage" 
-              name="Хранение" 
-              fill="#10B981" 
-              radius={[4, 4, 0, 0]} 
-              animationDuration={1500}
-              animationEasing="ease-in-out"
-              animationBegin={300}
-            />
-            <Bar 
-              dataKey="penalties" 
-              name="Штрафы" 
-              fill="#EC4899" 
-              radius={[4, 4, 0, 0]} 
-              animationDuration={1500}
-              animationEasing="ease-in-out"
-              animationBegin={600}
-            />
-            {/* Add bars for acceptance and advertising if they exist in the data */}
-            <Bar 
-              dataKey="acceptance" 
-              name="Приемка" 
-              fill="#F59E0B" 
-              radius={[4, 4, 0, 0]} 
-              animationDuration={1500}
-              animationEasing="ease-in-out"
-              animationBegin={900}
-            />
-            <Bar 
-              dataKey="advertising" 
-              name="Реклама" 
-              fill="#3B82F6" 
-              radius={[4, 4, 0, 0]} 
-              animationDuration={1500}
-              animationEasing="ease-in-out"
-              animationBegin={1200}
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-      
-      {/* Mobile-only legend */}
-      {isMobile && (
-        <div className="flex flex-wrap justify-center gap-3 mt-3">
-          <div className="flex items-center">
-            <span className="h-3 w-3 rounded-full bg-violet-600 mr-1"></span>
-            <span className="text-xs">Логистика</span>
-          </div>
-          <div className="flex items-center">
-            <span className="h-3 w-3 rounded-full bg-emerald-600 mr-1"></span>
-            <span className="text-xs">Хранение</span>
-          </div>
-          <div className="flex items-center">
-            <span className="h-3 w-3 rounded-full bg-pink-600 mr-1"></span>
-            <span className="text-xs">Штрафы</span>
-          </div>
-          <div className="flex items-center">
-            <span className="h-3 w-3 rounded-full bg-amber-500 mr-1"></span>
-            <span className="text-xs">Приемка</span>
-          </div>
-          <div className="flex items-center">
-            <span className="h-3 w-3 rounded-full bg-blue-500 mr-1"></span>
-            <span className="text-xs">Реклама</span>
-          </div>
+              <YAxis 
+                tick={{ fontSize: 12 }}
+                tickFormatter={(value) => {
+                  if (value >= 1000) {
+                    return `${(value / 1000).toFixed(1)}k`;
+                  }
+                  return value;
+                }}
+              />
+              <Tooltip 
+                formatter={(value, name) => {
+                  const nameMap: {[key: string]: string} = {
+                    logistic: 'Логистика',
+                    storage: 'Хранение',
+                    penalties: 'Штрафы',
+                    acceptance: 'Приемка',
+                    advertising: 'Реклама',
+                    deductions: 'Вычеты'
+                  };
+                  
+                  return [`${value} ₽`, nameMap[name] || name];
+                }}
+                labelFormatter={(label) => {
+                  // Convert YYYY-MM-DD to DD.MM.YYYY
+                  const parts = label.split('-');
+                  if (parts.length === 3) {
+                    return `${parts[2]}.${parts[1]}.${parts[0]}`;
+                  }
+                  return label;
+                }}
+              />
+              <Legend 
+                formatter={(value) => {
+                  const nameMap: {[key: string]: string} = {
+                    logistic: 'Логистика',
+                    storage: 'Хранение',
+                    penalties: 'Штрафы',
+                    acceptance: 'Приемка',
+                    advertising: 'Реклама',
+                    deductions: 'Вычеты'
+                  };
+                  
+                  return nameMap[value] || value;
+                }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="logistic" 
+                stackId="1" 
+                stroke="#8884d8" 
+                fill="#8884d8"
+                fillOpacity={0.6}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="storage" 
+                stackId="1" 
+                stroke="#82ca9d" 
+                fill="#82ca9d"
+                fillOpacity={0.6}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="penalties" 
+                stackId="1" 
+                stroke="#ffc658" 
+                fill="#ffc658"
+                fillOpacity={0.6}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="acceptance" 
+                stackId="1" 
+                stroke="#ff7300" 
+                fill="#ff7300"
+                fillOpacity={0.6}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="advertising" 
+                stackId="1" 
+                stroke="#0088fe" 
+                fill="#0088fe"
+                fillOpacity={0.6}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="deductions" 
+                stackId="1" 
+                stroke="#FF5733" 
+                fill="#FF5733"
+                fillOpacity={0.6}
+              />
+              <ReferenceLine y={getAverageTotal()} stroke="#888" strokeDasharray="3 3">
+                <Label value="Среднее" position="right" fill="#888" fontSize={12} />
+              </ReferenceLine>
+              <ReferenceLine y={getMaxTotal()} stroke="#ff0000" strokeDasharray="3 3">
+                <Label value="Макс." position="right" fill="#ff0000" fontSize={12} />
+              </ReferenceLine>
+              <ReferenceLine y={0} stroke="#000" />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
-      )}
+      </CardContent>
     </Card>
   );
 };
