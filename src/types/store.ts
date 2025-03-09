@@ -96,3 +96,12 @@ export interface WildberriesSale {
   gNumber: string;
   srid: string;
 }
+
+// Payment History Item for user payments
+export interface PaymentHistoryItem {
+  userId: string;
+  tariff: string;
+  amount: number;
+  period: number;
+  date: string;
+}

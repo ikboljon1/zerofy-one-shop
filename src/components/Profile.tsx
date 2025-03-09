@@ -35,9 +35,7 @@ import {
   CalendarIcon,
   ShoppingBag,
   KeyRound,
-  BadgePercent,
-  GemIcon,
-  TrophyIcon
+  BadgePercent
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Progress } from "@/components/ui/progress";
@@ -153,8 +151,6 @@ const Profile = ({ user: propUser, onUserUpdated }: ProfileProps) => {
     email: "ivan@example.com",
     phone: "+7 (999) 123-45-67",
     company: "ООО Компания",
-    subscription: "Бизнес",
-    subscriptionEnd: "31.12.2024",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ivan"
   };
 
@@ -1323,23 +1319,23 @@ const Profile = ({ user: propUser, onUserUpdated }: ProfileProps) => {
                     <div key={index} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 rounded-lg border">
                       <div className="flex items-center gap-3 mb-2 md:mb-0">
                         <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                          payment.tariffId === "3" ? "bg-amber-500/20" : 
-                          payment.tariffId === "2" ? "bg-purple-600/20" : 
-                          payment.tariffId === "4" ? "bg-emerald-600/20" :
+                          payment.tariff === "3" ? "bg-amber-500/20" : 
+                          payment.tariff === "2" ? "bg-purple-600/20" : 
+                          payment.tariff === "4" ? "bg-emerald-600/20" :
                           "bg-blue-600/20"
                         }`}>
                           <DollarSign className={`h-5 w-5 ${
-                            payment.tariffId === "3" ? "text-amber-500" : 
-                            payment.tariffId === "2" ? "text-purple-600" : 
-                            payment.tariffId === "4" ? "text-emerald-600" :
+                            payment.tariff === "3" ? "text-amber-500" : 
+                            payment.tariff === "2" ? "text-purple-600" : 
+                            payment.tariff === "4" ? "text-emerald-600" :
                             "text-blue-600"
                           }`} />
                         </div>
                         <div>
                           <p className="font-medium">{
-                            payment.tariffId === "3" ? "Премиум" : 
-                            payment.tariffId === "2" ? "Бизнес" : 
-                            payment.tariffId === "4" ? "Корпоративный" :
+                            payment.tariff === "3" ? "Премиум" : 
+                            payment.tariff === "2" ? "Бизнес" : 
+                            payment.tariff === "4" ? "Корпоративный" :
                             "Стартовый"
                           }</p>
                           <p className="text-sm text-muted-foreground flex items-center gap-1">
@@ -1351,9 +1347,9 @@ const Profile = ({ user: propUser, onUserUpdated }: ProfileProps) => {
                       <div className="flex items-center gap-4">
                         <Badge variant="outline" className="flex items-center gap-1">
                           <CalendarClock className="h-3 w-3" />
-                          {payment.months} {
-                            payment.months === 1 ? 'месяц' : 
-                            payment.months < 5 ? 'месяца' : 'месяцев'
+                          {payment.period} {
+                            Number(payment.period) === 1 ? 'месяц' : 
+                            Number(payment.period) < 5 ? 'месяца' : 'месяцев'
                           }
                         </Badge>
                         <span className="font-bold text-lg">
