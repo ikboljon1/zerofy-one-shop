@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag, Loader2, BadgePercent } from "lucide-react";
@@ -13,7 +12,6 @@ import DeductionsChart from "./components/DeductionsChart";
 import PieChartCard from "./components/PieChartCard";
 import ExpenseBreakdown from "./components/ExpenseBreakdown";
 import ProductList from "./components/ProductList";
-import ProfitabilityTips from "./components/ProfitabilityTips";
 import AdvertisingOptimization from "./components/AdvertisingOptimization";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -332,7 +330,6 @@ const AnalyticsSection = () => {
         setDeductionsTimeline(newDeductionsTimeline);
         setDataTimestamp(Date.now());
         
-        // Сохраняем данные в БД
         try {
           await axios.post('http://localhost:3001/api/analytics', {
             storeId: selectedStore.id,
@@ -348,7 +345,6 @@ const AnalyticsSection = () => {
           });
         } catch (dbError) {
           console.error('Error saving analytics to DB:', dbError);
-          // В случае ошибки сохраняем в localStorage как запасной вариант
           localStorage.setItem(`${ANALYTICS_STORAGE_KEY}_${selectedStore.id}`, JSON.stringify({
             storeId: selectedStore.id,
             dateFrom: dateFrom.toISOString(),
@@ -377,7 +373,6 @@ const AnalyticsSection = () => {
         variant: "destructive"
       });
       
-      // Загрузка из базы данных при ошибке API
       try {
         const analyticsData = await getAnalyticsData(selectedStoreId || '');
         if (analyticsData && analyticsData.data) {
@@ -402,6 +397,7 @@ const AnalyticsSection = () => {
           
           setPenalties([]);
           setDeductions([]);
+          setProductAdvertisingData([]);
           setReturns([]);
         }
       } catch (dbError) {
@@ -419,162 +415,6 @@ const AnalyticsSection = () => {
         
         setPenalties([]);
         setDeductions([]);
-        setReturns([]);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        setProductAdvertisingData([]);
+       
 
-  const applyPreset = (preset: string) => {
-    const today = new Date();
-    
-    switch(preset) {
-      case 'today':
-        setDateFrom(today);
-        setDateTo(today);
-        break;
-      case 'yesterday':
-        const yesterday = subDays(today, 1);
-        setDateFrom(yesterday);
-        setDateTo(yesterday);
-        break;
-      case 'week':
-        setDateFrom(subDays(today, 6));
-        setDateTo(today);
-        break;
-      case 'month':
-        setDateFrom(subDays(today, 29));
-        setDateTo(today);
-        break;
-      default:
-        break;
-    }
-    
-    setQuickSelectOpen(false);
-    
-    setTimeout(() => fetchData(), 100);
-  };
-
-  useEffect(() => {
-    const selectedStore = getSelectedStore();
-    if (selectedStore) {
-      fetchData();
-    } else {
-      setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
-        date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        logistic: 0, 
-        storage: 0, 
-        penalties: 0,
-        acceptance: 0,
-        advertising: 0,
-        deductions: 0
-      })));
-      
-      setPenalties([]);
-      setDeductions([]);
-      setProductAdvertisingData([]);
-      setReturns([]);
-      setIsLoading(false);
-    }
-  }, [selectedStoreId]);
-
-  const hasAdvertisingData = productAdvertisingData && productAdvertisingData.length > 0;
-  const hasPenaltiesData = penalties && penalties.length > 0;
-  const hasDeductionsData = deductions && deductions.length > 0;
-
-  const handleDateChange = () => {
-    fetchData();
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex flex-col items-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="mt-4 text-muted-foreground">Загрузка аналитики...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-8">
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-100 dark:border-blue-800/30 shadow-lg">
-        <DateRangePicker 
-          dateFrom={dateFrom}
-          dateTo={dateTo}
-          setDateFrom={setDateFrom}
-          setDateTo={setDateTo}
-          onApplyDateRange={handleDateChange}
-          onUpdate={handleDateChange}
-        />
-      </div>
-
-      <div className="space-y-8">
-        <KeyMetrics data={data} />
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <SalesChart data={data} />
-          <DeductionsChart data={deductionsTimeline} />
-        </div>
-
-        {/* Profitability Tips Section */}
-        <ProfitabilityTips />
-
-        {/* Advertising Optimization Section */}
-        <AdvertisingOptimization />
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <PieChartCard 
-            title="Детализация по штрафам"
-            icon={<AlertCircle className="h-4 w-4 text-purple-600 dark:text-purple-400" />}
-            data={penalties}
-            emptyMessage="Штрафы отсутствуют"
-          />
-          <PieChartCard 
-            title="Прочие удержания"
-            icon={<BadgePercent className="h-4 w-4 text-orange-600 dark:text-orange-400" />}
-            data={deductions}
-            emptyMessage="Удержания отсутствуют"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <PieChartCard 
-            title="Возврат товаров"
-            icon={<PackageX className="h-4 w-4 text-red-600 dark:text-red-400" />}
-            data={returns}
-            showCount={true}
-            emptyMessage="Возвраты отсутствуют"
-          />
-          {hasAdvertisingData && (
-            <PieChartCard 
-              title="Расходы на рекламу по товарам"
-              icon={<Tag className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
-              data={productAdvertisingData}
-              emptyMessage="Нет данных о расходах на рекламу"
-            />
-          )}
-        </div>
-
-        <ExpenseBreakdown data={data} advertisingBreakdown={advertisingBreakdown} />
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ProductList 
-            title="Самые прибыльные товары"
-            products={data.topProfitableProducts}
-            isProfitable={true}
-          />
-          <ProductList 
-            title="Самые убыточные товары"
-            products={data.topUnprofitableProducts}
-            isProfitable={false}
-          />
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default AnalyticsSection;
