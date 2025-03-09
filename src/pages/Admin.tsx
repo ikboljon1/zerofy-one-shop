@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { User, getUsers } from "@/services/userService";
 import UserList from "@/components/admin/UserList";
@@ -16,9 +15,11 @@ import {
   User as UserIcon,
   BadgeDollarSign,
   Tag,
+  Mail
 } from "lucide-react";
 import { motion } from "framer-motion";
 import TariffSection from "@/components/admin/TariffSection";
+import SMTPSettings from "@/components/admin/SMTPSettings";
 
 export default function Admin() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -27,7 +28,6 @@ export default function Admin() {
   const [userCount, setUserCount] = useState(0);
 
   useEffect(() => {
-    // Fetch the user count
     getUsers().then(users => setUserCount(users.length));
   }, []);
 
@@ -41,17 +41,14 @@ export default function Admin() {
 
   const handleUserUpdated = (user: User) => {
     setSelectedUser(user);
-    // Refresh user count
     getUsers().then(users => setUserCount(users.length));
   };
 
   const handleUserAdded = (user: User) => {
     setSelectedUser(null);
-    // Refresh user count
     getUsers().then(users => setUserCount(users.length));
   };
 
-  // Check if admin is logged in
   const userDataStr = localStorage.getItem('user');
   const userData = userDataStr ? JSON.parse(userDataStr) : null;
   const isAdmin = userData?.role === 'admin';
@@ -119,6 +116,10 @@ export default function Admin() {
               <FileText className="h-4 w-4" />
               <span>Журналы</span>
             </TabsTrigger>
+            <TabsTrigger value="smtp" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-800 data-[state=active]:text-white rounded-lg px-4 py-2">
+              <Mail className="h-4 w-4" />
+              <span>SMTP</span>
+            </TabsTrigger>
             <TabsTrigger value="database" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-800 data-[state=active]:text-white rounded-lg px-4 py-2">
               <Database className="h-4 w-4" />
               <span>База данных</span>
@@ -176,6 +177,10 @@ export default function Admin() {
                 Этот раздел находится в разработке. Здесь будет доступна история всех действий пользователей в системе.
               </p>
             </div>
+          </TabsContent>
+
+          <TabsContent value="smtp">
+            <SMTPSettings />
           </TabsContent>
 
           <TabsContent value="database">

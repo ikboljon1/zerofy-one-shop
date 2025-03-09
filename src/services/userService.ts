@@ -35,6 +35,16 @@ export interface PaymentHistoryItem {
   period: string;
 }
 
+export interface SmtpSettings {
+  host: string;
+  port: number;
+  secure: boolean;
+  username: string;
+  password: string;
+  fromEmail: string;
+  fromName: string;
+}
+
 export const TARIFF_STORE_LIMITS: Record<string, number> = {
   "1": 1,  // Стартовый
   "2": 3,  // Бизнес
@@ -300,6 +310,83 @@ export const changePassword = async (
   return { success: true };
 };
 
+export const getSmtpSettings = async (): Promise<SmtpSettings | null> => {
+  await new Promise(resolve => setTimeout(resolve, 300)); // Simulate network delay
+  
+  const storedSettings = localStorage.getItem('smtp_settings');
+  if (storedSettings) {
+    return JSON.parse(storedSettings);
+  }
+  
+  const defaultSettings: SmtpSettings = {
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: true,
+    username: "uldashvaevasarvinoz@gmail.com",
+    password: "",
+    fromEmail: "uldashvaevasarvinoz@gmail.com",
+    fromName: "Zerofy System"
+  };
+  
+  return defaultSettings;
+};
+
+export const saveSmtpSettings = async (settings: SmtpSettings): Promise<void> => {
+  await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+  
+  localStorage.setItem('smtp_settings', JSON.stringify(settings));
+};
+
+export const testSmtpConnection = async (settings: SmtpSettings): Promise<{ success: boolean; message: string }> => {
+  await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
+  
+  try {
+    console.log("Testing SMTP connection with settings:", settings);
+    
+    if (!settings.host) {
+      return { success: false, message: "Неверный хост SMTP-сервера" };
+    }
+    
+    return { success: true, message: "Соединение успешно установлено" };
+  } catch (error) {
+    return { 
+      success: false, 
+      message: error instanceof Error ? error.message : "Неизвестная ошибка при подключении к SMTP-серверу" 
+    };
+  }
+};
+
+export const sendEmail = async (
+  to: string,
+  subject: string,
+  htmlContent: string
+): Promise<{ success: boolean; message: string }> => {
+  await new Promise(resolve => setTimeout(resolve, 800)); // Simulate network delay
+  
+  try {
+    const smtpSettings = await getSmtpSettings();
+    if (!smtpSettings) {
+      return { success: false, message: "SMTP настройки не найдены" };
+    }
+    
+    console.log(`
+      Sending email:
+      From: ${smtpSettings.fromName} <${smtpSettings.fromEmail}>
+      To: ${to}
+      Subject: ${subject}
+      Content: ${htmlContent}
+      Using SMTP server: ${smtpSettings.host}:${smtpSettings.port}
+    `);
+    
+    return { success: true, message: "Email отправлен успешно" };
+  } catch (error) {
+    return { 
+      success: false, 
+      message: error instanceof Error ? error.message : "Неизвестная ошибка при отправке email" 
+    };
+  }
+};
+
 export const requestPasswordReset = async (
   email: string
 ): Promise<{ success: boolean; message: string }> => {
@@ -323,7 +410,36 @@ export const requestPasswordReset = async (
     expiry: resetExpiry.toISOString()
   }));
   
-  console.log(`Reset token for ${email}: ${resetToken}`);
+  const resetUrl = `?resetToken=${resetToken}&resetEmail=${encodeURIComponent(email)}`;
+  
+  const emailHtml = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 5px;">
+      <h2 style="color: #333; text-align: center;">Восстановление пароля</h2>
+      <p>Здравствуйте!</p>
+      <p>Вы запросили сброс пароля для вашей учетной записи в системе Zerofy. Пожалуйста, перейдите по ссылке ниже для создания нового пароля:</p>
+      <div style="text-align: center; margin: 20px 0;">
+        <a href="${resetUrl}" style="background-color: #4a6cf7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Сбросить пароль</a>
+      </div>
+      <p>Ссылка действительна в течение 1 часа. Если вы не запрашивали сброс пароля, проигнорируйте это сообщение.</p>
+      <p>С уважением,<br>Команда Zerofy</p>
+    </div>
+  `;
+  
+  try {
+    const emailResult = await sendEmail(
+      email,
+      "Восстановление пароля",
+      emailHtml
+    );
+    
+    console.log(`Password reset link for ${email}: ${resetUrl}`);
+    
+    if (!emailResult.success) {
+      console.error(`Failed to send reset email: ${emailResult.message}`);
+    }
+  } catch (error) {
+    console.error("Error sending reset email:", error);
+  }
   
   return { 
     success: true, 

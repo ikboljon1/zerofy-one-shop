@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LoginForm from "./LoginForm";
@@ -21,6 +21,23 @@ const AuthModal = ({ open, onClose, initialMode = 'login', resetToken, resetEmai
     resetToken && resetEmail ? 'reset' : null
   );
   const [emailForReset, setEmailForReset] = useState<string>(resetEmail || '');
+
+  // Detect reset parameters from URL
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const tokenFromUrl = url.searchParams.get('resetToken');
+    const emailFromUrl = url.searchParams.get('resetEmail');
+    
+    if (tokenFromUrl && emailFromUrl) {
+      setResetMode('reset');
+      setEmailForReset(emailFromUrl);
+      
+      // Clear URL parameters after reading them
+      url.searchParams.delete('resetToken');
+      url.searchParams.delete('resetEmail');
+      window.history.replaceState({}, document.title, url.toString());
+    }
+  }, [open]);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
