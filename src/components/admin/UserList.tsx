@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { User, getUsers } from "@/services/userService";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -65,9 +64,28 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
   const itemsPerPage = 5;
   const [paginatedUsers, setPaginatedUsers] = useState<User[]>([]);
 
+  // Memoize the fetchUsers function so it can be used in useEffect and as a callback
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getUsers();
+      setUsers(data);
+      setFilteredUsers(data);
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить список пользователей",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [fetchUsers]);
 
   useEffect(() => {
     let result = users;
@@ -105,22 +123,8 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
     setPaginatedUsers(filteredUsers.slice(start, end));
   }, [filteredUsers, page]);
 
-  const fetchUsers = async () => {
-    setLoading(true);
-    try {
-      const data = await getUsers();
-      setUsers(data);
-      setFilteredUsers(data);
-    } catch (error) {
-      console.error("Failed to fetch users:", error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось загрузить список пользователей",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+  const handleRefresh = () => {
+    fetchUsers();
   };
 
   const formatDate = (dateString: string) => {
@@ -178,6 +182,14 @@ export default function UserList({ onSelectUser, onAddUser }: UserListProps) {
             <span>Пользователи ({filteredUsers.length})</span>
           </CardTitle>
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleRefresh}
+              className="rounded-full bg-gray-800 border-gray-700 hover:bg-gray-700"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button 

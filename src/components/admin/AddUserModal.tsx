@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -67,7 +68,6 @@ export default function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserMo
       });
       
       onUserAdded(newUser);
-      onClose();
       
       // Reset form
       setFormData({
@@ -75,6 +75,8 @@ export default function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserMo
         email: "",
         role: "user",
       });
+      
+      onClose();
     } catch (error) {
       console.error("Error adding user:", error);
       toast({
@@ -95,6 +97,9 @@ export default function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserMo
             <UserPlus className="h-5 w-5 text-blue-500" />
             <span>Добавить пользователя</span>
           </DialogTitle>
+          <DialogDescription>
+            Добавьте нового пользователя в систему
+          </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4 py-4">

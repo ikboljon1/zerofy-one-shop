@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useCallback } from "react";
 import { User, getUsers } from "@/services/userService";
 import UserList from "@/components/admin/UserList";
 import UserDetails from "@/components/admin/UserDetails";
@@ -29,15 +30,22 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState("users");
   const [userCount, setUserCount] = useState(0);
   const [userData, setUserData] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
 
-  useEffect(() => {
-    getUsers().then(users => setUserCount(users.length));
+  const fetchUserData = useCallback(async () => {
+    const users = await getUsers();
+    setUserCount(users.length);
+    setUsers(users);
     
     const userDataStr = localStorage.getItem('user');
     if (userDataStr) {
       setUserData(JSON.parse(userDataStr));
     }
   }, []);
+  
+  useEffect(() => {
+    fetchUserData();
+  }, [fetchUserData]);
 
   const handleSelectUser = (user: User) => {
     setSelectedUser(user);
@@ -49,12 +57,12 @@ export default function Admin() {
 
   const handleUserUpdated = (user: User) => {
     setSelectedUser(user);
-    getUsers().then(users => setUserCount(users.length));
+    fetchUserData();
   };
 
   const handleUserAdded = (user: User) => {
+    fetchUserData();
     setSelectedUser(null);
-    getUsers().then(users => setUserCount(users.length));
   };
 
   const isAdmin = userData?.role === 'admin';
