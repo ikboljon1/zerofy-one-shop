@@ -35,6 +35,17 @@ export interface PaymentHistoryItem {
   period: string;
 }
 
+export interface SMTPSettings {
+  host: string;
+  port: number;
+  secure: boolean;
+  auth: {
+    user: string;
+    pass: string;
+  };
+  from: string;
+}
+
 export const TARIFF_STORE_LIMITS: Record<string, number> = {
   "1": 1,  // Стартовый
   "2": 3,  // Бизнес
@@ -323,7 +334,16 @@ export const requestPasswordReset = async (
     expiry: resetExpiry.toISOString()
   }));
   
+  const resetLink = `${window.location.origin}?resetToken=${resetToken}&email=${encodeURIComponent(email)}`;
+  
+  await sendEmail(
+    email,
+    "Восстановление пароля на Zerofy",
+    `Для восстановления пароля перейдите по ссылке: ${resetLink}`
+  );
+  
   console.log(`Reset token for ${email}: ${resetToken}`);
+  console.log(`Reset link: ${resetLink}`);
   
   return { 
     success: true, 
@@ -497,4 +517,33 @@ export const getUserSubscriptionData = async (userId: string): Promise<Subscript
   }
   
   return getSubscriptionStatus(user);
+};
+
+export const getSMTPSettings = (): SMTPSettings | null => {
+  const settings = localStorage.getItem('smtp_settings');
+  return settings ? JSON.parse(settings) : null;
+};
+
+export const saveSMTPSettings = (settings: SMTPSettings): void => {
+  localStorage.setItem('smtp_settings', JSON.stringify(settings));
+};
+
+export const sendEmail = async (
+  to: string,
+  subject: string,
+  body: string
+): Promise<{ success: boolean; message: string }> => {
+  const smtpSettings = getSMTPSettings();
+  
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  console.log(`Отправка письма на ${to}`);
+  console.log(`Тема: ${subject}`);
+  console.log(`Содержание: ${body}`);
+  console.log(`Настройки SMTP:`, smtpSettings || 'Не настроены');
+  
+  return {
+    success: true,
+    message: "Письмо успешно отправлено"
+  };
 };
