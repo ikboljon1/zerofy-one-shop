@@ -1,5 +1,4 @@
-
-import { Store, NewStore, STATS_STORAGE_KEY } from "@/types/store";
+import { Store, NewStore, STATS_STORAGE_KEY, AIModel, NewAIModel, AI_MODELS_STORAGE_KEY } from "@/types/store";
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
 
 const STORES_STORAGE_KEY = 'marketplace_stores';
@@ -220,4 +219,116 @@ export const fetchAndUpdateSales = async (store: any) => {
   }));
   
   return mockSales;
+};
+
+// === Функции для работы с AI моделями ===
+
+// Загрузка списка AI моделей из localStorage
+export const loadAIModels = (): AIModel[] => {
+  try {
+    const storedModels = localStorage.getItem(AI_MODELS_STORAGE_KEY);
+    return storedModels ? JSON.parse(storedModels) : [];
+  } catch (error) {
+    console.error("Ошибка при загрузке AI моделей:", error);
+    return [];
+  }
+};
+
+// Сохранение списка AI моделей в localStorage
+export const saveAIModels = (models: AIModel[]): void => {
+  try {
+    localStorage.setItem(AI_MODELS_STORAGE_KEY, JSON.stringify(models));
+  } catch (error) {
+    console.error("Ошибка при сохранении AI моделей:", error);
+  }
+};
+
+// Проверка валидности API ключа для AI модели
+export const validateAIModelApiKey = async (apiKey: string, modelType: string): Promise<{ isValid: boolean; errorMessage?: string }> => {
+  try {
+    // Здесь можно добавить реальную проверку API ключа через запрос к соответствующему API
+    // Для примера просто проверяем, что ключ не пустой и имеет минимальную длину
+    if (!apiKey) {
+      return { isValid: false, errorMessage: "API ключ не может быть пустым" };
+    }
+    
+    // Разные модели имеют разные форматы ключей
+    switch (modelType) {
+      case "OpenAI":
+        if (!apiKey.startsWith("sk-") || apiKey.length < 20) {
+          return { isValid: false, errorMessage: "API ключ OpenAI должен начинаться с 'sk-' и содержать минимум 20 символов" };
+        }
+        break;
+      case "Gemini":
+        if (apiKey.length < 12) {
+          return { isValid: false, errorMessage: "API ключ Gemini должен содержать минимум 12 символов" };
+        }
+        break;
+      default:
+        if (apiKey.length < 10) {
+          return { isValid: false, errorMessage: `API ключ ${modelType} должен содержать минимум 10 символов` };
+        }
+    }
+    
+    return { isValid: true };
+  } catch (error) {
+    console.error(`Ошибка при проверке API ключа ${modelType}:`, error);
+    return { isValid: false, errorMessage: `Произошла ошибка при проверке API ключа ${modelType}` };
+  }
+};
+
+// Получение выбранной AI модели
+export const getSelectedAIModel = (): AIModel | null => {
+  try {
+    const models = loadAIModels();
+    return models.find(model => model.isSelected) || null;
+  } catch (error) {
+    console.error('Ошибка при получении выбранной AI модели:', error);
+    return null;
+  }
+};
+
+// Обеспечение сохранения выбранной AI модели
+export const ensureAIModelSelectionPersistence = (): AIModel[] => {
+  const models = loadAIModels();
+  
+  // Если нет моделей, просто возвращаем пустой массив
+  if (models.length === 0) {
+    return models;
+  }
+  
+  // Проверяем, есть ли выбранная модель
+  const hasSelectedModel = models.some(model => model.isSelected);
+  
+  // Если нет выбранной модели, проверяем сохраненный ID последней выбранной модели
+  if (!hasSelectedModel) {
+    try {
+      const lastSelectedModel = localStorage.getItem('last_selected_ai_model');
+      if (lastSelectedModel) {
+        const { modelId } = JSON.parse(lastSelectedModel);
+        
+        // Обновляем выбранную модель
+        const updatedModels = models.map(model => ({
+          ...model,
+          isSelected: model.id === modelId
+        }));
+        
+        saveAIModels(updatedModels);
+        return updatedModels;
+      }
+    } catch (error) {
+      console.error("Ошибка при восстановлении выбранной AI модели:", error);
+    }
+    
+    // Если не удалось восстановить выбранную модель, выбираем первую
+    const updatedModels = models.map((model, index) => ({
+      ...model,
+      isSelected: index === 0
+    }));
+    
+    saveAIModels(updatedModels);
+    return updatedModels;
+  }
+  
+  return models;
 };

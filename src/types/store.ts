@@ -105,3 +105,28 @@ export interface PaymentHistoryItem {
   period: number;
   date: string;
 }
+
+// AI Model types
+export type AIModelType = "OpenAI" | "Gemini" | "Anthropic" | "Mistral" | "Llama";
+
+export interface AIModel {
+  id: string;
+  type: AIModelType;
+  name: string;
+  apiKey: string;
+  isSelected?: boolean;
+  lastUsed?: string;
+}
+
+export interface NewAIModel extends Partial<AIModel> {}
+
+export const AI_MODELS_STORAGE_KEY = 'ai_models';
+export const aiModelTypes: AIModelType[] = ["OpenAI", "Gemini", "Anthropic", "Mistral", "Llama"];
+
+export const aiModelVersions: Record<AIModelType, string[]> = {
+  "OpenAI": ["GPT-4o", "GPT-4o-mini", "GPT-4 Turbo"],
+  "Gemini": ["Gemini Pro", "Gemini 1.5 Pro", "Gemini 1.5 Flash"],
+  "Anthropic": ["Claude 3 Opus", "Claude 3 Sonnet", "Claude 3 Haiku"],
+  "Mistral": ["Mistral Large", "Mistral Medium", "Mistral Small"],
+  "Llama": ["Llama 3 70B", "Llama 3 8B", "Llama 2"]
+};
