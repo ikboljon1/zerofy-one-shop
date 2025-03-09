@@ -19,6 +19,7 @@ export const STORES_STORAGE_KEY = 'marketplace_stores';
 export const STATS_STORAGE_KEY = 'marketplace_stats';
 export const ORDERS_STORAGE_KEY = 'marketplace_orders';
 export const SALES_STORAGE_KEY = 'marketplace_sales';
+export const PRODUCT_EFFICIENCY_KEY = 'product_efficiency';
 
 export const marketplaces: Marketplace[] = ["Wildberries", "Ozon", "Yandexmarket", "Uzum"];
 
@@ -104,4 +105,30 @@ export interface PaymentHistoryItem {
   amount: number;
   period: number;
   date: string;
+}
+
+// Новый интерфейс для хранения данных об эффективности товаров
+export interface ProductEfficiency {
+  storeId: string;
+  updateDate: string;
+  profitableProducts: Array<{
+    name: string;
+    price: string;
+    profit: string;
+    image: string;
+    quantitySold?: number;
+    margin?: number;
+    returnCount?: number;
+    category?: string;
+  }>;
+  unprofitableProducts: Array<{
+    name: string;
+    price: string;
+    profit: string;
+    image: string;
+    quantitySold?: number;
+    margin?: number;
+    returnCount?: number;
+    category?: string;
+  }>;
 }
