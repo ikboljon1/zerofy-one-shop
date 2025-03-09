@@ -1,6 +1,6 @@
 
-import { Store, NewStore, STATS_STORAGE_KEY } from "@/types/store";
-import { getWildberriesStats } from "@/services/wildberriesApi";
+import { Store, NewStore, STATS_STORAGE_KEY, WildberriesOrder, WildberriesSale } from "@/types/store";
+import { fetchWildberriesStats, fetchWildberriesOrders, fetchWildberriesSales } from "@/services/wildberriesApi";
 import axios from "axios";
 
 const API_BASE_URL = "http://localhost:3001";
@@ -166,7 +166,7 @@ export const ensureStoreSelectionPersistence = (): Store[] => {
 // Refresh store statistics from Wildberries API
 export const refreshStoreStats = async (store: Store): Promise<Store | null> => {
   try {
-    const stats = await getWildberriesStats(store.apiKey);
+    const stats = await fetchWildberriesStats(store.apiKey, new Date(new Date().setDate(new Date().getDate() - 7)), new Date());
     if (!stats) return null;
     
     const updatedStore = {
@@ -203,7 +203,7 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
 export const validateApiKey = async (apiKey: string): Promise<{isValid: boolean; errorMessage?: string}> => {
   try {
     // Attempt to fetch data with the API key
-    const stats = await getWildberriesStats(apiKey);
+    const stats = await fetchWildberriesStats(apiKey, new Date(new Date().setDate(new Date().getDate() - 7)), new Date());
     
     // If we got data back, the key is valid
     if (stats) {
@@ -228,5 +228,178 @@ export const validateApiKey = async (apiKey: string): Promise<{isValid: boolean;
       isValid: false,
       errorMessage
     };
+  }
+};
+
+// Get analytics data for a store
+export const getAnalyticsData = (storeId: string): any => {
+  try {
+    const analyticsData = localStorage.getItem(`marketplace_analytics_${storeId}`);
+    if (!analyticsData) return null;
+    
+    return JSON.parse(analyticsData);
+  } catch (error) {
+    console.error(`Error getting analytics data for store ${storeId}:`, error);
+    return null;
+  }
+};
+
+// Get selected store
+export const getSelectedStore = (): { id: string; apiKey: string } | null => {
+  try {
+    const stores = localStorage.getItem('stores');
+    if (!stores) return null;
+    
+    const parsedStores = JSON.parse(stores) as Store[];
+    const selectedStore = parsedStores.find(store => store.isSelected);
+    
+    if (!selectedStore) return null;
+    
+    return { 
+      id: selectedStore.id, 
+      apiKey: selectedStore.apiKey 
+    };
+  } catch (error) {
+    console.error("Error getting selected store:", error);
+    return null;
+  }
+};
+
+// Get product profitability data
+export const getProductProfitabilityData = (storeId: string): any => {
+  try {
+    const profitabilityData = localStorage.getItem(`product_profitability_${storeId}`);
+    if (!profitabilityData) {
+      // Fallback to analytics data to extract profitable products
+      const analyticsData = getAnalyticsData(storeId);
+      if (!analyticsData || !analyticsData.data) return null;
+      
+      return {
+        profitableProducts: analyticsData.data.topProfitableProducts || [],
+        unprofitableProducts: analyticsData.data.topUnprofitableProducts || [],
+        updateDate: analyticsData.timestamp ? new Date(analyticsData.timestamp).toISOString() : new Date().toISOString()
+      };
+    }
+    
+    return JSON.parse(profitabilityData);
+  } catch (error) {
+    console.error(`Error getting product profitability data for store ${storeId}:`, error);
+    return null;
+  }
+};
+
+// Get orders data
+export const getOrdersData = async (storeId: string): Promise<any> => {
+  try {
+    const ordersData = localStorage.getItem(`orders_data_${storeId}`);
+    if (!ordersData) return null;
+    
+    return JSON.parse(ordersData);
+  } catch (error) {
+    console.error(`Error getting orders data for store ${storeId}:`, error);
+    return null;
+  }
+};
+
+// Get sales data
+export const getSalesData = async (storeId: string): Promise<any> => {
+  try {
+    const salesData = localStorage.getItem(`sales_data_${storeId}`);
+    if (!salesData) return null;
+    
+    return JSON.parse(salesData);
+  } catch (error) {
+    console.error(`Error getting sales data for store ${storeId}:`, error);
+    return null;
+  }
+};
+
+// Fetch and update orders
+export const fetchAndUpdateOrders = async (store: { id: string, apiKey: string }): Promise<any> => {
+  try {
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    
+    // Fetch orders from API
+    const orders = await fetchWildberriesOrders(store.apiKey, oneMonthAgo);
+    
+    if (orders && orders.length > 0) {
+      // Calculate warehouse and region distributions
+      const warehouseCounts: Record<string, number> = {};
+      const regionCounts: Record<string, number> = {};
+      const totalOrders = orders.length;
+      
+      orders.forEach((order: WildberriesOrder) => {
+        if (order.warehouseName) {
+          warehouseCounts[order.warehouseName] = (warehouseCounts[order.warehouseName] || 0) + 1;
+        }
+        if (order.regionName) {
+          regionCounts[order.regionName] = (regionCounts[order.regionName] || 0) + 1;
+        }
+      });
+      
+      const warehouseDistribution = Object.entries(warehouseCounts)
+        .map(([name, count]) => ({
+          name,
+          count,
+          percentage: (count / totalOrders) * 100
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+      
+      const regionDistribution = Object.entries(regionCounts)
+        .map(([name, count]) => ({
+          name,
+          count,
+          percentage: (count / totalOrders) * 100
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+      
+      // Save to localStorage
+      const ordersData = {
+        orders,
+        warehouseDistribution,
+        regionDistribution,
+        updateDate: new Date().toISOString()
+      };
+      
+      localStorage.setItem(`orders_data_${store.id}`, JSON.stringify(ordersData));
+      
+      return ordersData;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error(`Error fetching and updating orders for store ${store.id}:`, error);
+    return null;
+  }
+};
+
+// Fetch and update sales
+export const fetchAndUpdateSales = async (store: { id: string, apiKey: string }): Promise<WildberriesSale[] | null> => {
+  try {
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    
+    // Fetch sales from API
+    const sales = await fetchWildberriesSales(store.apiKey, oneMonthAgo);
+    
+    if (sales && sales.length > 0) {
+      // Save to localStorage
+      const salesData = {
+        sales,
+        updateDate: new Date().toISOString()
+      };
+      
+      localStorage.setItem(`sales_data_${store.id}`, JSON.stringify(salesData));
+      
+      return sales;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error(`Error fetching and updating sales for store ${store.id}:`, error);
+    return null;
   }
 };
