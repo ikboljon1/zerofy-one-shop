@@ -13,6 +13,8 @@ import DeductionsChart from "./components/DeductionsChart";
 import PieChartCard from "./components/PieChartCard";
 import ExpenseBreakdown from "./components/ExpenseBreakdown";
 import ProductList from "./components/ProductList";
+import ProfitabilityTips from "./components/ProfitabilityTips";
+import AdvertisingOptimization from "./components/AdvertisingOptimization";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
@@ -516,6 +518,12 @@ const AnalyticsSection = () => {
           <SalesChart data={data} />
           <DeductionsChart data={deductionsTimeline} />
         </div>
+
+        {/* Profitability Tips Section */}
+        <ProfitabilityTips />
+
+        {/* Advertising Optimization Section */}
+        <AdvertisingOptimization />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <PieChartCard 

@@ -10,9 +10,6 @@ import {
   fetchAcceptanceCoefficients, 
   fetchWarehouses, 
   fetchAcceptanceOptions,
-  fetchStocks,
-  processStocksByCategory,
-  processStocksByWarehouse
 } from '@/services/suppliesApi';
 import {
   fetchWarehouseRemains
@@ -28,32 +25,24 @@ import {
   WarehouseCoefficient, 
   Warehouse as WBWarehouse,
   SupplyOptionsResponse,
-  WildberriesStock,
-  StocksByCategory,
-  StocksByWarehouse,
   WarehouseRemainItem
 } from '@/types/supplies';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { loadStores, ensureStoreSelectionPersistence } from '@/utils/storeUtils';
+import { ensureStoreSelectionPersistence } from '@/utils/storeUtils';
 import { Store as StoreType } from '@/types/store';
 
 const Warehouses: React.FC = () => {
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('inventory');
   const [wbWarehouses, setWbWarehouses] = useState<WBWarehouse[]>([]);
   const [coefficients, setCoefficients] = useState<WarehouseCoefficient[]>([]);
   const [supplyResults, setSupplyResults] = useState<SupplyOptionsResponse | null>(null);
-  const [stocks, setStocks] = useState<WildberriesStock[]>([]);
-  const [categorySummary, setCategorySummary] = useState<StocksByCategory[]>([]);
-  const [warehouseSummary, setWarehouseSummary] = useState<StocksByWarehouse[]>([]);
   const [warehouseRemains, setWarehouseRemains] = useState<WarehouseRemainItem[]>([]);
   const [loading, setLoading] = useState({
     warehouses: false,
     coefficients: false,
     options: false,
-    inventory: false,
     remains: false
   });
   const [selectedStore, setSelectedStore] = useState<StoreType | null>(null);
@@ -112,28 +101,6 @@ const Warehouses: React.FC = () => {
       toast.error('Не удалось загрузить коэффициенты приемки');
     } finally {
       setLoading(prev => ({ ...prev, coefficients: false }));
-    }
-  };
-
-  const loadInventory = async (apiKey: string) => {
-    try {
-      setLoading(prev => ({ ...prev, inventory: true }));
-      const stocksData = await fetchStocks(apiKey);
-      setStocks(stocksData);
-      
-      // Process the stocks data
-      const categoryData = processStocksByCategory(stocksData);
-      const warehouseData = processStocksByWarehouse(stocksData);
-      
-      setCategorySummary(categoryData);
-      setWarehouseSummary(warehouseData);
-      
-      toast.success('Данные об остатках товаров успешно загружены');
-    } catch (error) {
-      console.error('Ошибка при загрузке остатков:', error);
-      toast.error('Не удалось загрузить данные об остатках товаров');
-    } finally {
-      setLoading(prev => ({ ...prev, inventory: false }));
     }
   };
 
