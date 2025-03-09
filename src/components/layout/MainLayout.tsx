@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { 
   Home, 
@@ -13,7 +14,8 @@ import {
   Settings,
   LogOut,
   WarehouseIcon,
-  MenuIcon
+  MenuIcon,
+  Brain
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -128,6 +130,17 @@ const MainLayout = ({ children, activeTab, onTabChange }: MainLayoutProps) => {
                       variant="ghost" 
                       className="justify-start"
                       onClick={() => {
+                        onTabChange("ai_models");
+                        setShowMobileMenu(false);
+                      }}
+                    >
+                      <Brain className="mr-2 h-4 w-4" />
+                      AI Модели
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="justify-start"
+                      onClick={() => {
                         onTabChange("warehouses");
                         setShowMobileMenu(false);
                       }}
@@ -218,6 +231,14 @@ const MainLayout = ({ children, activeTab, onTabChange }: MainLayoutProps) => {
                 >
                   <ShoppingBag className="mr-2 h-4 w-4" />
                   Магазины
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => onTabChange("ai_models")}
+                  className={activeTab === "ai_models" ? "bg-accent" : ""}
+                >
+                  <Brain className="mr-2 h-4 w-4" />
+                  AI Модели
                 </Button>
                 <Button 
                   variant="ghost" 
