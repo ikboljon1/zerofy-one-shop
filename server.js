@@ -15,7 +15,7 @@ app.use(bodyParser.json());
 const db = new sqlite3.Database('./database.sqlite');
 
 db.serialize(() => {
-  // Сохраняем только основные таблицы для пользователей и их данных
+  // Сохраняем основные таблицы для пользователей и их данных
   db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT UNIQUE NOT NULL,
@@ -24,6 +24,18 @@ db.serialize(() => {
     status TEXT DEFAULT 'active',
     subscription_type TEXT DEFAULT 'free',
     subscription_expiry DATETIME
+  )`);
+
+  // Добавляем таблицу stores для хранения магазинов пользователей
+  db.run(`CREATE TABLE IF NOT EXISTS stores (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    marketplace TEXT NOT NULL,
+    api_key TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS email_settings (
@@ -55,8 +67,6 @@ db.serialize(() => {
     payment_method TEXT,
     FOREIGN KEY (user_id) REFERENCES users(id)
   )`);
-  
-  // Удалили создание таблиц store_stats, orders, sales, products и analytics
 });
 
 // Регистрация пользователя
@@ -310,7 +320,179 @@ app.get('/api/payment-history/:user_id', (req, res) => {
   });
 });
 
-// Удалены эндпоинты API для store_stats, orders, sales, products и analytics
+// API для работы с магазинами
+
+// Добавление нового магазина
+app.post('/api/stores', (req, res) => {
+  const { user_id, name, marketplace, api_key } = req.body;
+  
+  if (!user_id || !name || !marketplace || !api_key) {
+    return res.status(400).json({ error: 'Все поля обязательны для заполнения' });
+  }
+  
+  const query = `INSERT INTO stores (user_id, name, marketplace, api_key, created_at, last_updated) 
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`;
+  
+  db.run(query, [user_id, name, marketplace, api_key], function(err) {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Ошибка при добавлении магазина' });
+    }
+    
+    res.status(201).json({ 
+      id: this.lastID,
+      message: 'Магазин успешно добавлен',
+      store: {
+        id: this.lastID,
+        user_id,
+        name,
+        marketplace,
+        created_at: new Date().toISOString()
+      }
+    });
+  });
+});
+
+// Получение всех магазинов пользователя
+app.get('/api/stores/user/:user_id', (req, res) => {
+  const userId = req.params.user_id;
+  
+  const query = 'SELECT id, name, marketplace, created_at, last_updated FROM stores WHERE user_id = ?';
+  
+  db.all(query, [userId], (err, rows) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Ошибка при получении списка магазинов' });
+    }
+    
+    res.json(rows);
+  });
+});
+
+// Получение информации о конкретном магазине
+app.get('/api/stores/:id', (req, res) => {
+  const storeId = req.params.id;
+  
+  const query = 'SELECT id, user_id, name, marketplace, created_at, last_updated FROM stores WHERE id = ?';
+  
+  db.get(query, [storeId], (err, row) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Ошибка при получении информации о магазине' });
+    }
+    
+    if (!row) {
+      return res.status(404).json({ error: 'Магазин не найден' });
+    }
+    
+    res.json(row);
+  });
+});
+
+// Обновление информации о магазине
+app.put('/api/stores/:id', (req, res) => {
+  const storeId = req.params.id;
+  const { name, marketplace, api_key } = req.body;
+  
+  // Проверяем, что хотя бы одно из полей для обновления присутствует в запросе
+  if (!name && !marketplace && !api_key) {
+    return res.status(400).json({ error: 'Необходимо указать хотя бы одно поле для обновления' });
+  }
+  
+  let query = 'UPDATE stores SET last_updated = CURRENT_TIMESTAMP';
+  const values = [];
+  
+  if (name) {
+    query += ', name = ?';
+    values.push(name);
+  }
+  
+  if (marketplace) {
+    query += ', marketplace = ?';
+    values.push(marketplace);
+  }
+  
+  if (api_key) {
+    query += ', api_key = ?';
+    values.push(api_key);
+  }
+  
+  query += ' WHERE id = ?';
+  values.push(storeId);
+  
+  db.run(query, values, function(err) {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Ошибка при обновлении информации о магазине' });
+    }
+    
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Магазин не найден' });
+    }
+    
+    res.json({ message: 'Информация о магазине успешно обновлена' });
+  });
+});
+
+// Удаление магазина
+app.delete('/api/stores/:id', (req, res) => {
+  const storeId = req.params.id;
+  const userId = req.query.user_id; // Используется для проверки прав
+  
+  // Проверяем, принадлежит ли магазин указанному пользователю
+  if (userId) {
+    const checkQuery = 'SELECT * FROM stores WHERE id = ? AND user_id = ?';
+    
+    db.get(checkQuery, [storeId, userId], (err, row) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Ошибка при проверке магазина' });
+      }
+      
+      if (!row) {
+        return res.status(403).json({ error: 'У вас нет прав на удаление этого магазина' });
+      }
+      
+      // Проверка условия: магазин можно удалить только через месяц после регистрации
+      const createdAt = new Date(row.created_at);
+      const now = new Date();
+      const oneMonthLater = new Date(createdAt);
+      oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
+      
+      if (now < oneMonthLater) {
+        const daysRemaining = Math.ceil((oneMonthLater.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        return res.status(403).json({ 
+          error: 'Магазин можно удалить только через месяц после создания',
+          daysRemaining: daysRemaining
+        });
+      }
+      
+      // Если проверки пройдены, удаляем магазин
+      deleteStore(storeId, res);
+    });
+  } else {
+    // Если user_id не указан, просто удаляем магазин (например, для админа)
+    deleteStore(storeId, res);
+  }
+});
+
+// Функция для удаления магазина
+function deleteStore(storeId, res) {
+  const query = 'DELETE FROM stores WHERE id = ?';
+  
+  db.run(query, [storeId], function(err) {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Ошибка при удалении магазина' });
+    }
+    
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Магазин не найден' });
+    }
+    
+    res.json({ message: 'Магазин успешно удален' });
+  });
+}
 
 app.listen(port, () => {
   console.log(`Сервер запущен на порту ${port}`);
