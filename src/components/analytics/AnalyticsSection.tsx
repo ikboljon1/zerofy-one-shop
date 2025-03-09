@@ -416,5 +416,114 @@ const AnalyticsSection = () => {
         setPenalties([]);
         setDeductions([]);
         setProductAdvertisingData([]);
-       
+        setReturns([]);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
+    fetchData();
+  }, [dateFrom, dateTo]);
+
+  const handleDateRangeChange = (start: Date, end: Date) => {
+    setDateFrom(start);
+    setDateTo(end);
+  };
+
+  const handleRefreshData = () => {
+    fetchData();
+  };
+
+  return (
+    <div className="container mx-auto px-4 pt-4 pb-12">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold mb-4 sm:mb-0">Аналитика</h1>
+        <div className="flex flex-col sm:flex-row w-full sm:w-auto space-y-2 sm:space-y-0 sm:space-x-2">
+          <DateRangePicker 
+            dateFrom={dateFrom} 
+            dateTo={dateTo} 
+            onDateRangeChange={handleDateRangeChange}
+            quickSelectOpen={quickSelectOpen}
+            setQuickSelectOpen={setQuickSelectOpen}
+          />
+          <Button 
+            variant="outline" 
+            onClick={handleRefreshData}
+            disabled={isLoading}
+            className="w-full sm:w-auto"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Загрузка...
+              </>
+            ) : (
+              "Обновить"
+            )}
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+        <KeyMetrics data={data} isLoading={isLoading} />
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+        <SalesChart data={data.dailySales} isLoading={isLoading} />
+        <DeductionsChart data={deductionsTimeline} isLoading={isLoading} />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-6">
+        <PieChartCard 
+          title="Структура расходов" 
+          data={[
+            { name: 'Логистика', value: data.currentPeriod.expenses.logistics },
+            { name: 'Хранение', value: data.currentPeriod.expenses.storage },
+            { name: 'Штрафы', value: data.currentPeriod.expenses.penalties },
+            { name: 'Приемка', value: data.currentPeriod.expenses.acceptance || 0 },
+            { name: 'Реклама', value: data.currentPeriod.expenses.advertising },
+            { name: 'Вычеты', value: data.currentPeriod.expenses.deductions || 0 }
+          ]} 
+          isLoading={isLoading}
+          dataKey="value"
+          nameKey="name"
+          colors={['#4f46e5', '#0ea5e9', '#f59e0b', '#f43f5e', '#10b981', '#8b5cf6']}
+        />
+
+        <ExpenseBreakdown 
+          title="Рекламные расходы" 
+          total={data.currentPeriod.expenses.advertising}
+          data={productAdvertisingData} 
+          isLoading={isLoading}
+        />
+
+        <PieChartCard 
+          title="Структура возвратов" 
+          data={returns} 
+          isLoading={isLoading}
+          dataKey="value"
+          nameKey="name"
+          colors={['#4f46e5', '#0ea5e9', '#f59e0b', '#f43f5e', '#10b981', '#8b5cf6']}
+          emptyText="Нет данных о возвратах"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+        <ProductList
+          profitableProducts={data.topProfitableProducts || []}
+          unprofitableProducts={data.topUnprofitableProducts || []}
+          isLoading={isLoading}
+        />
+        <AdvertisingOptimization 
+          data={data}
+          advertisingBreakdown={advertisingBreakdown}
+          isLoading={isLoading}
+        />
+      </div>
+    </div>
+  );
+};
+
+export default AnalyticsSection;
