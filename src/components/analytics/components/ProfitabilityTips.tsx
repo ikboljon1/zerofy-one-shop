@@ -228,7 +228,7 @@ const ProfitabilityTips = () => {
           <ul className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
             <li className="flex items-start gap-2">
               <span className="flex-shrink-0 text-purple-600 dark:text-purple-400">•</span>
-              <span><b>Анализ ROAS:</b> Рассчитывайте возврат на рекламные инвестиции (ROAS) для каждой кампании и каждого товара. Концентрируйте бюджет на кампаниях с ROAS > 200%.</span>
+              <span><b>Анализ ROAS:</b> Рассчитывайте возврат на рекламные инвестиции (ROAS) для каждой кампании и каждого товара. Концентрируйте бюджет на кампаниях с ROAS {'>'} 200%.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="flex-shrink-0 text-purple-600 dark:text-purple-400">•</span>
