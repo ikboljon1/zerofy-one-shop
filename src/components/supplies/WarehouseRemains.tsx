@@ -79,8 +79,8 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
     // Calculate total price of all goods
     const totalPrice = data.reduce((sum, item) => {
       // If price is available, multiply by quantity
-      if (item.price && !isNaN(item.price)) {
-        return sum + (item.price * item.quantityWarehousesFull);
+      if (item.price && !isNaN(Number(item.price))) {
+        return sum + (Number(item.price) * item.quantityWarehousesFull);
       }
       return sum;
     }, 0);
