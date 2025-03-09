@@ -8,12 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { getProductProfitabilityData } from "@/utils/storeUtils";
 import { Badge } from "@/components/ui/badge";
+import { Store } from "@/types/store";
 
 interface ProductsProps {
-  selectedStore?: {
-    id: string;
-    apiKey: string;
-  } | null;
+  selectedStore?: Store | null;
 }
 
 interface ProductData {
@@ -153,26 +151,32 @@ const Products = ({ selectedStore }: ProductsProps) => {
                   key={index} 
                   className={`flex items-center p-3 rounded-lg border ${bgClass}`}
                 >
-                  <div className="w-12 h-12 rounded overflow-hidden mr-4 bg-gray-100 dark:bg-gray-800">
+                  <div className="w-16 h-16 rounded-lg overflow-hidden mr-4 bg-gray-100 dark:bg-gray-800 flex-shrink-0">
                     <img 
                       src={product.image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"} 
                       alt={product.name} 
                       className="w-full h-full object-cover" 
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg";
+                      }}
                     />
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-medium">{product.name || "Неизвестный товар"}</h4>
-                    <p className="text-sm text-muted-foreground">Цена: {formatCurrency(parseFloat(product.price))}</p>
-                  </div>
-                  <div className="text-right flex items-center">
-                    <span className={`${textColorClass} font-semibold mr-1`}>
-                      {formattedProfit}
-                    </span>
-                    {isProfitable ? (
-                      <ArrowUp className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <ArrowDown className="h-4 w-4 text-red-500" />
-                    )}
+                    <h4 className="font-medium text-base line-clamp-2">{product.name || "Неизвестный товар"}</h4>
+                    <div className="flex justify-between mt-1">
+                      <p className="text-sm text-muted-foreground">Цена: {formatCurrency(parseFloat(product.price))}</p>
+                      <div className="text-right flex items-center">
+                        <span className={`${textColorClass} font-semibold mr-1`}>
+                          {formattedProfit}
+                        </span>
+                        {isProfitable ? (
+                          <ArrowUp className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <ArrowDown className="h-4 w-4 text-red-500" />
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               );
