@@ -6,8 +6,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { PackageIcon, TruckIcon, ArrowLeftRight, Search, Package, Truck } from 'lucide-react';
+import { PackageIcon, TruckIcon, ArrowLeftRight, Search, Package, Truck, Warehouse, Package2 } from 'lucide-react';
 import { BarChart, ResponsiveContainer, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, PieChart, Pie, Legend } from 'recharts';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 interface WarehouseRemainsProps {
   data: WarehouseRemainItem[];
@@ -75,6 +76,15 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
     const totalInWayToClient = data.reduce((sum, item) => sum + item.inWayToClient, 0);
     const totalInWayFromClient = data.reduce((sum, item) => sum + item.inWayFromClient, 0);
     
+    // Calculate total price of all goods
+    const totalPrice = data.reduce((sum, item) => {
+      // If price is available, multiply by quantity
+      if (item.price && !isNaN(item.price)) {
+        return sum + (item.price * item.quantityWarehousesFull);
+      }
+      return sum;
+    }, 0);
+    
     return {
       warehouseData,
       brandData,
@@ -82,6 +92,7 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
       totalItems,
       totalInWayToClient,
       totalInWayFromClient,
+      totalPrice,
     };
   }, [data]);
   
@@ -139,7 +150,7 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
         <TabsContent value="overview" className="space-y-4">
           {processedData && (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base">Всего на складах</CardTitle>
@@ -180,6 +191,21 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
                       <div>
                         <p className="text-3xl font-bold">{processedData.totalInWayFromClient.toLocaleString()}</p>
                         <p className="text-xs text-muted-foreground">единиц товара</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Общая стоимость</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center">
+                      <Warehouse className="h-8 w-8 text-green-500 mr-2" />
+                      <div>
+                        <p className="text-3xl font-bold">{formatCurrency(processedData.totalPrice || 0)}</p>
+                        <p className="text-xs text-muted-foreground">рублей</p>
                       </div>
                     </div>
                   </CardContent>
