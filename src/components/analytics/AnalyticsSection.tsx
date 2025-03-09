@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag, Loader2, BadgePercent } from "lucide-react";
@@ -130,6 +129,7 @@ const AnalyticsSection = () => {
   });
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [dataTimestamp, setDataTimestamp] = useState<number>(Date.now());
+  const [quickSelectOpen, setQuickSelectOpen] = useState<boolean>(false);
   const isMobile = useIsMobile();
   const { toast } = useToast();
 
@@ -260,7 +260,6 @@ const AnalyticsSection = () => {
         setData(modifiedData);
         
         if (statsData.penaltiesData && statsData.penaltiesData.length > 0) {
-          // Fixed: Define the roundedPenalties variable
           const roundedPenalties = statsData.penaltiesData.map(item => ({
             ...item,
             value: roundToTwoDecimals(item.value)
@@ -271,7 +270,6 @@ const AnalyticsSection = () => {
         }
         
         if (statsData.deductionsData && statsData.deductionsData.length > 0) {
-          // Fixed: Define the roundedDeductions variable
           const roundedDeductions = statsData.deductionsData.map(item => ({
             ...item,
             value: roundToTwoDecimals(item.value)
@@ -282,7 +280,6 @@ const AnalyticsSection = () => {
         }
         
         if (statsData.productReturns && statsData.productReturns.length > 0) {
-          // Fixed: Define the roundedReturns variable
           const roundedReturns = statsData.productReturns.map(item => ({
             ...item,
             value: roundToTwoDecimals(item.value)
@@ -357,6 +354,42 @@ const AnalyticsSection = () => {
       setReturns([]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const applyPreset = (preset: string) => {
+    const today = new Date();
+    
+    switch(preset) {
+      case 'today':
+        setDateFrom(today);
+        setDateTo(today);
+        break;
+      case 'yesterday':
+        const yesterday = subDays(today, 1);
+        setDateFrom(yesterday);
+        setDateTo(yesterday);
+        break;
+      case 'week':
+        setDateFrom(subDays(today, 6));
+        setDateTo(today);
+        break;
+      case 'month':
+        setDateFrom(subDays(today, 29));
+        setDateTo(today);
+        break;
+      case 'quarter':
+        setDateFrom(subDays(today, 89));
+        setDateTo(today);
+        break;
+      default:
+        break;
+    }
+    
+    setQuickSelectOpen(false);
+    
+    if (onApplyDateRange) {
+      setTimeout(onApplyDateRange, 100);
     }
   };
 
