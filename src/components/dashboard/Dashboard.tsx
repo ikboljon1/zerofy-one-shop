@@ -166,7 +166,7 @@ const Dashboard = () => {
         description: "Начата загрузка заказов...",
       });
 
-      const ordersResult = await fetchAndUpdateOrders(selectedStore, forceRefresh);
+      const ordersResult = await fetchAndUpdateOrders(selectedStore);
       let hasNewOrdersData = false;
       
       if (ordersResult) {
@@ -190,7 +190,7 @@ const Dashboard = () => {
         description: "Начата загрузка продаж...",
       });
 
-      const salesResult = await fetchAndUpdateSales(selectedStore, forceRefresh);
+      const salesResult = await fetchAndUpdateSales(selectedStore);
       let hasNewSalesData = false;
       
       if (salesResult) {
