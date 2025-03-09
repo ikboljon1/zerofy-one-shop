@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getSelectedAIModel } from '@/utils/storeUtils';
+import { toast } from '@/hooks/use-toast';
 
 // Типы для работы с AI анализом
 export interface AnalysisContext {
@@ -35,36 +36,66 @@ export const analyzeDataWithAI = async (context: AnalysisContext): Promise<AIRec
       throw new Error('Не выбрана AI модель для анализа');
     }
     
-    console.log(`Отправка данных на анализ с использованием ${selectedModel.type} модели`);
+    console.log(`Отправка данных на анализ с использованием ${selectedModel.type} модели (${selectedModel.name})`);
+    
+    // Проверяем API ключ
+    if (!selectedModel.apiKey || selectedModel.apiKey.trim() === '') {
+      throw new Error('API ключ для выбранной модели не установлен или пустой');
+    }
     
     // Форматируем контекст для отправки в AI
     const prompt = formatContextForAI(context);
     
     // В зависимости от типа модели используем разные API
-    switch (selectedModel.type) {
-      case "OpenAI":
-        return await callOpenAI(prompt, selectedModel.apiKey);
-      case "Gemini":
-        return await callGemini(prompt, selectedModel.apiKey);
-      case "Anthropic":
-        return await callAnthropic(prompt, selectedModel.apiKey);
-      case "Mistral":
-        return await callMistral(prompt, selectedModel.apiKey);
-      case "Llama":
-        return await callLlama(prompt, selectedModel.apiKey);
-      default:
-        // В случае неизвестного типа модели используем моковые данные
-        console.warn('Неизвестный тип AI модели, использую заглушку');
+    let result: AIRecommendation[];
+    try {
+      switch (selectedModel.type) {
+        case "OpenAI":
+          result = await callOpenAI(prompt, selectedModel.apiKey);
+          break;
+        case "Gemini":
+          result = await callGemini(prompt, selectedModel.apiKey);
+          break;
+        case "Anthropic":
+          result = await callAnthropic(prompt, selectedModel.apiKey);
+          break;
+        case "Mistral":
+          result = await callMistral(prompt, selectedModel.apiKey);
+          break;
+        case "Llama":
+          result = await callLlama(prompt, selectedModel.apiKey);
+          break;
+        default:
+          // В случае неизвестного типа модели используем моковые данные
+          console.warn('Неизвестный тип AI модели, использую заглушку');
+          result = generateMockRecommendations(context);
+      }
+      
+      if (!result || result.length === 0) {
+        console.warn('AI модель вернула пустой результат, использую заглушку');
         return generateMockRecommendations(context);
+      }
+      
+      return result;
+    } catch (apiError) {
+      console.error(`Ошибка при вызове ${selectedModel.type} API:`, apiError);
+      throw new Error(`Ошибка при вызове ${selectedModel.type} API: ${(apiError as Error).message || 'Неизвестная ошибка'}`);
     }
   } catch (error) {
     console.error('Ошибка при выполнении AI анализа:', error);
     
-    // В случае ошибки возвращаем базовые рекомендации
+    // Показываем детальную ошибку в toast
+    toast({
+      title: "Ошибка AI анализа",
+      description: (error as Error).message || 'Неизвестная ошибка при анализе данных',
+      variant: "destructive"
+    });
+    
+    // В случае ошибки возвращаем информативную рекомендацию
     return [
       {
         title: 'Ошибка при анализе данных',
-        description: 'Произошла ошибка при обращении к AI модели. Пожалуйста, проверьте валидность API ключа и правильность настроек.',
+        description: `Произошла ошибка при обращении к AI модели: ${(error as Error).message || 'Неизвестная ошибка'}. Пожалуйста, проверьте валидность API ключа и правильность настроек.`,
         type: 'error',
         category: 'general',
         score: 10
@@ -93,7 +124,7 @@ export const formatContextForAI = (context: AnalysisContext): string => {
   1. Название рекомендации
   2. Подробное описание рекомендации
   3. Тип рекомендации (успех, предупреждение, информация, ошибка)
-  4. Категория (продажи, това��ы, расходы, склады, общее)
+  4. Категория (продажи, товары, расходы, склады, общее)
   5. Важность (число от 1 до 10, где 10 - наиболее важно)
   
   Дай минимум 3 и максимум a5 конкретных рекомендаций, основанных на анализе данных.
@@ -105,6 +136,8 @@ export const formatContextForAI = (context: AnalysisContext): string => {
 // Вызов OpenAI API
 export const callOpenAI = async (prompt: string, apiKey: string): Promise<AIRecommendation[]> => {
   try {
+    console.log('Вызов OpenAI API с моделью gpt-4o');
+    
     const response = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
@@ -124,9 +157,18 @@ export const callOpenAI = async (prompt: string, apiKey: string): Promise<AIReco
       }
     );
     
+    if (!response.data || !response.data.choices || !response.data.choices[0]) {
+      throw new Error('Некорректный ответ от OpenAI API');
+    }
+    
     const aiResponse = response.data.choices[0].message.content;
+    console.log('Получен ответ от OpenAI:', aiResponse.substring(0, 100) + '...');
     return parseAIResponse(aiResponse);
   } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('Ошибка при вызове OpenAI API:', error.response?.data || error.message);
+      throw new Error(`Ошибка OpenAI API: ${error.response?.data?.error?.message || error.message}`);
+    }
     console.error('Ошибка при вызове OpenAI API:', error);
     throw error;
   }
@@ -163,9 +205,18 @@ export const callGemini = async (prompt: string, apiKey: string): Promise<AIReco
       }
     );
     
+    if (!response.data || !response.data.candidates || !response.data.candidates[0]) {
+      throw new Error('Некорректный ответ от Gemini API');
+    }
+    
     const aiResponse = response.data.candidates[0].content.parts[0].text;
+    console.log('Получен ответ от Gemini:', aiResponse.substring(0, 100) + '...');
     return parseAIResponse(aiResponse);
   } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('Ошибка при вызове Gemini API:', error.response?.data || error.message);
+      throw new Error(`Ошибка Gemini API: ${error.response?.data?.error?.message || error.message}`);
+    }
     console.error('Ошибка при вызове Gemini API:', error);
     throw error;
   }
@@ -216,6 +267,8 @@ export const callLlama = async (prompt: string, apiKey: string): Promise<AIRecom
 // Парсинг ответа от AI
 const parseAIResponse = (aiResponse: string): AIRecommendation[] => {
   try {
+    console.log('Парсинг ответа AI, длина:', aiResponse.length);
+    
     // Попытка распарсить JSON, если AI вернул его
     try {
       const jsonMatch = aiResponse.match(/```json([\s\S]*?)```/);
@@ -339,7 +392,7 @@ const parseAIResponse = (aiResponse: string): AIRecommendation[] => {
     return [
       {
         title: 'Ошибка при анализе',
-        description: 'Не удалось обработать ответ от AI модели',
+        description: `Не удалось обработать ответ от AI модели: ${(error as Error).message}`,
         type: 'error',
         category: 'general',
         score: 10
@@ -367,7 +420,7 @@ const generateMockRecommendations = (context?: AnalysisContext): AIRecommendatio
     },
     {
       title: 'Оптимизация складских запасов',
-      description: 'У вас наблюдается избыток товаров на складах в Москве и недостаток в регионах. Рекомендуем перераспределить запасы для ускорения доставки и снижения логистических расходов.',
+      description: 'У ва�� наблюдается избыток товаров на складах в Москве и недостаток в регионах. Рекомендуем перераспределить запасы для ускорения доставки и снижения логистических расходов.',
       type: 'info',
       category: 'warehouses',
       score: 7
