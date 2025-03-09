@@ -81,7 +81,6 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           timestamp: Date.now()
         };
         
-        // Сохраняем данные в базу через API
         try {
           await axios.post('http://localhost:3001/api/store-stats', {
             storeId: store.id,
@@ -93,7 +92,6 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           await axios.post('http://localhost:3001/api/analytics', analyticsData);
         } catch (error) {
           console.error('Error saving stats to DB:', error);
-          // В случае ошибки сохраняем в localStorage как резервный вариант
           localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
         }
         
@@ -109,7 +107,6 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
 
 export const getOrdersData = async (storeId: string) => {
   try {
-    // Пытаемся получить данные из БД
     const response = await axios.get(`http://localhost:3001/api/orders/${storeId}`);
     if (response.data) {
       return {
@@ -120,7 +117,6 @@ export const getOrdersData = async (storeId: string) => {
     }
   } catch (error) {
     console.error('Error fetching orders from DB:', error);
-    // Если не удалось получить из БД, используем localStorage
     const storedData = localStorage.getItem(`${ORDERS_STORAGE_KEY}_${storeId}`);
     if (storedData) {
       return JSON.parse(storedData);
@@ -131,7 +127,6 @@ export const getOrdersData = async (storeId: string) => {
 
 export const getSalesData = async (storeId: string) => {
   try {
-    // Пытаемся получить данные из БД
     const response = await axios.get(`http://localhost:3001/api/sales/${storeId}`);
     if (response.data) {
       return {
@@ -140,7 +135,6 @@ export const getSalesData = async (storeId: string) => {
     }
   } catch (error) {
     console.error('Error fetching sales from DB:', error);
-    // Если не удалось получить из БД, используем localStorage
     const storedData = localStorage.getItem(`${SALES_STORAGE_KEY}_${storeId}`);
     if (storedData) {
       return JSON.parse(storedData);
@@ -201,12 +195,10 @@ export const fetchAndUpdateOrders = async (store: Store) => {
           timestamp: Date.now()
         };
         
-        // Сохраняем в БД
         try {
           await axios.post('http://localhost:3001/api/orders', ordersData);
         } catch (error) {
           console.error('Error saving orders to DB:', error);
-          // Если не удалось сохранить в БД, используем localStorage
           localStorage.setItem(`${ORDERS_STORAGE_KEY}_${store.id}`, JSON.stringify(ordersData));
         }
         
@@ -238,12 +230,10 @@ export const fetchAndUpdateSales = async (store: Store) => {
           timestamp: Date.now()
         };
         
-        // Сохраняем в БД
         try {
           await axios.post('http://localhost:3001/api/sales', salesData);
         } catch (error) {
           console.error('Error saving sales to DB:', error);
-          // Если не удалось сохранить в БД, используем localStorage
           localStorage.setItem(`${SALES_STORAGE_KEY}_${store.id}`, JSON.stringify(salesData));
         }
         
@@ -258,7 +248,6 @@ export const fetchAndUpdateSales = async (store: Store) => {
 
 export const getProductProfitabilityData = (storeId: string) => {
   try {
-    // Try to get data from localStorage first (for faster response)
     try {
       const storedData = localStorage.getItem(`products_detailed_${storeId}`);
       if (storedData) {
@@ -283,7 +272,6 @@ export const getProductProfitabilityData = (storeId: string) => {
       console.error('Error parsing local storage data:', innerError);
     }
     
-    // Then try to fetch from the API (results will be used in next render)
     axios.get(`http://localhost:3001/api/analytics/${storeId}`)
       .then(response => {
         if (response.data && response.data.data) {
@@ -292,7 +280,6 @@ export const getProductProfitabilityData = (storeId: string) => {
             unprofitableProducts: response.data.data.topUnprofitableProducts?.slice(0, 3) || [],
             updateDate: response.data.date_to
           };
-          // Cache the data for future use
           localStorage.setItem(`products_detailed_${storeId}`, JSON.stringify(data));
           return data;
         }
@@ -337,7 +324,6 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
   }
   
   try {
-    // Try to get data from localStorage first
     try {
       const key = `marketplace_analytics_${storeId}`;
       const storedData = localStorage.getItem(key);
@@ -404,7 +390,6 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
       console.error('Error parsing localStorage analytics data:', localError);
     }
     
-    // Then try to fetch from the API (results will be used in next render)
     axios.get(`http://localhost:3001/api/analytics/${storeId}`)
       .then(response => {
         if (response.data) {
@@ -431,7 +416,6 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
             }));
           }
           
-          // Cache the data for future use
           localStorage.setItem(`marketplace_analytics_${storeId}`, JSON.stringify(parsedData));
           return parsedData;
         }
@@ -445,7 +429,6 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
     console.error('Error in getAnalyticsData:', error);
   }
   
-  // Return default structure if nothing was found
   return {
     data: null,
     penalties: [],
@@ -508,7 +491,6 @@ export const ensureStoreSelectionPersistence = (): Store[] => {
   return stores;
 };
 
-// Функция для получения выбранного магазина
 export const getSelectedStore = (): Store | null => {
   try {
     const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
@@ -516,5 +498,20 @@ export const getSelectedStore = (): Store | null => {
   } catch (error) {
     console.error('Error getting selected store:', error);
     return null;
+  }
+};
+
+export const validateApiKey = async (apiKey: string): Promise<boolean> => {
+  try {
+    const { from, to } = getLastWeekDateRange();
+    const testFrom = new Date();
+    testFrom.setDate(testFrom.getDate() - 1);
+    
+    const result = await fetchWildberriesStats(apiKey, testFrom, to);
+    
+    return result !== null && result !== undefined;
+  } catch (error) {
+    console.error('Error validating API key:', error);
+    return false;
   }
 };

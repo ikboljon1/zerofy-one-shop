@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -5,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NewStore, marketplaces } from "@/types/store";
-import { PlusCircle, ShoppingBag, AlertTriangle, Package2, Clock } from "lucide-react";
+import { PlusCircle, ShoppingBag, AlertTriangle, Package2, Clock, CheckCircle, XCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 
@@ -29,12 +30,21 @@ export function AddStoreDialog({
   const [storeName, setStoreName] = useState("");
   const [marketplace, setMarketplace] = useState<string>("Wildberries");
   const [apiKey, setApiKey] = useState("");
+  const [apiKeyValidationStatus, setApiKeyValidationStatus] = useState<"idle" | "validating" | "valid" | "invalid">("idle");
 
   useEffect(() => {
     if (isOpen) {
       setMarketplace("Wildberries");
+      setApiKeyValidationStatus("idle");
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    // Сбрасываем статус валидации при изменении API ключа
+    if (apiKey) {
+      setApiKeyValidationStatus("idle");
+    }
+  }, [apiKey]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +59,7 @@ export function AddStoreDialog({
     setStoreName("");
     setMarketplace("Wildberries");
     setApiKey("");
+    setApiKeyValidationStatus("idle");
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -133,7 +144,21 @@ export function AddStoreDialog({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="apiKey">API ключ</Label>
+              <Label htmlFor="apiKey" className="flex items-center gap-2">
+                API ключ
+                {apiKeyValidationStatus === "valid" && (
+                  <Badge variant="outline" className="ml-1 px-2 py-0 h-5 bg-green-950/20 text-green-300 border-green-800/50 text-xs flex items-center">
+                    <CheckCircle className="h-3 w-3 mr-1 text-green-500" />
+                    <span>Ключ валиден</span>
+                  </Badge>
+                )}
+                {apiKeyValidationStatus === "invalid" && (
+                  <Badge variant="outline" className="ml-1 px-2 py-0 h-5 bg-red-950/20 text-red-300 border-red-800/50 text-xs flex items-center">
+                    <XCircle className="h-3 w-3 mr-1 text-red-500" />
+                    <span>Ключ невалиден</span>
+                  </Badge>
+                )}
+              </Label>
               <Input
                 id="apiKey"
                 value={apiKey}

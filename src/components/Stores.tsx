@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { ShoppingBag, Store, Package2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Store as StoreType, NewStore, STATS_STORAGE_KEY } from "@/types/store";
-import { loadStores, saveStores, refreshStoreStats, ensureStoreSelectionPersistence } from "@/utils/storeUtils";
+import { loadStores, saveStores, refreshStoreStats, ensureStoreSelectionPersistence, validateApiKey } from "@/utils/storeUtils";
 import { AddStoreDialog } from "./stores/AddStoreDialog";
 import { StoreCard } from "./stores/StoreCard";
 import { getSubscriptionStatus, SubscriptionData } from "@/services/userService";
@@ -118,6 +119,19 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     setIsLoading(true);
 
     try {
+      // Validate API key before creating the store
+      const isValidApiKey = await validateApiKey(newStore.apiKey);
+      
+      if (!isValidApiKey) {
+        toast({
+          title: "Ошибка API ключа",
+          description: "Указанный API ключ некорректен. Пожалуйста, проверьте ключ и попробуйте снова.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
       const store: StoreType = {
         id: Date.now().toString(),
         marketplace: newStore.marketplace,
