@@ -17,7 +17,6 @@ const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ userId }) => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -56,7 +55,6 @@ const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ userId }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSuccess(null);
     
     if (!validateForm()) {
       return;
@@ -65,12 +63,9 @@ const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ userId }) => {
     setIsSubmitting(true);
     
     try {
-      // For demo purposes, assume current-password is the current password
-      const simulatedCurrentPassword = 'current-password';
-      const result = await changePassword(userId, simulatedCurrentPassword, newPassword);
+      const result = await changePassword(userId, currentPassword, newPassword);
       
       if (result.success) {
-        setSuccess('Пароль успешно изменен');
         toast({
           title: "Успешно",
           description: "Пароль успешно изменен",
@@ -94,20 +89,13 @@ const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ userId }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4 py-4">
       {error && (
-        <Alert variant="destructive" className="animate-in fade-in-50">
+        <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
       
-      {success && (
-        <Alert className="bg-green-50 text-green-800 border-green-300 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300 animate-in fade-in-50">
-          <Check className="h-4 w-4 mr-2" />
-          <AlertDescription>{success}</AlertDescription>
-        </Alert>
-      )}
-      
       <div className="space-y-2">
-        <Label htmlFor="currentPassword" className="text-base">Текущий пароль</Label>
+        <Label htmlFor="currentPassword">Текущий пароль</Label>
         <div className="relative">
           <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
@@ -122,7 +110,6 @@ const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ userId }) => {
             type="button"
             className="absolute right-3 top-1/2 transform -translate-y-1/2"
             onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-            aria-label={showCurrentPassword ? "Скрыть пароль" : "Показать пароль"}
           >
             {showCurrentPassword ? (
               <EyeOff className="h-4 w-4 text-gray-400" />
@@ -134,7 +121,7 @@ const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ userId }) => {
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="newPassword" className="text-base">Новый пароль</Label>
+        <Label htmlFor="newPassword">Новый пароль</Label>
         <div className="relative">
           <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
@@ -149,7 +136,6 @@ const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ userId }) => {
             type="button"
             className="absolute right-3 top-1/2 transform -translate-y-1/2"
             onClick={() => setShowNewPassword(!showNewPassword)}
-            aria-label={showNewPassword ? "Скрыть пароль" : "Показать пароль"}
           >
             {showNewPassword ? (
               <EyeOff className="h-4 w-4 text-gray-400" />
@@ -161,7 +147,7 @@ const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ userId }) => {
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="confirmPassword" className="text-base">Подтвердите пароль</Label>
+        <Label htmlFor="confirmPassword">Подтвердите пароль</Label>
         <div className="relative">
           <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
@@ -176,7 +162,6 @@ const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ userId }) => {
             type="button"
             className="absolute right-3 top-1/2 transform -translate-y-1/2"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            aria-label={showConfirmPassword ? "Скрыть пароль" : "Показать пароль"}
           >
             {showConfirmPassword ? (
               <EyeOff className="h-4 w-4 text-gray-400" />
@@ -189,7 +174,7 @@ const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ userId }) => {
       
       <Button 
         type="submit" 
-        className="w-full mt-6 flex items-center gap-2"
+        className="w-full mt-4 flex items-center gap-2"
         disabled={isSubmitting}
       >
         {isSubmitting ? (
