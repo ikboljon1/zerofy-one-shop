@@ -9,7 +9,7 @@ import { NewStore, marketplaces } from "@/types/store";
 import { PlusCircle, ShoppingBag, AlertTriangle, Package2, Clock, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { refreshStoreStats } from "@/utils/storeUtils";
+import { fetchWildberriesStats } from "@/services/wildberriesApi";
 
 interface AddStoreDialogProps {
   isOpen: boolean;
@@ -36,7 +36,9 @@ export function AddStoreDialog({
 
   useEffect(() => {
     if (isOpen) {
+      setStoreName("");
       setMarketplace("Wildberries");
+      setApiKey("");
       setValidationError(null);
     }
   }, [isOpen]);
@@ -51,24 +53,20 @@ export function AddStoreDialog({
     setValidationError(null);
     
     try {
-      // Create a temporary store object to test the API key
-      const testStore = {
-        id: "temp-id",
-        marketplace: marketplace as any,
-        name: "Тестовый магазин",
-        apiKey: apiKey,
-      };
+      // Instead of using a temp store and refreshStoreStats, directly use fetchWildberriesStats
+      const today = new Date();
+      const weekAgo = new Date(today);
+      weekAgo.setDate(weekAgo.getDate() - 7);
       
-      // Try to fetch stats using this API key
-      const result = await refreshStoreStats(testStore);
+      const result = await fetchWildberriesStats(apiKey, weekAgo, today);
       
-      // If we get valid results, the API key is valid
-      if (result && result.stats) {
-        setIsValidating(false);
+      setIsValidating(false);
+      
+      // If we get a result with currentPeriod, it's valid
+      if (result && result.currentPeriod) {
         return true;
       } else {
         setValidationError("Не удалось получить данные с API. Проверьте ключ и попробуйте снова.");
-        setIsValidating(false);
         return false;
       }
     } catch (error) {
@@ -82,7 +80,11 @@ export function AddStoreDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate API key before adding store
+    setIsValidating(true);
     const isValid = await validateApiKey();
+    setIsValidating(false);
+    
     if (!isValid) return;
     
     onAddStore({
@@ -91,6 +93,11 @@ export function AddStoreDialog({
       apiKey,
       isValid: true,
     });
+    
+    // Reset form
+    setStoreName("");
+    setApiKey("");
+    setValidationError(null);
   };
 
   const resetForm = () => {
