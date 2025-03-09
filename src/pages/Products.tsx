@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Package, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -110,16 +111,22 @@ const Products = ({ selectedStore }: ProductsProps) => {
           storeId: selectedStore.id,
           products: data.cards
         });
+        
+        toast({
+          title: "Успешно",
+          description: "Товары успешно синхронизированы и сохранены в базе данных",
+        });
       } catch (dbError) {
         console.error("Error saving products to DB:", dbError);
+        
         // Если не удалось сохранить в БД, используем localStorage
         localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(data.cards));
+        
+        toast({
+          title: "Частично успешно",
+          description: "Товары синхронизированы, но сохранены локально (нет соединения с БД)",
+        });
       }
-
-      toast({
-        title: "Успешно",
-        description: "Товары успешно синхронизированы",
-      });
       
       // Повторно загружаем данные о прибыльности
       loadProductProfitabilityData();

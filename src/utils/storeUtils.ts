@@ -507,3 +507,14 @@ export const ensureStoreSelectionPersistence = (): Store[] => {
   
   return stores;
 };
+
+// Функция для получения выбранного магазина
+export const getSelectedStore = (): Store | null => {
+  try {
+    const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
+    return stores.find((store: Store) => store.isSelected) || null;
+  } catch (error) {
+    console.error('Error getting selected store:', error);
+    return null;
+  }
+};

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -11,7 +12,7 @@ import Advertising from "@/components/Advertising";
 import MainLayout from "@/components/layout/MainLayout";
 import AnalyticsSection from "@/components/analytics/AnalyticsSection";
 import Dashboard from "@/components/dashboard/Dashboard";
-import { getProductProfitabilityData } from "@/utils/storeUtils";
+import { getProductProfitabilityData, getSelectedStore } from "@/utils/storeUtils";
 import { User } from "@/services/userService";
 
 const Index = () => {
@@ -26,43 +27,28 @@ const Index = () => {
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
+    
+    // Initialize selected store
+    const store = getSelectedStore();
+    if (store) {
+      setSelectedStore(store);
+    }
   }, []);
 
   const getProductsData = () => {
-    const selectedStore = getSelectedStore();
-    if (!selectedStore) return { profitable: [], unprofitable: [] };
+    const store = selectedStore || getSelectedStore();
+    if (!store) return { profitable: [], unprofitable: [] };
     
-    // Try to load detailed data about products
-    const profitabilityData = getProductProfitabilityData(selectedStore.id);
-    if (profitabilityData) {
+    // Получаем данные о прибыльности товаров
+    const profitabilityData = getProductProfitabilityData(store.id);
+    if (profitabilityData && profitabilityData.profitableProducts && profitabilityData.unprofitableProducts) {
       return {
         profitable: profitabilityData.profitableProducts || [],
         unprofitable: profitabilityData.unprofitableProducts || []
       };
     }
     
-    // If no detailed data, try to load from analytics
-    const storageKey = `marketplace_analytics_${selectedStore.id}`;
-    const storedData = localStorage.getItem(storageKey);
-    
-    if (storedData) {
-      try {
-        const parsedData = JSON.parse(storedData);
-        return {
-          profitable: parsedData.data.topProfitableProducts || [],
-          unprofitable: parsedData.data.topUnprofitableProducts || []
-        };
-      } catch (e) {
-        console.error("Error parsing analytics data:", e);
-      }
-    }
-    
     return { profitable: [], unprofitable: [] };
-  };
-
-  const getSelectedStore = () => {
-    const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
-    return stores.find((store: any) => store.isSelected) || null;
   };
 
   const handleTabChange = (tab: string) => {
