@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -5,9 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NewStore, marketplaces } from "@/types/store";
-import { PlusCircle, ShoppingBag, AlertTriangle, Package2, Clock } from "lucide-react";
+import { PlusCircle, ShoppingBag, AlertTriangle, Package2, Clock, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { refreshStoreStats } from "@/utils/storeUtils";
 
 interface AddStoreDialogProps {
   isOpen: boolean;
@@ -29,19 +31,65 @@ export function AddStoreDialog({
   const [storeName, setStoreName] = useState("");
   const [marketplace, setMarketplace] = useState<string>("Wildberries");
   const [apiKey, setApiKey] = useState("");
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setMarketplace("Wildberries");
+      setValidationError(null);
     }
   }, [isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validateApiKey = async () => {
+    if (!apiKey) {
+      setValidationError("API ключ не может быть пустым");
+      return false;
+    }
+    
+    setIsValidating(true);
+    setValidationError(null);
+    
+    try {
+      // Create a temporary store object to test the API key
+      const testStore = {
+        id: "temp-id",
+        marketplace: marketplace as any,
+        name: "Тестовый магазин",
+        apiKey: apiKey,
+      };
+      
+      // Try to fetch stats using this API key
+      const result = await refreshStoreStats(testStore);
+      
+      // If we get valid results, the API key is valid
+      if (result && result.stats) {
+        setIsValidating(false);
+        return true;
+      } else {
+        setValidationError("Не удалось получить данные с API. Проверьте ключ и попробуйте снова.");
+        setIsValidating(false);
+        return false;
+      }
+    } catch (error) {
+      console.error("Ошибка при валидации API ключа:", error);
+      setValidationError("Неверный API ключ. Пожалуйста, проверьте и попробуйте снова.");
+      setIsValidating(false);
+      return false;
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const isValid = await validateApiKey();
+    if (!isValid) return;
+    
     onAddStore({
       name: storeName,
       marketplace: marketplace as any,
       apiKey,
+      isValid: true,
     });
   };
 
@@ -49,6 +97,7 @@ export function AddStoreDialog({
     setStoreName("");
     setMarketplace("Wildberries");
     setApiKey("");
+    setValidationError(null);
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -140,9 +189,17 @@ export function AddStoreDialog({
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder="Введите API ключ"
               />
+              {validationError && (
+                <Alert variant="destructive" className="mt-2 py-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="text-sm">
+                    {validationError}
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
             
-            {!isLoading && (
+            {!isLoading && !isValidating && (
               <Alert variant="default" className="bg-yellow-900/20 border-yellow-800/30 text-yellow-300">
                 <AlertTriangle className="h-4 w-4 text-yellow-500" />
                 <AlertDescription>
@@ -155,8 +212,16 @@ export function AddStoreDialog({
               <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)} className="mr-2">
                 Отмена
               </Button>
-              <Button type="submit" disabled={isLoading || !storeName || !marketplace || !apiKey}>
-                {isLoading ? "Добавление..." : "Добавить"}
+              <Button 
+                type="submit" 
+                disabled={isLoading || isValidating || !storeName || !marketplace || !apiKey}
+              >
+                {isLoading || isValidating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {isValidating ? "Проверка..." : "Добавление..."}
+                  </>
+                ) : "Добавить"}
               </Button>
             </div>
           </form>

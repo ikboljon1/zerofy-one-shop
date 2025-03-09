@@ -124,12 +124,20 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         name: newStore.name,
         apiKey: newStore.apiKey,
         isSelected: false,
+        isValid: newStore.isValid, // Add the validation state
         lastFetchDate: new Date().toISOString()
       };
 
       console.log("Created new store object:", store);
 
+      // We've already validated the API key in the AddStoreDialog component
+      // so we can directly fetch the stats here
       const updatedStore = await refreshStoreStats(store);
+      
+      if (!updatedStore || !updatedStore.stats) {
+        throw new Error("Не удалось получить данные от API. Пожалуйста, проверьте API ключ.");
+      }
+      
       const storeToAdd = updatedStore || store;
       
       // Также сохраняем данные для использования в Analytics и Dashboard
@@ -161,7 +169,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       console.error("Ошибка при добавлении магазина:", error);
       toast({
         title: "Ошибка",
-        description: "Не удалось добавить магазин",
+        description: error instanceof Error ? error.message : "Не удалось добавить магазин",
         variant: "destructive",
       });
     } finally {
