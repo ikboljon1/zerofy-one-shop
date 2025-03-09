@@ -48,7 +48,7 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
         };
         
         const deductionsTimeline = stats.dailySales?.map((day: any) => {
-          const daysCount = stats.dailySales.length || 1;
+          const daysCount = stats.dailySales?.length || 1;
           const logistic = (stats.currentPeriod.expenses.logistics || 0) / daysCount;
           const storage = (stats.currentPeriod.expenses.storage || 0) / daysCount;
           const penalties = (stats.currentPeriod.expenses.penalties || 0) / daysCount;
@@ -418,4 +418,126 @@ export const getSelectedStore = (): Store | null => {
     console.error('Error getting selected store:', error);
     return null;
   }
+};
+
+// Implementing missing functions with minimal logic for TypeScript compatibility
+export const getOrdersData = async (storeId: string) => {
+  try {
+    // Use only localStorage
+    const storedData = localStorage.getItem(`${ORDERS_STORAGE_KEY}_${storeId}`);
+    if (storedData) {
+      return JSON.parse(storedData);
+    }
+  } catch (error) {
+    console.error('Error fetching orders from localStorage:', error);
+  }
+  return null;
+};
+
+export const getSalesData = async (storeId: string) => {
+  try {
+    // Use only localStorage
+    const storedData = localStorage.getItem(`${SALES_STORAGE_KEY}_${storeId}`);
+    if (storedData) {
+      return JSON.parse(storedData);
+    }
+  } catch (error) {
+    console.error('Error fetching sales from localStorage:', error);
+  }
+  return null;
+};
+
+export const fetchAndUpdateOrders = async (store: Store) => {
+  if (store.marketplace === "Wildberries") {
+    try {
+      const { from } = getLastWeekDateRange();
+      const orders = await fetchWildberriesOrders(store.apiKey, from);
+      
+      if (orders && orders.length > 0) {
+        const warehouseCounts: Record<string, number> = {};
+        const totalOrders = orders.length;
+        
+        orders.forEach((order: any) => {
+          if (order.warehouseName) {
+            warehouseCounts[order.warehouseName] = (warehouseCounts[order.warehouseName] || 0) + 1;
+          }
+        });
+        
+        const warehouseDistribution = Object.entries(warehouseCounts)
+          .map(([name, count]) => ({
+            name,
+            count,
+            percentage: (count / totalOrders) * 100
+          }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5);
+        
+        const regionCounts: Record<string, number> = {};
+        
+        orders.forEach((order: any) => {
+          if (order.regionName) {
+            regionCounts[order.regionName] = (regionCounts[order.regionName] || 0) + 1;
+          }
+        });
+        
+        const regionDistribution = Object.entries(regionCounts)
+          .map(([name, count]) => ({
+            name,
+            count,
+            percentage: (count / totalOrders) * 100
+          }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5);
+        
+        const ordersData = {
+          storeId: store.id,
+          dateFrom: from.toISOString(),
+          dateTo: new Date().toISOString(),
+          orders,
+          warehouseDistribution,
+          regionDistribution,
+          timestamp: Date.now()
+        };
+        
+        // Save to localStorage only
+        localStorage.setItem(`${ORDERS_STORAGE_KEY}_${store.id}`, JSON.stringify(ordersData));
+        
+        return {
+          orders,
+          warehouseDistribution,
+          regionDistribution
+        };
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    }
+  }
+  return null;
+};
+
+export const fetchAndUpdateSales = async (store: Store) => {
+  if (store.marketplace === "Wildberries") {
+    try {
+      const { from } = getLastWeekDateRange();
+      const sales = await fetchWildberriesSales(store.apiKey, from);
+      
+      if (sales && sales.length > 0) {
+        const salesData = {
+          storeId: store.id,
+          dateFrom: from.toISOString(),
+          dateTo: new Date().toISOString(),
+          sales,
+          timestamp: Date.now()
+        };
+        
+        // Save to localStorage only
+        localStorage.setItem(`${SALES_STORAGE_KEY}_${store.id}`, JSON.stringify(salesData));
+        
+        return sales;
+      }
+    } catch (error) {
+      console.error('Error fetching sales:', error);
+    }
+  }
+  return null;
 };
