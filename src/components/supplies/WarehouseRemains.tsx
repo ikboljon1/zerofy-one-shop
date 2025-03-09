@@ -258,14 +258,16 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
               <CardDescription>Распределение товаров по брендам</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="mb-4">
+              <div className="mb-4 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-gray-400" />
+                </div>
                 <Input
                   type="search"
                   placeholder="Поиск по бренду..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="max-w-sm"
-                  icon={<Search className="h-4 w-4" />}
+                  className="max-w-sm pl-10"
                 />
               </div>
               
@@ -319,14 +321,16 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
               <CardDescription>Распределение товаров по категориям</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="mb-4">
+              <div className="mb-4 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-gray-400" />
+                </div>
                 <Input
                   type="search"
                   placeholder="Поиск по категории..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="max-w-sm"
-                  icon={<Search className="h-4 w-4" />}
+                  className="max-w-sm pl-10"
                 />
               </div>
               
@@ -376,14 +380,16 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
               <CardDescription>Детальная информация по товарам на складах</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="mb-4">
+              <div className="mb-4 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-gray-400" />
+                </div>
                 <Input
                   type="search"
                   placeholder="Поиск по товару..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="max-w-sm"
-                  icon={<Search className="h-4 w-4" />}
+                  className="max-w-sm pl-10"
                 />
               </div>
               
