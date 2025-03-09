@@ -288,26 +288,53 @@ export const changePassword = async (
 ): Promise<{ success: boolean; message?: string }> => {
   await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
   
-  const storedUser = localStorage.getItem('user');
-  if (!storedUser) {
+  const users = await getUsers();
+  const userIndex = users.findIndex(user => user.id === userId);
+  
+  if (userIndex === -1) {
     return { success: false, message: "Пользователь не найден" };
   }
   
-  const user = JSON.parse(storedUser);
+  const user = users[userIndex];
   
-  if (user.id !== userId) {
-    return { success: false, message: "Пользователь не найден" };
-  }
-  
-  if (currentPassword !== 'current-password' && currentPassword !== user.password) {
+  // Check if the current password is correct (for admin)
+  if (user.role === 'admin' && currentPassword === 'admin') {
+    // Admin user with default 'admin' password
+    user.password = newPassword;
+    users[userIndex] = user;
+    localStorage.setItem('users', JSON.stringify(users));
+    
+    // Also update the logged-in user data in localStorage
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const loggedInUser = JSON.parse(storedUser);
+      if (loggedInUser.id === userId) {
+        loggedInUser.password = newPassword;
+        localStorage.setItem('user', JSON.stringify(loggedInUser));
+      }
+    }
+    
+    return { success: true };
+  } else if (user.password && user.password === currentPassword) {
+    // Regular user with matching stored password
+    user.password = newPassword;
+    users[userIndex] = user;
+    localStorage.setItem('users', JSON.stringify(users));
+    
+    // Also update the logged-in user data in localStorage
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const loggedInUser = JSON.parse(storedUser);
+      if (loggedInUser.id === userId) {
+        loggedInUser.password = newPassword;
+        localStorage.setItem('user', JSON.stringify(loggedInUser));
+      }
+    }
+    
+    return { success: true };
+  } else {
     return { success: false, message: "Неверный текущий пароль" };
   }
-  
-  user.password = newPassword;
-  
-  localStorage.setItem('user', JSON.stringify(user));
-  
-  return { success: true };
 };
 
 export const getSmtpSettings = async (): Promise<SmtpSettings | null> => {
