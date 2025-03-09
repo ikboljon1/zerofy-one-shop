@@ -3,7 +3,7 @@ import { ShoppingBag, Store, Package2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Store as StoreType, NewStore, STATS_STORAGE_KEY } from "@/types/store";
-import { loadStores, saveStores, refreshStoreStats, ensureStoreSelectionPersistence, validateApiKey } from "@/utils/storeUtils";
+import { loadStores, saveStores, refreshStoreStats, ensureStoreSelectionPersistence } from "@/utils/storeUtils";
 import { AddStoreDialog } from "./stores/AddStoreDialog";
 import { StoreCard } from "./stores/StoreCard";
 import { getSubscriptionStatus, SubscriptionData } from "@/services/userService";
@@ -38,12 +38,14 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   }, []);
 
   const getStoreLimitFromTariff = () => {
+    // Get user data from localStorage
     const userData = localStorage.getItem('user');
     if (!userData) return;
     
     try {
       const user = JSON.parse(userData);
       
+      // Set store limit based on tariff
       switch (user.tariffId) {
         case "1": // Базовый
           setStoreLimit(1);
@@ -67,12 +69,14 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   };
 
   const checkDeletePermissions = async () => {
+    // Get current user from localStorage
     const userData = localStorage.getItem('user');
     if (!userData) return;
     
     try {
       const user = JSON.parse(userData);
       
+      // Get subscription information
       const subscriptionData: SubscriptionData = getSubscriptionStatus(user);
       
       if (subscriptionData && subscriptionData.endDate) {
@@ -80,6 +84,8 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         const oneMonthAgo = new Date();
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
         
+        // Если конец подписки более чем через месяц, значит подписка оформлена менее месяца назад
+        // В этом случае удаление запрещено
         setCanDeleteStores(subscriptionEndDate.getTime() - oneMonthAgo.getTime() < 0);
       }
     } catch (error) {
@@ -99,6 +105,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       return;
     }
 
+    // Check if store limit has been reached
     if (stores.length >= storeLimit) {
       toast({
         title: "Ограничение тарифа",
@@ -111,54 +118,33 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     setIsLoading(true);
 
     try {
-      if (!newStore.isValidated) {
-        const isValid = await validateApiKey(newStore.apiKey!, newStore.marketplace);
-        if (!isValid) {
-          setIsLoading(false);
-          toast({
-            title: "Ошибка",
-            description: "Неверный API ключ. Пожалуйста, проверьте и попробуйте снова.",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-      
       const store: StoreType = {
         id: Date.now().toString(),
         marketplace: newStore.marketplace,
         name: newStore.name,
         apiKey: newStore.apiKey,
         isSelected: false,
-        lastFetchDate: new Date().toISOString(),
-        isValidated: true
+        lastFetchDate: new Date().toISOString()
       };
 
       console.log("Created new store object:", store);
 
       const updatedStore = await refreshStoreStats(store);
-      
-      if (!updatedStore || !updatedStore.stats) {
-        toast({
-          title: "Ошибка",
-          description: "Не удалось получить данные магазина. Пожалуйста, проверьте API ключ и попробуйте снова.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-      
       const storeToAdd = updatedStore || store;
       
-      const analyticsData = {
-        storeId: store.id,
-        dateFrom: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        dateTo: new Date().toISOString(),
-        data: updatedStore.stats,
-        timestamp: Date.now()
-      };
-      
-      localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
+      // Также сохраняем данные для использования в Analytics и Dashboard
+      if (updatedStore && updatedStore.stats) {
+        const analyticsData = {
+          storeId: store.id,
+          dateFrom: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          dateTo: new Date().toISOString(),
+          data: updatedStore.stats,
+          timestamp: Date.now()
+        };
+        
+        // Сохраняем данные для использования в аналитике
+        localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
+      }
       
       const updatedStores = [...stores, storeToAdd];
       setStores(updatedStores);
@@ -175,7 +161,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       console.error("Ошибка при добавлении магазина:", error);
       toast({
         title: "Ошибка",
-        description: "Не удалось добавить магазин. Проверьте правильность API ключа.",
+        description: "Не удалось добавить магазин",
         variant: "destructive",
       });
     } finally {
@@ -192,6 +178,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     setStores(updatedStores);
     saveStores(updatedStores);
 
+    // Save the selected store separately for better persistence
     localStorage.setItem('last_selected_store', JSON.stringify({
       storeId,
       timestamp: Date.now()
@@ -217,6 +204,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         setStores(updatedStores);
         saveStores(updatedStores);
         
+        // Также обновляем данные для использования в Analytics и Dashboard
         if (updatedStore.stats) {
           const analyticsData = {
             storeId: store.id,
@@ -226,6 +214,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
             timestamp: Date.now()
           };
           
+          // Сохраняем данные для использования в аналитике
           localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
         }
         
@@ -247,6 +236,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   };
 
   const handleDeleteStore = (storeId: string) => {
+    // Проверяем, можно ли удалять магазины
     if (!canDeleteStores) {
       toast({
         title: "Действие запрещено",
@@ -278,6 +268,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
           <ShoppingBag className="h-5 w-5" />
           <h2 className="text-xl font-semibold">Магазины</h2>
           
+          {/* Store count indicator */}
           <Badge variant="outline" className="flex items-center gap-1.5 ml-2 bg-blue-950/30 text-blue-400 border-blue-800">
             <Package2 className="h-3.5 w-3.5" />
             <span>{stores.length}/{storeLimit}</span>
