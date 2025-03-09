@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NewStore, marketplaces } from "@/types/store";
-import { PlusCircle, ShoppingBag, AlertTriangle, Package2, Clock } from "lucide-react";
+import { PlusCircle, ShoppingBag, AlertTriangle, Package2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 
@@ -27,14 +28,8 @@ export function AddStoreDialog({
   storeLimit
 }: AddStoreDialogProps) {
   const [storeName, setStoreName] = useState("");
-  const [marketplace, setMarketplace] = useState<string>("Wildberries");
+  const [marketplace, setMarketplace] = useState<string>("");
   const [apiKey, setApiKey] = useState("");
-
-  useEffect(() => {
-    if (isOpen) {
-      setMarketplace("Wildberries");
-    }
-  }, [isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +42,7 @@ export function AddStoreDialog({
 
   const resetForm = () => {
     setStoreName("");
-    setMarketplace("Wildberries");
+    setMarketplace("");
     setApiKey("");
   };
 
@@ -114,19 +109,9 @@ export function AddStoreDialog({
                   <SelectValue placeholder="Выберите маркетплейс" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem key="Wildberries" value="Wildberries">
-                    Wildberries
-                  </SelectItem>
-                  
-                  {marketplaces.filter(mp => mp !== "Wildberries").map((mp) => (
-                    <SelectItem key={mp} value={mp} disabled className="opacity-60 cursor-not-allowed">
-                      <div className="flex items-center gap-1.5">
-                        <span>{mp}</span>
-                        <Badge variant="outline" className="ml-1 px-1.5 py-0 h-5 bg-amber-950/20 text-amber-300 border-amber-800/50 text-xs flex items-center">
-                          <Clock className="h-3 w-3 mr-1" />
-                          <span>скоро</span>
-                        </Badge>
-                      </div>
+                  {marketplaces.map((mp) => (
+                    <SelectItem key={mp} value={mp}>
+                      {mp}
                     </SelectItem>
                   ))}
                 </SelectContent>
