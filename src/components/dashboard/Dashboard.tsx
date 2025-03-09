@@ -24,6 +24,7 @@ import SalesMetrics from "./SalesMetrics";
 import OrdersChart from "./OrdersChart";
 import SalesChart from "./SalesChart";
 import TipsSection from "./TipsSection";
+import AIDashboardSection from "@/components/ai-analysis/AIDashboardSection";
 
 const Dashboard = () => {
   const { toast } = useToast();
@@ -226,11 +227,12 @@ const Dashboard = () => {
       </div>
 
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className={`${isMobile ? 'w-full grid grid-cols-4 gap-1' : ''}`}>
+        <TabsList className={`${isMobile ? 'w-full grid grid-cols-5 gap-1' : ''}`}>
           <TabsTrigger value="overview" className={isMobile ? 'text-xs py-1 px-1' : ''}>Обзор</TabsTrigger>
           <TabsTrigger value="orders" className={isMobile ? 'text-xs py-1 px-1' : ''}>Заказы</TabsTrigger>
           <TabsTrigger value="sales" className={isMobile ? 'text-xs py-1 px-1' : ''}>Продажи</TabsTrigger>
           <TabsTrigger value="geography" className={isMobile ? 'text-xs py-1 px-1' : ''}>География</TabsTrigger>
+          <TabsTrigger value="ai" className={isMobile ? 'text-xs py-1 px-1' : ''}>AI Анализ</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -282,6 +284,21 @@ const Dashboard = () => {
             warehouseDistribution={warehouseDistribution} 
             regionDistribution={regionDistribution}
             sales={getFilteredSales(sales)}
+          />
+        </TabsContent>
+        
+        <TabsContent value="ai" className="space-y-4">
+          <AIDashboardSection 
+            salesData={sales}
+            ordersData={orders}
+            returnsData={[]}
+            expensesData={{
+              logistics: 0,
+              storage: 0,
+              penalties: 0,
+              advertising: 0
+            }}
+            period={period}
           />
         </TabsContent>
       </Tabs>
