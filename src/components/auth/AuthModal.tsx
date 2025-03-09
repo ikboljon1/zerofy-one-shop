@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import React, { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LoginForm from "./LoginForm";
 import RegisterForm from "./RegisterForm";
@@ -21,26 +21,6 @@ const AuthModal = ({ open, onClose, initialMode = 'login', resetToken, resetEmai
     resetToken && resetEmail ? 'reset' : null
   );
   const [emailForReset, setEmailForReset] = useState<string>(resetEmail || '');
-
-  // Проверка URL на наличие параметров для сброса пароля
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tokenFromUrl = urlParams.get('resetToken');
-    const emailFromUrl = urlParams.get('email');
-    
-    if (tokenFromUrl && emailFromUrl) {
-      setResetMode('reset');
-      setEmailForReset(emailFromUrl);
-      
-      // Если модальное окно еще не открыто, вызываем onClose, которое по сути его откроет
-      if (!open) {
-        onClose();
-      }
-      
-      // Очищаем URL от параметров сброса пароля для безопасности
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, [open, onClose]);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
@@ -114,15 +94,6 @@ const AuthModal = ({ open, onClose, initialMode = 'login', resetToken, resetEmai
                   ? 'Добро пожаловать!' 
                   : 'Присоединяйтесь к Zerofy'}
           </DialogTitle>
-          <DialogDescription className="text-center text-muted-foreground">
-            {resetMode === 'request'
-              ? 'Введите email для получения инструкций'
-              : resetMode === 'reset'
-                ? 'Создайте новый пароль для вашей учетной записи'
-                : activeTab === 'login'
-                  ? 'Войдите в свою учетную запись'
-                  : 'Создайте учетную запись для начала работы'}
-          </DialogDescription>
         </DialogHeader>
         {renderContent()}
       </DialogContent>
