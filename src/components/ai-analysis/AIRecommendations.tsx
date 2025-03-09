@@ -13,9 +13,10 @@ interface AIRecommendationsProps {
   recommendations: AIRecommendation[];
   isLoading: boolean;
   onRefresh: () => void;
+  aiModelError?: string | null;
 }
 
-const AIRecommendations = ({ recommendations, isLoading, onRefresh }: AIRecommendationsProps) => {
+const AIRecommendations = ({ recommendations, isLoading, onRefresh, aiModelError }: AIRecommendationsProps) => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<string>("all");
   
