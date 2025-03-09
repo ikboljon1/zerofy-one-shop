@@ -1,108 +1,146 @@
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Info } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { formatCurrency } from "@/utils/formatCurrency";
-import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
+import { COLORS } from "../data/demoData";
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip
+} from "recharts";
+import { formatCurrency, roundToTwoDecimals } from "@/utils/formatCurrency";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface PieChartCardProps {
   title: string;
   icon: React.ReactNode;
-  data?: Array<{ name: string; value: number; count?: number }>;
-  showCount?: boolean;
-  emptyMessage?: string;
-  isDemoData?: boolean;
+  data: Array<{
+    name: string;
+    value: number;
+    count?: number; // Поле для количества
+    isNegative?: boolean; // Флаг для отрицательных значений
+  }>;
+  valueLabel?: string;
+  showCount?: boolean; // Флаг для отображения количества
+  emptyMessage?: string; // Сообщение при отсутствии данных
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A569BD', '#5DADE2', '#48C9B0', '#F4D03F', '#EC7063'];
+const PieChartCard = ({ 
+  title, 
+  icon, 
+  data, 
+  valueLabel = "", 
+  showCount = false,
+  emptyMessage = "Нет данных за выбранный период" 
+}: PieChartCardProps) => {
+  // Отфильтровываем данные с нулевыми значениями
+  const filteredData = data && data.filter(item => item.value !== 0);
+  
+  // Проверяем, что данные не пустые и содержат значения
+  const hasData = filteredData && filteredData.length > 0;
 
-const PieChartCard = ({ title, icon, data = [], showCount = false, emptyMessage = "Нет данных", isDemoData = false }: PieChartCardProps) => {
-  const isEmpty = !data || data.length === 0;
+  // Преобразуем данные для корректного отображения в диаграмме
+  // Для диаграммы используем абсолютные значения, чтобы все сегменты были положительными
+  const chartData = hasData ? filteredData.map(item => ({
+    ...item,
+    value: Math.abs(item.value)
+  })) : [];
 
-  const renderLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name }: any) => {
-    const RADIAN = Math.PI / 180;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-    return (
-      <text 
-        x={x} 
-        y={y} 
-        fill="white" 
-        textAnchor={x > cx ? 'start' : 'end'} 
-        dominantBaseline="central"
-        className="text-xs font-semibold"
-      >
-        {`${(percent * 100).toFixed(0)}%`}
-      </text>
-    );
-  };
+  // Определяем, нужно ли делать список скроллируемым (если больше 5 элементов)
+  const needScroll = filteredData && filteredData.length > 5;
 
   return (
-    <Card className={cn("overflow-hidden", isDemoData && "border-gray-300 dark:border-gray-700")}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div className="flex items-center gap-1.5">
+    <Card className="p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-semibold">{title}</h3>
+        <div className="bg-primary/10 dark:bg-primary/20 p-2 rounded-md">
           {icon}
-          <CardTitle className="text-base font-semibold">{title}</CardTitle>
-          
-          {isDemoData && (
-            <Badge variant="outline" className="ml-2 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 text-xs">
-              <Info className="h-3 w-3 mr-1" />
-              Демо данные
-            </Badge>
-          )}
         </div>
-      </CardHeader>
-      <CardContent>
-        {isEmpty ? (
-          <div className="flex justify-center items-center h-48 bg-muted/5 rounded-md">
-            <p className="text-muted-foreground">{emptyMessage}</p>
-          </div>
-        ) : (
-          <div className="h-56">
+      </div>
+      {hasData ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  dataKey="value"
-                  isAnimationActive={true}
-                  data={data}
+                  data={chartData}
                   cx="50%"
                   cy="50%"
+                  innerRadius={40}
                   outerRadius={80}
-                  labelLine={false}
-                  label={renderLabel}
-                  className={isDemoData ? "opacity-80" : ""}
+                  paddingAngle={2}
+                  dataKey="value"
                 >
-                  {data.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={COLORS[index % COLORS.length]} 
-                      className={isDemoData ? "opacity-90" : ""}
-                    />
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip 
-                  formatter={(value: number, name: string) => 
-                    [showCount && data[0]?.count 
-                      ? `${value} (${data.find(item => item.name === name)?.count || 0})`
-                      : formatCurrency(value), name]
-                  }
-                />
-                <Legend 
-                  className={`${isDemoData ? "text-gray-500" : ""}`}
-                  formatter={(value, entry, index) => (
-                    <span className={`${isDemoData ? "text-gray-600 dark:text-gray-400" : ""}`}>
-                      {value}
-                    </span>
-                  )}
+                <Tooltip
+                  formatter={(value: any) => [`${formatCurrency(value)} ${valueLabel}`, '']}
+                  contentStyle={{ background: '#ffffff', borderRadius: '4px', border: '1px solid #e5e7eb' }}
                 />
               </PieChart>
             </ResponsiveContainer>
           </div>
-        )}
-      </CardContent>
+          <div className={needScroll ? "relative" : "space-y-4"}>
+            {needScroll ? (
+              <ScrollArea className="h-[200px] pr-4">
+                <div className="space-y-4 pr-2">
+                  {filteredData.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div 
+                          className="w-3 h-3 rounded-full mr-2" 
+                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                        ></div>
+                        <span className="text-sm">{item.name}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className={`font-medium ${item.isNegative || item.value < 0 ? 'text-red-500' : ''}`}>
+                          {item.isNegative || item.value < 0 ? '-' : ''}{formatCurrency(roundToTwoDecimals(Math.abs(item.value)))} {valueLabel}
+                        </span>
+                        {showCount && item.count !== undefined && (
+                          <div className="text-xs text-muted-foreground">
+                            Кол-во: {item.count}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            ) : (
+              <>
+                {filteredData.map((item, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div 
+                        className="w-3 h-3 rounded-full mr-2" 
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      ></div>
+                      <span className="text-sm">{item.name}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className={`font-medium ${item.isNegative || item.value < 0 ? 'text-red-500' : ''}`}>
+                        {item.isNegative || item.value < 0 ? '-' : ''}{formatCurrency(roundToTwoDecimals(Math.abs(item.value)))} {valueLabel}
+                      </span>
+                      {showCount && item.count !== undefined && (
+                        <div className="text-xs text-muted-foreground">
+                          Кол-во: {item.count}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="py-8 text-center text-muted-foreground">
+          <p>{emptyMessage}</p>
+        </div>
+      )}
     </Card>
   );
 };
