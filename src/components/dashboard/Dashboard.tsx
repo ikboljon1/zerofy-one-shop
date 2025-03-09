@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { 
   loadStores,
   getOrdersData, 
@@ -33,6 +33,7 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [period, setPeriod] = useState<Period>("today");
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   
   const [orders, setOrders] = useState<WildberriesOrder[]>([]);
@@ -40,6 +41,7 @@ const Dashboard = () => {
   const [warehouseDistribution, setWarehouseDistribution] = useState<any[]>([]);
   const [regionDistribution, setRegionDistribution] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
 
   const filterDataByPeriod = (date: string, period: Period) => {
     const now = new Date();
@@ -123,10 +125,12 @@ const Dashboard = () => {
     }
   }, [period, orders]);
 
-  const fetchData = async () => {
+  const fetchData = async (forceRefresh = false) => {
     try {
       setIsLoading(true);
+      setIsFetching(true);
       setError(null);
+      
       const selectedStore = getSelectedStore();
       
       if (!selectedStore) {
@@ -136,6 +140,8 @@ const Dashboard = () => {
           variant: "destructive"
         });
         setError("Не выбран основной магазин");
+        setIsLoading(false);
+        setIsFetching(false);
         return;
       }
 
@@ -146,6 +152,8 @@ const Dashboard = () => {
           variant: "destructive"
         });
         setError("Отсутствует API ключ для магазина");
+        setIsLoading(false);
+        setIsFetching(false);
         return;
       }
 
@@ -153,33 +161,60 @@ const Dashboard = () => {
         setSelectedStoreId(selectedStore.id);
       }
 
-      const ordersResult = await fetchAndUpdateOrders(selectedStore);
+      toast({
+        title: "Загрузка данных",
+        description: "Начата загрузка заказов...",
+      });
+
+      const ordersResult = await fetchAndUpdateOrders(selectedStore, forceRefresh);
+      let hasNewOrdersData = false;
+      
       if (ordersResult) {
         setOrders(ordersResult.orders);
         setWarehouseDistribution(ordersResult.warehouseDistribution);
         setRegionDistribution(ordersResult.regionDistribution);
+        hasNewOrdersData = true;
+        console.log(`Успешно загружено ${ordersResult.orders.length} заказов`);
       } else {
         const savedOrdersData = await getOrdersData(selectedStore.id);
         if (savedOrdersData) {
           setOrders(savedOrdersData.orders || []);
           setWarehouseDistribution(savedOrdersData.warehouseDistribution || []);
           setRegionDistribution(savedOrdersData.regionDistribution || []);
+          console.log(`Загружено ${savedOrdersData.orders?.length || 0} заказов из кэша`);
         }
       }
 
-      const salesResult = await fetchAndUpdateSales(selectedStore);
+      toast({
+        title: "Загрузка данных",
+        description: "Начата загрузка продаж...",
+      });
+
+      const salesResult = await fetchAndUpdateSales(selectedStore, forceRefresh);
+      let hasNewSalesData = false;
+      
       if (salesResult) {
         setSales(salesResult);
+        hasNewSalesData = true;
+        console.log(`Успешно загружено ${salesResult.length} продаж`);
       } else {
         const savedSalesData = await getSalesData(selectedStore.id);
         if (savedSalesData) {
           setSales(savedSalesData.sales || []);
+          console.log(`Загружено ${savedSalesData.sales?.length || 0} продаж из кэша`);
         }
       }
 
       console.log(`Данные загружены: ${orders.length} заказов, ${sales.length} продаж`);
+      setLastUpdateTime(new Date());
 
-      if (orders.length === 0 && sales.length === 0) {
+      if (hasNewOrdersData || hasNewSalesData) {
+        toast({
+          title: "Успех",
+          description: `Данные успешно обновлены (${hasNewOrdersData ? 'заказы' : ''}${hasNewOrdersData && hasNewSalesData ? ', ' : ''}${hasNewSalesData ? 'продажи' : ''})`,
+        });
+        setError(null);
+      } else if (orders.length === 0 && sales.length === 0) {
         toast({
           title: "Внимание",
           description: "Не удалось загрузить данные. Проверьте API ключ и подключение к сервисам маркетплейса",
@@ -188,10 +223,9 @@ const Dashboard = () => {
         setError("Не удалось загрузить данные");
       } else {
         toast({
-          title: "Успех",
-          description: "Данные успешно обновлены",
+          title: "Информация",
+          description: "Загружены данные из кэша. Для получения свежих данных нажмите 'Обновить данные'",
         });
-        setError(null);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -203,6 +237,7 @@ const Dashboard = () => {
       });
     } finally {
       setIsLoading(false);
+      setIsFetching(false);
     }
   };
 
@@ -226,8 +261,8 @@ const Dashboard = () => {
 
     const refreshInterval = setInterval(() => {
       console.log('Auto-refreshing data...');
-      fetchData();
-    }, 60000);
+      fetchData(true);
+    }, 30 * 60 * 1000);
 
     return () => {
       window.removeEventListener('store-selection-changed', handleStoreSelectionChange);
@@ -235,17 +270,9 @@ const Dashboard = () => {
     };
   }, []);
 
-  useEffect(() => {
-    if (selectedStoreId) {
-      fetchData();
-    }
-  }, [selectedStoreId]);
-
-  // Получаем отфильтрованные заказы и продажи для текущего периода
   const filteredOrders = orders.length > 0 ? getFilteredOrders(orders).orders : [];
   const filteredSales = sales.length > 0 ? getFilteredSales(sales) : [];
 
-  // Проверяем, есть ли данные для отображения графиков
   const hasOrdersData = filteredOrders.length > 0;
   const hasSalesData = filteredSales.length > 0;
 
@@ -253,13 +280,28 @@ const Dashboard = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className={`${isMobile ? 'text-xl' : 'text-3xl'} font-bold`}>Дашборд</h2>
-        {isLoading && (
-          <div className="flex items-center text-sm text-muted-foreground">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Обновление данных...
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {lastUpdateTime && (
+            <div className="text-xs text-muted-foreground hidden md:block">
+              Последнее обновление: {lastUpdateTime.toLocaleTimeString()}
+            </div>
+          )}
+          {isLoading && (
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Обновление данных...
+            </div>
+          )}
+        </div>
       </div>
+
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Ошибка</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className={`${isMobile ? 'w-full grid grid-cols-5 gap-1' : ''}`}>
@@ -281,7 +323,7 @@ const Dashboard = () => {
             <div className="flex-grow"></div>
             <Button 
               variant="outline" 
-              onClick={fetchData} 
+              onClick={() => fetchData(true)} 
               disabled={isLoading}
               className="flex items-center gap-2"
             >
@@ -303,7 +345,7 @@ const Dashboard = () => {
           <OrdersTable 
             orders={filteredOrders} 
             isLoading={isLoading}
-            onRefresh={fetchData}
+            onRefresh={() => fetchData(true)}
           />
         </TabsContent>
 
@@ -313,7 +355,7 @@ const Dashboard = () => {
             <div className="flex-grow"></div>
             <Button 
               variant="outline" 
-              onClick={fetchData} 
+              onClick={() => fetchData(true)} 
               disabled={isLoading}
               className="flex items-center gap-2"
             >
@@ -332,7 +374,7 @@ const Dashboard = () => {
           <SalesTable 
             sales={filteredSales} 
             isLoading={isLoading}
-            onRefresh={fetchData}
+            onRefresh={() => fetchData(true)}
           />
         </TabsContent>
 
@@ -342,7 +384,7 @@ const Dashboard = () => {
             <div className="flex-grow"></div>
             <Button 
               variant="outline" 
-              onClick={fetchData} 
+              onClick={() => fetchData(true)} 
               disabled={isLoading}
               className="flex items-center gap-2"
             >
