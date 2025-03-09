@@ -1,10 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
-import WarehouseMap from '@/components/WarehouseMap';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  WarehouseIcon, TruckIcon, BarChart3Icon, ClipboardListIcon, 
+  TruckIcon, BarChart3Icon, ClipboardListIcon, 
   PackageSearch, ArrowUpDown, Clock, DollarSign, PackageOpen, Box, RefreshCw
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -41,7 +39,7 @@ const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1'
 
 const Warehouses: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('map');
+  const [activeTab, setActiveTab] = useState('inventory');
   const [wbWarehouses, setWbWarehouses] = useState<WBWarehouse[]>([]);
   const [coefficients, setCoefficients] = useState<WarehouseCoefficient[]>([]);
   const [supplyResults, setSupplyResults] = useState<SupplyOptionsResponse | null>(null);
@@ -155,12 +153,8 @@ const Warehouses: React.FC = () => {
         <h1 className="text-2xl font-bold">Управление складами и логистикой</h1>
       </div>
 
-      <Tabs defaultValue="map" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid grid-cols-5 w-full max-w-3xl">
-          <TabsTrigger value="map" className="flex items-center justify-center">
-            <WarehouseIcon className="h-4 w-4 mr-2" />
-            <span>Карта</span>
-          </TabsTrigger>
+      <Tabs defaultValue="inventory" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid grid-cols-4 w-full max-w-3xl">
           <TabsTrigger value="inventory" className="flex items-center justify-center">
             <ClipboardListIcon className="h-4 w-4 mr-2" />
             <span>Инвентарь</span>
@@ -178,10 +172,6 @@ const Warehouses: React.FC = () => {
             <span>Поставки</span>
           </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="map" className="space-y-4">
-          <WarehouseMap />
-        </TabsContent>
 
         <TabsContent value="inventory" className="space-y-4">
           <div className="flex justify-between items-center mb-4">
