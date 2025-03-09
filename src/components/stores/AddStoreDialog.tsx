@@ -53,19 +53,25 @@ export function AddStoreDialog({
     setValidationError(null);
     
     try {
-      // Instead of using a temp store and refreshStoreStats, directly use fetchWildberriesStats
+      // Get dates for API call
       const today = new Date();
       const weekAgo = new Date(today);
       weekAgo.setDate(weekAgo.getDate() - 7);
       
+      // Direct call to validate the API key
       const result = await fetchWildberriesStats(apiKey, weekAgo, today);
       
       setIsValidating(false);
       
-      // If we get a result with currentPeriod, it's valid
-      if (result && result.currentPeriod) {
+      // Make a more robust check to ensure the API key is valid
+      // Check if result exists and has the expected data structure
+      if (result && 
+          result.currentPeriod && 
+          typeof result.currentPeriod.sales === 'number') {
+        console.log("API key validation successful:", result);
         return true;
       } else {
+        console.log("API key validation failed - invalid response:", result);
         setValidationError("Не удалось получить данные с API. Проверьте ключ и попробуйте снова.");
         return false;
       }
@@ -80,13 +86,22 @@ export function AddStoreDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!storeName || !marketplace || !apiKey) {
+      setValidationError("Пожалуйста, заполните все поля");
+      return;
+    }
+    
     // Validate API key before adding store
     setIsValidating(true);
     const isValid = await validateApiKey();
     setIsValidating(false);
     
-    if (!isValid) return;
+    if (!isValid) {
+      console.log("API key validation failed, not adding store");
+      return;
+    }
     
+    console.log("API key validation passed, adding store");
     onAddStore({
       name: storeName,
       marketplace: marketplace as any,
