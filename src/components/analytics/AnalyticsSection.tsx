@@ -1,8 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag, Loader2, BadgePercent } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
+import axios from "axios";
 
 import DateRangePicker from "./components/DateRangePicker";
 import KeyMetrics from "./components/KeyMetrics";
@@ -37,7 +39,7 @@ interface AnalyticsData {
       penalties: number;
       advertising: number;
       acceptance: number;
-      deductions?: number; // Добавляем удержания
+      deductions?: number;
     };
     netProfit: number;
     acceptance: number;
@@ -88,8 +90,8 @@ interface StoredAnalyticsData {
   dateTo: string;
   data: AnalyticsData;
   penalties: Array<{name: string, value: number}>;
-  deductions: Array<{name: string, value: number}>; // Добавляем отдельное поле для удержаний
   returns: Array<{name: string, value: number}>;
+  deductions: Array<{name: string, value: number}>;
   deductionsTimeline: Array<{
     date: string; 
     logistic: number; 
@@ -97,7 +99,7 @@ interface StoredAnalyticsData {
     penalties: number;
     acceptance: number;
     advertising: number;
-    deductions?: number; // Добавляем удержания
+    deductions?: number;
   }>;
   productAdvertisingData: Array<{name: string, value: number}>;
   advertisingBreakdown: AdvertisingBreakdown;
@@ -111,7 +113,7 @@ interface DeductionsTimelineItem {
   penalties: number;
   acceptance: number;
   advertising: number;
-  deductions?: number; // Добавляем удержания
+  deductions?: number;
 }
 
 const AnalyticsSection = () => {
@@ -259,32 +261,35 @@ const AnalyticsSection = () => {
         
         setData(modifiedData);
         
+        let penaltiesData = [];
         if (statsData.penaltiesData && statsData.penaltiesData.length > 0) {
-          const roundedPenalties = statsData.penaltiesData.map(item => ({
+          penaltiesData = statsData.penaltiesData.map(item => ({
             ...item,
             value: roundToTwoDecimals(item.value)
           }));
-          setPenalties(roundedPenalties);
+          setPenalties(penaltiesData);
         } else {
           setPenalties([]);
         }
         
+        let deductionsData = [];
         if (statsData.deductionsData && statsData.deductionsData.length > 0) {
-          const roundedDeductions = statsData.deductionsData.map(item => ({
+          deductionsData = statsData.deductionsData.map(item => ({
             ...item,
             value: roundToTwoDecimals(item.value)
           }));
-          setDeductions(roundedDeductions);
+          setDeductions(deductionsData);
         } else {
           setDeductions([]);
         }
         
+        let returnsData = [];
         if (statsData.productReturns && statsData.productReturns.length > 0) {
-          const roundedReturns = statsData.productReturns.map(item => ({
+          returnsData = statsData.productReturns.map(item => ({
             ...item,
             value: roundToTwoDecimals(item.value)
           }));
-          setReturns(roundedReturns);
+          setReturns(returnsData);
         } else {
           setReturns([]);
         }
@@ -323,8 +328,39 @@ const AnalyticsSection = () => {
         }
         
         setDeductionsTimeline(newDeductionsTimeline);
-        
         setDataTimestamp(Date.now());
+        
+        // Сохраняем данные в БД
+        try {
+          await axios.post('http://localhost:3001/api/analytics', {
+            storeId: selectedStore.id,
+            dateFrom: dateFrom.toISOString(),
+            dateTo: dateTo.toISOString(),
+            data: modifiedData,
+            penalties: penaltiesData,
+            returns: returnsData,
+            deductions: deductionsData,
+            deductionsTimeline: newDeductionsTimeline,
+            productAdvertisingData: productAdvertisingData,
+            advertisingBreakdown: advertisingBreakdown
+          });
+        } catch (dbError) {
+          console.error('Error saving analytics to DB:', dbError);
+          // В случае ошибки сохраняем в localStorage как запасной вариант
+          localStorage.setItem(`${ANALYTICS_STORAGE_KEY}_${selectedStore.id}`, JSON.stringify({
+            storeId: selectedStore.id,
+            dateFrom: dateFrom.toISOString(),
+            dateTo: dateTo.toISOString(),
+            data: modifiedData,
+            penalties: penaltiesData,
+            returns: returnsData,
+            deductions: deductionsData,
+            deductionsTimeline: newDeductionsTimeline,
+            productAdvertisingData: productAdvertisingData,
+            advertisingBreakdown: advertisingBreakdown,
+            timestamp: Date.now()
+          }));
+        }
         
         toast({
           title: "Успех",
@@ -339,19 +375,50 @@ const AnalyticsSection = () => {
         variant: "destructive"
       });
       
-      setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
-        date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        logistic: 0, 
-        storage: 0, 
-        penalties: 0,
-        acceptance: 0,
-        advertising: 0,
-        deductions: 0
-      })));
-      
-      setPenalties([]);
-      setDeductions([]);
-      setReturns([]);
+      // Загрузка из базы данных при ошибке API
+      try {
+        const analyticsData = await getAnalyticsData(selectedStoreId || '');
+        if (analyticsData && analyticsData.data) {
+          setData(analyticsData.data);
+          setPenalties(analyticsData.penalties);
+          setReturns(analyticsData.returns);
+          setDeductions(analyticsData.deductions);
+          setDeductionsTimeline(analyticsData.deductionsTimeline);
+          setProductAdvertisingData(analyticsData.productAdvertisingData);
+          setAdvertisingBreakdown(analyticsData.advertisingBreakdown);
+          setDataTimestamp(analyticsData.timestamp);
+        } else {
+          setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
+            date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            logistic: 0,
+            storage: 0, 
+            penalties: 0,
+            acceptance: 0,
+            advertising: 0,
+            deductions: 0
+          })));
+          
+          setPenalties([]);
+          setDeductions([]);
+          setReturns([]);
+        }
+      } catch (dbError) {
+        console.error('Error fetching analytics from DB:', dbError);
+        
+        setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
+          date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          logistic: 0,
+          storage: 0, 
+          penalties: 0,
+          acceptance: 0,
+          advertising: 0,
+          deductions: 0
+        })));
+        
+        setPenalties([]);
+        setDeductions([]);
+        setReturns([]);
+      }
     } finally {
       setIsLoading(false);
     }

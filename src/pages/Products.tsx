@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Store } from "@/types/store";
 import ProductsComponent from "@/components/Products";
 import { useIsMobile } from "@/hooks/use-mobile";
+import axios from "axios";
 
 interface ProductsProps {
   selectedStore?: Store | null;
@@ -46,16 +47,25 @@ const Products = ({ selectedStore }: ProductsProps) => {
     }
   }, [selectedStore]);
 
-  const loadProductProfitabilityData = () => {
+  const loadProductProfitabilityData = async () => {
     if (!selectedStore) return;
     
-    const profitabilityData = getProductProfitabilityData(selectedStore.id);
-    
-    if (profitabilityData) {
-      // Ensure we're only taking the top profitable and unprofitable products
-      setProfitableProducts(profitabilityData.profitableProducts?.slice(0, 3) || []);
-      setUnprofitableProducts(profitabilityData.unprofitableProducts?.slice(0, 3) || []);
-      setLastUpdateDate(profitabilityData.updateDate);
+    try {
+      const profitabilityData = await getProductProfitabilityData(selectedStore.id);
+      
+      if (profitabilityData) {
+        // Ensure we're only taking the top profitable and unprofitable products
+        setProfitableProducts(profitabilityData.profitableProducts?.slice(0, 3) || []);
+        setUnprofitableProducts(profitabilityData.unprofitableProducts?.slice(0, 3) || []);
+        setLastUpdateDate(profitabilityData.updateDate);
+      }
+    } catch (error) {
+      console.error("Error loading product profitability data:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить данные о прибыльности товаров",
+        variant: "destructive",
+      });
     }
   };
 
@@ -95,8 +105,17 @@ const Products = ({ selectedStore }: ProductsProps) => {
 
       const data = await response.json();
       
-      // Сохраняем полученные товары в localStorage
-      localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(data.cards));
+      // Сохраняем полученные товары в БД
+      try {
+        await axios.post('http://localhost:3001/api/products', {
+          storeId: selectedStore.id,
+          products: data.cards
+        });
+      } catch (dbError) {
+        console.error("Error saving products to DB:", dbError);
+        // Если не удалось сохранить в БД, используем localStorage
+        localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(data.cards));
+      }
 
       toast({
         title: "Успешно",

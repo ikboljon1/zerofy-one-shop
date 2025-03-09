@@ -147,8 +147,8 @@ const Dashboard = () => {
         setWarehouseDistribution(ordersResult.warehouseDistribution);
         setRegionDistribution(ordersResult.regionDistribution);
       } else {
-        // Если не удалось получить данные, пробуем загрузить из временного хранилища
-        const savedOrdersData = getOrdersData(selectedStore.id);
+        // Если не удалось получить данные, пробуем загрузить из базы данных
+        const savedOrdersData = await getOrdersData(selectedStore.id);
         if (savedOrdersData) {
           setOrders(savedOrdersData.orders || []);
           setWarehouseDistribution(savedOrdersData.warehouseDistribution || []);
@@ -160,8 +160,8 @@ const Dashboard = () => {
       if (salesResult) {
         setSales(salesResult);
       } else {
-        // Если не удалось получить данные, пробуем загрузить из временного хранилища
-        const savedSalesData = getSalesData(selectedStore.id);
+        // Если не удалось получить данные, пробуем загрузить из базы данных
+        const savedSalesData = await getSalesData(selectedStore.id);
         if (savedSalesData) {
           setSales(savedSalesData.sales || []);
         }
