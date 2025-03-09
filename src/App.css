@@ -1,3 +1,4 @@
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -39,4 +40,18 @@
 
 .read-the-docs {
   color: #888;
+}
+
+/* Fix for layout shift when modal opens */
+[data-radix-popper-content-wrapper] {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+/* Ensure body doesn't shift */
+body.dialog-open {
+  overflow: hidden;
+  padding-right: var(--scrollbar-width, 0px);
 }

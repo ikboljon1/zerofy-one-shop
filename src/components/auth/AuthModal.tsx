@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LoginForm from "./LoginForm";
 import RegisterForm from "./RegisterForm";
@@ -99,8 +99,8 @@ const AuthModal = ({ open, onClose, initialMode = 'login', resetToken, resetEmai
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={open} onOpenChange={onClose} modal={true}>
+      <DialogContent className="sm:max-w-[425px]" onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="text-center text-2xl font-bold">
             {resetMode === 'request' 
@@ -111,6 +111,9 @@ const AuthModal = ({ open, onClose, initialMode = 'login', resetToken, resetEmai
                   ? 'Добро пожаловать!' 
                   : 'Присоединяйтесь к Zerofy'}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            {activeTab === 'login' ? 'Вход в систему' : 'Регистрация нового аккаунта'}
+          </DialogDescription>
         </DialogHeader>
         {renderContent()}
       </DialogContent>
