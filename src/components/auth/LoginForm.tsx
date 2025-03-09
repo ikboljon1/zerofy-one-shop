@@ -17,9 +17,10 @@ const loginSchema = z.object({
 
 interface LoginFormProps {
   onSuccess: () => void;
+  onForgotPassword: () => void;
 }
 
-const LoginForm = ({ onSuccess }: LoginFormProps) => {
+const LoginForm = ({ onSuccess, onForgotPassword }: LoginFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -94,7 +95,15 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label htmlFor="password">Пароль</Label>
-          <Button variant="link" size="sm" className="px-0 h-auto">
+          <Button 
+            variant="link" 
+            size="sm" 
+            className="px-0 h-auto"
+            onClick={(e) => {
+              e.preventDefault();
+              onForgotPassword();
+            }}
+          >
             Забыли пароль?
           </Button>
         </div>

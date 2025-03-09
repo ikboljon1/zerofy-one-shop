@@ -300,6 +300,82 @@ export const changePassword = async (
   return { success: true };
 };
 
+export const requestPasswordReset = async (
+  email: string
+): Promise<{ success: boolean; message: string }> => {
+  await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+  
+  const users = await getUsers();
+  const user = users.find(u => u.email === email);
+  
+  if (!user) {
+    return { 
+      success: true, 
+      message: "Если указанный email зарегистрирован в системе, инструкции по восстановлению пароля будут отправлены на него."
+    };
+  }
+  
+  const resetToken = Math.random().toString(36).substring(2, 15);
+  const resetExpiry = new Date(new Date().getTime() + 60 * 60 * 1000); // 1 hour
+  
+  localStorage.setItem(`reset_token_${user.id}`, JSON.stringify({
+    token: resetToken,
+    expiry: resetExpiry.toISOString()
+  }));
+  
+  console.log(`Reset token for ${email}: ${resetToken}`);
+  
+  return { 
+    success: true, 
+    message: "Если указанный email зарегистрирован в системе, инструкции по восстановлению пароля будут отправлены на него."
+  };
+};
+
+export const resetPassword = async (
+  email: string,
+  token: string,
+  newPassword: string
+): Promise<{ success: boolean; message: string }> => {
+  await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+  
+  const users = await getUsers();
+  const userIndex = users.findIndex(u => u.email === email);
+  
+  if (userIndex === -1) {
+    return { success: false, message: "Неверные данные для сброса пароля" };
+  }
+  
+  const user = users[userIndex];
+  
+  const storedResetData = localStorage.getItem(`reset_token_${user.id}`);
+  
+  if (!storedResetData) {
+    return { success: false, message: "Срок действия ссылки для сброса пароля истек" };
+  }
+  
+  const resetData = JSON.parse(storedResetData);
+  const now = new Date();
+  const expiry = new Date(resetData.expiry);
+  
+  if (now > expiry || resetData.token !== token) {
+    return { success: false, message: "Срок действия ссылки для сброса пароля истек" };
+  }
+  
+  users[userIndex] = {
+    ...user,
+    password: newPassword
+  };
+  
+  localStorage.setItem('users', JSON.stringify(users));
+  
+  localStorage.removeItem(`reset_token_${user.id}`);
+  
+  return { 
+    success: true, 
+    message: "Пароль успешно сброшен. Теперь вы можете войти в систему, используя новый пароль." 
+  };
+};
+
 export const getTrialDaysRemaining = (user: User): number => {
   if (!user.isInTrial || !user.trialEndDate) {
     return 0;
