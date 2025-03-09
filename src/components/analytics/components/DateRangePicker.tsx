@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { format, subDays, startOfWeek, startOfMonth } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -16,8 +17,6 @@ interface DateRangePickerProps {
   onApplyDateRange?: () => void;
   onUpdate?: () => void;
   forceRefresh?: boolean;
-  isQuickSelectOpen?: boolean;
-  updateQuickSelectOpen?: (open: boolean) => void;
 }
 
 const DateRangePicker = ({ 
@@ -27,17 +26,12 @@ const DateRangePicker = ({
   setDateTo,
   onApplyDateRange,
   onUpdate,
-  forceRefresh = true,
-  isQuickSelectOpen,
-  updateQuickSelectOpen
+  forceRefresh = true
 }: DateRangePickerProps) => {
   const [fromOpen, setFromOpen] = useState(false);
   const [toOpen, setToOpen] = useState(false);
-  const [localQuickSelectOpen, setLocalQuickSelectOpen] = useState(false);
+  const [quickSelectOpen, setQuickSelectOpen] = useState(false);
   const isMobile = useIsMobile();
-
-  const quickSelectOpen = isQuickSelectOpen !== undefined ? isQuickSelectOpen : localQuickSelectOpen;
-  const setQuickSelectOpen = updateQuickSelectOpen || setLocalQuickSelectOpen;
 
   const handleApply = () => {
     if (onApplyDateRange) {

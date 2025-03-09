@@ -1,10 +1,10 @@
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { TrendingUp, TrendingDown, Loader2, Package } from 'lucide-react';
+import { Card } from "@/components/ui/card";
+import { ArrowUp, ArrowDown, TrendingUp, TrendingDown, DollarSign, FileText, Info, Image } from "lucide-react";
+import { formatCurrency } from "@/utils/formatCurrency";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-export interface ProductItem {
+interface Product {
   name: string;
   price: string;
   profit: string;
@@ -16,171 +16,135 @@ export interface ProductItem {
 }
 
 interface ProductListProps {
-  profitableProducts?: ProductItem[];
-  unprofitableProducts?: ProductItem[];
-  isLoading?: boolean;
-  title?: string;
-  products?: ProductItem[];
-  isProfitable?: boolean;
+  title: string;
+  products: Product[] | undefined;
+  isProfitable: boolean;
 }
 
-const ProductList = ({ 
-  profitableProducts = [], 
-  unprofitableProducts = [], 
-  isLoading = false,
-  title,
-  products,
-  isProfitable
-}: ProductListProps) => {
-  // If we're using the new props pattern
-  const usingNewPropsPattern = products !== undefined && isProfitable !== undefined;
+const ProductList = ({ title, products = [], isProfitable }: ProductListProps) => {
+  const isMobile = useIsMobile();
+  const textColorClass = isProfitable 
+    ? "text-green-600 dark:text-green-400" 
+    : "text-red-600 dark:text-red-400";
   
-  if (isLoading) {
-    return (
-      <Card className="shadow-md">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center">
-            <Package className="mr-2 h-5 w-5 text-blue-500" />
-            <span>{title || "Доходность товаров"}</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col items-center justify-center py-10 space-y-4">
-          <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
-          <p className="text-sm text-muted-foreground">Загрузка данных о продуктах...</p>
-        </CardContent>
-      </Card>
-    );
-  }
-  
-  // If using the new pattern with title, products, and isProfitable
-  if (usingNewPropsPattern) {
-    return (
-      <Card className="shadow-md">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center">
-            <Package className="mr-2 h-5 w-5 text-blue-500" />
-            <span>{title}</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3">
-            {products && products.length > 0 ? products.map((product, index) => (
-              <div key={`product-${index}`} className={`flex items-start gap-3 p-2 ${
-                isProfitable 
-                  ? 'bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/20' 
-                  : 'bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/20'
-              } rounded-lg`}>
-                <div className="flex-shrink-0 w-12 h-12 rounded-md bg-white dark:bg-gray-800 overflow-hidden border border-gray-200 dark:border-gray-700">
-                  {product.image ? (
-                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-                      <Package className="h-6 w-6 text-gray-400" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-xs font-medium truncate mb-0.5">{product.name}</h4>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                    <span className="text-gray-600 dark:text-gray-400">Цена: {product.price}</span>
-                    <span className={isProfitable ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}>
-                      Прибыль: {product.profit}
-                    </span>
-                    {product.margin && <span className="text-blue-600 dark:text-blue-400">Маржа: {product.margin}%</span>}
-                    {product.quantitySold && <span className="text-purple-600 dark:text-purple-400">Продано: {product.quantitySold}</span>}
-                    {product.returnCount && <span className="text-orange-600 dark:text-orange-400">Возвраты: {product.returnCount}</span>}
-                  </div>
-                </div>
-              </div>
-            )) : (
-              <p className="text-sm text-gray-500 col-span-full py-4 text-center">
-                {isProfitable ? "Данные о прибыльных товарах отсутствуют" : "Данные о убыточных товарах отсутствуют"}
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const bgGradientClass = isProfitable
+    ? "bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-green-100 dark:border-green-800/30"
+    : "bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-950/30 dark:to-rose-950/30 border-red-100 dark:border-red-800/30";
 
-  // Original implementation
+  const IconComponent = isProfitable ? TrendingUp : TrendingDown;
+
+  const formatNumberWithSign = (value: string) => {
+    const numValue = parseFloat(value.replace(/[^\d.-]/g, ''));
+    if (isNaN(numValue)) return value;
+    
+    return isProfitable 
+      ? `+${formatCurrency(numValue)}` 
+      : formatCurrency(numValue);
+  };
+
+  const getProfitabilityReason = (product: Product) => {
+    if (isProfitable) {
+      if (product.quantitySold && product.quantitySold > 50) {
+        return "Высокие объемы продаж";
+      } else if (product.returnCount !== undefined && product.returnCount < 3) {
+        return "Низкое количество возвратов";
+      }
+      return "Стабильные продажи";
+    } else {
+      if (product.returnCount !== undefined && product.returnCount > 10) {
+        return "Высокое количество возвратов";
+      } else if (product.quantitySold && product.quantitySold < 5) {
+        return "Низкие объемы продаж";
+      }
+      return "Нестабильные продажи";
+    }
+  };
+
   return (
-    <Card className="shadow-md">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg flex items-center">
-          <Package className="mr-2 h-5 w-5 text-blue-500" />
-          <span>Доходность товаров</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <h3 className="text-sm font-semibold flex items-center mb-2">
-            <TrendingUp className="mr-2 h-4 w-4 text-emerald-500" />
-            <span>Самые прибыльные товары</span>
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3">
-            {profitableProducts && profitableProducts.length > 0 ? profitableProducts.slice(0, 4).map((product, index) => (
-              <div key={`profit-${index}`} className="flex items-start gap-3 p-2 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg border border-emerald-100 dark:border-emerald-900/20">
-                <div className="flex-shrink-0 w-12 h-12 rounded-md bg-white dark:bg-gray-800 overflow-hidden border border-gray-200 dark:border-gray-700">
-                  {product.image ? (
-                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-                      <Package className="h-6 w-6 text-gray-400" />
+    <Card className={`p-4 ${isMobile ? 'p-3' : 'p-5'}`}>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold">{title}</h3>
+        <div className={`p-2 rounded-md ${isProfitable ? 'bg-green-100 dark:bg-green-900/60' : 'bg-red-100 dark:bg-red-900/60'}`}>
+          <IconComponent className={`h-4 w-4 ${isProfitable ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} />
+        </div>
+      </div>
+      <div className="space-y-4">
+        {products && products.length > 0 ? (
+          products.map((product, index) => (
+            <div 
+              key={index} 
+              className={`flex flex-col p-4 rounded-lg border ${bgGradientClass}`}
+            >
+              <div className="flex items-start mb-2">
+                <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 mr-4 bg-gray-100 dark:bg-gray-800">
+                  <img 
+                    src={product.image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"} 
+                    alt={product.name} 
+                    className="w-full h-full object-cover" 
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg";
+                    }}
+                  />
+                </div>
+                <div className="flex-1">
+                  <div className="flex justify-between items-start">
+                    <h4 className="font-medium text-base">{product.name || "Неизвестный товар"}</h4>
+                    <div className="text-right flex items-center">
+                      <span className={`${textColorClass} font-semibold mr-1`}>
+                        {formatNumberWithSign(product.profit)}
+                      </span>
+                      {isProfitable ? (
+                        <ArrowUp className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <ArrowDown className="h-4 w-4 text-red-500" />
+                      )}
                     </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Цена: {formatCurrency(parseFloat(product.price || "0"))}
+                  </p>
+                  {product.category && (
+                    <p className="text-sm text-muted-foreground">
+                      Категория: {product.category}
+                    </p>
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-xs font-medium truncate mb-0.5">{product.name}</h4>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                    <span className="text-gray-600 dark:text-gray-400">Цена: {product.price}</span>
-                    <span className="text-emerald-600 dark:text-emerald-400">Прибыль: {product.profit}</span>
-                    {product.margin && <span className="text-blue-600 dark:text-blue-400">Маржа: {product.margin}%</span>}
-                    {product.quantitySold && <span className="text-purple-600 dark:text-purple-400">Продано: {product.quantitySold}</span>}
-                  </div>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 text-sm">
+                <div className="flex items-center">
+                  <FileText className="h-4 w-4 mr-1 text-muted-foreground" />
+                  <span>
+                    Продано: {product.quantitySold !== undefined ? `${product.quantitySold} шт.` : 'Н/Д'}
+                  </span>
+                </div>
+                
+                <div className="flex items-center">
+                  <ArrowDown className={`h-4 w-4 mr-1 ${product.returnCount && product.returnCount > 5 ? 'text-red-500' : 'text-muted-foreground'}`} />
+                  <span>
+                    Возвраты: {product.returnCount !== undefined ? `${product.returnCount} шт.` : 'Н/Д'}
+                  </span>
+                </div>
+                
+                <div className="flex items-center">
+                  <Info className="h-4 w-4 mr-1 text-muted-foreground" />
+                  <span className="font-medium">
+                    {getProfitabilityReason(product)}
+                  </span>
                 </div>
               </div>
-            )) : (
-              <p className="text-sm text-gray-500 col-span-full py-4 text-center">Данные о прибыльных товарах отсутствуют</p>
-            )}
+            </div>
+          ))
+        ) : (
+          <div className="py-6 px-4 text-center text-muted-foreground">
+            <div className="flex flex-col items-center">
+              <Image className="h-12 w-12 text-muted-foreground opacity-20 mb-2" />
+              <p>Нет данных за выбранный период</p>
+            </div>
           </div>
-        </div>
-        
-        <Separator />
-        
-        <div>
-          <h3 className="text-sm font-semibold flex items-center mb-2">
-            <TrendingDown className="mr-2 h-4 w-4 text-red-500" />
-            <span>Убыточные товары</span>
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3">
-            {unprofitableProducts && unprofitableProducts.length > 0 ? unprofitableProducts.slice(0, 4).map((product, index) => (
-              <div key={`loss-${index}`} className="flex items-start gap-3 p-2 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-100 dark:border-red-900/20">
-                <div className="flex-shrink-0 w-12 h-12 rounded-md bg-white dark:bg-gray-800 overflow-hidden border border-gray-200 dark:border-gray-700">
-                  {product.image ? (
-                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-                      <Package className="h-6 w-6 text-gray-400" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-xs font-medium truncate mb-0.5">{product.name}</h4>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                    <span className="text-gray-600 dark:text-gray-400">Цена: {product.price}</span>
-                    <span className="text-red-600 dark:text-red-400">Прибыль: {product.profit}</span>
-                    {product.margin && <span className="text-blue-600 dark:text-blue-400">Маржа: {product.margin}%</span>}
-                    {product.returnCount && <span className="text-orange-600 dark:text-orange-400">Возвраты: {product.returnCount}</span>}
-                  </div>
-                </div>
-              </div>
-            )) : (
-              <p className="text-sm text-gray-500 col-span-full py-4 text-center">Данных о убыточных товарах нет</p>
-            )}
-          </div>
-        </div>
-      </CardContent>
+        )}
+      </div>
     </Card>
   );
 };
