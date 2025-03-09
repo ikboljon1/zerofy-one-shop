@@ -376,6 +376,10 @@ const Profile = ({ user: propUser, onUserUpdated }: ProfileProps) => {
         setUserProfile(result.user);
         localStorage.setItem('user', JSON.stringify(result.user));
         
+        if (onUserUpdated && result.user) {
+          onUserUpdated(result.user);
+        }
+        
         if (result.user.subscriptionEndDate) {
           const endDate = new Date(result.user.subscriptionEndDate);
           const today = new Date();
@@ -1140,7 +1144,7 @@ const Profile = ({ user: propUser, onUserUpdated }: ProfileProps) => {
                     <div className="text-center mb-4">
                       <CreditCardIcon className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
                       <h3 className="text-lg font-medium">Нет сохраненных карт</h3>
-                      <p className="text-muted-foreground">Добавьте платежную карту для оплаты</p>
+                      <p className="text-muted-foreground">Добавьте платежную карту ��ля оплаты</p>
                     </div>
                     
                     {isAddingCard ? (
@@ -1308,59 +1312,41 @@ const Profile = ({ user: propUser, onUserUpdated }: ProfileProps) => {
             </CardHeader>
             <CardContent>
               {isLoadingHistory ? (
-                <div className="flex justify-center items-center py-10">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <div className="flex justify-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin" />
                 </div>
               ) : paymentHistory.length === 0 ? (
-                <div className="text-center py-10">
-                  <History className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                  <h3 className="text-lg font-medium">История платежей пуста</h3>
-                  <p className="text-muted-foreground">У вас пока нет платежей</p>
+                <div className="text-center p-8">
+                  <p className="text-muted-foreground">История платежей пуста</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {paymentHistory.map((payment, index) => (
-                    <div key={index} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 rounded-lg border">
-                      <div className="flex items-center gap-3 mb-2 md:mb-0">
-                        <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                          payment.tariff === "3" ? "bg-amber-500/20" : 
-                          payment.tariff === "2" ? "bg-purple-600/20" : 
-                          payment.tariff === "4" ? "bg-emerald-600/20" :
-                          "bg-blue-600/20"
-                        }`}>
-                          <DollarSign className={`h-5 w-5 ${
-                            payment.tariff === "3" ? "text-amber-500" : 
-                            payment.tariff === "2" ? "text-purple-600" : 
-                            payment.tariff === "4" ? "text-emerald-600" :
-                            "text-blue-600"
-                          }`} />
+                  {paymentHistory.map((payment) => (
+                    <Card key={payment.id}>
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-medium">{payment.description}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {formatDate(payment.date)}
+                            </p>
+                          </div>
+                          
+                          <div className="flex items-center gap-4">
+                            <Badge variant="outline" className="flex items-center gap-1">
+                              <CalendarClock className="h-3 w-3" />
+                              {payment.period} {
+                                payment.period === '1' ? 'месяц' : 
+                                Number(payment.period) < 5 ? 'месяца' : 'месяцев'
+                              }
+                            </Badge>
+                            <span className="font-bold text-lg">
+                              {payment.amount.toLocaleString('ru-RU')} ₽
+                            </span>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{
-                            payment.tariff === "3" ? "Премиум" : 
-                            payment.tariff === "2" ? "Бизнес" : 
-                            payment.tariff === "4" ? "Корпоративный" :
-                            "Стартовый"
-                          }</p>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <CalendarIcon className="h-3 w-3" /> 
-                            {formatDate(payment.date)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <Badge variant="outline" className="flex items-center gap-1">
-                          <CalendarClock className="h-3 w-3" />
-                          {payment.period} {
-                            Number(payment.period) === 1 ? 'месяц' : 
-                            Number(payment.period) < 5 ? 'месяца' : 'месяцев'
-                          }
-                        </Badge>
-                        <span className="font-bold text-lg">
-                          {payment.amount.toLocaleString('ru-RU')} ₽
-                        </span>
-                      </div>
-                    </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               )}

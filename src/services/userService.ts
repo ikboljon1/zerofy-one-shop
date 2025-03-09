@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   name: string;
@@ -364,7 +365,7 @@ export const getPaymentHistory = async (userId: string): Promise<PaymentHistoryI
       description: 'Оплата подписки',
       status: 'success',
       tariff: '2',
-      period: 1
+      period: '1'
     },
     {
       id: '2',
@@ -373,7 +374,7 @@ export const getPaymentHistory = async (userId: string): Promise<PaymentHistoryI
       description: 'Продление подписки',
       status: 'success',
       tariff: '2',
-      period: 1
+      period: '1'
     }
   ];
   
@@ -403,7 +404,7 @@ export const addPaymentRecord = async (
     description: 'Оплата подписки',
     status: 'success',
     tariff,
-    period: months
+    period: months.toString()
   };
   
   const history = await getPaymentHistory(userId);
