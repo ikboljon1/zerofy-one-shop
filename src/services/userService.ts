@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   name: string;
@@ -802,15 +803,5 @@ export const changePassword = async (
   }
 };
 
-export { 
-  TARIFF_STORE_LIMITS, 
-  requestPasswordReset, 
-  resetPassword, 
-  getTrialDaysRemaining, 
-  getSubscriptionStatus, 
-  getPaymentHistory, 
-  addPaymentRecord, 
-  getUserSubscriptionData 
-};
-
-export type { User, SubscriptionData, PaymentHistoryItem };
+// No need for the duplicate exports at the end of the file
+// Removed the extra export statements that were causing the errors
