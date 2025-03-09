@@ -29,6 +29,8 @@ const smtpSchema = z.object({
   fromName: z.string().min(1, { message: "Имя отправителя обязательно" }),
 });
 
+type SmtpFormValues = z.infer<typeof smtpSchema>;
+
 const SMTPSettings = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -42,7 +44,7 @@ const SMTPSettings = () => {
     formState: { errors },
     setValue,
     watch,
-  } = useForm<z.infer<typeof smtpSchema>>({
+  } = useForm<SmtpFormValues>({
     resolver: zodResolver(smtpSchema),
     defaultValues: {
       host: "",
@@ -78,11 +80,11 @@ const SMTPSettings = () => {
     loadSettings();
   }, [setValue]);
 
-  const onSubmit = async (data: z.infer<typeof smtpSchema>) => {
+  const onSubmit = async (data: SmtpFormValues) => {
     setIsLoading(true);
 
     try {
-      await saveSmtpSettings(data);
+      await saveSmtpSettings(data as SmtpSettingsType);
       
       toast({
         title: "Настройки сохранены",
@@ -105,8 +107,23 @@ const SMTPSettings = () => {
     setTestErrorMessage(null);
 
     try {
-      const data = watch();
-      const result = await testSmtpConnection(data);
+      const formData = watch();
+      
+      // Ensure all required fields are present before testing
+      if (!formData.host || !formData.username || !formData.password || 
+          !formData.fromEmail || !formData.fromName) {
+        setIsTestSuccess(false);
+        setTestErrorMessage("Пожалуйста, заполните все обязательные поля");
+        toast({
+          title: "Ошибка",
+          description: "Пожалуйста, заполните все обязательные поля",
+          variant: "destructive",
+        });
+        setIsTesting(false);
+        return;
+      }
+      
+      const result = await testSmtpConnection(formData as SmtpSettingsType);
       
       if (result.success) {
         setIsTestSuccess(true);
