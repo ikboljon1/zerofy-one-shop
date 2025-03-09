@@ -15,20 +15,28 @@ import {
   User as UserIcon,
   BadgeDollarSign,
   Tag,
-  Mail
+  Mail,
+  Lock
 } from "lucide-react";
 import { motion } from "framer-motion";
 import TariffSection from "@/components/admin/TariffSection";
 import SMTPSettings from "@/components/admin/SMTPSettings";
+import AdminSettingsSection from "@/components/admin/AdminSettingsSection";
 
 export default function Admin() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("users");
   const [userCount, setUserCount] = useState(0);
+  const [userData, setUserData] = useState<User | null>(null);
 
   useEffect(() => {
     getUsers().then(users => setUserCount(users.length));
+    
+    const userDataStr = localStorage.getItem('user');
+    if (userDataStr) {
+      setUserData(JSON.parse(userDataStr));
+    }
   }, []);
 
   const handleSelectUser = (user: User) => {
@@ -49,8 +57,6 @@ export default function Admin() {
     getUsers().then(users => setUserCount(users.length));
   };
 
-  const userDataStr = localStorage.getItem('user');
-  const userData = userDataStr ? JSON.parse(userDataStr) : null;
   const isAdmin = userData?.role === 'admin';
 
   if (!isAdmin) {
@@ -131,6 +137,10 @@ export default function Admin() {
             <TabsTrigger value="statistics" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-800 data-[state=active]:text-white rounded-lg px-4 py-2">
               <BarChart3 className="h-4 w-4" />
               <span>Статистика</span>
+            </TabsTrigger>
+            <TabsTrigger value="admin-settings" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-800 data-[state=active]:text-white rounded-lg px-4 py-2">
+              <Lock className="h-4 w-4" />
+              <span>Админ</span>
             </TabsTrigger>
           </TabsList>
 
@@ -217,6 +227,10 @@ export default function Admin() {
                 Этот раздел находится в разработке. В будущем здесь будут доступны отчеты и графики об использовании системы.
               </p>
             </div>
+          </TabsContent>
+
+          <TabsContent value="admin-settings">
+            <AdminSettingsSection userData={userData} />
           </TabsContent>
         </Tabs>
       </motion.div>
