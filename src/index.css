@@ -5,25 +5,26 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+    --radius: 0.75rem;
   }
  
   .light {
@@ -46,28 +47,6 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
-  }
-  
-  .dark {
-    --background: 280 12% 10%;
-    --foreground: 270 10% 98%;
-    --card: 280 10% 12%;
-    --card-foreground: 270 10% 98%;
-    --popover: 280 10% 13%;
-    --popover-foreground: 270 10% 98%;
-    --primary: 276 75% 60%;
-    --primary-foreground: 270 10% 98%;
-    --secondary: 280 10% 16%;
-    --secondary-foreground: 270 10% 98%;
-    --muted: 280 10% 16%;
-    --muted-foreground: 270 10% 60%;
-    --accent: 275 65% 32%;
-    --accent-foreground: 270 10% 98%;
-    --destructive: 0 70% 45%;
-    --destructive-foreground: 270 10% 98%;
-    --border: 280 10% 20%;
-    --input: 280 10% 20%;
-    --ring: 275 70% 60%;
   }
 }
 
@@ -141,33 +120,4 @@
     opacity: 0.95;
     transform: scale(1.02);
   }
-}
-
-/* Wildberries-inspired card gradient for dark mode */
-.wildberries-card-gradient {
-  @apply bg-gradient-to-br from-[#322037] via-[#42214D] to-[#36203C] border-purple-800/30;
-}
-
-/* Glassmorphism effect for cards in dark mode */
-.glass-card {
-  @apply backdrop-blur-sm bg-black/20 border border-white/10 dark:border-purple-800/30;
-}
-
-/* Custom scrollbar for dark mode */
-.dark ::-webkit-scrollbar {
-  width: 8px;
-}
-
-.dark ::-webkit-scrollbar-track {
-  background: hsl(280 10% 15%);
-  border-radius: 8px;
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: hsl(276 40% 40%);
-  border-radius: 8px;
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: hsl(276 40% 50%);
 }
