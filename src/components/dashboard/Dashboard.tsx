@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
@@ -38,6 +39,7 @@ const Dashboard = () => {
   const [sales, setSales] = useState<WildberriesSale[]>([]);
   const [warehouseDistribution, setWarehouseDistribution] = useState<any[]>([]);
   const [regionDistribution, setRegionDistribution] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const filterDataByPeriod = (date: string, period: Period) => {
     const now = new Date();
@@ -124,6 +126,7 @@ const Dashboard = () => {
   const fetchData = async () => {
     try {
       setIsLoading(true);
+      setError(null);
       const selectedStore = getSelectedStore();
       
       if (!selectedStore) {
@@ -132,6 +135,17 @@ const Dashboard = () => {
           description: "Выберите основной магазин в разделе 'Магазины'",
           variant: "destructive"
         });
+        setError("Не выбран основной магазин");
+        return;
+      }
+
+      if (!selectedStore.apiKey) {
+        toast({
+          title: "Внимание",
+          description: "У выбранного магазина не настроен API ключ",
+          variant: "destructive"
+        });
+        setError("Отсутствует API ключ для магазина");
         return;
       }
 
@@ -163,15 +177,28 @@ const Dashboard = () => {
         }
       }
 
-      toast({
-        title: "Успех",
-        description: "Данные успешно обновлены",
-      });
+      console.log(`Данные загружены: ${orders.length} заказов, ${sales.length} продаж`);
+
+      if (orders.length === 0 && sales.length === 0) {
+        toast({
+          title: "Внимание",
+          description: "Не удалось загрузить данные. Проверьте API ключ и подключение к сервисам маркетплейса",
+          variant: "destructive"
+        });
+        setError("Не удалось загрузить данные");
+      } else {
+        toast({
+          title: "Успех",
+          description: "Данные успешно обновлены",
+        });
+        setError(null);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
+      setError(`Ошибка загрузки: ${(error as Error).message}`);
       toast({
         title: "Ошибка",
-        description: "Не удалось загрузить данные",
+        description: `Не удалось загрузить данные: ${(error as Error).message}`,
         variant: "destructive"
       });
     } finally {
@@ -214,6 +241,14 @@ const Dashboard = () => {
     }
   }, [selectedStoreId]);
 
+  // Получаем отфильтрованные заказы и продажи для текущего периода
+  const filteredOrders = orders.length > 0 ? getFilteredOrders(orders).orders : [];
+  const filteredSales = sales.length > 0 ? getFilteredSales(sales) : [];
+
+  // Проверяем, есть ли данные для отображения графиков
+  const hasOrdersData = filteredOrders.length > 0;
+  const hasSalesData = filteredSales.length > 0;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -244,46 +279,81 @@ const Dashboard = () => {
           <div className={`mb-4 ${isMobile ? 'w-full' : 'flex items-center gap-4'}`}>
             <PeriodSelector value={period} onChange={setPeriod} />
             <div className="flex-grow"></div>
+            <Button 
+              variant="outline" 
+              onClick={fetchData} 
+              disabled={isLoading}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              {isLoading ? 'Обновление...' : 'Обновить данные'}
+            </Button>
           </div>
           
-          {orders.length > 0 && (
+          {hasOrdersData && (
             <>
-              <OrderMetrics orders={getFilteredOrders(orders).orders} />
+              <OrderMetrics orders={filteredOrders} />
               <OrdersChart 
-                orders={getFilteredOrders(orders).orders} 
-                sales={getFilteredSales(sales)}
+                orders={filteredOrders} 
+                sales={filteredSales}
               />
             </>
           )}
           
-          <OrdersTable orders={getFilteredOrders(orders).orders} />
+          <OrdersTable 
+            orders={filteredOrders} 
+            isLoading={isLoading}
+            onRefresh={fetchData}
+          />
         </TabsContent>
 
         <TabsContent value="sales" className="space-y-4">
           <div className={`mb-4 ${isMobile ? 'w-full' : 'flex items-center gap-4'}`}>
             <PeriodSelector value={period} onChange={setPeriod} />
             <div className="flex-grow"></div>
+            <Button 
+              variant="outline" 
+              onClick={fetchData} 
+              disabled={isLoading}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              {isLoading ? 'Обновление...' : 'Обновить данные'}
+            </Button>
           </div>
           
-          {sales.length > 0 && (
+          {hasSalesData && (
             <>
-              <SalesMetrics sales={getFilteredSales(sales)} />
-              <SalesChart sales={getFilteredSales(sales)} />
+              <SalesMetrics sales={filteredSales} />
+              <SalesChart sales={filteredSales} />
             </>
           )}
           
-          <SalesTable sales={getFilteredSales(sales)} />
+          <SalesTable 
+            sales={filteredSales} 
+            isLoading={isLoading}
+            onRefresh={fetchData}
+          />
         </TabsContent>
 
         <TabsContent value="geography" className="space-y-4">
           <div className={`mb-4 ${isMobile ? 'w-full' : 'flex items-center gap-4'}`}>
             <PeriodSelector value={period} onChange={setPeriod} />
             <div className="flex-grow"></div>
+            <Button 
+              variant="outline" 
+              onClick={fetchData} 
+              disabled={isLoading}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              {isLoading ? 'Обновление...' : 'Обновить данные'}
+            </Button>
           </div>
           <GeographySection 
             warehouseDistribution={warehouseDistribution} 
             regionDistribution={regionDistribution}
-            sales={getFilteredSales(sales)}
+            sales={filteredSales}
           />
         </TabsContent>
         

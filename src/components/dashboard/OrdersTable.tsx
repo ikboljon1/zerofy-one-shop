@@ -4,18 +4,26 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Calendar, Package, ArrowUpDown } from "lucide-react";
+import { Search, Calendar, Package, ArrowUpDown, RefreshCw, AlertTriangle } from "lucide-react";
 import { WildberriesOrder } from "@/types/store";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface OrdersTableProps {
   orders: WildberriesOrder[];
   title?: string;
+  isLoading?: boolean;
+  onRefresh?: () => void;
 }
 
-const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы" }) => {
+const OrdersTable: React.FC<OrdersTableProps> = ({ 
+  orders, 
+  title = "Заказы", 
+  isLoading = false,
+  onRefresh
+}) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<keyof WildberriesOrder>("date");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
@@ -77,7 +85,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
           {title}
         </CardTitle>
         <CardDescription>
-          Всего заказов: {orders.length}
+          {orders.length > 0 ? `Всего заказов: ${orders.length}` : "Данные не загружены"}
         </CardDescription>
         <div className="flex gap-2 mt-2">
           <div className="relative flex-1">
@@ -89,9 +97,45 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
               className="pl-8"
             />
           </div>
+          {onRefresh && (
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={onRefresh}
+              disabled={isLoading}
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent>
+        {orders.length === 0 && (
+          <Alert className="mb-4 bg-yellow-900/20 border-yellow-800/30 text-yellow-300">
+            <AlertTriangle className="h-4 w-4 text-yellow-500" />
+            <AlertDescription>
+              Данные о заказах не загружены. Проверьте, что:
+              <ol className="list-decimal list-inside text-sm mt-2 space-y-1">
+                <li>Выбран правильный магазин в разделе "Магазины"</li>
+                <li>Настроен API ключ для выбранного магазина</li>
+                <li>Выбран подходящий период для анализа</li>
+              </ol>
+              {onRefresh && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-3 text-yellow-300 border-yellow-800/50 hover:bg-yellow-900/20" 
+                  onClick={onRefresh}
+                  disabled={isLoading}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                  Обновить данные
+                </Button>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <div className="rounded-md border">
           <Table>
             <TableHeader>
@@ -165,7 +209,9 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
               ) : (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-4">
-                    {searchTerm ? "Заказы не найдены" : "Заказов нет"}
+                    {isLoading 
+                      ? "Загрузка данных..." 
+                      : (searchTerm ? "Заказы не найдены" : "Заказов нет")}
                   </TableCell>
                 </TableRow>
               )}
