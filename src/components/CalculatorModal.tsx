@@ -51,11 +51,11 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
 
   useEffect(() => {
     if (open) {
-      fetchAverageExpenses();
+      fetchHighestExpenses();
     }
   }, [open]);
 
-  const fetchAverageExpenses = async () => {
+  const fetchHighestExpenses = async () => {
     setIsLoading(true);
     try {
       // Fetch data from API - use a 30-day period for significant data
@@ -84,17 +84,15 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
       const statsData = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
       
       if (statsData) {
-        // Находим средние значения расходов для всех товаров
-        let totalLogistics = 0;
-        let totalStorage = 0;
-        let totalPenalties = 0;
-        let totalAcceptance = 0;
-        let totalAdvertising = 0;
-        let totalDeductions = 0;
-        let totalPrice = 0;
-        let productCount = 0;
-        let productWithHighestSales = null;
-        let maxSales = 0;
+        // Find the highest expenses across all products
+        let maxLogistics = 0;
+        let maxStorage = 0;
+        let maxPenalties = 0;
+        let maxAcceptance = 0;
+        let maxAdvertising = 0;
+        let maxDeductions = 0;
+        let productWithHighestTotal = null;
+        let maxTotalExpenses = 0;
         
         // Process products from all stores
         const allStores = Object.keys(localStorage).filter(key => key.startsWith('products_'));
@@ -111,67 +109,61 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
               const advertising = product.expenses.advertising || 0;
               const deductions = product.expenses.deductions || 0;
               
-              // Суммируем расходы для последующего вычисления среднего
-              totalLogistics += logistics;
-              totalStorage += storage;
-              totalPenalties += penalties;
-              totalAcceptance += acceptance;
-              totalAdvertising += advertising;
-              totalDeductions += deductions;
+              // Update maximum values for each expense type
+              maxLogistics = Math.max(maxLogistics, logistics);
+              maxStorage = Math.max(maxStorage, storage);
+              maxPenalties = Math.max(maxPenalties, penalties);
+              maxAcceptance = Math.max(maxAcceptance, acceptance);
+              maxAdvertising = Math.max(maxAdvertising, advertising);
+              maxDeductions = Math.max(maxDeductions, deductions);
               
-              if (product.price) {
-                totalPrice += product.price;
-              }
-              
-              productCount++;
-              
-              // Отслеживаем товар с наибольшими продажами для определения себестоимости
-              const sales = product.quantity || 0;
-              if (sales > maxSales) {
-                maxSales = sales;
-                productWithHighestSales = product;
+              // Track product with highest total expenses for cost price
+              const totalExpenses = logistics + storage + penalties + acceptance + advertising + deductions;
+              if (totalExpenses > maxTotalExpenses) {
+                maxTotalExpenses = totalExpenses;
+                productWithHighestTotal = product;
               }
             }
           });
         });
         
-        // Вычисляем средние значения
-        const avgLogistics = productCount > 0 ? totalLogistics / productCount : 0;
-        const avgStorage = productCount > 0 ? totalStorage / productCount : 0;
-        const avgPenalties = productCount > 0 ? totalPenalties / productCount : 0;
-        const avgAcceptance = productCount > 0 ? totalAcceptance / productCount : 0;
-        const avgAdvertising = productCount > 0 ? totalAdvertising / productCount : 0;
-        const avgDeductions = productCount > 0 ? totalDeductions / productCount : 0;
-        const avgPrice = productCount > 0 ? totalPrice / productCount : 0;
-        
-        // Update expenses state with average values
-        setExpenses({
-          logistics: avgLogistics,
-          storage: avgStorage,
-          penalties: avgPenalties,
-          acceptance: avgAcceptance,
-          advertising: avgAdvertising,
-          deductions: avgDeductions,
-          price: avgPrice
-        });
-        
-        // Set cost price from the product with highest sales
-        if (productWithHighestSales) {
-          setCostPrice(productWithHighestSales.costPrice?.toString() || "0");
+        // Also check analytics data for highest values
+        if (statsData.currentPeriod && statsData.currentPeriod.expenses) {
+          maxLogistics = Math.max(maxLogistics, statsData.currentPeriod.expenses.logistics || 0);
+          maxStorage = Math.max(maxStorage, statsData.currentPeriod.expenses.storage || 0);
+          maxPenalties = Math.max(maxPenalties, statsData.currentPeriod.expenses.penalties || 0);
+          maxAcceptance = Math.max(maxAcceptance, statsData.currentPeriod.expenses.acceptance || 0);
+          maxAdvertising = Math.max(maxAdvertising, statsData.currentPeriod.expenses.advertising || 0);
+          maxDeductions = Math.max(maxDeductions, statsData.currentPeriod.expenses.deductions || 0);
         }
         
-        console.log('Average expenses calculated:', {
-          logistics: avgLogistics,
-          storage: avgStorage,
-          penalties: avgPenalties,
-          acceptance: avgAcceptance,
-          advertising: avgAdvertising,
-          deductions: avgDeductions,
-          productCount: productCount
+        // Update expenses state with highest values
+        setExpenses({
+          logistics: maxLogistics,
+          storage: maxStorage,
+          penalties: maxPenalties,
+          acceptance: maxAcceptance,
+          advertising: maxAdvertising,
+          deductions: maxDeductions,
+          price: productWithHighestTotal?.price || 0
+        });
+        
+        // Set cost price from the product with highest expenses
+        if (productWithHighestTotal) {
+          setCostPrice(productWithHighestTotal.costPrice?.toString() || "0");
+        }
+        
+        console.log('Highest expenses found:', {
+          logistics: maxLogistics,
+          storage: maxStorage,
+          penalties: maxPenalties,
+          acceptance: maxAcceptance,
+          advertising: maxAdvertising,
+          deductions: maxDeductions
         });
       }
     } catch (error) {
-      console.error('Error fetching average expenses:', error);
+      console.error('Error fetching highest expenses:', error);
       toast({
         title: "Ошибка",
         description: "Не удалось загрузить данные о расходах",
@@ -244,40 +236,40 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
             />
           </div>
           <Card className="p-4">
-            <h3 className="text-sm font-medium mb-2">Средние расходы:</h3>
+            <h3 className="text-sm font-medium mb-2">Максимальные расходы:</h3>
             <div className="space-y-2">
               {expenses.price !== undefined && expenses.price > 0 && (
                 <div className="flex justify-between">
-                  <span>Ср. цена товара:</span>
+                  <span>Цена товара:</span>
                   <span>{expenses.price.toFixed(2)} ₽</span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span>Ср. логистика:</span>
+                <span>Логистика:</span>
                 <span>{expenses.logistics.toFixed(2)} ₽</span>
               </div>
               <div className="flex justify-between">
-                <span>Ср. хранение:</span>
+                <span>Хранение:</span>
                 <span>{expenses.storage.toFixed(2)} ₽</span>
               </div>
               <div className="flex justify-between">
-                <span>Ср. штрафы:</span>
+                <span>Штрафы:</span>
                 <span>{expenses.penalties.toFixed(2)} ₽</span>
               </div>
               <div className="flex justify-between">
-                <span>Ср. приемка:</span>
+                <span>Приемка:</span>
                 <span>{expenses.acceptance.toFixed(2)} ₽</span>
               </div>
               <div className="flex justify-between">
-                <span>Ср. реклама:</span>
+                <span>Реклама:</span>
                 <span>{expenses.advertising.toFixed(2)} ₽</span>
               </div>
               <div className="flex justify-between">
-                <span>Ср. удержания:</span>
+                <span>Удержания:</span>
                 <span>{expenses.deductions.toFixed(2)} ₽</span>
               </div>
               <div className="flex justify-between font-medium border-t pt-2">
-                <span>Всего ср. расходов:</span>
+                <span>Всего расходов:</span>
                 <span>{(
                   expenses.logistics + 
                   expenses.storage + 

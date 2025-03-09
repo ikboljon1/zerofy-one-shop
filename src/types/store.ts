@@ -1,3 +1,4 @@
+
 import { WildberriesResponse as ApiWildberriesResponse } from "@/services/wildberriesApi";
 
 export type Marketplace = "Wildberries" | "Ozon" | "Yandexmarket" | "Uzum";
@@ -103,30 +104,4 @@ export interface PaymentHistoryItem {
   amount: number;
   period: number;
   date: string;
-}
-
-// Интерфейс для данных по продукту с обновленной структурой
-export interface ProductDataWithStats {
-  nmID: number;
-  vendorCode: string;
-  brand: string;
-  title: string;
-  photos: Array<{
-    big: string;
-    c246x328: string;
-  }>;
-  costPrice?: number;
-  price?: number;
-  discountedPrice?: number;
-  clubPrice?: number;
-  quantity?: number;
-  expenses?: {
-    logistics: number;
-    storage: number;
-    penalties: number;
-    acceptance: number;
-    deductions?: number;
-    ppvz_for_pay?: number;
-    retail_price?: number;
-  };
 }

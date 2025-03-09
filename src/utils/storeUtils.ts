@@ -1,372 +1,520 @@
+import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY, ORDERS_STORAGE_KEY, SALES_STORAGE_KEY, WildberriesOrder, WildberriesSale } from "@/types/store";
+import { fetchWildberriesStats, fetchWildberriesOrders, fetchWildberriesSales } from "@/services/wildberriesApi";
+import axios from "axios";
 
-import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY, ORDERS_STORAGE_KEY, SALES_STORAGE_KEY } from "@/types/store";
-import { fetchWildberriesStats } from "@/services/wildberriesApi";
-
-// Функция для получения выбранного магазина
-export const getSelectedStore = (): { id: string; apiKey: string } | null => {
-  try {
-    const storesStr = localStorage.getItem(STORES_STORAGE_KEY);
-    if (!storesStr) return null;
-    
-    const stores = JSON.parse(storesStr);
-    const selectedStore = stores.find((store: Store) => store.isSelected);
-    
-    if (selectedStore) {
-      return {
-        id: selectedStore.id,
-        apiKey: selectedStore.apiKey
-      };
-    }
-    
-    return null;
-  } catch (error) {
-    console.error('Error getting selected store:', error);
-    return null;
-  }
+export const getLastWeekDateRange = () => {
+  const now = new Date();
+  const lastWeek = new Date(now);
+  lastWeek.setDate(now.getDate() - 7);
+  return { from: lastWeek, to: now };
 };
 
-// Функция для получения данных о прибыльности товаров
+export const loadStores = (): Store[] => {
+  const savedStores = localStorage.getItem(STORES_STORAGE_KEY);
+  return savedStores ? JSON.parse(savedStores) : [];
+};
+
+export const saveStores = (stores: Store[]): void => {
+  const storesWithTimestamp = {
+    stores,
+    timestamp: new Date().toISOString()
+  };
+  localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(stores));
+  localStorage.setItem(`${STORES_STORAGE_KEY}_timestamp`, Date.now().toString());
+  
+  const selectedStore = stores.find(s => s.isSelected);
+  if (selectedStore) {
+    localStorage.setItem('last_selected_store', JSON.stringify({
+      storeId: selectedStore.id,
+      timestamp: Date.now()
+    }));
+  }
+  
+  window.dispatchEvent(new CustomEvent('stores-updated', { 
+    detail: { stores, timestamp: Date.now() } 
+  }));
+};
+
+export const refreshStoreStats = async (store: Store): Promise<Store | null> => {
+  if (store.marketplace === "Wildberries") {
+    try {
+      const { from, to } = getLastWeekDateRange();
+      const stats = await fetchWildberriesStats(store.apiKey, from, to);
+      if (stats) {
+        const updatedStore = { 
+          ...store, 
+          stats,
+          lastFetchDate: new Date().toISOString() 
+        };
+        
+        const deductionsTimeline = stats.dailySales?.map((day: any) => {
+          const daysCount = stats.dailySales.length || 1;
+          const logistic = (stats.currentPeriod.expenses.logistics || 0) / daysCount;
+          const storage = (stats.currentPeriod.expenses.storage || 0) / daysCount;
+          const penalties = (stats.currentPeriod.expenses.penalties || 0) / daysCount;
+          const acceptance = (stats.currentPeriod.expenses.acceptance || 0) / daysCount;
+          const advertising = (stats.currentPeriod.expenses.advertising || 0) / daysCount;
+          const deductions = (stats.currentPeriod.expenses.deductions || 0) / daysCount;
+          
+          return {
+            date: typeof day.date === 'string' ? day.date.split('T')[0] : new Date().toISOString().split('T')[0],
+            logistic,
+            storage,
+            penalties,
+            acceptance,
+            advertising,
+            deductions
+          };
+        }) || [];
+        
+        const analyticsData = {
+          storeId: store.id,
+          dateFrom: from.toISOString(),
+          dateTo: to.toISOString(),
+          data: stats,
+          penalties: [],
+          returns: [],
+          deductions: [],
+          deductionsTimeline,
+          productAdvertisingData: [],
+          advertisingBreakdown: { search: 0 },
+          timestamp: Date.now()
+        };
+        
+        // Сохраняем данные в базу через API
+        try {
+          await axios.post('http://localhost:3001/api/store-stats', {
+            storeId: store.id,
+            dateFrom: from.toISOString(),
+            dateTo: to.toISOString(),
+            data: stats
+          });
+          
+          await axios.post('http://localhost:3001/api/analytics', analyticsData);
+        } catch (error) {
+          console.error('Error saving stats to DB:', error);
+          // В случае ошибки сохраняем в localStorage как резервный вариант
+          localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
+        }
+        
+        return updatedStore;
+      }
+    } catch (error) {
+      console.error('Error refreshing stats:', error);
+      return store;
+    }
+  }
+  return store;
+};
+
+export const getOrdersData = async (storeId: string) => {
+  try {
+    // Пытаемся получить данные из БД
+    const response = await axios.get(`http://localhost:3001/api/orders/${storeId}`);
+    if (response.data) {
+      return {
+        orders: response.data.orders,
+        warehouseDistribution: response.data.warehouse_distribution,
+        regionDistribution: response.data.region_distribution
+      };
+    }
+  } catch (error) {
+    console.error('Error fetching orders from DB:', error);
+    // Если не удалось получить из БД, используем localStorage
+    const storedData = localStorage.getItem(`${ORDERS_STORAGE_KEY}_${storeId}`);
+    if (storedData) {
+      return JSON.parse(storedData);
+    }
+  }
+  return null;
+};
+
+export const getSalesData = async (storeId: string) => {
+  try {
+    // Пытаемся получить данные из БД
+    const response = await axios.get(`http://localhost:3001/api/sales/${storeId}`);
+    if (response.data) {
+      return {
+        sales: response.data.sales
+      };
+    }
+  } catch (error) {
+    console.error('Error fetching sales from DB:', error);
+    // Если не удалось получить из БД, используем localStorage
+    const storedData = localStorage.getItem(`${SALES_STORAGE_KEY}_${storeId}`);
+    if (storedData) {
+      return JSON.parse(storedData);
+    }
+  }
+  return null;
+};
+
+export const fetchAndUpdateOrders = async (store: Store) => {
+  if (store.marketplace === "Wildberries") {
+    try {
+      const { from } = getLastWeekDateRange();
+      const orders = await fetchWildberriesOrders(store.apiKey, from);
+      
+      if (orders && orders.length > 0) {
+        const warehouseCounts: Record<string, number> = {};
+        const totalOrders = orders.length;
+        
+        orders.forEach(order => {
+          if (order.warehouseName) {
+            warehouseCounts[order.warehouseName] = (warehouseCounts[order.warehouseName] || 0) + 1;
+          }
+        });
+        
+        const warehouseDistribution = Object.entries(warehouseCounts)
+          .map(([name, count]) => ({
+            name,
+            count,
+            percentage: (count / totalOrders) * 100
+          }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5);
+        
+        const regionCounts: Record<string, number> = {};
+        
+        orders.forEach(order => {
+          if (order.regionName) {
+            regionCounts[order.regionName] = (regionCounts[order.regionName] || 0) + 1;
+          }
+        });
+        
+        const regionDistribution = Object.entries(regionCounts)
+          .map(([name, count]) => ({
+            name,
+            count,
+            percentage: (count / totalOrders) * 100
+          }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5);
+        
+        const ordersData = {
+          storeId: store.id,
+          dateFrom: from.toISOString(),
+          dateTo: new Date().toISOString(),
+          orders,
+          warehouseDistribution,
+          regionDistribution,
+          timestamp: Date.now()
+        };
+        
+        // Сохраняем в БД
+        try {
+          await axios.post('http://localhost:3001/api/orders', ordersData);
+        } catch (error) {
+          console.error('Error saving orders to DB:', error);
+          // Если не удалось сохранить в БД, используем localStorage
+          localStorage.setItem(`${ORDERS_STORAGE_KEY}_${store.id}`, JSON.stringify(ordersData));
+        }
+        
+        return {
+          orders,
+          warehouseDistribution,
+          regionDistribution
+        };
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    }
+  }
+  return null;
+};
+
+export const fetchAndUpdateSales = async (store: Store) => {
+  if (store.marketplace === "Wildberries") {
+    try {
+      const { from } = getLastWeekDateRange();
+      const sales = await fetchWildberriesSales(store.apiKey, from);
+      
+      if (sales && sales.length > 0) {
+        const salesData = {
+          storeId: store.id,
+          dateFrom: from.toISOString(),
+          dateTo: new Date().toISOString(),
+          sales,
+          timestamp: Date.now()
+        };
+        
+        // Сохраняем в БД
+        try {
+          await axios.post('http://localhost:3001/api/sales', salesData);
+        } catch (error) {
+          console.error('Error saving sales to DB:', error);
+          // Если не удалось сохранить в БД, используем localStorage
+          localStorage.setItem(`${SALES_STORAGE_KEY}_${store.id}`, JSON.stringify(salesData));
+        }
+        
+        return sales;
+      }
+    } catch (error) {
+      console.error('Error fetching sales:', error);
+    }
+  }
+  return null;
+};
+
 export const getProductProfitabilityData = (storeId: string) => {
   try {
-    const profitabilityKey = `profitability_${storeId}`;
-    const profitabilityStr = localStorage.getItem(profitabilityKey);
-    
-    if (!profitabilityStr) return null;
-    
-    return JSON.parse(profitabilityStr);
-  } catch (error) {
-    console.error('Error getting product profitability data:', error);
-    return null;
-  }
-};
-
-// Функция для получения данных о статистике магазина
-export const getStoreStats = (storeId: string) => {
-  try {
-    const statsKey = `${STATS_STORAGE_KEY}_${storeId}`;
-    const statsStr = localStorage.getItem(statsKey);
-    
-    if (!statsStr) return null;
-    
-    const stats = JSON.parse(statsStr);
-    
-    // Если есть данные о ежедневных продажах, аналитика расходов и т.д. - обрабатываем их
-    if (stats.dailySales) {
-      stats.dailySales = stats.dailySales.map((item: any) => ({
-        ...item
-      }));
+    // Try to get data from localStorage first (for faster response)
+    try {
+      const storedData = localStorage.getItem(`products_detailed_${storeId}`);
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+        return {
+          profitableProducts: parsedData.profitableProducts?.slice(0, 3) || [],
+          unprofitableProducts: parsedData.unprofitableProducts?.slice(0, 3) || [],
+          updateDate: parsedData.updateDate
+        };
+      }
+      
+      const analyticsData = localStorage.getItem(`marketplace_analytics_${storeId}`);
+      if (analyticsData) {
+        const parsedData = JSON.parse(analyticsData);
+        return {
+          profitableProducts: (parsedData.data.topProfitableProducts || []).slice(0, 3),
+          unprofitableProducts: (parsedData.data.topUnprofitableProducts || []).slice(0, 3),
+          updateDate: parsedData.dateTo
+        };
+      }
+    } catch (innerError) {
+      console.error('Error parsing local storage data:', innerError);
     }
     
-    if (stats.currentPeriod && stats.currentPeriod.expenses) {
-      stats.currentPeriod.expenses = {
-        logistics: stats.currentPeriod.expenses.logistics || 0,
-        storage: stats.currentPeriod.expenses.storage || 0,
-        penalties: stats.currentPeriod.expenses.penalties || 0,
-        acceptance: stats.currentPeriod.expenses.acceptance || 0,
-        advertising: stats.currentPeriod.expenses.advertising || 0,
-        deductions: stats.currentPeriod.expenses.deductions || 0,
-        total: stats.currentPeriod.expenses.total || 0
-      };
+    // Then try to fetch from the API (results will be used in next render)
+    axios.get(`http://localhost:3001/api/analytics/${storeId}`)
+      .then(response => {
+        if (response.data && response.data.data) {
+          const data = {
+            profitableProducts: response.data.data.topProfitableProducts?.slice(0, 3) || [],
+            unprofitableProducts: response.data.data.topUnprofitableProducts?.slice(0, 3) || [],
+            updateDate: response.data.date_to
+          };
+          // Cache the data for future use
+          localStorage.setItem(`products_detailed_${storeId}`, JSON.stringify(data));
+          return data;
+        }
+        return null;
+      })
+      .catch(error => {
+        console.error('Error fetching product profitability data from DB:', error);
+        return null;
+      });
+  } catch (error) {
+    console.error('Error in getProductProfitabilityData:', error);
+  }
+  
+  return {
+    profitableProducts: [],
+    unprofitableProducts: [],
+    updateDate: null
+  };
+};
+
+export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
+  if (forceRefresh) {
+    console.log('Forced refresh requested, returning default structure');
+    return {
+      data: null,
+      penalties: [],
+      returns: [],
+      deductions: [],
+      deductionsTimeline: Array.from({ length: 7 }, (_, i) => ({
+        date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        logistic: 0,
+        storage: 0, 
+        penalties: 0,
+        acceptance: 0,
+        advertising: 0,
+        deductions: 0
+      })),
+      productAdvertisingData: [],
+      advertisingBreakdown: { search: 0 },
+      timestamp: Date.now()
+    };
+  }
+  
+  try {
+    // Try to get data from localStorage first
+    try {
+      const key = `marketplace_analytics_${storeId}`;
+      const storedData = localStorage.getItem(key);
+      
+      if (storedData) {
+        let parsedData = JSON.parse(storedData);
+        
+        if (!parsedData.timestamp) {
+          parsedData.timestamp = Date.now();
+        }
+        
+        if (!parsedData.deductionsTimeline || !Array.isArray(parsedData.deductionsTimeline) || parsedData.deductionsTimeline.length === 0) {
+          console.log("Creating default deductionsTimeline data");
+          parsedData.deductionsTimeline = Array.from({ length: 7 }, (_, i) => ({
+            date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            logistic: 0,
+            storage: 0, 
+            penalties: 0,
+            acceptance: 0,
+            advertising: 0,
+            deductions: 0
+          }));
+        } else {
+          parsedData.deductionsTimeline = parsedData.deductionsTimeline.map((item: any) => ({
+            date: item.date || new Date().toISOString().split('T')[0],
+            logistic: item.logistic || 0,
+            storage: item.storage || 0,
+            penalties: item.penalties || 0,
+            acceptance: item.acceptance || 0,
+            advertising: item.advertising || 0,
+            deductions: item.deductions || 0
+          }));
+        }
+        
+        if (!parsedData.penalties || !Array.isArray(parsedData.penalties)) {
+          parsedData.penalties = [];
+        }
+        
+        if (!parsedData.returns || !Array.isArray(parsedData.returns)) {
+          parsedData.returns = [];
+        }
+        
+        if (!parsedData.deductions || !Array.isArray(parsedData.deductions)) {
+          parsedData.deductions = [];
+        }
+        
+        if (!parsedData.productAdvertisingData || !Array.isArray(parsedData.productAdvertisingData)) {
+          parsedData.productAdvertisingData = [];
+        }
+        
+        if (!parsedData.advertisingBreakdown) {
+          parsedData.advertisingBreakdown = { search: 0 };
+        }
+        
+        if (parsedData.data && parsedData.data.currentPeriod && parsedData.data.currentPeriod.expenses) {
+          parsedData.data.currentPeriod.expenses.advertising = parsedData.data.currentPeriod.expenses.advertising || 0;
+          parsedData.data.currentPeriod.expenses.acceptance = parsedData.data.currentPeriod.expenses.acceptance || 0;
+          parsedData.data.currentPeriod.expenses.deductions = parsedData.data.currentPeriod.expenses.deductions || 0;
+        }
+        
+        return parsedData;
+      }
+    } catch (localError) {
+      console.error('Error parsing localStorage analytics data:', localError);
     }
     
-    return stats;
+    // Then try to fetch from the API (results will be used in next render)
+    axios.get(`http://localhost:3001/api/analytics/${storeId}`)
+      .then(response => {
+        if (response.data) {
+          const parsedData = {
+            data: response.data.data,
+            penalties: response.data.penalties || [],
+            returns: response.data.returns || [],
+            deductions: response.data.deductions || [],
+            deductionsTimeline: response.data.deductions_timeline || [],
+            productAdvertisingData: response.data.product_advertising_data || [],
+            advertisingBreakdown: response.data.advertising_breakdown || { search: 0 },
+            timestamp: response.data.timestamp
+          };
+          
+          if (!parsedData.deductionsTimeline || !Array.isArray(parsedData.deductionsTimeline) || parsedData.deductionsTimeline.length === 0) {
+            parsedData.deductionsTimeline = Array.from({ length: 7 }, (_, i) => ({
+              date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              logistic: 0,
+              storage: 0, 
+              penalties: 0,
+              acceptance: 0,
+              advertising: 0,
+              deductions: 0
+            }));
+          }
+          
+          // Cache the data for future use
+          localStorage.setItem(`marketplace_analytics_${storeId}`, JSON.stringify(parsedData));
+          return parsedData;
+        }
+        return null;
+      })
+      .catch(error => {
+        console.error('Error fetching analytics data from DB:', error);
+        return null;
+      });
   } catch (error) {
-    console.error('Error getting store stats:', error);
-    return null;
+    console.error('Error in getAnalyticsData:', error);
   }
+  
+  // Return default structure if nothing was found
+  return {
+    data: null,
+    penalties: [],
+    returns: [],
+    deductions: [],
+    deductionsTimeline: Array.from({ length: 7 }, (_, i) => ({
+      date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      logistic: 0,
+      storage: 0, 
+      penalties: 0,
+      acceptance: 0,
+      advertising: 0,
+      deductions: 0
+    })),
+    productAdvertisingData: [],
+    advertisingBreakdown: { search: 0 },
+    timestamp: Date.now()
+  };
 };
 
-// Функция для получения данных о заказах
-export const getOrdersData = (storeId: string) => {
-  try {
-    const key = `${ORDERS_STORAGE_KEY}_${storeId}`;
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : [];
-  } catch (error) {
-    console.error('Error getting orders data:', error);
-    return [];
-  }
+export const getStoresLastUpdateTime = (): number => {
+  const timestamp = localStorage.getItem(`${STORES_STORAGE_KEY}_timestamp`);
+  return timestamp ? parseInt(timestamp, 10) : 0;
 };
 
-// Функция для получения данных о продажах
-export const getSalesData = (storeId: string) => {
-  try {
-    const key = `${SALES_STORAGE_KEY}_${storeId}`;
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : [];
-  } catch (error) {
-    console.error('Error getting sales data:', error);
-    return [];
-  }
-};
-
-// Функция для загрузки списка магазинов
-export const loadStores = (): Store[] => {
-  try {
-    const storesStr = localStorage.getItem(STORES_STORAGE_KEY);
-    return storesStr ? JSON.parse(storesStr) : [];
-  } catch (error) {
-    console.error('Error loading stores:', error);
-    return [];
-  }
-};
-
-// Функция для сохранения списка магазинов
-export const saveStores = (stores: Store[]) => {
-  try {
-    localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(stores));
-  } catch (error) {
-    console.error('Error saving stores:', error);
-  }
-};
-
-// Функция для обеспечения сохранения выбранного магазина между сессиями
 export const ensureStoreSelectionPersistence = (): Store[] => {
-  try {
-    const stores = loadStores();
+  const stores = loadStores();
+  
+  const hasSelectedStore = stores.some(store => store.isSelected);
+  
+  if (!hasSelectedStore && stores.length > 0) {
+    const lastSelectedStoreData = localStorage.getItem('last_selected_store');
     
-    // Если нет магазинов или уже есть выбранный магазин, просто возвращаем
-    if (stores.length === 0 || stores.some(store => store.isSelected)) {
-      return stores;
+    if (lastSelectedStoreData) {
+      try {
+        const { storeId } = JSON.parse(lastSelectedStoreData);
+        const updatedStores = stores.map(store => ({
+          ...store,
+          isSelected: store.id === storeId
+        }));
+        
+        saveStores(updatedStores);
+        return updatedStores;
+      } catch (error) {
+        console.error('Error restoring store selection:', error);
+      }
     }
     
-    // Проверяем, есть ли сохраненный выбор из прошлой сессии
-    const lastSelectedStoreStr = localStorage.getItem('last_selected_store');
-    if (lastSelectedStoreStr) {
-      const { storeId } = JSON.parse(lastSelectedStoreStr);
-      
-      // Если такой магазин существует, делаем его выбранным
-      const updatedStores = stores.map(store => ({
-        ...store,
-        isSelected: store.id === storeId
-      }));
-      
-      // Сохраняем обновленный список
-      saveStores(updatedStores);
-      
-      return updatedStores;
-    }
-    
-    // Если нет сохраненного выбора, делаем первый магазин выбранным
     if (stores.length > 0) {
       const updatedStores = stores.map((store, index) => ({
         ...store,
         isSelected: index === 0
       }));
       
-      // Сохраняем обновленный список
       saveStores(updatedStores);
-      
       return updatedStores;
     }
-    
-    return stores;
-  } catch (error) {
-    console.error('Error ensuring store selection persistence:', error);
-    return loadStores();
   }
+  
+  return stores;
 };
 
-// Функция для обновления статистики магазина
-export const refreshStoreStats = async (store: Store): Promise<Store | null> => {
+// Функция для получения выбранного магазина
+export const getSelectedStore = (): Store | null => {
   try {
-    const dateFrom = new Date();
-    dateFrom.setDate(dateFrom.getDate() - 7); // Получаем данные за последние 7 дней
-    
-    const dateTo = new Date();
-    
-    const stats = await fetchWildberriesStats(store.apiKey, dateFrom, dateTo);
-    
-    if (stats) {
-      // Добавляем netProfit в currentPeriod и previousPeriod
-      if (stats.currentPeriod) {
-        stats.currentPeriod.netProfit = stats.currentPeriod.profit || 0;
-      }
-      
-      if (stats.previousPeriod) {
-        stats.previousPeriod.netProfit = stats.previousPeriod.profit || 0;
-      }
-      
-      return {
-        ...store,
-        stats,
-        lastFetchDate: new Date().toISOString()
-      };
-    }
-    
-    return null;
+    const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
+    return stores.find((store: Store) => store.isSelected) || null;
   } catch (error) {
-    console.error('Error refreshing store stats:', error);
+    console.error('Error getting selected store:', error);
     return null;
   }
-};
-
-// Функция для загрузки и обновления данных о заказах
-export const fetchAndUpdateOrders = async (store: Store) => {
-  // Здесь будет реальный запрос к API для получения данных о заказах
-  // Для демо-версии создаем мок данные
-  const mockOrders = generateMockOrders(50);
-  
-  // Создаем объект с данными заказов и аналитикой
-  const orderData = {
-    orders: mockOrders,
-    warehouseDistribution: calculateWarehouseDistribution(mockOrders),
-    regionDistribution: calculateRegionDistribution(mockOrders)
-  };
-  
-  const key = `${ORDERS_STORAGE_KEY}_${store.id}`;
-  localStorage.setItem(key, JSON.stringify(orderData));
-  
-  console.log('Orders data updated for store:', store.id);
-  return orderData;
-};
-
-// Функция для загрузки и обновления данных о продажах
-export const fetchAndUpdateSales = async (store: Store) => {
-  // Здесь будет реальный запрос к API для получения данных о продажах
-  // Для демо-версии создаем мок данные
-  const mockSales = generateMockSales(100);
-  
-  // Создаем объект с данными продаж
-  const salesData = {
-    sales: mockSales
-  };
-  
-  const key = `${SALES_STORAGE_KEY}_${store.id}`;
-  localStorage.setItem(key, JSON.stringify(salesData));
-  
-  console.log('Sales data updated for store:', store.id);
-  return mockSales;
-};
-
-// Функция для получения аналитических данных
-export const getAnalyticsData = (storeId: string) => {
-  try {
-    const key = `marketplace_analytics_${storeId}`;
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : null;
-  } catch (error) {
-    console.error('Error getting analytics data:', error);
-    return null;
-  }
-};
-
-// Вспомогательные функции для расчета распределения по складам и регионам
-const calculateWarehouseDistribution = (orders: any[]) => {
-  const warehouseCounts: Record<string, number> = {};
-  const totalOrders = orders.length;
-
-  orders.forEach(order => {
-    if (order.warehouseName) {
-      warehouseCounts[order.warehouseName] = (warehouseCounts[order.warehouseName] || 0) + 1;
-    }
-  });
-
-  return Object.entries(warehouseCounts)
-    .map(([name, count]) => ({
-      name,
-      count,
-      percentage: (count / totalOrders) * 100
-    }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
-};
-
-const calculateRegionDistribution = (orders: any[]) => {
-  const regionCounts: Record<string, number> = {};
-  const totalOrders = orders.length;
-
-  orders.forEach(order => {
-    if (order.regionName) {
-      regionCounts[order.regionName] = (regionCounts[order.regionName] || 0) + 1;
-    }
-  });
-
-  return Object.entries(regionCounts)
-    .map(([name, count]) => ({
-      name,
-      count,
-      percentage: (count / totalOrders) * 100
-    }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
-};
-
-// Генерация мок-данных для заказов
-const generateMockOrders = (count: number) => {
-  const mockOrders = [];
-  for (let i = 0; i < count; i++) {
-    mockOrders.push({
-      date: new Date().toISOString(),
-      lastChangeDate: new Date().toISOString(),
-      warehouseName: ["Подольск", "Коледино", "Электросталь", "Невинномысск", "Казань"][Math.floor(Math.random() * 5)],
-      warehouseType: Math.random() > 0.5 ? "Основной" : "Транзитный",
-      countryName: "Россия",
-      oblastOkrugName: ["Московская область", "Ставропольский край", "Республика Татарстан"][Math.floor(Math.random() * 3)],
-      regionName: ["Москва", "Санкт-Петербург", "Казань", "Екатеринбург", "Новосибирск"][Math.floor(Math.random() * 5)],
-      supplierArticle: `WB-PRODUCT-${i}`,
-      nmId: Math.floor(Math.random() * 100000) + 10000,
-      barcode: `1234567890${i}`,
-      category: ["Одежда", "Обувь", "Аксессуары", "Товары для дома", "Электроника"][Math.floor(Math.random() * 5)],
-      subject: ["Футболки", "Джинсы", "Куртки", "Кроссовки", "Часы"][Math.floor(Math.random() * 5)],
-      brand: ["Nike", "Adidas", "Puma", "Reebok", "New Balance"][Math.floor(Math.random() * 5)],
-      techSize: ["S", "M", "L", "XL", "XXL"][Math.floor(Math.random() * 5)],
-      incomeID: Math.floor(Math.random() * 1000000),
-      isSupply: Math.random() > 0.7,
-      isRealization: Math.random() > 0.3,
-      totalPrice: Math.floor(Math.random() * 5000) + 500,
-      discountPercent: Math.floor(Math.random() * 30),
-      spp: Math.floor(Math.random() * 10),
-      finishedPrice: Math.floor(Math.random() * 4000) + 400,
-      priceWithDisc: Math.floor(Math.random() * 3500) + 300,
-      isCancel: Math.random() > 0.8,
-      isReturn: Math.random() > 0.9,
-      cancelDate: Math.random() > 0.8 ? new Date().toISOString() : "",
-      orderType: Math.random() > 0.5 ? "Клиентский" : "Возврат",
-      sticker: `WB-${Math.floor(Math.random() * 100000)}`,
-      gNumber: `G-${Math.floor(Math.random() * 1000000)}`,
-      srid: `WB-ORDER-${i}`
-    });
-  }
-  return mockOrders;
-};
-
-// Генерация мок-данных для продаж
-const generateMockSales = (count: number) => {
-  const mockSales = [];
-  for (let i = 0; i < count; i++) {
-    mockSales.push({
-      date: new Date().toISOString(),
-      lastChangeDate: new Date().toISOString(),
-      warehouseName: ["Подольск", "Коледино", "Электросталь", "Невинномысск", "Казань"][Math.floor(Math.random() * 5)],
-      warehouseType: Math.random() > 0.5 ? "Основной" : "Транзитный",
-      countryName: "Россия",
-      oblastOkrugName: ["Московская область", "Ставропольский край", "Республика Татарстан"][Math.floor(Math.random() * 3)],
-      regionName: ["Москва", "Санкт-Петербург", "Казань", "Екатеринбург", "Новосибирск"][Math.floor(Math.random() * 5)],
-      supplierArticle: `WB-PRODUCT-${i}`,
-      nmId: Math.floor(Math.random() * 100000) + 10000,
-      barcode: `1234567890${i}`,
-      category: ["Одежда", "Обувь", "Аксессуары", "Товары для дома", "Электроника"][Math.floor(Math.random() * 5)],
-      subject: ["Футболки", "Джинсы", "Куртки", "Кроссовки", "Часы"][Math.floor(Math.random() * 5)],
-      brand: ["Nike", "Adidas", "Puma", "Reebok", "New Balance"][Math.floor(Math.random() * 5)],
-      techSize: ["S", "M", "L", "XL", "XXL"][Math.floor(Math.random() * 5)],
-      incomeID: Math.floor(Math.random() * 1000000),
-      isSupply: Math.random() > 0.7,
-      isRealization: Math.random() > 0.3,
-      totalPrice: Math.floor(Math.random() * 5000) + 500,
-      discountPercent: Math.floor(Math.random() * 30),
-      spp: Math.floor(Math.random() * 10),
-      paymentSaleAmount: Math.floor(Math.random() * 4000) + 400,
-      forPay: Math.floor(Math.random() * 3800) + 380,
-      finishedPrice: Math.floor(Math.random() * 4000) + 400,
-      priceWithDisc: Math.floor(Math.random() * 3500) + 300,
-      isReturn: Math.random() > 0.9,
-      saleID: `WB-SALE-${i}`,
-      orderType: Math.random() > 0.5 ? "Клиентский" : "Возврат",
-      sticker: `WB-${Math.floor(Math.random() * 100000)}`,
-      gNumber: `G-${Math.floor(Math.random() * 1000000)}`,
-      srid: `WB-SALE-${i}`
-    });
-  }
-  return mockSales;
 };

@@ -94,7 +94,7 @@ export function StoreCard({
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Чистая прибыль:</span>
-                <span className="font-medium">{formatCurrency(store.stats.currentPeriod.profit)}</span>
+                <span className="font-medium">{formatCurrency(store.stats.currentPeriod.netProfit)}</span>
               </div>
             </>
           )}
