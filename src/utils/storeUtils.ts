@@ -1,3 +1,4 @@
+
 import { Store, NewStore, STATS_STORAGE_KEY } from "@/types/store";
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
 
@@ -51,14 +52,22 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
 };
 
 // Проверка валидности API ключа
-export const validateApiKey = async (apiKey: string): Promise<boolean> => {
+export const validateApiKey = async (apiKey: string): Promise<{ isValid: boolean; errorMessage?: string }> => {
   try {
     // Здесь можно добавить реальную проверку API ключа через запрос к API маркетплейса
     // Для примера просто проверяем, что ключ не пустой и имеет минимальную длину
-    return apiKey && apiKey.length >= 8;
+    if (!apiKey) {
+      return { isValid: false, errorMessage: "API ключ не может быть пустым" };
+    }
+    
+    if (apiKey.length < 8) {
+      return { isValid: false, errorMessage: "API ключ должен содержать минимум 8 символов" };
+    }
+    
+    return { isValid: true };
   } catch (error) {
     console.error("Ошибка при проверке API ключа:", error);
-    return false;
+    return { isValid: false, errorMessage: "Произошла ошибка при проверке API ключа" };
   }
 };
 
