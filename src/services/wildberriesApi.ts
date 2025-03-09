@@ -7,7 +7,7 @@ export interface ExpensesData {
   acceptance: number;
   advertising: number;
   deductions: number;
-  total?: number;
+  total: number; // Changed from optional to required
 }
 
 export interface PeriodData {
@@ -15,17 +15,17 @@ export interface PeriodData {
   income: number;
   expenses: ExpensesData;
   profit: number;
-  sales?: number;
-  transferred?: number;
-  netProfit?: number;
+  sales: number; // Changed from optional to required
+  transferred: number; // Changed from optional to required
+  netProfit: number; // Changed from optional to required
 }
 
 export interface SalesData {
   date: string;
   orderCount: number;
   profit: number;
-  sales?: number;
-  previousSales?: number;
+  sales: number; // Changed from optional to required
+  previousSales: number; // Changed from optional to required
 }
 
 export interface ProductData {
@@ -34,8 +34,8 @@ export interface ProductData {
   sales: number;
   income: number;
   profit: number;
-  price?: string;
-  image?: string;
+  price: string; // Changed from optional to required
+  image: string; // Changed from optional to required
   quantitySold?: number;
   margin?: number;
   returnCount?: number;
@@ -63,13 +63,13 @@ export interface WildberriesResponse {
   previousPeriod: PeriodData;
   sales: SalesData[];
   products: ProductData[];
-  dailySales?: SalesData[];
-  productSales?: Array<{ subject_name: string; quantity: number }>;
-  productReturns?: ReturnData[];
-  topProfitableProducts?: ProductData[];
-  topUnprofitableProducts?: ProductData[];
-  penaltiesData?: PenaltyData[];
-  deductionsData?: DeductionData[];
+  dailySales: SalesData[];
+  productSales: Array<{ subject_name: string; quantity: number }>;
+  productReturns: ReturnData[];
+  topProfitableProducts: ProductData[];
+  topUnprofitableProducts: ProductData[];
+  penaltiesData: PenaltyData[];
+  deductionsData: DeductionData[];
 }
 
 // Mock API implementations
@@ -92,6 +92,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
         acceptance: Math.floor(Math.random() * 40000) + 4000,
         advertising: Math.floor(Math.random() * 60000) + 6000,
         deductions: Math.floor(Math.random() * 30000) + 3000,
+        total: 0 // Will calculate below
       },
       profit: 0,
       sales: Math.floor(Math.random() * 1500000) + 200000,
@@ -100,7 +101,10 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
     };
     
     // Calculate profit based on income and expenses
-    const totalExpenses = Object.values(currentPeriod.expenses).reduce((sum, expense) => sum + expense, 0);
+    const totalExpenses = Object.values(currentPeriod.expenses).reduce((sum, expense) => 
+      typeof expense === 'number' && expense !== currentPeriod.expenses.total ? sum + expense : sum, 
+      0
+    );
     currentPeriod.profit = currentPeriod.income - totalExpenses;
     currentPeriod.expenses.total = totalExpenses;
     
@@ -115,15 +119,19 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
         acceptance: Math.floor(currentPeriod.expenses.acceptance * 0.8),
         advertising: Math.floor(currentPeriod.expenses.advertising * 0.8),
         deductions: Math.floor(currentPeriod.expenses.deductions * 0.8),
+        total: 0 // Will calculate below
       },
       profit: 0,
-      sales: currentPeriod.sales ? Math.floor(currentPeriod.sales * 0.8) : 0,
-      transferred: currentPeriod.transferred ? Math.floor(currentPeriod.transferred * 0.8) : 0,
-      netProfit: currentPeriod.netProfit ? Math.floor(currentPeriod.netProfit * 0.8) : 0
+      sales: Math.floor(currentPeriod.sales * 0.8),
+      transferred: Math.floor(currentPeriod.transferred * 0.8),
+      netProfit: Math.floor(currentPeriod.netProfit * 0.8)
     };
     
     // Calculate previous period profit
-    const prevTotalExpenses = Object.values(previousPeriod.expenses).reduce((sum, expense) => sum + expense, 0);
+    const prevTotalExpenses = Object.values(previousPeriod.expenses).reduce((sum, expense) => 
+      typeof expense === 'number' && expense !== previousPeriod.expenses.total ? sum + expense : sum, 
+      0
+    );
     previousPeriod.profit = previousPeriod.income - prevTotalExpenses;
     previousPeriod.expenses.total = prevTotalExpenses;
     
@@ -145,7 +153,9 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       sales.push({
         date: dateStr,
         orderCount,
-        profit
+        profit,
+        sales: salesAmount,
+        previousSales: prevSalesAmount
       });
       
       dailySales.push({
@@ -170,6 +180,8 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
         sales: productSales,
         income,
         profit,
+        price: `${Math.floor(Math.random() * 5000) + 1000}`,
+        image: `https://images.wbstatic.net/big/new/${10000000 + i}/${10000000 + i + 1}-1.jpg`,
       });
     }
 
