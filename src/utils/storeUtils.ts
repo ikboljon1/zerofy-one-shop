@@ -77,11 +77,8 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     
-    // Updated to match the fetchWildberriesStats function signature
-    const stats = await fetchWildberriesStats(store.apiKey, {
-      dateFrom: weekAgo,
-      dateTo: now
-    });
+    // Fix: Pass date range according to the function signature in wildberriesApi.ts
+    const stats = await fetchWildberriesStats(store.apiKey, weekAgo, now);
     
     if (stats) {
       return {
@@ -125,11 +122,8 @@ export const fetchAndUpdateOrders = async (store: Store) => {
     const monthAgo = new Date();
     monthAgo.setDate(monthAgo.getDate() - 30);
     
-    // Updated to match the fetchWildberriesOrders function signature
-    const orders = await fetchWildberriesOrders(store.apiKey, {
-      dateFrom: monthAgo,
-      dateTo: now
-    });
+    // Fix: Pass dates directly as separate parameters, not as an object
+    const orders = await fetchWildberriesOrders(store.apiKey, monthAgo);
     
     if (orders && orders.length > 0) {
       const warehouseCounts: Record<string, number> = {};
@@ -193,11 +187,8 @@ export const fetchAndUpdateSales = async (store: Store) => {
     const monthAgo = new Date();
     monthAgo.setDate(monthAgo.getDate() - 30);
     
-    // Updated to match the fetchWildberriesSales function signature
-    const sales = await fetchWildberriesSales(store.apiKey, {
-      dateFrom: monthAgo,
-      dateTo: now
-    });
+    // Fix: Pass dates directly as separate parameters, not as an object
+    const sales = await fetchWildberriesSales(store.apiKey, monthAgo);
     
     if (sales && sales.length > 0) {
       const salesData = {
