@@ -491,9 +491,13 @@ export const ensureStoreSelectionPersistence = (): Store[] => {
   return stores;
 };
 
+/**
+ * Gets the currently selected store without modifying any selections
+ * This is used to prevent unwanted reselection of stores
+ */
 export const getSelectedStore = (): Store | null => {
   try {
-    const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
+    const stores = JSON.parse(localStorage.getItem(STORES_STORAGE_KEY) || '[]');
     return stores.find((store: Store) => store.isSelected) || null;
   } catch (error) {
     console.error('Error getting selected store:', error);

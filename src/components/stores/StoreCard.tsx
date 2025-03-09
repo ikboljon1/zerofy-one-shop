@@ -23,7 +23,7 @@ export function StoreCard({
   isLoading,
   canDelete = true
 }: StoreCardProps) {
-  // Add a function to handle selection changes with additional side effects
+  // Modified the handleSelectionChange function to prevent redundant selections
   const handleSelectionChange = () => {
     // Only allow selecting a store, not deselecting it
     // This ensures the checkbox stays checked until another store is selected
@@ -31,12 +31,7 @@ export function StoreCard({
       // Call the parent component's toggle selection handler
       onToggleSelection(store.id);
       
-      // Also trigger a refresh of stats
-      setTimeout(() => {
-        onRefreshStats(store);
-      }, 100);
-      
-      // Notify other components about the store selection change
+      // Dispatch selection event only when we're actually changing the selection
       window.dispatchEvent(new CustomEvent('store-selection-changed', { 
         detail: { storeId: store.id, selected: true, timestamp: Date.now() } 
       }));
@@ -47,6 +42,11 @@ export function StoreCard({
         timestamp: Date.now()
       }));
     }
+  };
+  
+  // Create a separate handler for refreshing stats without triggering reselection
+  const handleRefreshStats = () => {
+    onRefreshStats(store);
   };
 
   return (
@@ -101,7 +101,7 @@ export function StoreCard({
           <Button 
             variant="outline" 
             className="w-full mt-4"
-            onClick={() => onRefreshStats(store)}
+            onClick={handleRefreshStats}
             disabled={isLoading}
           >
             Обновить статистику

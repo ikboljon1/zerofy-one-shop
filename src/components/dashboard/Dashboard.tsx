@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
@@ -11,7 +10,8 @@ import {
   getSalesData, 
   fetchAndUpdateOrders, 
   fetchAndUpdateSales,
-  ensureStoreSelectionPersistence
+  ensureStoreSelectionPersistence,
+  getSelectedStore
 } from "@/utils/storeUtils";
 import OrdersTable from "./OrdersTable";
 import SalesTable from "./SalesTable";
@@ -122,9 +122,7 @@ const Dashboard = () => {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      // Use the new function to ensure store selection persistence
-      const stores = ensureStoreSelectionPersistence();
-      const selectedStore = stores.find(s => s.isSelected);
+      const selectedStore = getSelectedStore();
       
       if (!selectedStore) {
         toast({
@@ -135,19 +133,16 @@ const Dashboard = () => {
         return;
       }
 
-      // Проверяем, изменился ли выбранный магазин
       if (selectedStore.id !== selectedStoreId) {
         setSelectedStoreId(selectedStore.id);
       }
 
-      // Всегда запрашиваем новые данные
       const ordersResult = await fetchAndUpdateOrders(selectedStore);
       if (ordersResult) {
         setOrders(ordersResult.orders);
         setWarehouseDistribution(ordersResult.warehouseDistribution);
         setRegionDistribution(ordersResult.regionDistribution);
       } else {
-        // Если не удалось получить данные, пробуем загрузить из базы данных
         const savedOrdersData = await getOrdersData(selectedStore.id);
         if (savedOrdersData) {
           setOrders(savedOrdersData.orders || []);
@@ -160,7 +155,6 @@ const Dashboard = () => {
       if (salesResult) {
         setSales(salesResult);
       } else {
-        // Если не удалось получить данные, пробуем загрузить из базы данных
         const savedSalesData = await getSalesData(selectedStore.id);
         if (savedSalesData) {
           setSales(savedSalesData.sales || []);
@@ -184,21 +178,16 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    // Use the persistence function instead of just loadStores
-    const stores = ensureStoreSelectionPersistence();
-    const selectedStore = stores.find(s => s.isSelected);
+    const selectedStore = getSelectedStore();
     
     if (selectedStore) {
-      // Устанавливаем ID выбранного магазина
       if (selectedStore.id !== selectedStoreId) {
         setSelectedStoreId(selectedStore.id);
       }
       
-      // Запрашиваем данные при первой загрузке
       fetchData();
     }
 
-    // Add event listener for store selection changes
     const handleStoreSelectionChange = () => {
       console.log('Store selection changed, refreshing data...');
       fetchData();
@@ -217,7 +206,6 @@ const Dashboard = () => {
     };
   }, []);
 
-  // При изменении ID выбранного магазина обновляем данные
   useEffect(() => {
     if (selectedStoreId) {
       fetchData();
