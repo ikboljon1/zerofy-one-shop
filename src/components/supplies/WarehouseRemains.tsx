@@ -23,7 +23,6 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   
-  // Filter data based on search term
   const filteredData = data.filter(item => 
     item.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.subjectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -31,16 +30,13 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
     item.barcode.includes(searchTerm)
   );
   
-  // Process data for charts and analytics
   const processedData = useMemo(() => {
     if (!data.length) return null;
     
-    // Get unique warehouses
     const warehouses = [...new Set(
       data.flatMap(item => item.warehouses.map(wh => wh.warehouseName))
     )];
     
-    // Total quantities and values by warehouse
     const warehouseData = warehouses.map(warehouse => {
       const warehouseItems = data.filter(item => 
         item.warehouses.some(wh => wh.warehouseName === warehouse)
@@ -59,11 +55,9 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
         return sum;
       }, 0);
       
-      // Simulate efficiency metrics based on available data
-      // In a real application, these would come from the API
-      const turnoverRate = Math.random() * 20 + 5; // Simulated turnover rate (5-25 days)
-      const utilizationPercent = Math.min(100, Math.max(40, quantity / 100 + Math.random() * 40 + 50)); // 50-90%
-      const processingSpeed = Math.random() * 500 + 200; // items per day
+      const turnoverRate = Math.random() * 20 + 5;
+      const utilizationPercent = Math.min(100, Math.max(40, quantity / 100 + Math.random() * 40 + 50));
+      const processingSpeed = Math.random() * 500 + 200;
       
       return {
         name: warehouse,
@@ -75,7 +69,6 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
       };
     }).sort((a, b) => b.value - a.value);
     
-    // Calculate warehouse efficiency rankings
     const warehouseEfficiency: WarehouseEfficiency[] = warehouseData.map((wh, index) => ({
       warehouseName: wh.name,
       totalItems: wh.value,
@@ -85,19 +78,16 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
       processingSpeed: wh.processingSpeed,
       rank: index + 1
     }))
-    // Sort by a combined efficiency score (lower is better)
     .sort((a, b) => {
       const scoreA = (a.turnoverRate * 0.4) + ((100 - a.utilizationPercent) * 0.3) + ((1000 - a.processingSpeed) * 0.3);
       const scoreB = (b.turnoverRate * 0.4) + ((100 - b.utilizationPercent) * 0.3) + ((1000 - b.processingSpeed) * 0.3);
       return scoreA - scoreB;
     })
-    // Re-rank after sorting by efficiency
     .map((wh, index) => ({
       ...wh,
       rank: index + 1
     }));
     
-    // Total quantities by brand (top 10)
     const brands = [...new Set(data.map(item => item.brand))];
     const brandData = brands.map(brand => {
       const items = data.filter(item => item.brand === brand);
@@ -107,7 +97,6 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
       };
     }).sort((a, b) => b.value - a.value).slice(0, 10);
     
-    // Total quantities by category
     const categories = [...new Set(data.map(item => item.subjectName))];
     const categoryData = categories.map(category => {
       const items = data.filter(item => item.subjectName === category);
@@ -117,19 +106,21 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
       };
     }).sort((a, b) => b.value - a.value).slice(0, 10);
     
-    // Overall statistics
     const totalItems = data.reduce((sum, item) => sum + item.quantityWarehousesFull, 0);
     const totalInWayToClient = data.reduce((sum, item) => sum + item.inWayToClient, 0);
     const totalInWayFromClient = data.reduce((sum, item) => sum + item.inWayFromClient, 0);
     
-    // Calculate total price of all goods
     const totalPrice = data.reduce((sum, item) => {
-      // If price is available, multiply by quantity
       if (item.price && !isNaN(Number(item.price))) {
         return sum + (Number(item.price) * item.quantityWarehousesFull);
       }
       return sum;
     }, 0);
+    
+    const formatNumber = (value: any, decimals: number = 1): string => {
+      const numValue = Number(value);
+      return !isNaN(numValue) ? numValue.toFixed(decimals) : '0';
+    };
     
     return {
       warehouseData,
@@ -140,6 +131,7 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
       totalInWayToClient,
       totalInWayFromClient,
       totalPrice,
+      formatNumber,
     };
   }, [data]);
   
@@ -350,7 +342,12 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis type="number" domain={[0, 100]} />
                           <YAxis type="category" dataKey="name" width={60} />
-                          <Tooltip formatter={(value) => [`${value.toFixed(1)}%`, 'Загруженность']} />
+                          <Tooltip 
+                            formatter={(value) => {
+                              const numValue = Number(value);
+                              return [`${!isNaN(numValue) ? numValue.toFixed(1) : '0'}%`, 'Загруженность'];
+                            }} 
+                          />
                           <Bar dataKey="value" fill="#10B981">
                             {processedData.warehouseEfficiency.slice(0, 5).map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -383,7 +380,12 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis type="number" />
                           <YAxis type="category" dataKey="name" width={60} />
-                          <Tooltip formatter={(value) => [`${value.toFixed(1)} дн.`, 'Оборачиваемость']} />
+                          <Tooltip 
+                            formatter={(value) => {
+                              const numValue = Number(value);
+                              return [`${!isNaN(numValue) ? numValue.toFixed(1) : '0'} дн.`, 'Оборачиваемость'];
+                            }} 
+                          />
                           <Bar dataKey="value" fill="#F59E0B">
                             {processedData.warehouseEfficiency.slice(0, 5).map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={COLORS[(index + 3) % COLORS.length]} />
@@ -416,7 +418,12 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis type="number" />
                           <YAxis type="category" dataKey="name" width={60} />
-                          <Tooltip formatter={(value) => [`${value.toFixed(0)} шт/день`, 'Скорость']} />
+                          <Tooltip 
+                            formatter={(value) => {
+                              const numValue = Number(value);
+                              return [`${!isNaN(numValue) ? numValue.toFixed(0) : '0'} шт/день`, 'Скорость'];
+                            }} 
+                          />
                           <Bar dataKey="value" fill="#8B5CF6">
                             {processedData.warehouseEfficiency.slice(0, 5).map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={COLORS[(index + 6) % COLORS.length]} />
@@ -693,4 +700,3 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
 };
 
 export default WarehouseRemains;
-
