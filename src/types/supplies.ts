@@ -1,4 +1,3 @@
-
 export interface WarehouseCoefficient {
   date: string;
   coefficient: number;
@@ -127,7 +126,7 @@ export interface WarehouseRemainItem {
   inWayFromClient: number;
   quantityWarehousesFull: number;
   warehouses: WarehouseQuantity[];
-  price?: number; // Adding optional price property
+  price?: number; // Optional price property
 }
 
 export interface CreateTaskResponse {
@@ -138,4 +137,14 @@ export interface CreateTaskResponse {
 
 export interface TaskStatusResponse {
   data: WarehouseRemainTask;
+}
+
+export interface WarehouseEfficiency {
+  warehouseName: string;
+  totalItems: number;
+  totalValue: number;
+  turnoverRate: number;
+  utilizationPercent: number;
+  processingSpeed: number;
+  rank: number;
 }
