@@ -1,3 +1,4 @@
+
 import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY, ORDERS_STORAGE_KEY, SALES_STORAGE_KEY, WildberriesOrder, WildberriesSale } from "@/types/store";
 import { fetchWildberriesStats, fetchWildberriesOrders, fetchWildberriesSales } from "@/services/wildberriesApi";
 
@@ -6,13 +7,6 @@ export const getLastWeekDateRange = () => {
   const lastWeek = new Date(now);
   lastWeek.setDate(now.getDate() - 7);
   return { from: lastWeek, to: now };
-};
-
-export const getLast30DaysDateRange = () => {
-  const now = new Date();
-  const last30Days = new Date(now);
-  last30Days.setDate(now.getDate() - 30);
-  return { from: last30Days, to: now };
 };
 
 export const loadStores = (): Store[] => {
@@ -28,12 +22,7 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
   if (store.marketplace === "Wildberries") {
     try {
       const { from, to } = getLastWeekDateRange();
-      const stats = await fetchWildberriesStats({
-        apiKey: store.apiKey, 
-        dateFrom: from, 
-        dateTo: to
-      });
-      
+      const stats = await fetchWildberriesStats(store.apiKey, from, to);
       if (stats) {
         const updatedStore = { 
           ...store, 
@@ -87,6 +76,7 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
   return store;
 };
 
+// Получение данных о заказах для конкретного магазина
 export const getOrdersData = (storeId: string) => {
   try {
     // TODO: Здесь должен быть запрос к базе данных вместо localStorage
@@ -101,6 +91,7 @@ export const getOrdersData = (storeId: string) => {
   }
 };
 
+// Получение данных о продажах для конкретного магазина
 export const getSalesData = (storeId: string) => {
   try {
     // TODO: Здесь должен быть запрос к базе данных вместо localStorage
@@ -115,6 +106,7 @@ export const getSalesData = (storeId: string) => {
   }
 };
 
+// Загрузка и обновление данных о заказах
 export const fetchAndUpdateOrders = async (store: Store) => {
   if (store.marketplace === "Wildberries") {
     try {
@@ -184,6 +176,7 @@ export const fetchAndUpdateOrders = async (store: Store) => {
   return null;
 };
 
+// Загрузка и обновление данных о продажах
 export const fetchAndUpdateSales = async (store: Store) => {
   if (store.marketplace === "Wildberries") {
     try {
@@ -210,6 +203,7 @@ export const fetchAndUpdateSales = async (store: Store) => {
   return null;
 };
 
+// Получение данных о доходности товаров для конкретного магазина
 export const getProductProfitabilityData = (storeId: string) => {
   try {
     const storedData = localStorage.getItem(`products_detailed_${storeId}`);
@@ -242,111 +236,7 @@ export const getProductProfitabilityData = (storeId: string) => {
   }
 };
 
-export const getProductProfitability30Days = async (store: Store) => {
-  if (!store) return null;
-  
-  try {
-    const { from, to } = getLast30DaysDateRange();
-    
-    // Получаем продажи за 30 дней
-    const sales = await fetchWildberriesSales({
-      apiKey: store.apiKey,
-      dateFrom: from
-    });
-    
-    // Получаем заказы за 30 дней
-    const orders = await fetchWildberriesOrders({
-      apiKey: store.apiKey,
-      dateFrom: from
-    });
-    
-    if (!sales || !orders) return null;
-    
-    // Группируем продажи по nmId (номеру товара)
-    const salesByNmId: Record<string, any[]> = {};
-    const returnsCountByNmId: Record<string, number> = {};
-    
-    sales.forEach(sale => {
-      const nmId = sale.nmId.toString();
-      if (!salesByNmId[nmId]) {
-        salesByNmId[nmId] = [];
-      }
-      
-      salesByNmId[nmId].push(sale);
-      
-      // Подсчитываем количество возвратов
-      if (sale.isReturn) {
-        returnsCountByNmId[nmId] = (returnsCountByNmId[nmId] || 0) + 1;
-      }
-    });
-    
-    // Рассчитываем прибыльность каждого товара
-    const productProfitability: any[] = [];
-    
-    Object.entries(salesByNmId).forEach(([nmId, productSales]) => {
-      if (productSales.length === 0) return;
-      
-      const totalRevenue = productSales.reduce((sum, sale) => sum + (sale.finishedPrice || 0), 0);
-      const totalQuantity = productSales.length;
-      const returnCount = returnsCountByNmId[nmId] || 0;
-      const returnRate = returnCount / totalQuantity;
-      
-      // Базовые расходы на товар (приблизительная оценка на основе комиссий Wildberries)
-      const commissionRate = 0.15; // 15% комиссия WB
-      const logisticCostPerItem = 50; // рублей за логистику на единицу товара
-      
-      // Расчет прибыли
-      const totalCommission = totalRevenue * commissionRate;
-      const totalLogistic = totalQuantity * logisticCostPerItem;
-      const totalCost = totalCommission + totalLogistic;
-      
-      // Чистая прибыль
-      const profit = totalRevenue - totalCost;
-      
-      // Маржинальность
-      const margin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
-      
-      // Информация о товаре из первой продажи
-      const sampleSale = productSales[0];
-      
-      productProfitability.push({
-        nmId: nmId,
-        name: sampleSale.subject || `Товар ${nmId}`,
-        category: sampleSale.category || "Не указана",
-        price: sampleSale.finishedPrice?.toString() || "0",
-        profit: profit.toString(),
-        quantitySold: totalQuantity,
-        margin: Math.round(margin),
-        returnCount: returnCount,
-        image: `https://images.wbstatic.net/c246x328/new/${nmId.substring(0, 4)}0000/${nmId}-1.jpg`
-      });
-    });
-    
-    // Сортируем товары по прибыли
-    const sortedProducts = productProfitability.sort((a, b) => parseFloat(b.profit) - parseFloat(a.profit));
-    
-    // Получаем топ прибыльных и убыточных товаров
-    const topProfitable = sortedProducts.filter(p => parseFloat(p.profit) > 0).slice(0, 5);
-    const topUnprofitable = [...sortedProducts].filter(p => parseFloat(p.profit) <= 0)
-      .sort((a, b) => parseFloat(a.profit) - parseFloat(b.profit))
-      .slice(0, 5);
-    
-    // Сохраняем данные в localStorage для дальнейшего использования
-    const profitabilityData = {
-      profitableProducts: topProfitable,
-      unprofitableProducts: topUnprofitable,
-      updateDate: new Date().toISOString()
-    };
-    
-    localStorage.setItem(`products_detailed_${store.id}`, JSON.stringify(profitabilityData));
-    
-    return profitabilityData;
-  } catch (error) {
-    console.error('Error calculating product profitability:', error);
-    return null;
-  }
-};
-
+// Получение данных аналитики с проверкой обязательных полей и принудительным обновлением при наличии параметра forceRefresh
 export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
   // Если forceRefresh = true, всегда возвращаем пустую структуру
   if (forceRefresh) {
