@@ -1,3 +1,4 @@
+
 export interface ExpensesData {
   total: number;
   logistics: number;
@@ -15,6 +16,7 @@ export interface PeriodData {
   profit: number;
   sales?: number;
   transferred?: number;
+  netProfit?: number; // Added netProfit property
 }
 
 export interface SalesData {
@@ -27,7 +29,7 @@ export interface ProductData {
   id: number;
   name: string;
   price: string;
-  profit: string;
+  profit: string | number;
   image: string;
   quantitySold?: number;
   margin?: number;
@@ -176,7 +178,8 @@ const getMockData = (): WildberriesResponse => {
       expenses: totalExpenses,
       profit: 62500,
       sales: 150000,
-      transferred: 75000
+      transferred: 75000,
+      netProfit: 62500  // Added netProfit property matching profit
     },
     previousPeriod: {
       orderCount: 1000,
@@ -192,7 +195,8 @@ const getMockData = (): WildberriesResponse => {
       },
       profit: 50000,
       sales: 120000,
-      transferred: 60000
+      transferred: 60000,
+      netProfit: 50000  // Added netProfit property matching profit
     },
     sales: [],
     products: [],
