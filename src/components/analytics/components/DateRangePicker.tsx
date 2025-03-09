@@ -113,20 +113,6 @@ const DateRangePicker = ({
                   >
                     Вчера
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start text-sm h-9" 
-                    onClick={() => applyPreset('week')}
-                  >
-                    7 дней
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start text-sm h-9" 
-                    onClick={() => applyPreset('month')}
-                  >
-                    30 дней
-                  </Button>
                 </div>
               </PopoverContent>
             </Popover>
@@ -136,32 +122,6 @@ const DateRangePicker = ({
           </div>
         ) : (
           <div className="flex flex-wrap gap-2 items-center">
-            <Tabs defaultValue="custom" className="mr-2">
-              <TabsList className="h-9 bg-muted/50">
-                <TabsTrigger 
-                  value="custom" 
-                  className="text-xs px-3"
-                  onClick={() => {}}
-                >
-                  Выбрать
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="week" 
-                  className="text-xs px-3"
-                  onClick={() => applyPreset('week')}
-                >
-                  7 дней
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="month" 
-                  className="text-xs px-3"
-                  onClick={() => applyPreset('month')}
-                >
-                  30 дней
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-            
             <Popover open={fromOpen} onOpenChange={setFromOpen}>
               <PopoverTrigger asChild>
                 <Button
