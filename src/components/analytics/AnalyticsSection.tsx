@@ -378,19 +378,13 @@ const AnalyticsSection = () => {
         setDateFrom(subDays(today, 29));
         setDateTo(today);
         break;
-      case 'quarter':
-        setDateFrom(subDays(today, 89));
-        setDateTo(today);
-        break;
       default:
         break;
     }
     
     setQuickSelectOpen(false);
     
-    if (onApplyDateRange) {
-      setTimeout(onApplyDateRange, 100);
-    }
+    setTimeout(() => fetchData(), 100);
   };
 
   useEffect(() => {
