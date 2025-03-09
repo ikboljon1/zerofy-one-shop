@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { getProductProfitabilityData } from "@/utils/storeUtils";
 import { Badge } from "@/components/ui/badge";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ProductsProps {
   selectedStore?: {
@@ -21,6 +22,10 @@ interface ProductData {
   price: string;
   profit: string;
   image: string;
+  quantitySold?: number;
+  margin?: number;
+  returnCount?: number;
+  category?: string;
 }
 
 const Products = ({ selectedStore }: ProductsProps) => {
@@ -29,12 +34,11 @@ const Products = ({ selectedStore }: ProductsProps) => {
   const [unprofitableProducts, setUnprofitableProducts] = useState<ProductData[]>([]);
   const [lastUpdateDate, setLastUpdateDate] = useState<string | null>(null);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (selectedStore) {
       loadProductProfitabilityData();
-      // Auto-sync products when store is selected
-      handleSync();
     } else {
       setProfitableProducts([]);
       setUnprofitableProducts([]);
@@ -67,40 +71,19 @@ const Products = ({ selectedStore }: ProductsProps) => {
 
     setIsLoading(true);
     try {
-      const response = await fetch("https://content-api.wildberries.ru/content/v2/get/cards/list", {
-        method: "POST",
-        headers: {
-          "Authorization": selectedStore.apiKey,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          settings: {
-            cursor: {
-              limit: 100
-            },
-            filter: {
-              withPhoto: -1
-            }
-          }
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to sync products");
-      }
-
-      const data = await response.json();
-      
-      // Сохраняем полученные товары в localStorage
-      localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(data.cards));
-
+      // Только запускаем синхронизацию, которая обновит все данные
+      // Обновление произойдет в компоненте ProductsList
       toast({
-        title: "Успешно",
-        description: "Товары успешно синхронизированы",
+        title: "Синхронизация",
+        description: "Начата синхронизация данных о товарах",
       });
       
-      // Повторно загружаем данные о прибыльности
-      loadProductProfitabilityData();
+      // Перезагружаем данные об эффективности после короткой задержки
+      setTimeout(() => {
+        loadProductProfitabilityData();
+        setIsLoading(false);
+      }, 1000);
+      
     } catch (error) {
       console.error("Error syncing products:", error);
       toast({
@@ -108,7 +91,6 @@ const Products = ({ selectedStore }: ProductsProps) => {
         description: "Не удалось синхронизировать товары",
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -151,28 +133,57 @@ const Products = ({ selectedStore }: ProductsProps) => {
               return (
                 <div 
                   key={index} 
-                  className={`flex items-center p-3 rounded-lg border ${bgClass}`}
+                  className={`flex flex-col p-3 rounded-lg border ${bgClass}`}
                 >
-                  <div className="w-12 h-12 rounded overflow-hidden mr-4 bg-gray-100 dark:bg-gray-800">
-                    <img 
-                      src={product.image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"} 
-                      alt={product.name} 
-                      className="w-full h-full object-cover" 
-                    />
+                  <div className="flex items-start mb-2">
+                    <div className="w-16 h-16 rounded-lg overflow-hidden mr-3 bg-gray-100 dark:bg-gray-800">
+                      <img 
+                        src={product.image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"} 
+                        alt={product.name} 
+                        className="w-full h-full object-cover" 
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg";
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-sm line-clamp-2">{product.name || "Неизвестный товар"}</h4>
+                      <p className="text-xs text-muted-foreground">Цена: {formatCurrency(parseFloat(product.price || "0"))}</p>
+                      {product.category && (
+                        <p className="text-xs text-muted-foreground">Категория: {product.category}</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium">{product.name || "Неизвестный товар"}</h4>
-                    <p className="text-sm text-muted-foreground">Цена: {formatCurrency(parseFloat(product.price))}</p>
-                  </div>
-                  <div className="text-right flex items-center">
-                    <span className={`${textColorClass} font-semibold mr-1`}>
-                      {formattedProfit}
-                    </span>
-                    {isProfitable ? (
-                      <ArrowUp className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <ArrowDown className="h-4 w-4 text-red-500" />
-                    )}
+                  
+                  <div className="grid grid-cols-2 gap-2 mt-1 text-xs">
+                    <div className="flex items-center">
+                      <span className="text-muted-foreground mr-1">Продано:</span>
+                      <span className="font-semibold">{product.quantitySold || 0} шт.</span>
+                    </div>
+                    
+                    <div className="flex items-center">
+                      <span className="text-muted-foreground mr-1">Маржа:</span>
+                      <span className={`font-semibold ${product.margin && product.margin > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {product.margin || 0}%
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center">
+                      <span className="text-muted-foreground mr-1">Возвраты:</span>
+                      <span className="font-semibold">{product.returnCount || 0} шт.</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-end">
+                      <span className={`${textColorClass} font-semibold mr-1`}>
+                        {formattedProfit}
+                      </span>
+                      {isProfitable ? (
+                        <ArrowUp className="h-3 w-3 text-green-500" />
+                      ) : (
+                        <ArrowDown className="h-3 w-3 text-red-500" />
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -180,6 +191,36 @@ const Products = ({ selectedStore }: ProductsProps) => {
           </div>
         </CardContent>
       </Card>
+    );
+  };
+
+  // Создаем компонент для отображения эффективности товаров
+  const ProductEfficiencySection = () => {
+    if (!profitableProducts.length && !unprofitableProducts.length) {
+      return (
+        <Card className="mb-6">
+          <CardContent className="py-6 text-center">
+            <p className="text-muted-foreground">
+              Данные об эффективности товаров отсутствуют. Нажмите "Синхронизировать" для их получения.
+            </p>
+          </CardContent>
+        </Card>
+      );
+    }
+    
+    return (
+      <div className={`grid ${isMobile ? 'grid-cols-1 gap-4' : 'grid-cols-2 gap-6'} mb-6`}>
+        <ProductProfitabilityCard 
+          title="Самые прибыльные товары" 
+          products={profitableProducts} 
+          isProfitable={true} 
+        />
+        <ProductProfitabilityCard 
+          title="Самые убыточные товары" 
+          products={unprofitableProducts} 
+          isProfitable={false} 
+        />
+      </div>
     );
   };
 
@@ -216,19 +257,7 @@ const Products = ({ selectedStore }: ProductsProps) => {
         </Card>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <ProductProfitabilityCard 
-              title="Самые прибыльные товары" 
-              products={profitableProducts} 
-              isProfitable={true} 
-            />
-            <ProductProfitabilityCard 
-              title="Самые убыточные товары" 
-              products={unprofitableProducts} 
-              isProfitable={false} 
-            />
-          </div>
-          
+          <ProductEfficiencySection />
           <ProductsList selectedStore={selectedStore} />
         </>
       )}
