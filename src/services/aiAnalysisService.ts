@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import { getSelectedAIModel } from '@/utils/storeUtils';
 
@@ -94,7 +93,7 @@ export const formatContextForAI = (context: AnalysisContext): string => {
   1. Название рекомендации
   2. Подробное описание рекомендации
   3. Тип рекомендации (успех, предупреждение, информация, ошибка)
-  4. Категория (продажи, товары, расходы, склады, общее)
+  4. Категория (продажи, това��ы, расходы, склады, общее)
   5. Важность (число от 1 до 10, где 10 - наиболее важно)
   
   Дай минимум 3 и максимум a5 конкретных рекомендаций, основанных на анализе данных.
@@ -136,8 +135,17 @@ export const callOpenAI = async (prompt: string, apiKey: string): Promise<AIReco
 // Вызов Gemini API
 export const callGemini = async (prompt: string, apiKey: string): Promise<AIRecommendation[]> => {
   try {
+    // Get the selected AI model to determine specific version
+    const selectedModel = getSelectedAIModel();
+    // Default to gemini-pro if no specific version is found
+    const modelVersion = selectedModel?.name?.includes('gemini-') 
+      ? selectedModel.name 
+      : 'gemini-pro';
+    
+    console.log(`Using Gemini model: ${modelVersion}`);
+    
     const response = await axios.post(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
+      `https://generativelanguage.googleapis.com/v1beta/models/${modelVersion}:generateContent`,
       {
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {

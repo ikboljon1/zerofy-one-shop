@@ -125,7 +125,13 @@ export const aiModelTypes: AIModelType[] = ["OpenAI", "Gemini", "Anthropic", "Mi
 
 export const aiModelVersions: Record<AIModelType, string[]> = {
   "OpenAI": ["GPT-4o", "GPT-4o-mini", "GPT-4 Turbo"],
-  "Gemini": ["Gemini Pro", "Gemini 1.5 Pro", "Gemini 1.5 Flash"],
+  "Gemini": [
+    "gemini-2.0-pro-exp-02-05", 
+    "gemini-2.0-flash-thinking-exp-01-21", 
+    "Gemini Pro", 
+    "Gemini 1.5 Pro", 
+    "Gemini 1.5 Flash"
+  ],
   "Anthropic": ["Claude 3 Opus", "Claude 3 Sonnet", "Claude 3 Haiku"],
   "Mistral": ["Mistral Large", "Mistral Medium", "Mistral Small"],
   "Llama": ["Llama 3 70B", "Llama 3 8B", "Llama 2"]
