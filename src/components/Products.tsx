@@ -95,11 +95,11 @@ const Products = ({
               )}
               <div className="flex-1">
                 <div className="flex justify-between items-start">
-                  <h4 className={`font-semibold ${isMobile ? 'text-sm' : 'text-base'}`}>
+                  <h4 className={`font-semibold ${isMobile ? 'text-sm' : 'text-base'} line-clamp-2`}>
                     {product.name || "Неизвестный товар"}
                   </h4>
-                  <p className={`text-sm flex items-center ${isProfitable ? 'text-green-500' : 'text-red-500'} font-medium`}>
-                    {isProfitable ? 'Прибыль: ' : 'Убыток: '}
+                  <p className={`text-sm flex items-center ${isProfitable ? 'text-green-500' : 'text-red-500'} font-medium ${isMobile ? 'ml-1' : 'ml-2'}`}>
+                    {isMobile ? '' : (isProfitable ? 'Прибыль: ' : 'Убыток: ')}
                     {formatProfitWithSign(product.profit)}
                     {isProfitable ? (
                       <ArrowUp className="h-4 w-4 ml-1" />
@@ -111,7 +111,7 @@ const Products = ({
                 <p className="text-sm text-muted-foreground">
                   Цена: {formatCurrency(parseCurrencyString(product.price))}
                 </p>
-                {product.category && (
+                {product.category && !isMobile && (
                   <p className="text-sm text-muted-foreground">
                     Категория: {product.category}
                   </p>
@@ -143,7 +143,7 @@ const Products = ({
               
               <div className="flex items-center">
                 <Info className="h-4 w-4 mr-1 text-muted-foreground" />
-                <span className="font-medium">
+                <span className={`font-medium ${isMobile ? 'text-xs' : 'text-sm'}`}>
                   {getProfitabilityReason(product, isProfitable)}
                 </span>
               </div>
@@ -156,7 +156,7 @@ const Products = ({
 
   return (
     <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'md:grid-cols-2'}`}>
-      <Card className={`mt-6 ${isMobile ? 'p-3' : 'p-4'}`}>
+      <Card className={`${isMobile ? 'p-3' : 'p-4'}`}>
         <div className="flex items-center justify-between mb-4">
           <h3 className={`font-semibold ${isMobile ? 'text-base' : 'text-lg'}`}>
             Топ-3 прибыльных товара
@@ -168,7 +168,7 @@ const Products = ({
         <ProductList products={topProfitableProducts.slice(0, 3)} isProfitable={true} />
       </Card>
       
-      <Card className={`mt-6 ${isMobile ? 'p-3' : 'p-4'}`}>
+      <Card className={`${isMobile ? 'p-3' : 'p-4'}`}>
         <div className="flex items-center justify-between mb-4">
           <h3 className={`font-semibold ${isMobile ? 'text-base' : 'text-lg'}`}>
             Топ-3 убыточных товара

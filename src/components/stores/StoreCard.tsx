@@ -12,7 +12,7 @@ interface StoreCardProps {
   onDelete: (id: string) => void;
   onRefreshStats: (store: Store) => void;
   isLoading: boolean;
-  canDelete?: boolean; // Added the canDelete prop with optional flag
+  canDelete?: boolean;
 }
 
 export function StoreCard({ 
@@ -21,8 +21,34 @@ export function StoreCard({
   onDelete, 
   onRefreshStats,
   isLoading,
-  canDelete = true // Default to true to maintain backward compatibility
+  canDelete = true
 }: StoreCardProps) {
+  // Add a function to handle selection changes with additional side effects
+  const handleSelectionChange = () => {
+    // Only allow selecting a store, not deselecting it
+    // This ensures the checkbox stays checked until another store is selected
+    if (!store.isSelected) {
+      // Call the parent component's toggle selection handler
+      onToggleSelection(store.id);
+      
+      // Also trigger a refresh of stats
+      setTimeout(() => {
+        onRefreshStats(store);
+      }, 100);
+      
+      // Notify other components about the store selection change
+      window.dispatchEvent(new CustomEvent('store-selection-changed', { 
+        detail: { storeId: store.id, selected: true, timestamp: Date.now() } 
+      }));
+      
+      // Save this selection to localStorage with timestamp to help with persistence
+      localStorage.setItem('last_selected_store', JSON.stringify({
+        storeId: store.id,
+        timestamp: Date.now()
+      }));
+    }
+  };
+
   return (
     <Card className={store.isSelected ? "border-primary" : ""}>
       <CardHeader className="pb-2">
@@ -31,7 +57,7 @@ export function StoreCard({
           <div className="flex items-center gap-2">
             <Checkbox
               checked={store.isSelected}
-              onCheckedChange={() => onToggleSelection(store.id)}
+              onCheckedChange={handleSelectionChange}
               className="mt-1"
             />
             <Button
@@ -39,7 +65,7 @@ export function StoreCard({
               size="icon"
               className="text-destructive hover:text-destructive/90"
               onClick={() => onDelete(store.id)}
-              disabled={!canDelete} // Disable the button based on canDelete prop
+              disabled={!canDelete}
             >
               <Trash2 className="h-4 w-4" />
             </Button>

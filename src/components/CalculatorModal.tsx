@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -9,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Card } from "@/components/ui/card";
+import { fetchWildberriesStats } from "@/services/wildberriesApi";
+import { subDays } from "date-fns";
 
 interface CalculatorModalProps {
   open: boolean;
@@ -20,6 +23,8 @@ interface Expenses {
   storage: number;
   penalties: number;
   acceptance: number;
+  advertising: number;
+  deductions: number;
   price?: number;
 }
 
@@ -31,6 +36,8 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
     storage: 0,
     penalties: 0,
     acceptance: 0,
+    advertising: 0,
+    deductions: 0,
     price: 0
   });
   const [result, setResult] = useState<{
@@ -39,49 +46,133 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
     profitPercent: number;
     totalExpenses: number;
   } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Find product with highest expenses from localStorage
-    const findProductWithHighestExpenses = () => {
-      const allStores = Object.keys(localStorage).filter(key => key.startsWith('products_'));
-      let maxExpenses = 0;
-      let productWithMaxExpenses = null;
-
-      allStores.forEach(storeKey => {
-        const products = JSON.parse(localStorage.getItem(storeKey) || '[]');
-        products.forEach((product: any) => {
-          if (product.expenses) {
-            const totalExpenses = 
-              product.expenses.logistics +
-              product.expenses.storage +
-              product.expenses.penalties +
-              product.expenses.acceptance;
-            
-            if (totalExpenses > maxExpenses) {
-              maxExpenses = totalExpenses;
-              productWithMaxExpenses = product;
-            }
-          }
-        });
-      });
-
-      if (productWithMaxExpenses) {
-        setCostPrice(productWithMaxExpenses.costPrice?.toString() || "0");
-        setExpenses({
-          ...productWithMaxExpenses.expenses,
-          price: productWithMaxExpenses.price || 0
-        });
-        
-        // Log found product for debugging
-        console.log('Product with highest expenses:', productWithMaxExpenses);
-      }
-    };
-
     if (open) {
-      findProductWithHighestExpenses();
+      fetchHighestExpenses();
     }
   }, [open]);
+
+  const fetchHighestExpenses = async () => {
+    setIsLoading(true);
+    try {
+      // Fetch data from API - use a 30-day period for significant data
+      const dateFrom = subDays(new Date(), 30);
+      const dateTo = new Date();
+      
+      // Get all stores from localStorage
+      const allStores = Object.keys(localStorage)
+        .filter(key => key.startsWith('marketplace_stores'))
+        .map(key => JSON.parse(localStorage.getItem(key) || '[]'))
+        .flat();
+      
+      const selectedStore = allStores.find((store: any) => store.isSelected);
+      
+      if (!selectedStore) {
+        toast({
+          title: "Внимание",
+          description: "Выберите основной магазин в разделе 'Магазины'",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch stats from API 
+      const statsData = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
+      
+      if (statsData) {
+        // Find the highest expenses across all products
+        let maxLogistics = 0;
+        let maxStorage = 0;
+        let maxPenalties = 0;
+        let maxAcceptance = 0;
+        let maxAdvertising = 0;
+        let maxDeductions = 0;
+        let productWithHighestTotal = null;
+        let maxTotalExpenses = 0;
+        
+        // Process products from all stores
+        const allStores = Object.keys(localStorage).filter(key => key.startsWith('products_'));
+        
+        allStores.forEach(storeKey => {
+          const products = JSON.parse(localStorage.getItem(storeKey) || '[]');
+          
+          products.forEach((product: any) => {
+            if (product.expenses) {
+              const logistics = product.expenses.logistics || 0;
+              const storage = product.expenses.storage || 0;
+              const penalties = product.expenses.penalties || 0;
+              const acceptance = product.expenses.acceptance || 0;
+              const advertising = product.expenses.advertising || 0;
+              const deductions = product.expenses.deductions || 0;
+              
+              // Update maximum values for each expense type
+              maxLogistics = Math.max(maxLogistics, logistics);
+              maxStorage = Math.max(maxStorage, storage);
+              maxPenalties = Math.max(maxPenalties, penalties);
+              maxAcceptance = Math.max(maxAcceptance, acceptance);
+              maxAdvertising = Math.max(maxAdvertising, advertising);
+              maxDeductions = Math.max(maxDeductions, deductions);
+              
+              // Track product with highest total expenses for cost price
+              const totalExpenses = logistics + storage + penalties + acceptance + advertising + deductions;
+              if (totalExpenses > maxTotalExpenses) {
+                maxTotalExpenses = totalExpenses;
+                productWithHighestTotal = product;
+              }
+            }
+          });
+        });
+        
+        // Also check analytics data for highest values
+        if (statsData.currentPeriod && statsData.currentPeriod.expenses) {
+          maxLogistics = Math.max(maxLogistics, statsData.currentPeriod.expenses.logistics || 0);
+          maxStorage = Math.max(maxStorage, statsData.currentPeriod.expenses.storage || 0);
+          maxPenalties = Math.max(maxPenalties, statsData.currentPeriod.expenses.penalties || 0);
+          maxAcceptance = Math.max(maxAcceptance, statsData.currentPeriod.expenses.acceptance || 0);
+          maxAdvertising = Math.max(maxAdvertising, statsData.currentPeriod.expenses.advertising || 0);
+          maxDeductions = Math.max(maxDeductions, statsData.currentPeriod.expenses.deductions || 0);
+        }
+        
+        // Update expenses state with highest values
+        setExpenses({
+          logistics: maxLogistics,
+          storage: maxStorage,
+          penalties: maxPenalties,
+          acceptance: maxAcceptance,
+          advertising: maxAdvertising,
+          deductions: maxDeductions,
+          price: productWithHighestTotal?.price || 0
+        });
+        
+        // Set cost price from the product with highest expenses
+        if (productWithHighestTotal) {
+          setCostPrice(productWithHighestTotal.costPrice?.toString() || "0");
+        }
+        
+        console.log('Highest expenses found:', {
+          logistics: maxLogistics,
+          storage: maxStorage,
+          penalties: maxPenalties,
+          acceptance: maxAcceptance,
+          advertising: maxAdvertising,
+          deductions: maxDeductions
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching highest expenses:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить данные о расходах",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const calculate = () => {
     const cost = parseFloat(costPrice);
@@ -92,7 +183,9 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
       expenses.logistics +
       expenses.storage +
       expenses.penalties +
-      expenses.acceptance;
+      expenses.acceptance +
+      expenses.advertising +
+      expenses.deductions;
 
     if (isNaN(cost) || isNaN(profit)) {
       toast({
@@ -167,9 +260,24 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
                 <span>Приемка:</span>
                 <span>{expenses.acceptance.toFixed(2)} ₽</span>
               </div>
+              <div className="flex justify-between">
+                <span>Реклама:</span>
+                <span>{expenses.advertising.toFixed(2)} ₽</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Удержания:</span>
+                <span>{expenses.deductions.toFixed(2)} ₽</span>
+              </div>
               <div className="flex justify-between font-medium border-t pt-2">
                 <span>Всего расходов:</span>
-                <span>{(expenses.logistics + expenses.storage + expenses.penalties + expenses.acceptance).toFixed(2)} ₽</span>
+                <span>{(
+                  expenses.logistics + 
+                  expenses.storage + 
+                  expenses.penalties + 
+                  expenses.acceptance + 
+                  expenses.advertising + 
+                  expenses.deductions
+                ).toFixed(2)} ₽</span>
               </div>
             </div>
           </Card>

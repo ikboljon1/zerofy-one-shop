@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import {
   LineChart,
@@ -10,7 +11,8 @@ import {
   Legend,
   PieChart,
   Pie,
-  Cell
+  Cell,
+  Sector
 } from "recharts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Package, ShoppingCart, TrendingUp, ShoppingBag } from "lucide-react";
@@ -41,56 +43,91 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
   }
 
   const totalSales = productSales.reduce((sum, item) => sum + item.quantity, 0);
+  
+  // Filter to only show top 5 products by quantity
+  const topProducts = [...productSales]
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 5);
+  
+  // Calculate "Other" category if needed
+  if (productSales.length > 5) {
+    const otherQuantity = productSales
+      .slice(5)
+      .reduce((sum, item) => sum + item.quantity, 0);
+    
+    if (otherQuantity > 0) {
+      topProducts.push({
+        subject_name: "Другие товары",
+        quantity: otherQuantity
+      });
+    }
+  }
 
-  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }: any) => {
-    const RADIAN = Math.PI / 180;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.6;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
+  const renderActiveShape = (props: any) => {
+    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
+    
     return (
-      <text 
-        x={x} 
-        y={y} 
-        fill="white" 
-        textAnchor={x > cx ? 'start' : 'end'} 
-        dominantBaseline="central"
-        className="text-xs font-bold drop-shadow-md"
-        style={{ filter: 'drop-shadow(0px 1px 2px rgba(0,0,0,0.5))' }}
-      >
-        {`${(percent * 100).toFixed(0)}%`}
-      </text>
-    );
-  };
-
-  const customLegendFormatter = (value: string) => {
-    const item = productSales.find(p => p.subject_name === value);
-    if (!item) return value;
-    const percentage = ((item.quantity / totalSales) * 100).toFixed(0);
-    return (
-      <span className="flex items-center gap-1 text-sm">
-        <span className="font-medium">{value}</span>
-        <span className="text-muted-foreground">({item.quantity} шт. • {percentage}%)</span>
-      </span>
+      <g>
+        <text x={cx} y={cy} dy={-20} textAnchor="middle" fill="#888" className="text-sm">
+          {payload.subject_name}
+        </text>
+        <text x={cx} y={cy} dy={8} textAnchor="middle" fill="#333" className="text-lg font-bold">
+          {value} шт.
+        </text>
+        <text x={cx} y={cy} dy={30} textAnchor="middle" fill="#888" className="text-xs">
+          {`${(percent * 100).toFixed(1)}%`}
+        </text>
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius + 5}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+          opacity={0.9}
+        />
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius - 5}
+          outerRadius={innerRadius - 2}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+        />
+      </g>
     );
   };
 
   return (
     <div className={`grid ${isMobile ? 'grid-cols-1 gap-6' : 'grid-cols-2 gap-4'}`}>
-      <Card className="p-4">
+      <Card className="p-4 shadow-md border-indigo-100 dark:border-indigo-900/40 bg-gradient-to-br from-white/80 to-indigo-50/50 dark:from-gray-900/90 dark:to-indigo-950/50">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <TrendingUp className="text-indigo-500" size={20} />
-            Динамика продаж по дням
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-700 dark:from-indigo-400 dark:to-blue-400">
+              Динамика продаж по дням
+            </span>
           </h3>
         </div>
         <div className="h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={salesTrend}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <defs>
+                <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.1}/>
+                </linearGradient>
+                <linearGradient id="colorPrevSales" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#EC4899" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#EC4899" stopOpacity={0.1}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
               <XAxis 
                 dataKey="date" 
-                stroke="#6B7280" 
+                stroke="#9ca3af" 
                 fontSize={12}
                 tickFormatter={(value) => {
                   const date = new Date(value);
@@ -98,16 +135,16 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 }}
               />
               <YAxis 
-                stroke="#6B7280" 
+                stroke="#9ca3af" 
                 fontSize={12}
                 tickFormatter={(value) => value.toLocaleString()}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#1F2937",
-                  border: "none",
+                  backgroundColor: "rgba(255, 255, 255, 0.97)",
                   borderRadius: "8px",
-                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+                  border: "1px solid #e5e7eb",
+                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)"
                 }}
                 formatter={(value: number) => [value.toLocaleString() + " ₽", '']}
                 labelFormatter={(label) => {
@@ -124,6 +161,8 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 6, strokeWidth: 0, fill: "#8B5CF6" }}
+                fillOpacity={1}
+                fill="url(#colorSales)"
               />
               <Line
                 type="monotone"
@@ -134,19 +173,21 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
                 dot={false}
                 strokeDasharray="5 5"
                 activeDot={{ r: 6, strokeWidth: 0, fill: "#EC4899" }}
+                fillOpacity={1}
+                fill="url(#colorPrevSales)"
               />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </Card>
 
-      <Card className="p-4 overflow-hidden relative border-indigo-200/40 dark:border-indigo-800/40 bg-gradient-to-br from-white/80 to-indigo-50/50 dark:from-gray-900/90 dark:to-indigo-950/50 backdrop-blur-[1px]">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-200/20 via-transparent to-transparent dark:from-indigo-900/20 pointer-events-none"></div>
-        
-        <div className="flex items-center justify-between mb-4 relative z-10">
+      <Card className="p-4 shadow-md border-indigo-100 dark:border-indigo-900/40 bg-gradient-to-br from-white/80 to-indigo-50/50 dark:from-gray-900/90 dark:to-indigo-950/50">
+        <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <ShoppingBag className="text-indigo-500" size={20} />
-            Количество проданных товаров
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-700 dark:from-indigo-400 dark:to-blue-400">
+              Количество проданных товаров
+            </span>
           </h3>
         </div>
         
@@ -155,79 +196,91 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
             <PieChart>
               <defs>
                 {COLORS.map((color, index) => (
-                  <linearGradient key={`colorGradient-${index}`} id={`colorGradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient key={`colorUniqueGradient-${index}`} id={`colorUniqueGradient-${index}`} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={color} stopOpacity={0.95}/>
                     <stop offset="100%" stopColor={color} stopOpacity={0.75}/>
                   </linearGradient>
                 ))}
-                <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#000" floodOpacity="0.3"/>
+                <filter id="dropShadow" height="130%">
+                  <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                  <feOffset dx="2" dy="2" result="offsetblur"/>
+                  <feComponentTransfer>
+                    <feFuncA type="linear" slope="0.3"/>
+                  </feComponentTransfer>
+                  <feMerge> 
+                    <feMergeNode/>
+                    <feMergeNode in="SourceGraphic"/> 
+                  </feMerge>
                 </filter>
               </defs>
               
               <Pie
-                data={productSales}
+                activeIndex={0}
+                activeShape={renderActiveShape}
+                data={topProducts}
                 cx="50%"
                 cy="50%"
-                labelLine={false}
-                label={renderCustomizedLabel}
-                innerRadius={95}
-                outerRadius={140}
+                innerRadius={isMobile ? 70 : 90}
+                outerRadius={isMobile ? 100 : 120}
                 fill="#8884d8"
                 dataKey="quantity"
                 nameKey="subject_name"
-                animationBegin={0}
-                animationDuration={1500}
-                paddingAngle={3}
+                paddingAngle={4}
+                filter="url(#dropShadow)"
               >
-                {productSales.map((entry, index) => (
+                {topProducts.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
-                    fill={`url(#colorGradient-${index % COLORS.length})`} 
+                    fill={`url(#colorUniqueGradient-${index % COLORS.length})`} 
                     stroke="rgba(255,255,255,0.6)" 
-                    strokeWidth={2} 
-                    style={{ filter: 'url(#shadow)' }}
+                    strokeWidth={2}
                   />
                 ))}
               </Pie>
               
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "#1F2937",
-                  border: "none",
-                  borderRadius: "8px",
-                  boxShadow: "0 4px 12px -1px rgba(0, 0, 0, 0.2), 0 2px 6px -1px rgba(0, 0, 0, 0.1)"
+              <Legend
+                layout="vertical" 
+                verticalAlign="middle" 
+                align="right"
+                formatter={(value, entry, index) => {
+                  const item = topProducts[index as number];
+                  const percentage = ((item.quantity / totalSales) * 100).toFixed(1);
+                  return (
+                    <span className="text-sm font-medium">
+                      {value} - {item.quantity} шт. ({percentage}%)
+                    </span>
+                  );
                 }}
-                formatter={(value: number, name: string) => {
-                  return [`${value.toLocaleString()} шт.`, name];
+                wrapperStyle={{ 
+                  paddingLeft: "10px",
+                  maxHeight: "300px", 
+                  overflowY: "auto" 
                 }}
-                itemStyle={{ padding: "4px 0" }}
               />
               
-              <Legend 
-                formatter={customLegendFormatter} 
-                layout="vertical"
-                align="right"
-                verticalAlign="middle"
-                wrapperStyle={{ paddingLeft: "20px", fontSize: "12px", maxHeight: "300px", overflowY: "auto" }}
+              <Tooltip
+                formatter={(value, name) => {
+                  const percentage = ((Number(value) / totalSales) * 100).toFixed(1);
+                  return [`${value} шт. (${percentage}%)`, name];
+                }}
+                contentStyle={{ 
+                  backgroundColor: "rgba(255, 255, 255, 0.97)", 
+                  borderRadius: "8px", 
+                  border: "1px solid #e5e7eb",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
+                }}
               />
             </PieChart>
           </ResponsiveContainer>
           
-          <div className="absolute inset-0 flex items-center justify-center" style={{ transform: 'translateX(-21%)' }}>
-            <div className="w-[180px] h-[180px] rounded-full flex flex-col items-center justify-center bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-2 border-indigo-300/60 dark:border-indigo-600/40 shadow-lg">
-              <div className="flex flex-col items-center justify-center gap-2">
-                <div className="bg-gradient-to-r from-indigo-500 to-purple-500 p-3 rounded-full">
-                  <Package className="text-white h-6 w-6" />
-                </div>
-                
-                <div className="text-3xl font-bold text-gray-800 dark:text-gray-200">
-                  {totalSales.toLocaleString()}
-                </div>
-                
-                <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  товаров продано
-                </div>
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-36 h-36 rounded-full flex flex-col items-center justify-center bg-white/90 dark:bg-gray-800/90 border-2 border-indigo-300/60 dark:border-indigo-600/40 shadow-lg">
+              <ShoppingCart className="text-indigo-500 h-8 w-8 mb-2" />
+              <div className="text-2xl font-bold text-gray-800 dark:text-gray-200">
+                {totalSales.toLocaleString()}
+              </div>
+              <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                товаров
               </div>
             </div>
           </div>
