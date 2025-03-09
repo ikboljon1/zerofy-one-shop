@@ -1,156 +1,140 @@
 
-import { Card } from "@/components/ui/card";
-import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, Coins } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from "recharts";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { Badge } from "@/components/ui/badge";
+import { Info } from "lucide-react";
 
 interface ExpenseBreakdownProps {
-  data: {
-    currentPeriod: {
-      expenses: {
-        total: number;
-        logistics: number;
-        storage: number;
-        penalties: number;
-        advertising: number;
-        acceptance: number;
-        deductions?: number; // Add deductions to the interface
-      };
-    };
-  };
-  advertisingBreakdown?: {
+  data: any;
+  advertisingBreakdown: {
     search: number;
   };
+  isDemoData?: boolean;
 }
 
-const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps) => {
-  // Используем общую сумму расходов на рекламу без разбивки
-  const advertisingAmount = data.currentPeriod.expenses.advertising || 0;
-  const acceptanceAmount = data.currentPeriod.expenses.acceptance || 0;
-  const deductionsAmount = data.currentPeriod.expenses.deductions || 0;
+const ExpenseBreakdown = ({ data, advertisingBreakdown, isDemoData = false }: ExpenseBreakdownProps) => {
+  const expenses = data?.currentPeriod?.expenses || {};
   
-  // Общая сумма расходов для расчета процентов
-  const totalExpenses = data.currentPeriod.expenses.total;
+  const chartData = [
+    {
+      name: "Логистика",
+      value: expenses.logistics || 0,
+    },
+    {
+      name: "Хранение",
+      value: expenses.storage || 0,
+    },
+    {
+      name: "Штрафы",
+      value: expenses.penalties || 0,
+    },
+    {
+      name: "Приемка",
+      value: expenses.acceptance || 0,
+    },
+    {
+      name: "Реклама",
+      value: expenses.advertising || 0,
+    },
+  ];
 
-  // Рассчитываем штрафы и удержания для отображения
-  const penaltiesAmount = data.currentPeriod.expenses.penalties;
+  if (expenses.deductions && expenses.deductions > 0) {
+    chartData.push({
+      name: "Прочие удержания",
+      value: expenses.deductions,
+    });
+  }
+
+  // Сортируем данные по убыванию значения
+  chartData.sort((a, b) => b.value - a.value);
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A569BD', '#5DADE2'];
+
+  const renderCustomizedLabel = ({ x, y, width, height, value, index }: any) => {
+    return (
+      <text 
+        x={x + width + 5} 
+        y={y + height / 2} 
+        fill="#666" 
+        textAnchor="start"
+        dominantBaseline="middle"
+        className={`${isDemoData ? "fill-gray-500" : ""}`}
+      >
+        {formatCurrency(value)}
+      </text>
+    );
+  };
+
+  const totalExpenses = chartData.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <Card className="p-6">
-      <h3 className="text-lg font-semibold mb-6">Структура расходов</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-        <div className="flex flex-col bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background border border-purple-200 dark:border-purple-800 rounded-xl p-6">
-          <div className="flex justify-between items-center mb-2">
-            <h4 className="text-base font-medium">Логистика</h4>
-            <div className="bg-purple-100 dark:bg-purple-900/60 p-2 rounded-md">
-              <Truck className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold">{formatCurrency(data.currentPeriod.expenses.logistics)}</p>
-          <span className="text-xs text-muted-foreground mt-1">
-            {totalExpenses > 0 ? ((data.currentPeriod.expenses.logistics / totalExpenses) * 100).toFixed(1) : '0'}% от общих расходов
-          </span>
-          <div className="mt-4 pt-4 border-t border-purple-200 dark:border-purple-800/50">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Доставка до клиента</span>
-                <span className="font-medium">{formatCurrency(data.currentPeriod.expenses.logistics * 0.65)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Доставка на склад</span>
-                <span className="font-medium">{formatCurrency(data.currentPeriod.expenses.logistics * 0.35)}</span>
-              </div>
-            </div>
-          </div>
+    <Card className={isDemoData ? "border-gray-300 dark:border-gray-700" : ""}>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <div className="flex flex-row items-center space-x-2">
+          <CardTitle className="text-base font-semibold">Структура расходов</CardTitle>
+          
+          {isDemoData && (
+            <Badge variant="outline" className="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 text-xs">
+              <Info className="h-3 w-3 mr-1" />
+              Демо данные
+            </Badge>
+          )}
         </div>
-
-        <div className="flex flex-col bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background border border-blue-200 dark:border-blue-800 rounded-xl p-6">
-          <div className="flex justify-between items-center mb-2">
-            <h4 className="text-base font-medium">Хранение</h4>
-            <div className="bg-blue-100 dark:bg-blue-900/60 p-2 rounded-md">
-              <WarehouseIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+        <CardDescription className="text-right">
+          {totalExpenses > 0 ? 
+            formatCurrency(totalExpenses) : 
+            "Нет данных"}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="h-[300px]">
+          {totalExpenses > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                layout="vertical"
+                data={chartData}
+                margin={{
+                  top: 5, right: 80, left: 5, bottom: 5,
+                }}
+              >
+                <CartesianGrid strokeDasharray="3 3" horizontalPoints={chartData.map((_, i) => i)} />
+                <XAxis 
+                  type="number" 
+                  tickFormatter={(value) => formatCurrency(value, 0)}
+                  stroke={isDemoData ? "#8E9196" : undefined}
+                />
+                <YAxis 
+                  type="category" 
+                  dataKey="name"
+                  width={120}
+                  stroke={isDemoData ? "#8E9196" : undefined}
+                />
+                <Tooltip 
+                  formatter={(value: number) => formatCurrency(value)}
+                />
+                <Bar 
+                  dataKey="value" 
+                  background={{ fill: isDemoData ? "#F1F0FB" : "#f5f5f5" }}
+                  label={renderCustomizedLabel}
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={COLORS[index % COLORS.length]} 
+                      opacity={isDemoData ? 0.8 : 1}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex justify-center items-center h-full">
+              <p className="text-muted-foreground">Нет данных о расходах</p>
             </div>
-          </div>
-          <p className="text-2xl font-bold">{formatCurrency(data.currentPeriod.expenses.storage)}</p>
-          <span className="text-xs text-muted-foreground mt-1">
-            {totalExpenses > 0 ? ((data.currentPeriod.expenses.storage / totalExpenses) * 100).toFixed(1) : '0'}% от общих расходов
-          </span>
-          <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-800/50">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Хранение на складах</span>
-                <span className="font-medium">{formatCurrency(data.currentPeriod.expenses.storage)}</span>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
-
-        <div className="flex flex-col bg-gradient-to-br from-red-50 to-white dark:from-red-950/20 dark:to-background border border-red-200 dark:border-red-800 rounded-xl p-6">
-          <div className="flex justify-between items-center mb-2">
-            <h4 className="text-base font-medium">Штрафы</h4>
-            <div className="bg-red-100 dark:bg-red-900/60 p-2 rounded-md">
-              <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold">{formatCurrency(penaltiesAmount)}</p>
-          <span className="text-xs text-muted-foreground mt-1">
-            {totalExpenses > 0 ? ((penaltiesAmount / totalExpenses) * 100).toFixed(1) : '0'}% от общих расходов
-          </span>
-          <div className="mt-4 pt-4 border-t border-red-200 dark:border-red-800/50">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Брак и повреждения</span>
-                <span className="font-medium">{formatCurrency(penaltiesAmount * 0.35)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Нарушение правил</span>
-                <span className="font-medium">{formatCurrency(penaltiesAmount * 0.35)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-background border border-amber-200 dark:border-amber-800 rounded-xl p-6">
-          <div className="flex justify-between items-center mb-2">
-            <h4 className="text-base font-medium">Реклама</h4>
-            <div className="bg-amber-100 dark:bg-amber-900/60 p-2 rounded-md">
-              <Target className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold">{formatCurrency(advertisingAmount)}</p>
-          <span className="text-xs text-muted-foreground mt-1">
-            {totalExpenses > 0 ? ((advertisingAmount / totalExpenses) * 100).toFixed(1) : '0'}% от общих расходов
-          </span>
-          <div className="mt-4 pt-4 border-t border-amber-200 dark:border-amber-800/50">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Расходы на продвижение</span>
-                <span className="font-medium">{formatCurrency(advertisingAmount)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col bg-gradient-to-br from-orange-50 to-white dark:from-orange-950/20 dark:to-background border border-orange-200 dark:border-orange-800 rounded-xl p-6">
-          <div className="flex justify-between items-center mb-2">
-            <h4 className="text-base font-medium">Удержания</h4>
-            <div className="bg-orange-100 dark:bg-orange-900/60 p-2 rounded-md">
-              <Coins className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold">{formatCurrency(deductionsAmount)}</p>
-          <span className="text-xs text-muted-foreground mt-1">
-            {totalExpenses > 0 ? ((deductionsAmount / totalExpenses) * 100).toFixed(1) : '0'}% от общих расходов
-          </span>
-          <div className="mt-4 pt-4 border-t border-orange-200 dark:border-orange-800/50">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Прочие удержания</span>
-                <span className="font-medium">{formatCurrency(deductionsAmount)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      </CardContent>
     </Card>
   );
 };

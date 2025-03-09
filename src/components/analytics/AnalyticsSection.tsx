@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
-import { AlertCircle, Target, PackageX, Tag, Loader2, BadgePercent } from "lucide-react";
+import { AlertCircle, Target, PackageX, Tag, Loader2, BadgePercent, Info } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
@@ -14,6 +13,7 @@ import PieChartCard from "./components/PieChartCard";
 import ExpenseBreakdown from "./components/ExpenseBreakdown";
 import ProductList from "./components/ProductList";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Badge } from "@/components/ui/badge";
 
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
 import { getAdvertCosts, getAdvertBalance, getAdvertPayments } from "@/services/advertisingApi";
@@ -25,8 +25,6 @@ import {
   deductionsTimelineData,
   advertisingData
 } from "./data/demoData";
-
-const ANALYTICS_STORAGE_KEY = 'marketplace_analytics';
 
 interface AnalyticsData {
   currentPeriod: {
@@ -132,6 +130,7 @@ const AnalyticsSection = () => {
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [dataTimestamp, setDataTimestamp] = useState<number>(Date.now());
   const [quickSelectOpen, setQuickSelectOpen] = useState<boolean>(false);
+  const [isDemoData, setIsDemoData] = useState<boolean>(true);
   const isMobile = useIsMobile();
   const { toast } = useToast();
 
@@ -169,13 +168,6 @@ const AnalyticsSection = () => {
         const advertCosts = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
         
         if (advertCosts && advertCosts.length > 0) {
-          totalAdvertisingCost = advertCosts.reduce((sum, cost) => sum + cost.updSum, 0);
-          totalAdvertisingCost = roundToTwoDecimals(totalAdvertisingCost);
-          
-          setAdvertisingBreakdown({
-            search: totalAdvertisingCost
-          });
-          
           const campaignCosts: Record<string, number> = {};
           
           advertCosts.forEach(cost => {
@@ -198,6 +190,7 @@ const AnalyticsSection = () => {
           }
           
           setProductAdvertisingData(topProductsList.length > 0 ? topProductsList : []);
+          setIsDemoData(false);
         } else {
           if (productAdvertisingData.length === 0) {
             setProductAdvertisingData(advertisingData);
@@ -207,6 +200,7 @@ const AnalyticsSection = () => {
             search: roundToTwoDecimals(demoData.currentPeriod.expenses.advertising)
           });
           totalAdvertisingCost = roundToTwoDecimals(demoData.currentPeriod.expenses.advertising);
+          setIsDemoData(true);
         }
       } catch (error) {
         console.error('Error fetching advertising data:', error);
@@ -215,6 +209,7 @@ const AnalyticsSection = () => {
           search: roundToTwoDecimals(demoData.currentPeriod.expenses.advertising)
         });
         totalAdvertisingCost = roundToTwoDecimals(demoData.currentPeriod.expenses.advertising);
+        setIsDemoData(true);
       }
       
       if (statsData) {
@@ -329,43 +324,14 @@ const AnalyticsSection = () => {
         
         setDeductionsTimeline(newDeductionsTimeline);
         setDataTimestamp(Date.now());
-        
-        // Сохраняем данные в БД
-        try {
-          await axios.post('http://localhost:3001/api/analytics', {
-            storeId: selectedStore.id,
-            dateFrom: dateFrom.toISOString(),
-            dateTo: dateTo.toISOString(),
-            data: modifiedData,
-            penalties: penaltiesData,
-            returns: returnsData,
-            deductions: deductionsData,
-            deductionsTimeline: newDeductionsTimeline,
-            productAdvertisingData: productAdvertisingData,
-            advertisingBreakdown: advertisingBreakdown
-          });
-        } catch (dbError) {
-          console.error('Error saving analytics to DB:', dbError);
-          // В случае ошибки сохраняем в localStorage как запасной вариант
-          localStorage.setItem(`${ANALYTICS_STORAGE_KEY}_${selectedStore.id}`, JSON.stringify({
-            storeId: selectedStore.id,
-            dateFrom: dateFrom.toISOString(),
-            dateTo: dateTo.toISOString(),
-            data: modifiedData,
-            penalties: penaltiesData,
-            returns: returnsData,
-            deductions: deductionsData,
-            deductionsTimeline: newDeductionsTimeline,
-            productAdvertisingData: productAdvertisingData,
-            advertisingBreakdown: advertisingBreakdown,
-            timestamp: Date.now()
-          }));
-        }
+        setIsDemoData(false);
         
         toast({
           title: "Успех",
           description: "Аналитические данные успешно обновлены",
         });
+      } else {
+        setIsDemoData(true);
       }
     } catch (error) {
       console.error('Error fetching analytics data:', error);
@@ -387,6 +353,7 @@ const AnalyticsSection = () => {
           setProductAdvertisingData(analyticsData.productAdvertisingData);
           setAdvertisingBreakdown(analyticsData.advertisingBreakdown);
           setDataTimestamp(analyticsData.timestamp);
+          setIsDemoData(false);
         } else {
           setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
             date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -401,6 +368,7 @@ const AnalyticsSection = () => {
           setPenalties([]);
           setDeductions([]);
           setReturns([]);
+          setIsDemoData(true);
         }
       } catch (dbError) {
         console.error('Error fetching analytics from DB:', dbError);
@@ -418,6 +386,7 @@ const AnalyticsSection = () => {
         setPenalties([]);
         setDeductions([]);
         setReturns([]);
+        setIsDemoData(true);
       }
     } finally {
       setIsLoading(false);
@@ -474,6 +443,7 @@ const AnalyticsSection = () => {
       setProductAdvertisingData([]);
       setReturns([]);
       setIsLoading(false);
+      setIsDemoData(true);
     }
   }, [selectedStoreId]);
 
@@ -507,14 +477,26 @@ const AnalyticsSection = () => {
           onApplyDateRange={handleDateChange}
           onUpdate={handleDateChange}
         />
+        
+        {isDemoData && (
+          <div className="mt-3 flex items-center gap-1.5 justify-center">
+            <Badge variant="outline" className="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border-gray-300 dark:border-gray-700">
+              <Info className="h-3 w-3 mr-1" />
+              Демонстрационные данные
+            </Badge>
+            <span className="text-xs text-gray-500">
+              (Выберите магазин и период для получения реальных данных)
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="space-y-8">
         <KeyMetrics data={data} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <SalesChart data={data} />
-          <DeductionsChart data={deductionsTimeline} />
+          <SalesChart data={data} isDemoData={isDemoData} />
+          <DeductionsChart data={deductionsTimeline} isDemoData={isDemoData} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -523,12 +505,14 @@ const AnalyticsSection = () => {
             icon={<AlertCircle className="h-4 w-4 text-purple-600 dark:text-purple-400" />}
             data={penalties}
             emptyMessage="Штрафы отсутствуют"
+            isDemoData={isDemoData}
           />
           <PieChartCard 
             title="Прочие удержания"
             icon={<BadgePercent className="h-4 w-4 text-orange-600 dark:text-orange-400" />}
             data={deductions}
             emptyMessage="Удержания отсутствуют"
+            isDemoData={isDemoData}
           />
         </div>
 
@@ -539,6 +523,7 @@ const AnalyticsSection = () => {
             data={returns}
             showCount={true}
             emptyMessage="Возвраты отсутствуют"
+            isDemoData={isDemoData}
           />
           {hasAdvertisingData && (
             <PieChartCard 
@@ -546,22 +531,29 @@ const AnalyticsSection = () => {
               icon={<Tag className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
               data={productAdvertisingData}
               emptyMessage="Нет данных о расходах на рекламу"
+              isDemoData={isDemoData}
             />
           )}
         </div>
 
-        <ExpenseBreakdown data={data} advertisingBreakdown={advertisingBreakdown} />
+        <ExpenseBreakdown 
+          data={data} 
+          advertisingBreakdown={advertisingBreakdown} 
+          isDemoData={isDemoData}
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <ProductList 
             title="Самые прибыльные товары"
             products={data.topProfitableProducts}
             isProfitable={true}
+            isDemoData={isDemoData}
           />
           <ProductList 
             title="Самые убыточные товары"
             products={data.topUnprofitableProducts}
             isProfitable={false}
+            isDemoData={isDemoData}
           />
         </div>
       </div>
