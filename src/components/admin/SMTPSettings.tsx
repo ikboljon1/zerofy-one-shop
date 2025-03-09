@@ -16,7 +16,7 @@ import {
   testSmtpConnection, 
   SmtpSettings as SmtpSettingsType 
 } from "@/services/userService";
-import { Mail, Key, Server, Globe, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { Mail, Key, Server, Globe, AlertCircle, CheckCircle2, Loader2, Eye, EyeOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const smtpSchema = z.object({
@@ -36,6 +36,7 @@ const SMTPSettings = () => {
   const [isTesting, setIsTesting] = useState(false);
   const [isTestSuccess, setIsTestSuccess] = useState<boolean | null>(null);
   const [testErrorMessage, setTestErrorMessage] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
 
   const {
@@ -44,6 +45,7 @@ const SMTPSettings = () => {
     formState: { errors },
     setValue,
     watch,
+    reset,
   } = useForm<SmtpFormValues>({
     resolver: zodResolver(smtpSchema),
     defaultValues: {
@@ -58,33 +60,67 @@ const SMTPSettings = () => {
   });
 
   const secure = watch("secure");
+  const hostValue = watch("host");
+
+  // Automatically update port based on secure setting and host
+  useEffect(() => {
+    const currentPort = watch("port");
+    
+    // Only auto-update port if it's one of the standard ports
+    if (currentPort === 587 || currentPort === 465) {
+      // Set default port based on secure setting
+      if (secure) {
+        setValue("port", 465);
+      } else {
+        setValue("port", 587);
+      }
+    }
+  }, [secure, setValue, watch]);
 
   useEffect(() => {
     const loadSettings = async () => {
       try {
         const settings = await getSmtpSettings();
         if (settings) {
-          setValue("host", settings.host || "");
-          setValue("port", settings.port || 587);
-          setValue("secure", settings.secure !== undefined ? settings.secure : true);
-          setValue("username", settings.username || "");
-          setValue("password", settings.password || "");
-          setValue("fromEmail", settings.fromEmail || "");
-          setValue("fromName", settings.fromName || "");
+          reset({
+            host: settings.host || "",
+            port: settings.port || 587,
+            secure: settings.secure !== undefined ? settings.secure : true,
+            username: settings.username || "",
+            password: settings.password || "",
+            fromEmail: settings.fromEmail || "",
+            fromName: settings.fromName || "",
+          });
         }
       } catch (error) {
         console.error("Error loading SMTP settings:", error);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось загрузить настройки SMTP",
+          variant: "destructive",
+        });
       }
     };
 
     loadSettings();
-  }, [setValue]);
+  }, [reset, setValue, toast]);
 
   const onSubmit = async (data: SmtpFormValues) => {
     setIsLoading(true);
 
     try {
-      await saveSmtpSettings(data as SmtpSettingsType);
+      // Create a fully validated settings object
+      const smtpSettings: SmtpSettingsType = {
+        host: data.host,
+        port: data.port,
+        secure: data.secure,
+        username: data.username,
+        password: data.password,
+        fromEmail: data.fromEmail,
+        fromName: data.fromName,
+      };
+      
+      await saveSmtpSettings(smtpSettings);
       
       toast({
         title: "Настройки сохранены",
@@ -123,7 +159,18 @@ const SMTPSettings = () => {
         return;
       }
       
-      const result = await testSmtpConnection(formData as SmtpSettingsType);
+      // Create a fully validated settings object
+      const smtpSettings: SmtpSettingsType = {
+        host: formData.host,
+        port: formData.port,
+        secure: formData.secure,
+        username: formData.username,
+        password: formData.password,
+        fromEmail: formData.fromEmail,
+        fromName: formData.fromName,
+      };
+      
+      const result = await testSmtpConnection(smtpSettings);
       
       if (result.success) {
         setIsTestSuccess(true);
@@ -142,6 +189,7 @@ const SMTPSettings = () => {
       }
     } catch (error) {
       setIsTestSuccess(false);
+      setTestErrorMessage(error instanceof Error ? error.message : "Неизвестная ошибка");
       toast({
         title: "Ошибка",
         description: "Не удалось выполнить тест соединения",
@@ -219,6 +267,22 @@ const SMTPSettings = () => {
                   />
                   <Label htmlFor="secure">Использовать защищенное соединение (SSL/TLS)</Label>
                 </div>
+                
+                {hostValue?.includes('gmail.com') && (
+                  <Alert className="bg-blue-900/40 border-blue-800">
+                    <AlertDescription className="text-sm">
+                      <strong>Совет по настройке Gmail:</strong> Для аккаунтов Google с двухфакторной аутентификацией необходимо использовать пароль приложения вместо обычного пароля. 
+                      <a 
+                        href="https://support.google.com/accounts/answer/185833" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:text-blue-300 ml-1"
+                      >
+                        Подробнее о паролях приложений
+                      </a>
+                    </AlertDescription>
+                  </Alert>
+                )}
               </TabsContent>
               
               <TabsContent value="auth" className="space-y-4">
@@ -244,11 +308,18 @@ const SMTPSettings = () => {
                     <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       id="password"
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       placeholder="Пароль или ключ приложения"
-                      className="pl-9"
+                      className="pl-9 pr-10"
                       {...register("password")}
                     />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                   {errors.password && (
                     <p className="text-sm text-destructive">{errors.password.message}</p>

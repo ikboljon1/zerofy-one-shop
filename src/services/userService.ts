@@ -322,9 +322,9 @@ export const getSmtpSettings = async (): Promise<SmtpSettings | null> => {
     host: "smtp.gmail.com",
     port: 587,
     secure: true,
-    username: "uldashvaevasarvinoz@gmail.com",
+    username: "",
     password: "",
-    fromEmail: "uldashvaevasarvinoz@gmail.com",
+    fromEmail: "",
     fromName: "Zerofy System"
   };
   
@@ -343,8 +343,54 @@ export const testSmtpConnection = async (settings: SmtpSettings): Promise<{ succ
   try {
     console.log("Testing SMTP connection with settings:", settings);
     
+    // Validation of required fields
     if (!settings.host) {
       return { success: false, message: "Неверный хост SMTP-сервера" };
+    }
+    
+    if (!settings.port || settings.port <= 0) {
+      return { success: false, message: "Неверный порт SMTP-сервера" };
+    }
+    
+    if (!settings.username) {
+      return { success: false, message: "Имя пользователя SMTP-сервера не указано" };
+    }
+    
+    if (!settings.password) {
+      return { success: false, message: "Пароль SMTP-сервера не указан" };
+    }
+    
+    if (!settings.fromEmail) {
+      return { success: false, message: "Email отправителя не указан" };
+    }
+    
+    // This would typically involve connecting to the SMTP server
+    // For Gmail, particularly note:
+    // 1. For Gmail accounts, you need to use an App Password if 2FA is enabled
+    // 2. Less secure app access must be enabled if not using an App Password
+    
+    // For demo purposes, we'll add validation for common email providers
+    if (settings.host.includes('gmail.com')) {
+      if (settings.secure && settings.port !== 465) {
+        return { 
+          success: false, 
+          message: "Для защищенного соединения с Gmail рекомендуется использовать порт 465" 
+        };
+      } else if (!settings.secure && settings.port !== 587) {
+        return { 
+          success: false, 
+          message: "Для незащищенного соединения с Gmail рекомендуется использовать порт 587" 
+        };
+      }
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(settings.fromEmail)) {
+      return { 
+        success: false, 
+        message: "Неверный формат email отправителя" 
+      };
     }
     
     return { success: true, message: "Соединение успешно установлено" };
