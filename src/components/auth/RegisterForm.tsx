@@ -76,7 +76,8 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
         localStorage.setItem('user', JSON.stringify(result.user));
         
         onSuccess();
-        navigate("/");
+        // Напрямую перенаправляем на dashboard вместо корневого пути
+        navigate("/dashboard");
       } else {
         toast({
           title: "Ошибка",
