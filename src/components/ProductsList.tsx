@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
 import { Package, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { PRODUCT_EFFICIENCY_KEY, ProductEfficiency } from "@/types/store";
 
 interface Product {
   nmID: number;
@@ -28,7 +28,7 @@ interface Product {
     acceptance: number;
     deductions?: number;
     ppvz_for_pay?: number;
-    retail_price?: number; 
+    retail_price?: number; // Изменено с retail_amount на retail_price
   };
 }
 
@@ -68,7 +68,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       salesAmount: 0,
       transferredAmount: 0,
       soldQuantity: 0,
-      margin: 0
+      margin: 0  // Added margin to the return object
     };
     
     console.log('Calculating for product:', {
@@ -101,6 +101,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     const netProfit = transferredAmount - costPriceTotal - totalExpenses;
     
     // Calculate margin as a percentage of costs (not revenue)
+    // This prevents division by zero and unrealistic margins
     let margin = 0;
     if (costPriceTotal > 0) {
       margin = (netProfit / costPriceTotal) * 100;
@@ -117,63 +118,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       salesAmount,
       transferredAmount,
       soldQuantity: productSales,
-      margin: Math.round(margin)
+      margin: Math.round(margin) // Return the calculated margin
     };
-  };
-
-  const saveProductEfficiencyData = () => {
-    if (!selectedStore) return;
-    
-    const productProfitData = products.map(product => {
-      const profitDetails = calculateNetProfit(product);
-      
-      return {
-        name: product.title || "Неизвестный товар",
-        price: (product.discountedPrice || 0).toString(),
-        profit: profitDetails.netProfit.toString(),
-        image: product.photos?.[0]?.c246x328 || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg",
-        quantitySold: profitDetails.soldQuantity,
-        margin: profitDetails.margin,
-        returnCount: 0,
-        category: product.brand || "Неизвестная категория"
-      };
-    });
-    
-    const sortedByProfit = [...productProfitData].sort((a, b) => 
-      parseFloat(b.profit) - parseFloat(a.profit)
-    );
-    
-    const profitableProducts = sortedByProfit.slice(0, 3);
-    
-    const sortedByLoss = [...productProfitData].sort((a, b) => 
-      parseFloat(a.profit) - parseFloat(b.profit)
-    );
-    
-    const unprofitableProducts = sortedByLoss.slice(0, 3);
-    
-    const efficiencyData: ProductEfficiency = {
-      storeId: selectedStore.id,
-      updateDate: new Date().toISOString(),
-      profitableProducts,
-      unprofitableProducts
-    };
-    
-    const existingData = localStorage.getItem(PRODUCT_EFFICIENCY_KEY);
-    const allData: ProductEfficiency[] = existingData 
-      ? JSON.parse(existingData) 
-      : [];
-    
-    const storeIndex = allData.findIndex(data => data.storeId === selectedStore.id);
-    
-    if (storeIndex !== -1) {
-      allData[storeIndex] = efficiencyData;
-    } else {
-      allData.push(efficiencyData);
-    }
-    
-    localStorage.setItem(PRODUCT_EFFICIENCY_KEY, JSON.stringify(allData));
-    
-    console.log('Saved product efficiency data:', efficiencyData);
   };
 
   const fetchProductPrices = async (nmIds: number[]) => {
@@ -435,8 +381,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       console.log("Updated products:", updatedProducts);
       setProducts(updatedProducts);
       localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(updatedProducts));
-      
-      setTimeout(() => saveProductEfficiencyData(), 500);
 
       toast({
         title: "Успешно",
@@ -471,7 +415,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     localStorage.setItem(`costPrices_${selectedStore?.id}`, JSON.stringify(costPrices));
   };
 
-  useEffect(() => {
+  useState(() => {
     if (selectedStore) {
       const storedProducts = localStorage.getItem(`products_${selectedStore.id}`);
       if (storedProducts) {
@@ -486,7 +430,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         setProducts([]);
       }
     }
-  }, [selectedStore]);
+  });
 
   if (!selectedStore) {
     return (
