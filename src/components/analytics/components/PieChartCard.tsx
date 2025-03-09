@@ -13,6 +13,8 @@ interface PieChartCardProps {
   isLoading?: boolean;
   icon?: React.ReactNode;
   emptyText?: string;
+  valueLabel?: string;
+  emptyMessage?: string;
 }
 
 const RADIAN = Math.PI / 180;
@@ -45,7 +47,9 @@ const PieChartCard = ({
   colors, 
   isLoading = false,
   icon,
-  emptyText = "Нет данных для отображения"
+  emptyText = "Нет данных для отображения",
+  valueLabel,
+  emptyMessage
 }: PieChartCardProps) => {
   
   if (isLoading) {
@@ -75,7 +79,7 @@ const PieChartCard = ({
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center py-10">
-          <p className="text-sm text-muted-foreground">{emptyText}</p>
+          <p className="text-sm text-muted-foreground">{emptyMessage || emptyText}</p>
         </CardContent>
       </Card>
     );
@@ -83,7 +87,7 @@ const PieChartCard = ({
 
   // Format data for the tooltip
   const formatTooltip = (value: number) => {
-    return `${value.toLocaleString('ru-RU')} ₽`;
+    return `${value.toLocaleString('ru-RU')} ${valueLabel || '₽'}`;
   };
 
   return (

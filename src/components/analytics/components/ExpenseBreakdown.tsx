@@ -28,12 +28,17 @@ interface ExpenseData {
   };
 }
 
+interface AdvertisingBreakdown {
+  search: number;
+}
+
 interface ExpenseBreakdownProps {
   data: ExpenseData;
   isLoading?: boolean;
+  advertisingBreakdown?: AdvertisingBreakdown;
 }
 
-const ExpenseBreakdown = ({ data, isLoading = false }: ExpenseBreakdownProps) => {
+const ExpenseBreakdown = ({ data, isLoading = false, advertisingBreakdown }: ExpenseBreakdownProps) => {
   if (isLoading) {
     return (
       <Card className="shadow-md">

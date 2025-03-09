@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag, Loader2, BadgePercent } from "lucide-react";
@@ -447,8 +448,8 @@ const AnalyticsSection = () => {
             setDateFrom={setDateFrom}
             setDateTo={setDateTo}
             onApplyDateRange={handleRefreshData}
-            quickSelectOpen={quickSelectOpen}
-            setQuickSelectOpen={setQuickSelectOpen}
+            isQuickSelectOpen={quickSelectOpen}
+            updateQuickSelectOpen={setQuickSelectOpen}
           />
           <Button 
             variant="outline" 
@@ -489,7 +490,9 @@ const AnalyticsSection = () => {
             { name: 'Реклама', value: data.currentPeriod.expenses.advertising },
             { name: 'Вычеты', value: data.currentPeriod.expenses.deductions || 0 }
           ]}
-          valueLabel="₽"
+          dataKey="value"
+          nameKey="name"
+          colors={['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#FF5733']}
         />
 
         <ExpenseBreakdown 
@@ -501,8 +504,10 @@ const AnalyticsSection = () => {
           title="Структура возвратов" 
           icon={<PackageX className="h-4 w-4 text-primary" />}
           data={returns}
-          valueLabel="₽"
-          emptyMessage="Нет данных о возвратах"
+          dataKey="value"
+          nameKey="name"
+          colors={['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#FF5733']}
+          emptyText="Нет данных о возвратах"
         />
       </div>
 

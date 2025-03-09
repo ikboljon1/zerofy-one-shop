@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { format, subDays, startOfWeek, startOfMonth } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -17,8 +16,8 @@ interface DateRangePickerProps {
   onApplyDateRange?: () => void;
   onUpdate?: () => void;
   forceRefresh?: boolean;
-  quickSelectOpen?: boolean;
-  setQuickSelectOpen?: (open: boolean) => void;
+  isQuickSelectOpen?: boolean;
+  updateQuickSelectOpen?: (open: boolean) => void;
 }
 
 const DateRangePicker = ({ 
@@ -29,18 +28,16 @@ const DateRangePicker = ({
   onApplyDateRange,
   onUpdate,
   forceRefresh = true,
-  quickSelectOpen: isQuickSelectOpen,
-  setQuickSelectOpen: updateQuickSelectOpen
+  isQuickSelectOpen,
+  updateQuickSelectOpen
 }: DateRangePickerProps) => {
   const [fromOpen, setFromOpen] = useState(false);
   const [toOpen, setToOpen] = useState(false);
-  // Use internal state only if external state is not provided
-  const [internalQuickSelectOpen, setInternalQuickSelectOpen] = useState(false);
+  const [localQuickSelectOpen, setLocalQuickSelectOpen] = useState(false);
   const isMobile = useIsMobile();
-  
-  // Use either the provided props or internal state
-  const quickSelectOpen = isQuickSelectOpen !== undefined ? isQuickSelectOpen : internalQuickSelectOpen;
-  const setQuickSelectOpen = updateQuickSelectOpen || setInternalQuickSelectOpen;
+
+  const quickSelectOpen = isQuickSelectOpen !== undefined ? isQuickSelectOpen : localQuickSelectOpen;
+  const setQuickSelectOpen = updateQuickSelectOpen || setLocalQuickSelectOpen;
 
   const handleApply = () => {
     if (onApplyDateRange) {
