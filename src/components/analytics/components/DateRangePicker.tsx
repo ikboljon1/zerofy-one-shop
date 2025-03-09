@@ -29,13 +29,18 @@ const DateRangePicker = ({
   onApplyDateRange,
   onUpdate,
   forceRefresh = true,
-  quickSelectOpen,
-  setQuickSelectOpen
+  quickSelectOpen: isQuickSelectOpen,
+  setQuickSelectOpen: updateQuickSelectOpen
 }: DateRangePickerProps) => {
   const [fromOpen, setFromOpen] = useState(false);
   const [toOpen, setToOpen] = useState(false);
-  const [quickSelectOpen, setQuickSelectOpen] = useState(false);
+  // Use internal state only if external state is not provided
+  const [internalQuickSelectOpen, setInternalQuickSelectOpen] = useState(false);
   const isMobile = useIsMobile();
+  
+  // Use either the provided props or internal state
+  const quickSelectOpen = isQuickSelectOpen !== undefined ? isQuickSelectOpen : internalQuickSelectOpen;
+  const setQuickSelectOpen = updateQuickSelectOpen || setInternalQuickSelectOpen;
 
   const handleApply = () => {
     if (onApplyDateRange) {
