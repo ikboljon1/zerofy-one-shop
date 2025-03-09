@@ -25,21 +25,22 @@ export function StoreCard({
 }: StoreCardProps) {
   // Add a function to handle selection changes with additional side effects
   const handleSelectionChange = () => {
-    // Call the parent component's toggle selection handler
-    onToggleSelection(store.id);
-    
-    // If selecting (not deselecting), also trigger a refresh of stats
+    // Only allow selecting a store, not deselecting it
+    // This ensures the checkbox stays checked until another store is selected
     if (!store.isSelected) {
-      // Small delay to ensure the selection is updated first
+      // Call the parent component's toggle selection handler
+      onToggleSelection(store.id);
+      
+      // Also trigger a refresh of stats
       setTimeout(() => {
         onRefreshStats(store);
       }, 100);
+      
+      // Notify other components about the store selection change
+      window.dispatchEvent(new CustomEvent('store-selection-changed', { 
+        detail: { storeId: store.id, selected: true } 
+      }));
     }
-    
-    // Notify other components about the store selection change
-    window.dispatchEvent(new CustomEvent('store-selection-changed', { 
-      detail: { storeId: store.id, selected: !store.isSelected } 
-    }));
   };
 
   return (
