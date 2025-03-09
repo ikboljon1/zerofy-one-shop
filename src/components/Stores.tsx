@@ -4,11 +4,12 @@ import { ShoppingBag, Store, Package2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Store as StoreType, NewStore, STATS_STORAGE_KEY } from "@/types/store";
-import { loadStores, saveStores, refreshStoreStats, ensureStoreSelectionPersistence, validateApiKey } from "@/utils/storeUtils";
+import { loadStores, saveStores, refreshStoreStats, validateApiKey } from "@/utils/storeUtils";
 import { AddStoreDialog } from "./stores/AddStoreDialog";
 import { StoreCard } from "./stores/StoreCard";
 import { getSubscriptionStatus, SubscriptionData } from "@/services/userService";
 import { Badge } from "@/components/ui/badge";
+import axios from "axios";
 
 interface StoresProps {
   onStoreSelect?: (store: { id: string; apiKey: string }) => void;
@@ -23,20 +24,63 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   const { toast } = useToast();
 
   useEffect(() => {
+    loadUserStores();
+    checkDeletePermissions();
+    getStoreLimitFromTariff();
+  }, []);
+
+  const loadUserStores = async () => {
     try {
-      const savedStores = ensureStoreSelectionPersistence();
-      setStores(savedStores);
-      checkDeletePermissions();
-      getStoreLimitFromTariff();
+      // Получаем текущего пользователя из localStorage
+      const userData = localStorage.getItem('user');
+      if (!userData) {
+        // Если пользователь не авторизован, используем старую логику
+        const savedStores = loadStores();
+        setStores(savedStores);
+        return;
+      }
+
+      const user = JSON.parse(userData);
+      const userId = user.id;
+
+      // Получаем магазины из API
+      const response = await axios.get(`/api/user-stores/${userId}`);
+      
+      if (response.data && Array.isArray(response.data)) {
+        // Преобразуем данные в формат StoreType
+        const userStores: StoreType[] = response.data.map(store => ({
+          id: store.store_id,
+          marketplace: store.marketplace,
+          name: store.name,
+          apiKey: store.api_key,
+          isSelected: store.is_selected === 1,
+          lastFetchDate: store.last_fetch_date
+        }));
+        
+        setStores(userStores);
+        
+        // Если нет выбранного магазина, но есть магазины, выбираем первый
+        if (userStores.length > 0 && !userStores.some(store => store.isSelected)) {
+          handleToggleSelection(userStores[0].id);
+        }
+      } else {
+        // Если API не вернул данные, используем локальное хранилище
+        const savedStores = loadStores();
+        setStores(savedStores);
+      }
     } catch (error) {
       console.error("Ошибка загрузки магазинов:", error);
+      // В случае ошибки API используем локальное хранилище
+      const savedStores = loadStores();
+      setStores(savedStores);
+      
       toast({
         title: "Ошибка",
         description: "Не удалось загрузить список магазинов",
         variant: "destructive",
       });
     }
-  }, []);
+  };
 
   const getStoreLimitFromTariff = () => {
     // Get user data from localStorage
@@ -132,8 +176,9 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         return;
       }
 
+      const storeId = Date.now().toString();
       const store: StoreType = {
-        id: Date.now().toString(),
+        id: storeId,
         marketplace: newStore.marketplace,
         name: newStore.name,
         apiKey: newStore.apiKey,
@@ -145,6 +190,25 @@ export default function Stores({ onStoreSelect }: StoresProps) {
 
       const updatedStore = await refreshStoreStats(store);
       const storeToAdd = updatedStore || store;
+      
+      // Получаем текущего пользователя из localStorage
+      const userData = localStorage.getItem('user');
+      
+      if (userData) {
+        // Если пользователь авторизован, сохраняем магазин в API
+        const user = JSON.parse(userData);
+        const userId = user.id;
+        
+        await axios.post('/api/user-stores', {
+          userId,
+          storeId: storeToAdd.id,
+          marketplace: storeToAdd.marketplace,
+          name: storeToAdd.name,
+          apiKey: storeToAdd.apiKey,
+          isSelected: false,
+          lastFetchDate: storeToAdd.lastFetchDate
+        });
+      }
       
       // Также сохраняем данные для использования в Analytics и Dashboard
       if (updatedStore && updatedStore.stats) {
@@ -162,7 +226,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       
       const updatedStores = [...stores, storeToAdd];
       setStores(updatedStores);
-      saveStores(updatedStores);
+      saveStores(updatedStores); // Сохраняем также в localStorage для совместимости
       
       console.log("Store added successfully:", storeToAdd);
       
@@ -183,14 +247,29 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     }
   };
 
-  const handleToggleSelection = (storeId: string) => {
+  const handleToggleSelection = async (storeId: string) => {
     const updatedStores = stores.map(store => ({
       ...store,
       isSelected: store.id === storeId
     }));
     
     setStores(updatedStores);
-    saveStores(updatedStores);
+    saveStores(updatedStores); // Сохраняем также в localStorage для совместимости
+
+    // Получаем текущего пользователя из localStorage
+    const userData = localStorage.getItem('user');
+    
+    if (userData) {
+      // Если пользователь авторизован, обновляем выбранный магазин в API
+      try {
+        const user = JSON.parse(userData);
+        const userId = user.id;
+        
+        await axios.put(`/api/user-stores/${userId}/select/${storeId}`);
+      } catch (error) {
+        console.error("Ошибка при обновлении выбранного магазина:", error);
+      }
+    }
 
     // Save the selected store separately for better persistence
     localStorage.setItem('last_selected_store', JSON.stringify({
@@ -217,6 +296,23 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         );
         setStores(updatedStores);
         saveStores(updatedStores);
+        
+        // Также обновляем данные в API, если пользователь авторизован
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const user = JSON.parse(userData);
+          const userId = user.id;
+          
+          await axios.post('/api/user-stores', {
+            userId,
+            storeId: updatedStore.id,
+            marketplace: updatedStore.marketplace,
+            name: updatedStore.name,
+            apiKey: updatedStore.apiKey,
+            isSelected: updatedStore.isSelected,
+            lastFetchDate: updatedStore.lastFetchDate
+          });
+        }
         
         // Также обновляем данные для использования в Analytics и Dashboard
         if (updatedStore.stats) {
@@ -249,7 +345,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     }
   };
 
-  const handleDeleteStore = (storeId: string) => {
+  const handleDeleteStore = async (storeId: string) => {
     // Проверяем, можно ли удалять магазины
     if (!canDeleteStores) {
       toast({
@@ -263,16 +359,34 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     const storeToDelete = stores.find(store => store.id === storeId);
     if (!storeToDelete) return;
 
-    const updatedStores = stores.filter(store => store.id !== storeId);
-    setStores(updatedStores);
-    saveStores(updatedStores);
-    localStorage.removeItem(`${STATS_STORAGE_KEY}_${storeId}`);
-    localStorage.removeItem(`marketplace_analytics_${storeId}`);
-    
-    toast({
-      title: "Магазин удален",
-      description: `Магазин "${storeToDelete.name}" был успешно удален`,
-    });
+    try {
+      // Удаляем магазин из API, если пользователь авторизован
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        const user = JSON.parse(userData);
+        const userId = user.id;
+        
+        await axios.delete(`/api/user-stores/${userId}/${storeId}`);
+      }
+      
+      const updatedStores = stores.filter(store => store.id !== storeId);
+      setStores(updatedStores);
+      saveStores(updatedStores);
+      localStorage.removeItem(`${STATS_STORAGE_KEY}_${storeId}`);
+      localStorage.removeItem(`marketplace_analytics_${storeId}`);
+      
+      toast({
+        title: "Магазин удален",
+        description: `Магазин "${storeToDelete.name}" был успешно удален`,
+      });
+    } catch (error) {
+      console.error("Ошибка при удалении магазина:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось удалить магазин",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

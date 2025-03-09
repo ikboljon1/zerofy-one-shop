@@ -54,7 +54,6 @@ db.serialize(() => {
     FOREIGN KEY (user_id) REFERENCES users(id)
   )`);
 
-  // Создаем таблицы для хранения данных от API
   db.run(`CREATE TABLE IF NOT EXISTS store_stats (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     store_id TEXT NOT NULL,
@@ -64,7 +63,6 @@ db.serialize(() => {
     timestamp INTEGER NOT NULL
   )`);
 
-  // Таблица для хранения заказов
   db.run(`CREATE TABLE IF NOT EXISTS orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     store_id TEXT NOT NULL,
@@ -76,7 +74,6 @@ db.serialize(() => {
     timestamp INTEGER NOT NULL
   )`);
 
-  // Таблица для хранения продаж
   db.run(`CREATE TABLE IF NOT EXISTS sales (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     store_id TEXT NOT NULL,
@@ -86,7 +83,6 @@ db.serialize(() => {
     timestamp INTEGER NOT NULL
   )`);
 
-  // Таблица для хранения данных о товарах
   db.run(`CREATE TABLE IF NOT EXISTS products (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     store_id TEXT NOT NULL,
@@ -94,7 +90,6 @@ db.serialize(() => {
     timestamp INTEGER NOT NULL
   )`);
 
-  // Таблица для хранения детальной аналитики
   db.run(`CREATE TABLE IF NOT EXISTS analytics (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     store_id TEXT NOT NULL,
@@ -108,6 +103,41 @@ db.serialize(() => {
     product_advertising_data TEXT NOT NULL,
     advertising_breakdown TEXT NOT NULL,
     timestamp INTEGER NOT NULL
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS user_stores (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    store_id TEXT NOT NULL,
+    marketplace TEXT NOT NULL,
+    name TEXT NOT NULL,
+    api_key TEXT NOT NULL,
+    is_selected BOOLEAN DEFAULT 0,
+    last_fetch_date TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    UNIQUE(user_id, store_id)
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS user_ai_settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    api_key TEXT NOT NULL,
+    model_type TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS ai_analysis_results (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    store_id TEXT NOT NULL,
+    analysis_type TEXT NOT NULL,
+    analysis_result TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
   )`);
 });
 
@@ -631,6 +661,177 @@ app.get('/api/analytics/:storeId', (req, res) => {
       console.error('Error parsing JSON data:', e);
       res.status(500).json({ error: 'Ошибка при обработке данных' });
     }
+  });
+});
+
+// API для работы с магазинами пользователей
+app.post('/api/user-stores', (req, res) => {
+  const { userId, storeId, marketplace, name, apiKey, isSelected, lastFetchDate } = req.body;
+  
+  if (!userId || !storeId || !marketplace || !name || !apiKey) {
+    return res.status(400).json({ error: 'Необходимы все данные для добавления магазина' });
+  }
+
+  const query = `INSERT INTO user_stores 
+                (user_id, store_id, marketplace, name, api_key, is_selected, last_fetch_date) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(user_id, store_id) 
+                DO UPDATE SET
+                marketplace = ?, name = ?, api_key = ?, is_selected = ?, last_fetch_date = ?`;
+  
+  db.run(query, [
+    userId, storeId, marketplace, name, apiKey, isSelected ? 1 : 0, lastFetchDate,
+    marketplace, name, apiKey, isSelected ? 1 : 0, lastFetchDate
+  ], function(err) {
+    if (err) {
+      console.error('Error saving user store:', err);
+      return res.status(500).json({ error: 'Ошибка при сохранении магазина пользователя' });
+    }
+    res.json({ success: true, id: this.lastID || storeId });
+  });
+});
+
+// Получение магазинов пользователя
+app.get('/api/user-stores/:userId', (req, res) => {
+  const { userId } = req.params;
+  
+  const query = 'SELECT * FROM user_stores WHERE user_id = ?';
+  db.all(query, [userId], (err, rows) => {
+    if (err) {
+      console.error('Error getting user stores:', err);
+      return res.status(500).json({ error: 'Ошибка при получении магазинов пользователя' });
+    }
+    res.json(rows);
+  });
+});
+
+// Удаление магазина пользователя
+app.delete('/api/user-stores/:userId/:storeId', (req, res) => {
+  const { userId, storeId } = req.params;
+  
+  const query = 'DELETE FROM user_stores WHERE user_id = ? AND store_id = ?';
+  db.run(query, [userId, storeId], function(err) {
+    if (err) {
+      console.error('Error deleting user store:', err);
+      return res.status(500).json({ error: 'Ошибка при удалении магазина пользователя' });
+    }
+    res.json({ success: true, changes: this.changes });
+  });
+});
+
+// Обновление выбранного магазина
+app.put('/api/user-stores/:userId/select/:storeId', (req, res) => {
+  const { userId, storeId } = req.params;
+  
+  // Сначала сбрасываем все выбранные магазины для этого пользователя
+  db.run('UPDATE user_stores SET is_selected = 0 WHERE user_id = ?', [userId], function(err) {
+    if (err) {
+      console.error('Error resetting selected stores:', err);
+      return res.status(500).json({ error: 'Ошибка при обновлении выбранного магазина' });
+    }
+    
+    // Теперь выбираем нужный магазин
+    db.run('UPDATE user_stores SET is_selected = 1 WHERE user_id = ? AND store_id = ?', [userId, storeId], function(err) {
+      if (err) {
+        console.error('Error selecting store:', err);
+        return res.status(500).json({ error: 'Ошибка при выборе магазина' });
+      }
+      res.json({ success: true });
+    });
+  });
+});
+
+// API для работы с ИИ-настройками пользователя
+app.post('/api/user-ai-settings', (req, res) => {
+  const { userId, apiKey, modelType, isActive } = req.body;
+  
+  if (!userId || !apiKey || !modelType) {
+    return res.status(400).json({ error: 'Необходимы все данные для настройки ИИ' });
+  }
+
+  // Проверяем, есть ли уже настройки для этого пользователя
+  db.get('SELECT id FROM user_ai_settings WHERE user_id = ?', [userId], (err, row) => {
+    if (err) {
+      console.error('Error checking AI settings:', err);
+      return res.status(500).json({ error: 'Ошибка при проверке настроек ИИ' });
+    }
+    
+    const now = new Date().toISOString();
+    
+    if (row) {
+      // Обновляем существующие настройки
+      const updateQuery = `UPDATE user_ai_settings 
+                          SET api_key = ?, model_type = ?, is_active = ?, updated_at = ?
+                          WHERE user_id = ?`;
+      db.run(updateQuery, [apiKey, modelType, isActive ? 1 : 0, now, userId], function(err) {
+        if (err) {
+          console.error('Error updating AI settings:', err);
+          return res.status(500).json({ error: 'Ошибка при обновлении настроек ИИ' });
+        }
+        res.json({ success: true, id: row.id });
+      });
+    } else {
+      // Создаем новые настройки
+      const insertQuery = `INSERT INTO user_ai_settings 
+                          (user_id, api_key, model_type, is_active, created_at, updated_at)
+                          VALUES (?, ?, ?, ?, ?, ?)`;
+      db.run(insertQuery, [userId, apiKey, modelType, isActive ? 1 : 0, now, now], function(err) {
+        if (err) {
+          console.error('Error creating AI settings:', err);
+          return res.status(500).json({ error: 'Ошибка при создании настроек ИИ' });
+        }
+        res.json({ success: true, id: this.lastID });
+      });
+    }
+  });
+});
+
+// Получение ИИ-настроек пользователя
+app.get('/api/user-ai-settings/:userId', (req, res) => {
+  const { userId } = req.params;
+  
+  const query = 'SELECT * FROM user_ai_settings WHERE user_id = ?';
+  db.get(query, [userId], (err, row) => {
+    if (err) {
+      console.error('Error getting AI settings:', err);
+      return res.status(500).json({ error: 'Ошибка при получении настроек ИИ' });
+    }
+    res.json(row || null);
+  });
+});
+
+// Сохранение результатов ИИ-анализа
+app.post('/api/ai-analysis-results', (req, res) => {
+  const { userId, storeId, analysisType, analysisResult } = req.body;
+  
+  if (!userId || !storeId || !analysisType || !analysisResult) {
+    return res.status(400).json({ error: 'Необходимы все данные для сохранения результата анализа' });
+  }
+
+  const query = `INSERT INTO ai_analysis_results 
+                (user_id, store_id, analysis_type, analysis_result)
+                VALUES (?, ?, ?, ?)`;
+  
+  db.run(query, [userId, storeId, analysisType, analysisResult], function(err) {
+    if (err) {
+      console.error('Error saving AI analysis result:', err);
+      return res.status(500).json({ error: 'Ошибка при сохранении результата анализа' });
+    }
+    res.json({ success: true, id: this.lastID });
+  });
+});
+
+// Получение результатов ИИ-анализа для магазина пользователя
+app.get('/api/ai-analysis-results/:userId/:storeId', (req, res) => {
+  const { userId, storeId } = req.params;
+  
+  const query = 'SELECT * FROM ai_analysis_results WHERE user_id = ? AND store_id = ? ORDER BY created_at DESC';
+  db.all(query, [userId, storeId], (err, rows) => {
+    if (err) {
+      console.error('Error getting AI analysis results:', err);
+      return res.status(500).json({ error: 'Ошибка при получении результатов анализа' });
+    }
+    res.json(rows || []);
   });
 });
 
