@@ -21,6 +21,14 @@ export const saveStores = (stores: Store[]): void => {
   localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(stores));
   localStorage.setItem(`${STORES_STORAGE_KEY}_timestamp`, Date.now().toString());
   
+  const selectedStore = stores.find(s => s.isSelected);
+  if (selectedStore) {
+    localStorage.setItem('last_selected_store', JSON.stringify({
+      storeId: selectedStore.id,
+      timestamp: Date.now()
+    }));
+  }
+  
   window.dispatchEvent(new CustomEvent('stores-updated', { 
     detail: { stores, timestamp: Date.now() } 
   }));
@@ -344,4 +352,41 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
 export const getStoresLastUpdateTime = (): number => {
   const timestamp = localStorage.getItem(`${STORES_STORAGE_KEY}_timestamp`);
   return timestamp ? parseInt(timestamp, 10) : 0;
+};
+
+export const ensureStoreSelectionPersistence = (): Store[] => {
+  const stores = loadStores();
+  
+  const hasSelectedStore = stores.some(store => store.isSelected);
+  
+  if (!hasSelectedStore && stores.length > 0) {
+    const lastSelectedStoreData = localStorage.getItem('last_selected_store');
+    
+    if (lastSelectedStoreData) {
+      try {
+        const { storeId } = JSON.parse(lastSelectedStoreData);
+        const updatedStores = stores.map(store => ({
+          ...store,
+          isSelected: store.id === storeId
+        }));
+        
+        saveStores(updatedStores);
+        return updatedStores;
+      } catch (error) {
+        console.error('Error restoring store selection:', error);
+      }
+    }
+    
+    if (stores.length > 0) {
+      const updatedStores = stores.map((store, index) => ({
+        ...store,
+        isSelected: index === 0
+      }));
+      
+      saveStores(updatedStores);
+      return updatedStores;
+    }
+  }
+  
+  return stores;
 };

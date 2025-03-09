@@ -3,7 +3,7 @@ import { ShoppingBag, Store, Package2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Store as StoreType, NewStore, STATS_STORAGE_KEY } from "@/types/store";
-import { loadStores, saveStores, refreshStoreStats } from "@/utils/storeUtils";
+import { loadStores, saveStores, refreshStoreStats, ensureStoreSelectionPersistence } from "@/utils/storeUtils";
 import { AddStoreDialog } from "./stores/AddStoreDialog";
 import { StoreCard } from "./stores/StoreCard";
 import { getSubscriptionStatus, SubscriptionData } from "@/services/userService";
@@ -23,7 +23,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
 
   useEffect(() => {
     try {
-      const savedStores = loadStores();
+      const savedStores = ensureStoreSelectionPersistence();
       setStores(savedStores);
       checkDeletePermissions();
       getStoreLimitFromTariff();
@@ -172,11 +172,17 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   const handleToggleSelection = (storeId: string) => {
     const updatedStores = stores.map(store => ({
       ...store,
-      isSelected: store.id === storeId ? !store.isSelected : false
+      isSelected: store.id === storeId
     }));
     
     setStores(updatedStores);
     saveStores(updatedStores);
+
+    // Save the selected store separately for better persistence
+    localStorage.setItem('last_selected_store', JSON.stringify({
+      storeId,
+      timestamp: Date.now()
+    }));
 
     const selectedStore = stores.find(store => store.id === storeId);
     if (selectedStore && onStoreSelect) {

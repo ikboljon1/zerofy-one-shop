@@ -10,7 +10,8 @@ import {
   getOrdersData, 
   getSalesData, 
   fetchAndUpdateOrders, 
-  fetchAndUpdateSales 
+  fetchAndUpdateSales,
+  ensureStoreSelectionPersistence
 } from "@/utils/storeUtils";
 import OrdersTable from "./OrdersTable";
 import SalesTable from "./SalesTable";
@@ -121,7 +122,8 @@ const Dashboard = () => {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const stores = loadStores();
+      // Use the new function to ensure store selection persistence
+      const stores = ensureStoreSelectionPersistence();
       const selectedStore = stores.find(s => s.isSelected);
       
       if (!selectedStore) {
@@ -182,7 +184,8 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    const stores = loadStores();
+    // Use the persistence function instead of just loadStores
+    const stores = ensureStoreSelectionPersistence();
     const selectedStore = stores.find(s => s.isSelected);
     
     if (selectedStore) {
@@ -195,12 +198,23 @@ const Dashboard = () => {
       fetchData();
     }
 
+    // Add event listener for store selection changes
+    const handleStoreSelectionChange = () => {
+      console.log('Store selection changed, refreshing data...');
+      fetchData();
+    };
+
+    window.addEventListener('store-selection-changed', handleStoreSelectionChange);
+
     const refreshInterval = setInterval(() => {
       console.log('Auto-refreshing data...');
       fetchData();
     }, 60000);
 
-    return () => clearInterval(refreshInterval);
+    return () => {
+      window.removeEventListener('store-selection-changed', handleStoreSelectionChange);
+      clearInterval(refreshInterval);
+    };
   }, []);
 
   // При изменении ID выбранного магазина обновляем данные

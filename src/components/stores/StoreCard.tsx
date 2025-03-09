@@ -38,7 +38,13 @@ export function StoreCard({
       
       // Notify other components about the store selection change
       window.dispatchEvent(new CustomEvent('store-selection-changed', { 
-        detail: { storeId: store.id, selected: true } 
+        detail: { storeId: store.id, selected: true, timestamp: Date.now() } 
+      }));
+      
+      // Save this selection to localStorage with timestamp to help with persistence
+      localStorage.setItem('last_selected_store', JSON.stringify({
+        storeId: store.id,
+        timestamp: Date.now()
       }));
     }
   };
