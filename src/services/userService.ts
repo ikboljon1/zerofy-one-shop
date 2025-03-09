@@ -241,12 +241,14 @@ export const activateSubscription = async (
   const user = users[userIndex];
   
   const currentDate = new Date();
-  const endDate = new Date();
+  let endDate = new Date();
   
   if (user.isSubscriptionActive && user.subscriptionEndDate) {
     const existingEndDate = new Date(user.subscriptionEndDate);
     if (existingEndDate > currentDate) {
-      endDate.setTime(existingEndDate.getTime());
+      endDate = new Date(existingEndDate);
+    } else {
+      endDate = new Date(); // Reset to current date if subscription already expired
     }
   }
   
@@ -361,8 +363,8 @@ export const getPaymentHistory = async (userId: string): Promise<PaymentHistoryI
       amount: 5000,
       description: 'Оплата подписки',
       status: 'success',
-      tariff: 'Бизнес',
-      period: '1 месяц'
+      tariff: '2',
+      period: 1
     },
     {
       id: '2',
@@ -370,8 +372,8 @@ export const getPaymentHistory = async (userId: string): Promise<PaymentHistoryI
       amount: 5000,
       description: 'Продление подписки',
       status: 'success',
-      tariff: 'Бизнес',
-      period: '1 месяц'
+      tariff: '2',
+      period: 1
     }
   ];
   
@@ -381,7 +383,7 @@ export const getPaymentHistory = async (userId: string): Promise<PaymentHistoryI
 
 export const addPaymentRecord = async (
   userId: string,
-  tariffId: string,
+  tariff: string,
   amount: number,
   months: number
 ): Promise<PaymentHistoryItem> => {
@@ -400,8 +402,8 @@ export const addPaymentRecord = async (
     amount,
     description: 'Оплата подписки',
     status: 'success',
-    tariff: tariffNames[tariffId] || `Тариф ${tariffId}`,
-    period: `${months} ${months === 1 ? 'месяц' : months < 5 ? 'месяца' : 'месяцев'}`
+    tariff,
+    period: months
   };
   
   const history = await getPaymentHistory(userId);

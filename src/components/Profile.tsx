@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -377,17 +376,19 @@ const Profile = ({ user: propUser, onUserUpdated }: ProfileProps) => {
         setUserProfile(result.user);
         localStorage.setItem('user', JSON.stringify(result.user));
         
-        // Call onUserUpdated callback if provided
-        if (onUserUpdated) {
-          onUserUpdated(result.user);
+        if (result.user.subscriptionEndDate) {
+          const endDate = new Date(result.user.subscriptionEndDate);
+          const today = new Date();
+          const diffTime = endDate.getTime() - today.getTime();
+          const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          
+          setCurrentSubscription({
+            plan: selectedPlan,
+            endDate: result.user.subscriptionEndDate,
+            daysRemaining: Math.max(0, daysRemaining),
+            isActive: true
+          });
         }
-        
-        setCurrentSubscription({
-          plan: selectedPlan,
-          endDate: result.user.subscriptionEndDate || new Date().toISOString(),
-          daysRemaining: 30 * selectedMonths,
-          isActive: true
-        });
         
         setIsSubscriptionExpired(false);
         
@@ -421,7 +422,6 @@ const Profile = ({ user: propUser, onUserUpdated }: ProfileProps) => {
     
     let price = plan.priceValue * selectedMonths;
     
-    // Apply discount
     if (discountPercentage > 0) {
       price = price * (1 - discountPercentage / 100);
     }
@@ -432,7 +432,6 @@ const Profile = ({ user: propUser, onUserUpdated }: ProfileProps) => {
   const handleMonthsChange = (months: number) => {
     setSelectedMonths(months);
     
-    // Calculate discount
     if (months === 3) {
       setDiscountPercentage(10); // 10% discount for 3 months
     } else if (months === 6) {
@@ -445,12 +444,17 @@ const Profile = ({ user: propUser, onUserUpdated }: ProfileProps) => {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }).format(date);
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      }).format(date);
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return 'Н/Д';
+    }
   };
 
   const getSubscriptionProgress = (): number => {
