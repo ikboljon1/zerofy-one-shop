@@ -301,14 +301,25 @@ const Dashboard = () => {
 
         <TabsContent value="profile" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
+            <Card className="bg-white dark:bg-gray-800 shadow">
               <CardHeader>
-                <CardTitle>Смена пароля</CardTitle>
+                <CardTitle className="text-xl font-semibold">Смена пароля</CardTitle>
               </CardHeader>
               <CardContent>
                 {userId && <PasswordChangeForm userId={userId} />}
               </CardContent>
             </Card>
+            
+            {userId && (
+              <Card className="bg-white dark:bg-gray-800 shadow">
+                <CardHeader>
+                  <CardTitle className="text-xl font-semibold">Информация о подписке</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <SubscriptionInfo userId={userId} />
+                </CardContent>
+              </Card>
+            )}
           </div>
         </TabsContent>
       </Tabs>

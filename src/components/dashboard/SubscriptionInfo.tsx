@@ -6,11 +6,13 @@ import {
   CheckCircle, 
   AlertCircle, 
   Sparkles,
-  Info
+  Info,
+  Clock,
+  CreditCard
 } from 'lucide-react';
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { getUserSubscriptionData, SubscriptionData } from "@/services/userService";
-import { format, addDays } from 'date-fns';
+import { format } from 'date-fns';
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SubscriptionInfoProps {
@@ -141,37 +143,44 @@ const SubscriptionInfo: React.FC<SubscriptionInfoProps> = ({ userId }) => {
 
   return (
     <Card className="bg-white dark:bg-gray-800 shadow">
-      <CardContent className={`p-4 ${isMobile ? 'space-y-4' : ''}`}>
-        <CardTitle className="mb-4 text-lg font-semibold flex items-center gap-2">
-          <Shield className="h-5 w-5 text-primary" />
+      <CardContent className={`p-4 ${isMobile ? 'space-y-6' : ''}`}>
+        <CardTitle className="mb-4 text-xl font-semibold flex items-center gap-2">
+          <Shield className="h-6 w-6 text-primary" />
           Информация о подписке
         </CardTitle>
         
-        <div className={`${isMobile ? 'space-y-4' : 'grid grid-cols-1 sm:grid-cols-2 gap-4'}`}>
-          <div className={`p-3 rounded-md border ${getStatusColor()}`}>
-            <div className="flex items-center gap-2 mb-1">
+        <div className={`grid ${isMobile ? 'grid-cols-1 gap-4' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4'}`}>
+          <div className={`p-4 rounded-md border ${getStatusColor()} transition-all hover:shadow-md`}>
+            <div className="flex items-center gap-3 mb-2">
               {getStatusIcon()}
-              <span className="font-medium">Статус</span>
+              <span className="font-medium text-lg">Статус</span>
             </div>
-            <p className="ml-8 text-sm">{getStatusText()}</p>
-            <p className="ml-8 text-xs text-muted-foreground">{getStatusDescription()}</p>
+            <p className="ml-9 text-base font-medium">{getStatusText()}</p>
+            <p className="ml-9 text-sm text-muted-foreground mt-1">{getStatusDescription()}</p>
           </div>
           
-          <div className="p-3 rounded-md border bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
-            <div className="flex items-center gap-2 mb-1">
-              <Sparkles className="h-6 w-6 text-blue-500" />
-              <span className="font-medium">Тариф</span>
+          <div className="p-4 rounded-md border bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 transition-all hover:shadow-md">
+            <div className="flex items-center gap-3 mb-2">
+              <CreditCard className="h-6 w-6 text-blue-500" />
+              <span className="font-medium text-lg">Тариф</span>
             </div>
-            <p className="ml-8 text-sm">{getTariffName(tariffId)}</p>
+            <p className="ml-9 text-base font-medium">{getTariffName(tariffId)}</p>
+            <p className="ml-9 text-sm text-muted-foreground mt-1">
+              {status === 'active' ? 'Активный тарифный план' : 'Неактивный тарифный план'}
+            </p>
           </div>
           
           {endDate && (
-            <div className="p-3 rounded-md border bg-purple-50 border-purple-200 dark:bg-purple-900/20 dark:border-purple-800">
-              <div className="flex items-center gap-2 mb-1">
+            <div className="p-4 rounded-md border bg-purple-50 border-purple-200 dark:bg-purple-900/20 dark:border-purple-800 transition-all hover:shadow-md">
+              <div className="flex items-center gap-3 mb-2">
                 <Calendar className="h-6 w-6 text-purple-500" />
-                <span className="font-medium">Дата окончания</span>
+                <span className="font-medium text-lg">Дата окончания</span>
               </div>
-              <p className="ml-8 text-sm">{formatDate(endDate)}</p>
+              <p className="ml-9 text-base font-medium">{formatDate(endDate)}</p>
+              <p className="ml-9 text-sm text-muted-foreground mt-1">
+                <Clock className="inline-block h-4 w-4 mr-1 relative -top-[1px]" />
+                {daysRemaining ? `${daysRemaining} дней до окончания` : 'Срок истек'}
+              </p>
             </div>
           )}
         </div>
