@@ -77,7 +77,11 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     
-    const stats = await fetchWildberriesStats(store.apiKey, weekAgo, now);
+    // Updated to match the fetchWildberriesStats function signature
+    const stats = await fetchWildberriesStats(store.apiKey, {
+      dateFrom: weekAgo,
+      dateTo: now
+    });
     
     if (stats) {
       return {
@@ -121,7 +125,11 @@ export const fetchAndUpdateOrders = async (store: Store) => {
     const monthAgo = new Date();
     monthAgo.setDate(monthAgo.getDate() - 30);
     
-    const orders = await fetchWildberriesOrders(store.apiKey, monthAgo, now);
+    // Updated to match the fetchWildberriesOrders function signature
+    const orders = await fetchWildberriesOrders(store.apiKey, {
+      dateFrom: monthAgo,
+      dateTo: now
+    });
     
     if (orders && orders.length > 0) {
       const warehouseCounts: Record<string, number> = {};
@@ -185,7 +193,11 @@ export const fetchAndUpdateSales = async (store: Store) => {
     const monthAgo = new Date();
     monthAgo.setDate(monthAgo.getDate() - 30);
     
-    const sales = await fetchWildberriesSales(store.apiKey, monthAgo, now);
+    // Updated to match the fetchWildberriesSales function signature
+    const sales = await fetchWildberriesSales(store.apiKey, {
+      dateFrom: monthAgo,
+      dateTo: now
+    });
     
     if (sales && sales.length > 0) {
       const salesData = {
