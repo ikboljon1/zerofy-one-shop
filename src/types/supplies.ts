@@ -103,3 +103,37 @@ export interface StocksByWarehouse {
     [category: string]: number;
   };
 }
+
+export interface WarehouseRemainTask {
+  id: string;
+  status: 'new' | 'processing' | 'done' | 'purged' | 'canceled';
+}
+
+export interface WarehouseQuantity {
+  warehouseName: string;
+  quantity: number;
+}
+
+export interface WarehouseRemainItem {
+  brand: string;
+  subjectName: string;
+  vendorCode: string;
+  nmId: number;
+  barcode: string;
+  techSize: string;
+  volume: number;
+  inWayToClient: number;
+  inWayFromClient: number;
+  quantityWarehousesFull: number;
+  warehouses: WarehouseQuantity[];
+}
+
+export interface CreateTaskResponse {
+  data: {
+    taskId: string;
+  };
+}
+
+export interface TaskStatusResponse {
+  data: WarehouseRemainTask;
+}

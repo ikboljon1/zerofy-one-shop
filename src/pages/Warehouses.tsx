@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,11 +17,15 @@ import {
   processStocksByCategory,
   processStocksByWarehouse
 } from '@/services/suppliesApi';
+import {
+  fetchWarehouseRemains
+} from '@/services/warehouseRemainsApi';
 import { 
   SupplyForm, 
   WarehouseCoefficientsTable, 
   SupplyOptionsResults,
-  InventoryDetails
+  InventoryDetails,
+  WarehouseRemains
 } from '@/components/supplies';
 import { 
   SupplyFormData, 
@@ -29,7 +34,8 @@ import {
   SupplyOptionsResponse,
   WildberriesStock,
   StocksByCategory,
-  StocksByWarehouse
+  StocksByWarehouse,
+  WarehouseRemainItem
 } from '@/types/supplies';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -46,11 +52,13 @@ const Warehouses: React.FC = () => {
   const [stocks, setStocks] = useState<WildberriesStock[]>([]);
   const [categorySummary, setCategorySummary] = useState<StocksByCategory[]>([]);
   const [warehouseSummary, setWarehouseSummary] = useState<StocksByWarehouse[]>([]);
+  const [warehouseRemains, setWarehouseRemains] = useState<WarehouseRemainItem[]>([]);
   const [loading, setLoading] = useState({
     warehouses: false,
     coefficients: false,
     options: false,
-    inventory: false
+    inventory: false,
+    remains: false
   });
 
   // Эмуляция API-ключа (в реальном приложении должен быть получен от пользователя)
@@ -61,7 +69,7 @@ const Warehouses: React.FC = () => {
       loadWarehouses();
       loadCoefficients();
     } else if (activeTab === 'inventory') {
-      loadInventory();
+      loadWarehouseRemains();
     }
   }, [activeTab]);
 
@@ -110,6 +118,29 @@ const Warehouses: React.FC = () => {
       toast.error('Не удалось загрузить данные об остатках товаров');
     } finally {
       setLoading(prev => ({ ...prev, inventory: false }));
+    }
+  };
+
+  const loadWarehouseRemains = async () => {
+    try {
+      setLoading(prev => ({ ...prev, remains: true }));
+      toast.info('Запрос на формирование отчета отправлен. Это может занять некоторое время...');
+      
+      // Fetch warehouse remains with grouping
+      const data = await fetchWarehouseRemains(apiKey, {
+        groupByBrand: true,
+        groupBySubject: true,
+        groupBySa: true,
+        groupBySize: true
+      });
+      
+      setWarehouseRemains(data);
+      toast.success('Отчет об остатках на складах успешно загружен');
+    } catch (error: any) {
+      console.error('Ошибка при загрузке остатков на складах:', error);
+      toast.error(`Не удалось загрузить отчет: ${error.message || 'Неизвестная ошибка'}`);
+    } finally {
+      setLoading(prev => ({ ...prev, remains: false }));
     }
   };
 
@@ -182,11 +213,11 @@ const Warehouses: React.FC = () => {
             <Button 
               variant="outline" 
               size="sm"
-              onClick={loadInventory}
-              disabled={loading.inventory}
+              onClick={loadWarehouseRemains}
+              disabled={loading.remains}
               className="flex items-center gap-2"
             >
-              {loading.inventory ? (
+              {loading.remains ? (
                 <RefreshCw className="h-4 w-4 animate-spin" />
               ) : (
                 <RefreshCw className="h-4 w-4" />
@@ -195,17 +226,15 @@ const Warehouses: React.FC = () => {
             </Button>
           </div>
 
-          {loading.inventory ? (
+          {loading.remains ? (
             <div className="grid gap-4">
               <Skeleton className="h-[400px] w-full" />
               <Skeleton className="h-[300px] w-full" />
             </div>
           ) : (
-            <InventoryDetails
-              stocks={stocks}
-              categorySummary={categorySummary}
-              selectedCategory={selectedCategory}
-              onSelectCategory={setSelectedCategory}
+            <WarehouseRemains 
+              data={warehouseRemains} 
+              isLoading={loading.remains} 
             />
           )}
         </TabsContent>
