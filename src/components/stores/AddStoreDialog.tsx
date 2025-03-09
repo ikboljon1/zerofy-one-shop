@@ -6,10 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NewStore, marketplaces } from "@/types/store";
-import { PlusCircle, ShoppingBag, AlertTriangle, Package2, Clock, CheckCircle, XCircle } from "lucide-react";
+import { PlusCircle, ShoppingBag, AlertTriangle, Package2, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { validateApiKey } from "@/utils/storeUtils";
+import { toast } from "sonner";
 
 interface AddStoreDialogProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ export function AddStoreDialog({
   const [marketplace, setMarketplace] = useState<string>("Wildberries");
   const [apiKey, setApiKey] = useState("");
   const [apiKeyValidationStatus, setApiKeyValidationStatus] = useState<"idle" | "validating" | "valid" | "invalid">("idle");
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -39,6 +41,7 @@ export function AddStoreDialog({
       setMarketplace("Wildberries");
       setApiKey("");
       setApiKeyValidationStatus("idle");
+      setValidationError(null);
     }
   }, [isOpen]);
 
@@ -46,16 +49,26 @@ export function AddStoreDialog({
     // Сбрасываем статус валидации при изменении API ключа
     if (apiKey) {
       setApiKeyValidationStatus("idle");
+      setValidationError(null);
     }
   }, [apiKey]);
 
   const validateKey = async () => {
-    if (!apiKey) return;
+    if (!apiKey) return false;
     
     setApiKeyValidationStatus("validating");
-    const isValid = await validateApiKey(apiKey);
-    setApiKeyValidationStatus(isValid ? "valid" : "invalid");
-    return isValid;
+    setValidationError(null);
+    
+    const result = await validateApiKey(apiKey);
+    
+    if (result.isValid) {
+      setApiKeyValidationStatus("valid");
+      return true;
+    } else {
+      setApiKeyValidationStatus("invalid");
+      setValidationError(result.errorMessage || "API ключ не прошел проверку");
+      return false;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,6 +77,9 @@ export function AddStoreDialog({
     // Проверка API ключа при отправке формы
     const isValid = await validateKey();
     if (!isValid) {
+      toast.error(validationError || "API ключ не прошел проверку", {
+        duration: 4000,
+      });
       return;
     }
     
@@ -79,6 +95,7 @@ export function AddStoreDialog({
     setMarketplace("Wildberries");
     setApiKey("");
     setApiKeyValidationStatus("idle");
+    setValidationError(null);
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -191,9 +208,10 @@ export function AddStoreDialog({
                 placeholder="Введите API ключ"
               />
               {apiKeyValidationStatus === "invalid" && (
-                <p className="text-sm text-red-400 mt-1">
-                  API ключ не прошел проверку. Пожалуйста, убедитесь, что ключ корректен.
-                </p>
+                <div className="text-sm text-red-400 mt-1 flex items-start gap-1.5">
+                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <p>{validationError || "API ключ не прошел проверку. Пожалуйста, убедитесь, что ключ корректен."}</p>
+                </div>
               )}
             </div>
             

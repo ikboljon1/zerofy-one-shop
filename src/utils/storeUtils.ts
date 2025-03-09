@@ -501,17 +501,54 @@ export const getSelectedStore = (): Store | null => {
   }
 };
 
-export const validateApiKey = async (apiKey: string): Promise<boolean> => {
+export const validateApiKey = async (apiKey: string): Promise<{ isValid: boolean; errorCode?: number; errorMessage?: string }> => {
   try {
     const { from, to } = getLastWeekDateRange();
     const testFrom = new Date();
     testFrom.setDate(testFrom.getDate() - 1);
     
-    const result = await fetchWildberriesStats(apiKey, testFrom, to);
+    const url = "https://statistics-api.wildberries.ru/api/v1/supplier/sales";
+    const headers = {
+      "Authorization": apiKey,
+    };
+    const params = {
+      "dateFrom": testFrom.toISOString().split('T')[0] + 'T00:00:00'
+    };
     
-    return result !== null && result !== undefined;
+    console.log("Validating API key with test request...");
+    const response = await axios.get(url, { headers, params });
+    
+    if (response.status === 200) {
+      console.log("API key validation successful");
+      return { isValid: true };
+    }
+    
+    console.log(`API key validation returned non-200 status: ${response.status}`);
+    return { isValid: false, errorCode: response.status, errorMessage: "Неожиданный ответ от API" };
+    
   } catch (error) {
     console.error('Error validating API key:', error);
-    return false;
+    
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      
+      let errorMessage = "Ошибка при проверке API ключа";
+      
+      if (status === 400) {
+        errorMessage = "Неправильный запрос";
+      } else if (status === 401) {
+        errorMessage = "Неверный API ключ";
+      } else if (status === 403) {
+        errorMessage = "Доступ запрещен";
+      } else if (status === 429) {
+        errorMessage = "Слишком много запросов, попробуйте позже";
+      } else if (status && status >= 500) {
+        errorMessage = "Сервер Wildberries временно недоступен";
+      }
+      
+      return { isValid: false, errorCode: status, errorMessage };
+    }
+    
+    return { isValid: false, errorMessage: "Невозможно соединиться с API Wildberries" };
   }
 };
