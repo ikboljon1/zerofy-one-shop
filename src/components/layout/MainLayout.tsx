@@ -1,272 +1,149 @@
-import { useState } from "react";
-import { 
-  Home, 
-  BarChart2, 
-  Package, 
-  ShoppingBag, 
-  User,
-  Calculator,
-  Sun,
-  Moon,
-  Zap,
-  Megaphone,
-  Settings,
-  LogOut,
-  WarehouseIcon,
-  MenuIcon
-} from "lucide-react";
-import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { useTheme } from "@/hooks/use-theme";
-import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import MobileNavigation from "./MobileNavigation";
-import CalculatorModal from "@/components/CalculatorModal";
 
-// Define menu profile options - keeping only settings, removing logout
-const profileMenu = [
-  {
-    label: "Настройки",
-    value: "settings",
-    icon: Settings,
-  }
-];
+import React, { ReactNode } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Sidebar } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
+import { Separator } from "@/components/ui/separator";
+import MobileNavigation from "./MobileNavigation";
+import { ensureStoreSelectionPersistence, ensureAIModelSelectionPersistence } from "@/utils/storeUtils";
+import {
+  Home,
+  BarChart2,
+  Package,
+  Store,
+  Warehouse,
+  Megaphone,
+  User,
+  LogOut,
+  Brain
+} from "lucide-react";
 
 interface MainLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
   activeTab: string;
   onTabChange: (tab: string) => void;
 }
 
-const MainLayout = ({ children, activeTab, onTabChange }: MainLayoutProps) => {
-  const [showCalculator, setShowCalculator] = useState(false);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
+export default function MainLayout({ children, activeTab, onTabChange }: MainLayoutProps) {
   const isMobile = useIsMobile();
-  const { theme, toggleTheme } = useTheme();
+  const { toast } = useToast();
+
+  React.useEffect(() => {
+    // Ensure store selection is persisted
+    ensureStoreSelectionPersistence();
+    
+    // Ensure AI model selection is persisted
+    ensureAIModelSelectionPersistence();
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    window.location.href = '/';
+  };
+
+  const navigationItems = [
+    {
+      id: "home",
+      name: "Дашборд",
+      icon: <Home className="h-5 w-5" />,
+    },
+    {
+      id: "analytics",
+      name: "Аналитика",
+      icon: <BarChart2 className="h-5 w-5" />,
+    },
+    {
+      id: "products",
+      name: "Товары",
+      icon: <Package className="h-5 w-5" />,
+    },
+    {
+      id: "stores",
+      name: "Магазины",
+      icon: <Store className="h-5 w-5" />,
+    },
+    {
+      id: "warehouses",
+      name: "Склады",
+      icon: <Warehouse className="h-5 w-5" />,
+    },
+    {
+      id: "advertising",
+      name: "Реклама",
+      icon: <Megaphone className="h-5 w-5" />,
+    },
+    {
+      id: "ai_models",
+      name: "AI Модели",
+      icon: <Brain className="h-5 w-5" />,
+    },
+    {
+      id: "profile",
+      name: "Профиль",
+      icon: <User className="h-5 w-5" />,
+    },
+  ];
+
+  const handleNavigationClick = (id: string) => {
+    onTabChange(id);
+  };
+
+  if (isMobile) {
+    return (
+      <div className="flex min-h-screen flex-col bg-background">
+        <div className="flex-1 p-4">{children}</div>
+        <MobileNavigation
+          items={navigationItems}
+          activeTab={activeTab}
+          onTabChange={handleNavigationClick}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background pb-16 md:pb-0">
-      <header className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b">
-        {isMobile ? (
-          <div className="flex items-center justify-between p-4">
-            <div className="flex items-center space-x-2">
-              <Zap className="h-6 w-6 text-primary" />
-              <h1 className="text-xl font-bold">Zerofy</h1>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button variant="ghost" size="icon" onClick={() => setShowCalculator(true)}>
-                <Calculator className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={toggleTheme}>
-                {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              </Button>
-              <Sheet open={showMobileMenu} onOpenChange={setShowMobileMenu}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <MenuIcon className="h-5 w-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent className="w-[80%] sm:max-w-sm" side="right">
-                  <SheetHeader className="border-b pb-4 mb-4">
-                    <SheetTitle className="flex items-center">
-                      <Zap className="h-6 w-6 text-primary mr-2" />
-                      Zerofy
-                    </SheetTitle>
-                  </SheetHeader>
-                  <div className="flex flex-col space-y-2">
-                    <Button 
-                      variant="ghost" 
-                      className="justify-start"
-                      onClick={() => {
-                        onTabChange("home");
-                        setShowMobileMenu(false);
-                      }}
-                    >
-                      <Home className="mr-2 h-4 w-4" />
-                      Dashboard
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="justify-start"
-                      onClick={() => {
-                        onTabChange("analytics");
-                        setShowMobileMenu(false);
-                      }}
-                    >
-                      <BarChart2 className="mr-2 h-4 w-4" />
-                      Analytics
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="justify-start"
-                      onClick={() => {
-                        onTabChange("products");
-                        setShowMobileMenu(false);
-                      }}
-                    >
-                      <Package className="mr-2 h-4 w-4" />
-                      Товары
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="justify-start"
-                      onClick={() => {
-                        onTabChange("stores");
-                        setShowMobileMenu(false);
-                      }}
-                    >
-                      <ShoppingBag className="mr-2 h-4 w-4" />
-                      Магазины
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="justify-start"
-                      onClick={() => {
-                        onTabChange("warehouses");
-                        setShowMobileMenu(false);
-                      }}
-                    >
-                      <WarehouseIcon className="mr-2 h-4 w-4" />
-                      Склады
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="justify-start"
-                      onClick={() => {
-                        onTabChange("advertising");
-                        setShowMobileMenu(false);
-                      }}
-                    >
-                      <Megaphone className="mr-2 h-4 w-4" />
-                      Реклама
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="justify-start"
-                      onClick={() => {
-                        onTabChange("profile");
-                        setShowMobileMenu(false);
-                      }}
-                    >
-                      <User className="mr-2 h-4 w-4" />
-                      Профиль
-                    </Button>
-                    
-                    <div className="border-t my-2 pt-2">
-                      {profileMenu.map((item) => (
-                        <Button
-                          key={item.value}
-                          variant="ghost"
-                          className="justify-start w-full"
-                          onClick={() => {
-                            onTabChange(item.value);
-                            setShowMobileMenu(false);
-                          }}
-                        >
-                          <item.icon className="mr-2 h-4 w-4" />
-                          {item.label}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                </SheetContent>
-              </Sheet>
+    <div className="flex min-h-screen bg-background">
+      <Sidebar className="hidden border-r lg:block">
+        <div className="flex h-full flex-col">
+          <div className="flex h-14 items-center border-b px-6 py-4">
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-semibold">Селлер Панель</h2>
             </div>
           </div>
-        ) : (
-          <div className="flex items-center justify-between p-4">
-            <div className="flex items-center space-x-8">
-              <div className="flex items-center space-x-2">
-                <Zap className="h-8 w-8 text-primary" />
-                <h1 className="text-2xl font-bold">Zerofy</h1>
-              </div>
-              <nav className="hidden md:flex space-x-6">
-                <Button 
-                  variant="ghost" 
-                  onClick={() => onTabChange("home")}
-                  className={activeTab === "home" ? "bg-accent" : ""}
+          <ScrollArea className="flex-1 px-2">
+            <div className="mt-4 flex flex-col space-y-1 px-2">
+              {navigationItems.map((item) => (
+                <Button
+                  key={item.id}
+                  variant={activeTab === item.id ? "secondary" : "ghost"}
+                  className="w-full justify-start gap-2"
+                  onClick={() => handleNavigationClick(item.id)}
                 >
-                  <Home className="mr-2 h-4 w-4" />
-                  Dashboard
+                  {item.icon}
+                  {item.name}
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => onTabChange("analytics")}
-                  className={activeTab === "analytics" ? "bg-accent" : ""}
-                >
-                  <BarChart2 className="mr-2 h-4 w-4" />
-                  Analytics
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => onTabChange("products")}
-                  className={activeTab === "products" ? "bg-accent" : ""}
-                >
-                  <Package className="mr-2 h-4 w-4" />
-                  Товары
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => onTabChange("stores")}
-                  className={activeTab === "stores" ? "bg-accent" : ""}
-                >
-                  <ShoppingBag className="mr-2 h-4 w-4" />
-                  Магазины
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => onTabChange("warehouses")}
-                  className={activeTab === "warehouses" ? "bg-accent" : ""}
-                >
-                  <WarehouseIcon className="mr-2 h-4 w-4" />
-                  Склады
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => onTabChange("advertising")}
-                  className={activeTab === "advertising" ? "bg-accent" : ""}
-                >
-                  <Megaphone className="mr-2 h-4 w-4" />
-                  Реклама
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => onTabChange("profile")}
-                  className={activeTab === "profile" ? "bg-accent" : ""}
-                >
-                  <User className="mr-2 h-4 w-4" />
-                  Профиль
-                </Button>
-              </nav>
+              ))}
             </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" onClick={() => setShowCalculator(true)}>
-                <Calculator className="mr-2 h-4 w-4" />
-                Calculator
-              </Button>
-              <Button variant="ghost" size="icon" onClick={toggleTheme}>
-                {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              </Button>
-            </div>
+          </ScrollArea>
+          <div className="mt-auto p-4">
+            <Separator className="mb-4" />
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-2"
+              onClick={handleLogout}
+            >
+              <LogOut className="h-5 w-5" />
+              Выйти
+            </Button>
           </div>
-        )}
-      </header>
-
-      <main className={`container px-4 py-6 ${isMobile ? 'pb-20 space-y-4' : 'space-y-6'}`}>
-        {children}
-      </main>
-
-      <MobileNavigation activeTab={activeTab} onTabChange={onTabChange} />
-
-      <CalculatorModal open={showCalculator} onClose={() => setShowCalculator(false)} />
+        </div>
+      </Sidebar>
+      <div className="flex w-full flex-col">
+        <div className="flex-1 p-4 lg:p-8">{children}</div>
+      </div>
     </div>
   );
-};
-
-export default MainLayout;
+}

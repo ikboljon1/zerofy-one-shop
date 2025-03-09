@@ -14,6 +14,7 @@ import AnalyticsSection from "@/components/analytics/AnalyticsSection";
 import Dashboard from "@/components/dashboard/Dashboard";
 import { getProductProfitabilityData, getSelectedStore } from "@/utils/storeUtils";
 import { User } from "@/services/userService";
+import AIModels from "@/components/ai/AIModels";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
@@ -122,6 +123,16 @@ const Index = () => {
             transition={{ duration: 0.3 }}
           >
             <Advertising selectedStore={selectedStore} />
+          </motion.div>
+        );
+      case "ai_models":
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <AIModels />
           </motion.div>
         );
       case "profile":
