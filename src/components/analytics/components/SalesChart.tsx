@@ -21,9 +21,10 @@ interface SalesChartProps {
       sales: number;
     }>;
   };
+  valueLabel?: string;
 }
 
-const SalesChart = ({ data }: SalesChartProps) => {
+const SalesChart = ({ data, valueLabel }: SalesChartProps) => {
   const isMobile = useIsMobile();
   // Check if data is valid and has sales data
   const hasSalesData = data && data.dailySales && data.dailySales.length > 0;
