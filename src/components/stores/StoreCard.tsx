@@ -3,8 +3,9 @@ import { Store } from "@/types/store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2 } from "lucide-react";
+import { Trash2, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { Badge } from "@/components/ui/badge";
 
 interface StoreCardProps {
   store: Store;
@@ -49,6 +50,9 @@ export function StoreCard({
     }
   };
 
+  // Check if this store has valid stats
+  const hasValidStats = store.stats && Object.keys(store.stats).length > 0;
+
   return (
     <Card className={store.isSelected ? "border-primary" : ""}>
       <CardHeader className="pb-2">
@@ -71,6 +75,12 @@ export function StoreCard({
             </Button>
           </div>
         </div>
+        {store.isValidated === false && (
+          <Badge variant="outline" className="bg-red-950/20 text-red-400 border-red-800 mt-1">
+            <AlertTriangle className="h-3 w-3 mr-1" />
+            <span>Неверный API ключ</span>
+          </Badge>
+        )}
       </CardHeader>
       <CardContent>
         <div className="space-y-2 text-sm">
@@ -78,7 +88,7 @@ export function StoreCard({
             <span className="text-muted-foreground">Маркетплейс:</span>
             <span className="font-medium">{store.marketplace}</span>
           </div>
-          {store.stats && (
+          {hasValidStats && store.stats && (
             <>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Продажи:</span>
@@ -94,9 +104,21 @@ export function StoreCard({
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Чистая прибыль:</span>
-                <span className="font-medium">{formatCurrency(store.stats.currentPeriod.netProfit)}</span>
+                <span className="font-medium">
+                  {formatCurrency(
+                    store.stats.currentPeriod.netProfit !== undefined
+                      ? store.stats.currentPeriod.netProfit
+                      : store.stats.currentPeriod.profit
+                  )}
+                </span>
               </div>
             </>
+          )}
+          {!hasValidStats && (
+            <div className="text-center text-muted-foreground py-2">
+              <p>Нет данных о продажах</p>
+              <p className="text-xs mt-1">Обновите статистику для получения данных</p>
+            </div>
           )}
           <Button 
             variant="outline" 

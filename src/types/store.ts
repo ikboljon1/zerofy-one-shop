@@ -1,4 +1,3 @@
-
 import { WildberriesResponse as ApiWildberriesResponse } from "@/services/wildberriesApi";
 
 export type Marketplace = "Wildberries" | "Ozon" | "Yandexmarket" | "Uzum";
@@ -11,6 +10,7 @@ export interface Store {
   isSelected?: boolean;
   stats?: WildberriesResponse;
   lastFetchDate?: string;
+  isValidated?: boolean; // Added to track API key validation status
 }
 
 export interface NewStore extends Partial<Store> {}
