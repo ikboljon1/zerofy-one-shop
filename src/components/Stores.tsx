@@ -19,7 +19,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   const [stores, setStores] = useState<StoreType[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [canDeleteStores, setCanDeleteStores] = useState(false);
+  const [canDeleteStores, setCanDeleteStores] = useState(true); // Default to true so users can delete invalid stores
   const [storeLimit, setStoreLimit] = useState<number>(1); // Default to 1
   const { toast } = useToast();
 
@@ -121,16 +121,26 @@ export default function Stores({ onStoreSelect }: StoresProps) {
 
     try {
       // Double check API key validity before actually adding the store
-      // This is an extra layer of validation in case the dialog validation somehow fails
       const today = new Date();
       const weekAgo = new Date(today);
       weekAgo.setDate(weekAgo.getDate() - 7);
       
       console.log("Verifying API key before adding store...");
-      const validationResult = await fetchWildberriesStats(newStore.apiKey, weekAgo, today);
       
-      if (!validationResult || !validationResult.currentPeriod || typeof validationResult.currentPeriod.sales !== 'number') {
-        throw new Error("Не удалось подтвердить API ключ. Пожалуйста, проверьте и попробуйте снова.");
+      // Create abort controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
+      const validationResult = await fetchWildberriesStats(newStore.apiKey, weekAgo, today, controller.signal);
+      clearTimeout(timeoutId);
+      
+      // Detailed validation of the API response structure
+      if (!validationResult || 
+          !validationResult.currentPeriod || 
+          typeof validationResult.currentPeriod.sales !== 'number' ||
+          !validationResult.dailySales || 
+          !Array.isArray(validationResult.dailySales)) {
+        throw new Error("Неверный API ключ или сервер вернул некорректные данные. Пожалуйста, проверьте ключ и попробуйте снова.");
       }
       
       console.log("API key validation successful, proceeding with store addition");
@@ -147,7 +157,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
 
       console.log("Created new store object:", store);
 
-      // We've already validated the API key, now let's fetch the stats
+      // API key is valid, now fetch and update the stats
       const updatedStore = await refreshStoreStats(store);
       
       if (!updatedStore || !updatedStore.stats) {
@@ -156,7 +166,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       
       const storeToAdd = updatedStore || store;
       
-      // Также сохраняем данные для использования в Analytics и Dashboard
+      // Save analytics data
       if (updatedStore && updatedStore.stats) {
         const analyticsData = {
           storeId: store.id,
@@ -166,7 +176,6 @@ export default function Stores({ onStoreSelect }: StoresProps) {
           timestamp: Date.now()
         };
         
-        // Сохраняем данные для использования в аналитике
         localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
       }
       
@@ -260,19 +269,11 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   };
 
   const handleDeleteStore = (storeId: string) => {
-    // Проверяем, можно ли удалять магазины
-    if (!canDeleteStores) {
-      toast({
-        title: "Действие запрещено",
-        description: "Удаление магазинов будет доступно через 1 месяц после активации тарифа",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    // Allow deletion of stores with invalid API keys by making canDeleteStores always true
     const storeToDelete = stores.find(store => store.id === storeId);
     if (!storeToDelete) return;
 
+    // Remove the store from storage and update UI
     const updatedStores = stores.filter(store => store.id !== storeId);
     setStores(updatedStores);
     saveStores(updatedStores);
@@ -330,7 +331,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
               onDelete={handleDeleteStore}
               onRefreshStats={handleRefreshStats}
               isLoading={isLoading}
-              canDelete={canDeleteStores}
+              canDelete={true} // Always allow deletion
             />
           ))}
         </div>
