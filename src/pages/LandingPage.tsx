@@ -59,6 +59,24 @@ const LandingPage = () => {
     }
   ];
 
+  const systemAdvantages = [
+    {
+      image: "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=600&q=80",
+      title: "Интуитивно понятный интерфейс",
+      description: "Дружественный интерфейс, который не требует специального обучения. Вы сможете начать работу с системой с первого дня использования."
+    },
+    {
+      image: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=600&q=80",
+      title: "Повышение эффективности",
+      description: "В среднем наши клиенты увеличивают эффективность своей работы на 30% уже в первый месяц использования Zerofy."
+    },
+    {
+      image: "https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?auto=format&fit=crop&w=600&q=80",
+      title: "Аналитика на все случаи",
+      description: "Точная и глубокая аналитика помогает принимать обоснованные решения и видеть полную картину вашего бизнеса на маркетплейсах."
+    }
+  ];
+
   const pricing = [
     {
       name: "Стартап",
@@ -169,6 +187,33 @@ const LandingPage = () => {
           </div>
         </section>
 
+        {/* System Advantages with Images */}
+        <section className="py-20 px-4 bg-muted/30">
+          <div className="container mx-auto max-w-6xl">
+            <h2 className="text-3xl font-bold text-center mb-4">Почему Zerofy — это выбор лидеров</h2>
+            <p className="text-center text-muted-foreground mb-12 max-w-3xl mx-auto">
+              Наша платформа предоставляет уникальные преимущества, которые помогают бизнесу расти и развиваться
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {systemAdvantages.map((advantage, index) => (
+                <div key={index} className="bg-card rounded-lg overflow-hidden shadow-md transition-all duration-300 hover:shadow-lg">
+                  <div className="aspect-video w-full overflow-hidden">
+                    <img 
+                      src={advantage.image} 
+                      alt={advantage.title} 
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                  <div className="p-6">
+                    <h3 className="text-xl font-semibold mb-2">{advantage.title}</h3>
+                    <p className="text-muted-foreground">{advantage.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Features */}
         <section className="py-20 px-4 bg-muted/50">
           <div className="container mx-auto max-w-6xl">
@@ -185,6 +230,23 @@ const LandingPage = () => {
                   <p className="text-muted-foreground">{feature.description}</p>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Screenshot/Interface Showcase */}
+        <section className="py-20 px-4">
+          <div className="container mx-auto max-w-6xl">
+            <h2 className="text-3xl font-bold text-center mb-4">Интуитивно понятный интерфейс</h2>
+            <p className="text-center text-muted-foreground mb-12 max-w-3xl mx-auto">
+              Современный и удобный интерфейс Zerofy позволяет быстро находить нужную информацию и эффективно управлять вашим бизнесом
+            </p>
+            <div className="rounded-xl overflow-hidden shadow-2xl">
+              <img 
+                src="https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?auto=format&fit=crop&w=1200&q=80" 
+                alt="Интерфейс Zerofy" 
+                className="w-full h-auto"
+              />
             </div>
           </div>
         </section>

@@ -22,6 +22,11 @@ const AuthModal = ({ open, onClose, initialMode = 'login', resetToken, resetEmai
   );
   const [emailForReset, setEmailForReset] = useState<string>(resetEmail || '');
 
+  // Update activeTab when initialMode changes
+  useEffect(() => {
+    setActiveTab(initialMode);
+  }, [initialMode]);
+
   // Detect reset parameters from URL
   useEffect(() => {
     const url = new URL(window.location.href);
