@@ -81,9 +81,12 @@ const Stats = () => {
         console.log("Using data from analytics storage", analyticsData);
         setStatsData(analyticsData.data);
         
+        const fromDate = analyticsData.dateFrom ? new Date(analyticsData.dateFrom) : dateFrom;
+        const toDate = analyticsData.dateTo ? new Date(analyticsData.dateTo) : dateTo;
+        
         toast({
           title: "Данные обновлены",
-          description: `Данные успешно загружены за период ${format(new Date(analyticsData.dateFrom), 'dd.MM.yyyy')} - ${format(new Date(analyticsData.dateTo), 'dd.MM.yyyy')}`,
+          description: `Данные успешно загружены за период ${format(fromDate, 'dd.MM.yyyy')} - ${format(toDate, 'dd.MM.yyyy')}`,
         });
         setIsLoading(false);
         return;

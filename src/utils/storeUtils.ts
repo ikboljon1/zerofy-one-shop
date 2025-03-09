@@ -1,4 +1,3 @@
-
 import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY, ORDERS_STORAGE_KEY, SALES_STORAGE_KEY, WildberriesOrder, WildberriesSale } from "@/types/store";
 import { fetchWildberriesStats, fetchWildberriesOrders, fetchWildberriesSales } from "@/services/wildberriesApi";
 import axios from "axios";
@@ -257,25 +256,13 @@ export const fetchAndUpdateSales = async (store: Store) => {
   return null;
 };
 
-export const getProductProfitabilityData = async (storeId: string) => {
+export const getProductProfitabilityData = (storeId: string) => {
   try {
-    // Пытаемся получить данные из БД
-    const response = await axios.get(`http://localhost:3001/api/analytics/${storeId}`);
-    if (response.data && response.data.data) {
-      return {
-        profitableProducts: response.data.data.topProfitableProducts?.slice(0, 3) || [],
-        unprofitableProducts: response.data.data.topUnprofitableProducts?.slice(0, 3) || [],
-        updateDate: response.data.date_to
-      };
-    }
-  } catch (error) {
-    console.error('Error fetching product profitability data from DB:', error);
-    // Если не удалось получить из БД, проверяем локальное хранилище
+    // Try to get data from localStorage first (for faster response)
     try {
       const storedData = localStorage.getItem(`products_detailed_${storeId}`);
       if (storedData) {
         const parsedData = JSON.parse(storedData);
-        
         return {
           profitableProducts: parsedData.profitableProducts?.slice(0, 3) || [],
           unprofitableProducts: parsedData.unprofitableProducts?.slice(0, 3) || [],
@@ -295,12 +282,38 @@ export const getProductProfitabilityData = async (storeId: string) => {
     } catch (innerError) {
       console.error('Error parsing local storage data:', innerError);
     }
+    
+    // Then try to fetch from the API (results will be used in next render)
+    axios.get(`http://localhost:3001/api/analytics/${storeId}`)
+      .then(response => {
+        if (response.data && response.data.data) {
+          const data = {
+            profitableProducts: response.data.data.topProfitableProducts?.slice(0, 3) || [],
+            unprofitableProducts: response.data.data.topUnprofitableProducts?.slice(0, 3) || [],
+            updateDate: response.data.date_to
+          };
+          // Cache the data for future use
+          localStorage.setItem(`products_detailed_${storeId}`, JSON.stringify(data));
+          return data;
+        }
+        return null;
+      })
+      .catch(error => {
+        console.error('Error fetching product profitability data from DB:', error);
+        return null;
+      });
+  } catch (error) {
+    console.error('Error in getProductProfitabilityData:', error);
   }
   
-  return null;
+  return {
+    profitableProducts: [],
+    unprofitableProducts: [],
+    updateDate: null
+  };
 };
 
-export const getAnalyticsData = async (storeId: string, forceRefresh?: boolean) => {
+export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
   if (forceRefresh) {
     console.log('Forced refresh requested, returning default structure');
     return {
@@ -324,50 +337,21 @@ export const getAnalyticsData = async (storeId: string, forceRefresh?: boolean) 
   }
   
   try {
-    // Пытаемся получить данные из БД
-    const response = await axios.get(`http://localhost:3001/api/analytics/${storeId}`);
-    if (response.data) {
-      const parsedData = {
-        data: response.data.data,
-        penalties: response.data.penalties || [],
-        returns: response.data.returns || [],
-        deductions: response.data.deductions || [],
-        deductionsTimeline: response.data.deductions_timeline || [],
-        productAdvertisingData: response.data.product_advertising_data || [],
-        advertisingBreakdown: response.data.advertising_breakdown || { search: 0 },
-        timestamp: response.data.timestamp
-      };
-      
-      if (!parsedData.deductionsTimeline || !Array.isArray(parsedData.deductionsTimeline) || parsedData.deductionsTimeline.length === 0) {
-        console.log("Creating default deductionsTimeline data");
-        parsedData.deductionsTimeline = Array.from({ length: 7 }, (_, i) => ({
-          date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          logistic: 0,
-          storage: 0, 
-          penalties: 0,
-          acceptance: 0,
-          advertising: 0,
-          deductions: 0
-        }));
-      }
-      
-      return parsedData;
-    }
-  } catch (error) {
-    console.error('Error fetching analytics data from DB:', error);
-    // Если не удалось получить из БД, проверяем локальное хранилище
+    // Try to get data from localStorage first
     try {
       const key = `marketplace_analytics_${storeId}`;
       const storedData = localStorage.getItem(key);
       
-      if (!storedData) {
-        console.log('Analytics data not found, returning default structure');
-        return {
-          data: null,
-          penalties: [],
-          returns: [],
-          deductions: [],
-          deductionsTimeline: Array.from({ length: 7 }, (_, i) => ({
+      if (storedData) {
+        let parsedData = JSON.parse(storedData);
+        
+        if (!parsedData.timestamp) {
+          parsedData.timestamp = Date.now();
+        }
+        
+        if (!parsedData.deductionsTimeline || !Array.isArray(parsedData.deductionsTimeline) || parsedData.deductionsTimeline.length === 0) {
+          console.log("Creating default deductionsTimeline data");
+          parsedData.deductionsTimeline = Array.from({ length: 7 }, (_, i) => ({
             date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             logistic: 0,
             storage: 0, 
@@ -375,74 +359,93 @@ export const getAnalyticsData = async (storeId: string, forceRefresh?: boolean) 
             acceptance: 0,
             advertising: 0,
             deductions: 0
-          })),
-          productAdvertisingData: [],
-          advertisingBreakdown: { search: 0 },
-          timestamp: Date.now()
-        };
+          }));
+        } else {
+          parsedData.deductionsTimeline = parsedData.deductionsTimeline.map((item: any) => ({
+            date: item.date || new Date().toISOString().split('T')[0],
+            logistic: item.logistic || 0,
+            storage: item.storage || 0,
+            penalties: item.penalties || 0,
+            acceptance: item.acceptance || 0,
+            advertising: item.advertising || 0,
+            deductions: item.deductions || 0
+          }));
+        }
+        
+        if (!parsedData.penalties || !Array.isArray(parsedData.penalties)) {
+          parsedData.penalties = [];
+        }
+        
+        if (!parsedData.returns || !Array.isArray(parsedData.returns)) {
+          parsedData.returns = [];
+        }
+        
+        if (!parsedData.deductions || !Array.isArray(parsedData.deductions)) {
+          parsedData.deductions = [];
+        }
+        
+        if (!parsedData.productAdvertisingData || !Array.isArray(parsedData.productAdvertisingData)) {
+          parsedData.productAdvertisingData = [];
+        }
+        
+        if (!parsedData.advertisingBreakdown) {
+          parsedData.advertisingBreakdown = { search: 0 };
+        }
+        
+        if (parsedData.data && parsedData.data.currentPeriod && parsedData.data.currentPeriod.expenses) {
+          parsedData.data.currentPeriod.expenses.advertising = parsedData.data.currentPeriod.expenses.advertising || 0;
+          parsedData.data.currentPeriod.expenses.acceptance = parsedData.data.currentPeriod.expenses.acceptance || 0;
+          parsedData.data.currentPeriod.expenses.deductions = parsedData.data.currentPeriod.expenses.deductions || 0;
+        }
+        
+        return parsedData;
       }
-      
-      let parsedData = JSON.parse(storedData);
-      
-      if (!parsedData.timestamp) {
-        parsedData.timestamp = Date.now();
-      }
-      
-      if (!parsedData.deductionsTimeline || !Array.isArray(parsedData.deductionsTimeline) || parsedData.deductionsTimeline.length === 0) {
-        console.log("Creating default deductionsTimeline data");
-        parsedData.deductionsTimeline = Array.from({ length: 7 }, (_, i) => ({
-          date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          logistic: 0,
-          storage: 0, 
-          penalties: 0,
-          acceptance: 0,
-          advertising: 0,
-          deductions: 0
-        }));
-      } else {
-        parsedData.deductionsTimeline = parsedData.deductionsTimeline.map((item: any) => ({
-          date: item.date || new Date().toISOString().split('T')[0],
-          logistic: item.logistic || 0,
-          storage: item.storage || 0,
-          penalties: item.penalties || 0,
-          acceptance: item.acceptance || 0,
-          advertising: item.advertising || 0,
-          deductions: item.deductions || 0
-        }));
-      }
-      
-      if (!parsedData.penalties || !Array.isArray(parsedData.penalties)) {
-        parsedData.penalties = [];
-      }
-      
-      if (!parsedData.returns || !Array.isArray(parsedData.returns)) {
-        parsedData.returns = [];
-      }
-      
-      if (!parsedData.deductions || !Array.isArray(parsedData.deductions)) {
-        parsedData.deductions = [];
-      }
-      
-      if (!parsedData.productAdvertisingData || !Array.isArray(parsedData.productAdvertisingData)) {
-        parsedData.productAdvertisingData = [];
-      }
-      
-      if (!parsedData.advertisingBreakdown) {
-        parsedData.advertisingBreakdown = { search: 0 };
-      }
-      
-      if (parsedData.data && parsedData.data.currentPeriod && parsedData.data.currentPeriod.expenses) {
-        parsedData.data.currentPeriod.expenses.advertising = parsedData.data.currentPeriod.expenses.advertising || 0;
-        parsedData.data.currentPeriod.expenses.acceptance = parsedData.data.currentPeriod.expenses.acceptance || 0;
-        parsedData.data.currentPeriod.expenses.deductions = parsedData.data.currentPeriod.expenses.deductions || 0;
-      }
-      
-      return parsedData;
     } catch (localError) {
       console.error('Error parsing localStorage analytics data:', localError);
     }
+    
+    // Then try to fetch from the API (results will be used in next render)
+    axios.get(`http://localhost:3001/api/analytics/${storeId}`)
+      .then(response => {
+        if (response.data) {
+          const parsedData = {
+            data: response.data.data,
+            penalties: response.data.penalties || [],
+            returns: response.data.returns || [],
+            deductions: response.data.deductions || [],
+            deductionsTimeline: response.data.deductions_timeline || [],
+            productAdvertisingData: response.data.product_advertising_data || [],
+            advertisingBreakdown: response.data.advertising_breakdown || { search: 0 },
+            timestamp: response.data.timestamp
+          };
+          
+          if (!parsedData.deductionsTimeline || !Array.isArray(parsedData.deductionsTimeline) || parsedData.deductionsTimeline.length === 0) {
+            parsedData.deductionsTimeline = Array.from({ length: 7 }, (_, i) => ({
+              date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              logistic: 0,
+              storage: 0, 
+              penalties: 0,
+              acceptance: 0,
+              advertising: 0,
+              deductions: 0
+            }));
+          }
+          
+          // Cache the data for future use
+          localStorage.setItem(`marketplace_analytics_${storeId}`, JSON.stringify(parsedData));
+          return parsedData;
+        }
+        return null;
+      })
+      .catch(error => {
+        console.error('Error fetching analytics data from DB:', error);
+        return null;
+      });
+  } catch (error) {
+    console.error('Error in getAnalyticsData:', error);
   }
   
+  // Return default structure if nothing was found
   return {
     data: null,
     penalties: [],

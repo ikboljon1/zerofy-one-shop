@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -33,7 +32,7 @@ const Index = () => {
     const selectedStore = getSelectedStore();
     if (!selectedStore) return { profitable: [], unprofitable: [] };
     
-    // Сначала пробуем загрузить детализированные данные о товарах 
+    // Try to load detailed data about products
     const profitabilityData = getProductProfitabilityData(selectedStore.id);
     if (profitabilityData) {
       return {
@@ -42,7 +41,7 @@ const Index = () => {
       };
     }
     
-    // Если нет детализированных данных, пробуем загрузить из аналитики
+    // If no detailed data, try to load from analytics
     const storageKey = `marketplace_analytics_${selectedStore.id}`;
     const storedData = localStorage.getItem(storageKey);
     

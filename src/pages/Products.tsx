@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Package, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -47,11 +46,11 @@ const Products = ({ selectedStore }: ProductsProps) => {
     }
   }, [selectedStore]);
 
-  const loadProductProfitabilityData = async () => {
+  const loadProductProfitabilityData = () => {
     if (!selectedStore) return;
     
     try {
-      const profitabilityData = await getProductProfitabilityData(selectedStore.id);
+      const profitabilityData = getProductProfitabilityData(selectedStore.id);
       
       if (profitabilityData) {
         // Ensure we're only taking the top profitable and unprofitable products
