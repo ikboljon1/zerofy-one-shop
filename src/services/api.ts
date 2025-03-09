@@ -9,9 +9,7 @@ export const api = axios.create({
   // Добавляем параметр, который предотвращает кеширование запросов браузером
   params: {
     _timestamp: Date.now()
-  },
-  // Add a timeout to ensure API requests don't hang indefinitely
-  timeout: 10000 // 10 seconds timeout
+  }
 });
 
 // Добавляем интерцептор для каждого запроса
@@ -23,29 +21,21 @@ api.interceptors.request.use((config) => {
     _random: Math.random()
   };
   
+  // Get API key from wherever you store it (this should be handled securely)
+  const apiKey = "YOUR_API_KEY"; // This should be handled securely, not hardcoded
+  
+  if (apiKey) {
+    config.headers.Authorization = apiKey;
+  }
+  
   return config;
 });
 
-// Add response interceptor for error handling with more detailed logging
+// Add response interceptor for error handling
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
-      console.error('API Error - Response:', {
-        status: error.response.status,
-        data: error.response.data,
-        headers: error.response.headers
-      });
-    } else if (error.request) {
-      // The request was made but no response was received
-      console.error('API Error - Request:', error.request);
-    } else {
-      // Something happened in setting up the request that triggered an Error
-      console.error('API Error - Setup:', error.message);
-    }
-    
+    console.error('API Error:', error);
     return Promise.reject(error);
   }
 );

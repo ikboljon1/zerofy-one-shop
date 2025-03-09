@@ -11,7 +11,6 @@ export interface Store {
   isSelected?: boolean;
   stats?: WildberriesResponse;
   lastFetchDate?: string;
-  isValid?: boolean; // Track validation state
 }
 
 export interface NewStore extends Partial<Store> {}

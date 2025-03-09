@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ShoppingBag, Store, Package2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,7 +8,6 @@ import { AddStoreDialog } from "./stores/AddStoreDialog";
 import { StoreCard } from "./stores/StoreCard";
 import { getSubscriptionStatus, SubscriptionData } from "@/services/userService";
 import { Badge } from "@/components/ui/badge";
-import { fetchWildberriesStats } from "@/services/wildberriesApi";
 
 interface StoresProps {
   onStoreSelect?: (store: { id: string; apiKey: string }) => void;
@@ -120,40 +118,18 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     setIsLoading(true);
 
     try {
-      // Double check API key validity before actually adding the store
-      // This is an extra layer of validation in case the dialog validation somehow fails
-      const today = new Date();
-      const weekAgo = new Date(today);
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      
-      console.log("Verifying API key before adding store...");
-      const validationResult = await fetchWildberriesStats(newStore.apiKey, weekAgo, today);
-      
-      if (!validationResult || !validationResult.currentPeriod || typeof validationResult.currentPeriod.sales !== 'number') {
-        throw new Error("Не удалось подтвердить API ключ. Пожалуйста, проверьте и попробуйте снова.");
-      }
-      
-      console.log("API key validation successful, proceeding with store addition");
-      
       const store: StoreType = {
         id: Date.now().toString(),
         marketplace: newStore.marketplace,
         name: newStore.name,
         apiKey: newStore.apiKey,
         isSelected: false,
-        isValid: true,
         lastFetchDate: new Date().toISOString()
       };
 
       console.log("Created new store object:", store);
 
-      // We've already validated the API key, now let's fetch the stats
       const updatedStore = await refreshStoreStats(store);
-      
-      if (!updatedStore || !updatedStore.stats) {
-        throw new Error("Не удалось получить данные от API. Пожалуйста, проверьте API ключ.");
-      }
-      
       const storeToAdd = updatedStore || store;
       
       // Также сохраняем данные для использования в Analytics и Dashboard
@@ -185,7 +161,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       console.error("Ошибка при добавлении магазина:", error);
       toast({
         title: "Ошибка",
-        description: error instanceof Error ? error.message : "Не удалось добавить магазин",
+        description: "Не удалось добавить магазин",
         variant: "destructive",
       });
     } finally {
