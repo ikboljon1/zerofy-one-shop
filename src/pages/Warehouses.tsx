@@ -25,7 +25,8 @@ import {
   WarehouseCoefficientsTable, 
   SupplyOptionsResults,
   InventoryDetails,
-  WarehouseRemains
+  WarehouseRemains,
+  APIKeyInput
 } from '@/components/supplies';
 import { 
   SupplyFormData, 
@@ -60,18 +61,24 @@ const Warehouses: React.FC = () => {
     inventory: false,
     remains: false
   });
+  const [apiKey, setApiKey] = useState<string>('');
 
-  // Эмуляция API-ключа (в реальном приложении должен быть получен от пользователя)
-  const apiKey = "test_api_key";
+  // Try to load the API key from localStorage on component mount
+  useEffect(() => {
+    const savedKey = localStorage.getItem('wb_api_key');
+    if (savedKey) {
+      setApiKey(savedKey);
+    }
+  }, []);
 
   useEffect(() => {
-    if (activeTab === 'supplies') {
+    if (activeTab === 'supplies' && apiKey) {
       loadWarehouses();
       loadCoefficients();
-    } else if (activeTab === 'inventory') {
+    } else if (activeTab === 'inventory' && apiKey) {
       loadWarehouseRemains();
     }
-  }, [activeTab]);
+  }, [activeTab, apiKey]);
 
   const loadWarehouses = async () => {
     try {
@@ -122,6 +129,11 @@ const Warehouses: React.FC = () => {
   };
 
   const loadWarehouseRemains = async () => {
+    if (!apiKey) {
+      toast.warning('Необходимо ввести API-ключ для получения данных');
+      return;
+    }
+    
     try {
       setLoading(prev => ({ ...prev, remains: true }));
       toast.info('Запрос на формирование отчета отправлен. Это может занять некоторое время...');
@@ -178,6 +190,16 @@ const Warehouses: React.FC = () => {
     }
   };
 
+  const handleApiKeySubmit = (key: string) => {
+    setApiKey(key);
+    toast.success('API-ключ сохранен');
+    
+    // Загружаем данные об остатках при установке нового API-ключа
+    if (activeTab === 'inventory') {
+      loadWarehouseRemains();
+    }
+  };
+
   return (
     <div className="container px-4 py-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -205,37 +227,43 @@ const Warehouses: React.FC = () => {
         </TabsList>
 
         <TabsContent value="inventory" className="space-y-4">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h2 className="text-lg font-semibold">Остатки товаров на складах</h2>
-              <p className="text-sm text-muted-foreground">Актуальная информация о количестве товаров</p>
-            </div>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={loadWarehouseRemains}
-              disabled={loading.remains}
-              className="flex items-center gap-2"
-            >
-              {loading.remains ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4" />
-              )}
-              Обновить данные
-            </Button>
-          </div>
-
-          {loading.remains ? (
-            <div className="grid gap-4">
-              <Skeleton className="h-[400px] w-full" />
-              <Skeleton className="h-[300px] w-full" />
-            </div>
+          {!apiKey ? (
+            <APIKeyInput onApiKeySubmit={handleApiKeySubmit} isLoading={loading.remains} />
           ) : (
-            <WarehouseRemains 
-              data={warehouseRemains} 
-              isLoading={loading.remains} 
-            />
+            <>
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h2 className="text-lg font-semibold">Остатки товаров на складах</h2>
+                  <p className="text-sm text-muted-foreground">Актуальная информация о количестве товаров</p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={loadWarehouseRemains}
+                  disabled={loading.remains}
+                  className="flex items-center gap-2"
+                >
+                  {loading.remains ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  Обновить данные
+                </Button>
+              </div>
+
+              {loading.remains ? (
+                <div className="grid gap-4">
+                  <Skeleton className="h-[400px] w-full" />
+                  <Skeleton className="h-[300px] w-full" />
+                </div>
+              ) : (
+                <WarehouseRemains 
+                  data={warehouseRemains} 
+                  isLoading={loading.remains} 
+                />
+              )}
+            </>
           )}
         </TabsContent>
 
@@ -397,59 +425,63 @@ const Warehouses: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="supplies" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-1">
-              {loading.warehouses ? (
-                <Card>
-                  <CardHeader>
-                    <Skeleton className="h-8 w-3/4" />
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                  </CardContent>
-                </Card>
-              ) : (
-                <SupplyForm 
-                  warehouses={wbWarehouses} 
-                  onSupplySubmit={handleSupplySubmit} 
-                />
-              )}
+          {!apiKey ? (
+            <APIKeyInput onApiKeySubmit={handleApiKeySubmit} isLoading={loading.warehouses || loading.coefficients} />
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="lg:col-span-1">
+                {loading.warehouses ? (
+                  <Card>
+                    <CardHeader>
+                      <Skeleton className="h-8 w-3/4" />
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <Skeleton className="h-10 w-full" />
+                      <Skeleton className="h-10 w-full" />
+                      <Skeleton className="h-10 w-full" />
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <SupplyForm 
+                    warehouses={wbWarehouses} 
+                    onSupplySubmit={handleSupplySubmit} 
+                  />
+                )}
+              </div>
+              
+              <div className="lg:col-span-2">
+                {supplyResults ? (
+                  <SupplyOptionsResults 
+                    results={supplyResults} 
+                    warehouses={wbWarehouses} 
+                  />
+                ) : (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <Box className="h-5 w-5 mr-2" />
+                        Коэффициенты приемки
+                      </CardTitle>
+                      <CardDescription>
+                        Информация о доступности приемки товаров на складах WB
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {loading.coefficients ? (
+                        <div className="space-y-2">
+                          <Skeleton className="h-10 w-full" />
+                          <Skeleton className="h-10 w-full" />
+                          <Skeleton className="h-10 w-full" />
+                        </div>
+                      ) : (
+                        <WarehouseCoefficientsTable coefficients={coefficients} />
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             </div>
-            
-            <div className="lg:col-span-2">
-              {supplyResults ? (
-                <SupplyOptionsResults 
-                  results={supplyResults} 
-                  warehouses={wbWarehouses} 
-                />
-              ) : (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Box className="h-5 w-5 mr-2" />
-                      Коэффициенты приемки
-                    </CardTitle>
-                    <CardDescription>
-                      Информация о доступности приемки товаров на складах WB
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {loading.coefficients ? (
-                      <div className="space-y-2">
-                        <Skeleton className="h-10 w-full" />
-                        <Skeleton className="h-10 w-full" />
-                        <Skeleton className="h-10 w-full" />
-                      </div>
-                    ) : (
-                      <WarehouseCoefficientsTable coefficients={coefficients} />
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

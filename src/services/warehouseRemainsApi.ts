@@ -138,17 +138,22 @@ export const fetchWarehouseRemains = async (
   } = {}
 ): Promise<WarehouseRemainItem[]> => {
   try {
+    console.log('Создание задания на получение отчета...');
     // Step 1: Create task
     const taskId = await createWarehouseRemainsTask(apiKey, params);
+    console.log(`Задание создано с ID: ${taskId}. Ожидание завершения...`);
     
     // Step 2: Wait for completion
     await waitForTaskCompletion(apiKey, taskId);
+    console.log('Задание выполнено. Загрузка отчета...');
     
     // Step 3: Get report data
     const report = await getWarehouseRemainsReport(apiKey, taskId);
+    console.log(`Отчет загружен. Получено ${report.length} записей.`);
     
     return report;
   } catch (error) {
+    console.error('Ошибка в процессе получения отчета:', error);
     throw error;
   }
 };
