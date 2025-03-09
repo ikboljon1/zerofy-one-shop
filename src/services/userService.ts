@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   name: string;
@@ -44,16 +43,6 @@ export interface SmtpSettings {
   password: string;
   fromEmail: string;
   fromName: string;
-}
-
-export interface PopSettings {
-  host: string;
-  port: number;
-  secure: boolean;
-  username: string;
-  password: string;
-  leaveOnServer: boolean;
-  checkInterval: number; // in minutes
 }
 
 export const TARIFF_STORE_LIMITS: Record<string, number> = {
@@ -369,37 +358,10 @@ export const getSmtpSettings = async (): Promise<SmtpSettings | null> => {
   return defaultSettings;
 };
 
-export const getPopSettings = async (): Promise<PopSettings | null> => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simulate network delay
-  
-  const storedSettings = localStorage.getItem('pop_settings');
-  if (storedSettings) {
-    return JSON.parse(storedSettings);
-  }
-  
-  const defaultSettings: PopSettings = {
-    host: "pop.gmail.com",
-    port: 995,
-    secure: true,
-    username: "",
-    password: "",
-    leaveOnServer: true,
-    checkInterval: 10
-  };
-  
-  return defaultSettings;
-};
-
 export const saveSmtpSettings = async (settings: SmtpSettings): Promise<void> => {
   await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
   
   localStorage.setItem('smtp_settings', JSON.stringify(settings));
-};
-
-export const savePopSettings = async (settings: PopSettings): Promise<void> => {
-  await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-  
-  localStorage.setItem('pop_settings', JSON.stringify(settings));
 };
 
 export const testSmtpConnection = async (settings: SmtpSettings): Promise<{ success: boolean; message: string }> => {
@@ -463,55 +425,6 @@ export const testSmtpConnection = async (settings: SmtpSettings): Promise<{ succ
     return { 
       success: false, 
       message: error instanceof Error ? error.message : "Неизвестная ошибка при подключении к SMTP-серверу" 
-    };
-  }
-};
-
-export const testPopConnection = async (settings: PopSettings): Promise<{ success: boolean; message: string }> => {
-  await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
-  
-  try {
-    console.log("Testing POP3 connection with settings:", settings);
-    
-    // Validation of required fields
-    if (!settings.host) {
-      return { success: false, message: "Неверный хост POP3-сервера" };
-    }
-    
-    if (!settings.port || settings.port <= 0) {
-      return { success: false, message: "Неверный порт POP3-сервера" };
-    }
-    
-    if (!settings.username) {
-      return { success: false, message: "Имя пользователя POP3-сервера не указано" };
-    }
-    
-    if (!settings.password) {
-      return { success: false, message: "Пароль POP3-сервера не указан" };
-    }
-    
-    // For demo purposes, we'll add validation for common email providers
-    if (settings.host.includes('gmail.com')) {
-      if (settings.port !== 995) {
-        return { 
-          success: false, 
-          message: "Для соединения с POP3 сервером Gmail рекомендуется использовать порт 995" 
-        };
-      }
-      
-      if (!settings.secure) {
-        return {
-          success: false,
-          message: "Gmail требует защищенное соединение для POP3"
-        };
-      }
-    }
-    
-    return { success: true, message: "Соединение успешно установлено" };
-  } catch (error) {
-    return { 
-      success: false, 
-      message: error instanceof Error ? error.message : "Неизвестная ошибка при подключении к POP3-серверу" 
     };
   }
 };
