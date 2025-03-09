@@ -335,12 +335,10 @@ export const saveSmtpSettings = async (settings: EmailSettings): Promise<void> =
 };
 
 export const testSmtpConnection = async (settings: SmtpSettings): Promise<{ success: boolean; message: string }> => {
-  await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
-  
   try {
     console.log("Testing SMTP connection with settings:", settings);
     
-    // Basic validation of required fields
+    // Базовая валидация обязательных полей
     if (!settings.host) {
       return { success: false, message: "Неверный хост SMTP-сервера" };
     }
@@ -361,7 +359,7 @@ export const testSmtpConnection = async (settings: SmtpSettings): Promise<{ succ
       return { success: false, message: "Email отправителя не указан" };
     }
     
-    // Email format validation
+    // Валидация формата email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(settings.fromEmail)) {
       return { 
@@ -370,10 +368,19 @@ export const testSmtpConnection = async (settings: SmtpSettings): Promise<{ succ
       };
     }
     
-    // Simulate actual SMTP connection attempt
-    const connectionAttempt = simulateSmtpConnection(settings);
-    return connectionAttempt;
+    // Вызываем API для проверки SMTP соединения
+    const response = await fetch('http://localhost:3001/api/test-smtp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(settings),
+    });
+    
+    const result = await response.json();
+    return result;
   } catch (error) {
+    console.error("Ошибка при проверке SMTP:", error);
     return { 
       success: false, 
       message: error instanceof Error ? error.message : "Неизвестная ошибка при подключении к SMTP-серверу" 
@@ -783,8 +790,6 @@ export const sendEmail = async (
   subject: string,
   htmlContent: string
 ): Promise<{ success: boolean; message: string }> => {
-  await new Promise(resolve => setTimeout(resolve, 800)); // Simulate network delay
-  
   try {
     const emailSettings = await getSmtpSettings();
     if (!emailSettings || !emailSettings.smtp) {
@@ -793,7 +798,7 @@ export const sendEmail = async (
     
     const smtpSettings = emailSettings.smtp;
     
-    // Validate that SMTP settings are complete
+    // Валидируем, что настройки SMTP полные
     if (!smtpSettings.host || !smtpSettings.username || !smtpSettings.password || !smtpSettings.fromEmail) {
       return { success: false, message: "SMTP настройки неполные" };
     }
@@ -803,32 +808,27 @@ export const sendEmail = async (
       From: ${smtpSettings.fromName} <${smtpSettings.fromEmail}>
       To: ${to}
       Subject: ${subject}
-      Content: ${htmlContent}
       Using SMTP server: ${smtpSettings.host}:${smtpSettings.port}
     `);
     
-    // In a real application, we would actually send the email
-    // For our demo, simulate the result based on the settings
+    // Используем реальную отправку для локальной разработки
+    const response = await fetch('http://localhost:3001/api/reset-password-request', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: to,
+        smtpSettings,
+        subject,
+        htmlContent,
+      }),
+    });
     
-    // Simulate a failure for specific email domains or hosts
-    if (smtpSettings.host.includes('invalid') || to.includes('invalid')) {
-      return { 
-        success: false, 
-        message: "Не удалось отправить email: недействительный домен" 
-      };
-    }
-    
-    // For demo, only simulate successful sending to certain domains to match our test credentials
-    if ((smtpSettings.host === "mail.qr-falcon.kg" && smtpSettings.password === "Ik507727280$@") ||
-        (smtpSettings.host !== "mail.qr-falcon.kg")) {
-      return { success: true, message: "Email отправлен успешно" };
-    } else {
-      return { 
-        success: false, 
-        message: "Ошибка отправки email: проверьте настройки SMTP и учетные данные" 
-      };
-    }
+    const result = await response.json();
+    return result;
   } catch (error) {
+    console.error("Ошибка при отправке email:", error);
     return { 
       success: false, 
       message: error instanceof Error ? error.message : "Неизвестная ошибка при отправке email" 
@@ -839,12 +839,13 @@ export const sendEmail = async (
 export const requestPasswordReset = async (
   email: string
 ): Promise<{ success: boolean; message: string }> => {
-  await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 500)); // Небольшая задержка
   
   const users = await getUsers();
   const user = users.find(u => u.email === email);
   
   if (!user) {
+    // Для безопасности возвращаем успешный результат даже если пользователь не найден
     return { 
       success: true, 
       message: "Если указанный email зарегистрирован в системе, инструкции по восстановлению пароля будут отправлены на него."
@@ -852,7 +853,7 @@ export const requestPasswordReset = async (
   }
   
   const resetToken = Math.random().toString(36).substring(2, 15);
-  const resetExpiry = new Date(new Date().getTime() + 60 * 60 * 1000); // 1 hour
+  const resetExpiry = new Date(new Date().getTime() + 60 * 60 * 1000); // 1 час
   
   localStorage.setItem(`reset_token_${user.id}`, JSON.stringify({
     token: resetToken,
@@ -875,25 +876,45 @@ export const requestPasswordReset = async (
   `;
   
   try {
-    const emailResult = await sendEmail(
-      email,
-      "Восстановление пароля",
-      emailHtml
-    );
+    // Проверяем наличие настроек SMTP
+    const settings = await getSmtpSettings();
+    if (!settings || !settings.smtp || !settings.smtp.host) {
+      console.warn("SMTP настройки не найдены. Отправка письма невозможна.");
+      return { 
+        success: false, 
+        message: "Отправка письма невозможна. Проверьте настройки SMTP сервера."
+      };
+    }
     
+    // Отправляем реальное письмо через бэкенд
+    const response = await fetch('http://localhost:3001/api/reset-password-request', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        smtpSettings: settings.smtp,
+        resetUrl: window.location.origin + window.location.pathname + resetUrl
+      }),
+    });
+    
+    const result = await response.json();
+    
+    // Для отладки показываем ссылку в консоли
     console.log(`Password reset link for ${email}: ${resetUrl}`);
     
-    if (!emailResult.success) {
-      console.error(`Failed to send reset email: ${emailResult.message}`);
-    }
+    return { 
+      success: result.success, 
+      message: result.message || "Инструкции по восстановлению пароля отправлены на указанный email"
+    };
   } catch (error) {
-    console.error("Error sending reset email:", error);
+    console.error("Ошибка при отправке письма для сброса пароля:", error);
+    return { 
+      success: false, 
+      message: "Произошла ошибка при отправке письма. Проверьте настройки SMTP и соединение."
+    };
   }
-  
-  return { 
-    success: true, 
-    message: "Если указанный email зарегистрирован в системе, инструкции по восстановлению пароля будут отправлены на него."
-  };
 };
 
 export const resetPassword = async (
