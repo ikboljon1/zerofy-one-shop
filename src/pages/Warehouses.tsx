@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   TruckIcon, BarChart3Icon, ClipboardListIcon, 
-  PackageSearch, ArrowUpDown, Clock, DollarSign, PackageOpen, Box, RefreshCw
+  PackageSearch, ArrowUpDown, Clock, DollarSign, PackageOpen, Box, RefreshCw, Store
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { warehouseAnalyticsData } from '@/components/analytics/data/demoData';
@@ -41,8 +41,8 @@ import {
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-
-const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1'];
+import { loadStores, ensureStoreSelectionPersistence } from '@/utils/storeUtils';
+import { Store as StoreType } from '@/types/store';
 
 const Warehouses: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -61,26 +61,40 @@ const Warehouses: React.FC = () => {
     inventory: false,
     remains: false
   });
-  const [apiKey, setApiKey] = useState<string>('');
+  const [selectedStore, setSelectedStore] = useState<StoreType | null>(null);
 
-  // Try to load the API key from localStorage on component mount
+  // Загрузка выбранного магазина из localStorage при монтировании компонента
   useEffect(() => {
-    const savedKey = localStorage.getItem('wb_api_key');
-    if (savedKey) {
-      setApiKey(savedKey);
+    const stores = ensureStoreSelectionPersistence();
+    const selected = stores.find(store => store.isSelected);
+    
+    if (selected) {
+      setSelectedStore(selected);
+      // Если есть выбранный магазин, загружаем соответствующие данные
+      if (activeTab === 'supplies') {
+        loadWarehouses(selected.apiKey);
+        loadCoefficients(selected.apiKey);
+      } else if (activeTab === 'inventory') {
+        loadWarehouseRemains(selected.apiKey);
+      }
+    } else if (stores.length > 0) {
+      // Если нет выбранного магазина, но есть магазины, выбираем первый
+      setSelectedStore(stores[0]);
     }
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'supplies' && apiKey) {
-      loadWarehouses();
-      loadCoefficients();
-    } else if (activeTab === 'inventory' && apiKey) {
-      loadWarehouseRemains();
+    if (selectedStore) {
+      if (activeTab === 'supplies') {
+        loadWarehouses(selectedStore.apiKey);
+        loadCoefficients(selectedStore.apiKey);
+      } else if (activeTab === 'inventory') {
+        loadWarehouseRemains(selectedStore.apiKey);
+      }
     }
-  }, [activeTab, apiKey]);
+  }, [activeTab, selectedStore]);
 
-  const loadWarehouses = async () => {
+  const loadWarehouses = async (apiKey: string) => {
     try {
       setLoading(prev => ({ ...prev, warehouses: true }));
       const data = await fetchWarehouses(apiKey);
@@ -93,7 +107,7 @@ const Warehouses: React.FC = () => {
     }
   };
 
-  const loadCoefficients = async () => {
+  const loadCoefficients = async (apiKey: string) => {
     try {
       setLoading(prev => ({ ...prev, coefficients: true }));
       const data = await fetchAcceptanceCoefficients(apiKey);
@@ -106,7 +120,7 @@ const Warehouses: React.FC = () => {
     }
   };
 
-  const loadInventory = async () => {
+  const loadInventory = async (apiKey: string) => {
     try {
       setLoading(prev => ({ ...prev, inventory: true }));
       const stocksData = await fetchStocks(apiKey);
@@ -128,9 +142,9 @@ const Warehouses: React.FC = () => {
     }
   };
 
-  const loadWarehouseRemains = async () => {
+  const loadWarehouseRemains = async (apiKey: string) => {
     if (!apiKey) {
-      toast.warning('Необходимо ввести API-ключ для получения данных');
+      toast.warning('Необходимо выбрать магазин для получения данных');
       return;
     }
     
@@ -157,6 +171,11 @@ const Warehouses: React.FC = () => {
   };
 
   const handleSupplySubmit = async (data: SupplyFormData) => {
+    if (!selectedStore) {
+      toast.error('Выберите магазин для проверки доступности товаров');
+      return;
+    }
+    
     try {
       setLoading(prev => ({ ...prev, options: true }));
       
@@ -167,7 +186,7 @@ const Warehouses: React.FC = () => {
       
       // Проверка доступности товаров на выбранном складе
       const optionsResponse = await fetchAcceptanceOptions(
-        apiKey,
+        selectedStore.apiKey,
         data.items,
         data.selectedWarehouse
       );
@@ -190,13 +209,17 @@ const Warehouses: React.FC = () => {
     }
   };
 
-  const handleApiKeySubmit = (key: string) => {
-    setApiKey(key);
-    toast.success('API-ключ сохранен');
+  const handleRefreshData = () => {
+    if (!selectedStore) {
+      toast.warning('Необходимо выбрать магазин для получения данных');
+      return;
+    }
     
-    // Загружаем данные об остатках при установке нового API-ключа
     if (activeTab === 'inventory') {
-      loadWarehouseRemains();
+      loadWarehouseRemains(selectedStore.apiKey);
+    } else if (activeTab === 'supplies') {
+      loadWarehouses(selectedStore.apiKey);
+      loadCoefficients(selectedStore.apiKey);
     }
   };
 
@@ -227,8 +250,29 @@ const Warehouses: React.FC = () => {
         </TabsList>
 
         <TabsContent value="inventory" className="space-y-4">
-          {!apiKey ? (
-            <APIKeyInput onApiKeySubmit={handleApiKeySubmit} isLoading={loading.remains} />
+          {!selectedStore ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center">
+                  <Store className="mr-2 h-5 w-5" />
+                  Выберите магазин
+                </CardTitle>
+                <CardDescription>
+                  Для просмотра и управления складами необходимо выбрать магазин в разделе "Магазины"
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <Store className="h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">Для работы с отчетами о складах необходимо выбрать магазин</p>
+                <Button 
+                  className="mt-4"
+                  variant="outline"
+                  onClick={() => window.location.href = '/dashboard'}
+                >
+                  Перейти к выбору магазина
+                </Button>
+              </CardContent>
+            </Card>
           ) : (
             <>
               <div className="flex justify-between items-center mb-4">
@@ -239,7 +283,7 @@ const Warehouses: React.FC = () => {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={loadWarehouseRemains}
+                  onClick={handleRefreshData}
                   disabled={loading.remains}
                   className="flex items-center gap-2"
                 >
@@ -425,8 +469,29 @@ const Warehouses: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="supplies" className="space-y-4">
-          {!apiKey ? (
-            <APIKeyInput onApiKeySubmit={handleApiKeySubmit} isLoading={loading.warehouses || loading.coefficients} />
+          {!selectedStore ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center">
+                  <Store className="mr-2 h-5 w-5" />
+                  Выберите магазин
+                </CardTitle>
+                <CardDescription>
+                  Для просмотра и управления поставками необходимо выбрать магазин в разделе "Магазины"
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <Store className="h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">Для работы с поставками необходимо выбрать магазин</p>
+                <Button 
+                  className="mt-4"
+                  variant="outline"
+                  onClick={() => window.location.href = '/dashboard'}
+                >
+                  Перейти к выбору магазина
+                </Button>
+              </CardContent>
+            </Card>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="lg:col-span-1">

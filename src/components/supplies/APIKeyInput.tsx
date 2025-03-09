@@ -3,14 +3,16 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { KeyRound } from 'lucide-react';
+import { KeyRound, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface APIKeyInputProps {
   onApiKeySubmit: (apiKey: string) => void;
   isLoading?: boolean;
+  message?: string;
 }
 
-const APIKeyInput: React.FC<APIKeyInputProps> = ({ onApiKeySubmit, isLoading = false }) => {
+const APIKeyInput: React.FC<APIKeyInputProps> = ({ onApiKeySubmit, isLoading = false, message }) => {
   const [apiKey, setApiKey] = useState('');
   const [saved, setSaved] = useState(false);
 
@@ -41,7 +43,7 @@ const APIKeyInput: React.FC<APIKeyInputProps> = ({ onApiKeySubmit, isLoading = f
           API-ключ Wildberries
         </CardTitle>
         <CardDescription>
-          Введите API-ключ от личного кабинета Wildberries для получения данных об остатках
+          {message || "Введите API-ключ от личного кабинета Wildberries для получения данных об остатках"}
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
@@ -53,6 +55,12 @@ const APIKeyInput: React.FC<APIKeyInputProps> = ({ onApiKeySubmit, isLoading = f
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
             />
+            <Alert variant="default" className="bg-yellow-900/20 border-yellow-800/30 text-yellow-300">
+              <AlertTriangle className="h-4 w-4 text-yellow-500" />
+              <AlertDescription>
+                Рекомендуется выбрать магазин в разделе "Магазины" вместо ручного ввода ключа
+              </AlertDescription>
+            </Alert>
             <p className="text-xs text-muted-foreground">
               API-ключ можно получить в личном кабинете Wildberries в разделе "Настройки &gt; Доступ к API".
               Ключ должен иметь доступ к категории "Аналитика".
