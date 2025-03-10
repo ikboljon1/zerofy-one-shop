@@ -150,7 +150,7 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
         
         // Set cost price from the product with highest expenses
         if (productWithHighestTotal) {
-          setCostPrice(productWithHighestTotal.costPrice?.toString() || "");
+          setCostPrice(productWithHighestTotal.costPrice?.toString() || "0");
         }
         
         console.log('Highest expenses found:', {
@@ -210,23 +210,6 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
     });
   };
 
-  // Обработчик для ввода себестоимости с правильным отображением
-  const handleCostPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setCostPrice(value);
-  };
-
-  // Обработчик для ввода целевой прибыли с правильным отображением
-  const handleTargetProfitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setTargetProfit(value);
-  };
-
-  // Форматирование числа для отображения (пустая строка вместо нуля)
-  const formatNumberDisplay = (value: number): string => {
-    return value === 0 ? "" : value.toString();
-  };
-
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
@@ -239,7 +222,7 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
             <Input
               type="number"
               value={costPrice}
-              onChange={handleCostPriceChange}
+              onChange={(e) => setCostPrice(e.target.value)}
               placeholder="Введите себестоимость"
             />
           </div>
@@ -248,7 +231,7 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
             <Input
               type="number"
               value={targetProfit}
-              onChange={handleTargetProfitChange}
+              onChange={(e) => setTargetProfit(e.target.value)}
               placeholder="Введите %"
             />
           </div>
@@ -263,27 +246,27 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
               )}
               <div className="flex justify-between">
                 <span>Логистика:</span>
-                <span>{expenses.logistics > 0 ? expenses.logistics.toFixed(2) : "0"} ₽</span>
+                <span>{expenses.logistics.toFixed(2)} ₽</span>
               </div>
               <div className="flex justify-between">
                 <span>Хранение:</span>
-                <span>{expenses.storage > 0 ? expenses.storage.toFixed(2) : "0"} ₽</span>
+                <span>{expenses.storage.toFixed(2)} ₽</span>
               </div>
               <div className="flex justify-between">
                 <span>Штрафы:</span>
-                <span>{expenses.penalties > 0 ? expenses.penalties.toFixed(2) : "0"} ₽</span>
+                <span>{expenses.penalties.toFixed(2)} ₽</span>
               </div>
               <div className="flex justify-between">
                 <span>Приемка:</span>
-                <span>{expenses.acceptance > 0 ? expenses.acceptance.toFixed(2) : "0"} ₽</span>
+                <span>{expenses.acceptance.toFixed(2)} ₽</span>
               </div>
               <div className="flex justify-between">
                 <span>Реклама:</span>
-                <span>{expenses.advertising > 0 ? expenses.advertising.toFixed(2) : "0"} ₽</span>
+                <span>{expenses.advertising.toFixed(2)} ₽</span>
               </div>
               <div className="flex justify-between">
                 <span>Удержания:</span>
-                <span>{expenses.deductions > 0 ? expenses.deductions.toFixed(2) : "0"} ₽</span>
+                <span>{expenses.deductions.toFixed(2)} ₽</span>
               </div>
               <div className="flex justify-between font-medium border-t pt-2">
                 <span>Всего расходов:</span>

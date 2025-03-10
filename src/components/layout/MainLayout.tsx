@@ -29,6 +29,7 @@ import {
 import MobileNavigation from "./MobileNavigation";
 import CalculatorModal from "@/components/CalculatorModal";
 
+// Define menu profile options - keeping only settings, removing logout
 const profileMenu = [
   {
     label: "Настройки",
@@ -204,11 +205,11 @@ const MainLayout = ({ children, activeTab, onTabChange }: MainLayoutProps) => {
                 </Button>
                 <Button 
                   variant="ghost" 
-                  onClick={() => onTabChange("inventory")}
-                  className={activeTab === "inventory" ? "bg-accent" : ""}
+                  onClick={() => onTabChange("products")}
+                  className={activeTab === "products" ? "bg-accent" : ""}
                 >
                   <Package className="mr-2 h-4 w-4" />
-                  Инвентарь
+                  Товары
                 </Button>
                 <Button 
                   variant="ghost" 
