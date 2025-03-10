@@ -1,6 +1,7 @@
+
 import { useEffect, useState } from "react";
 import { Card } from "./ui/card";
-import { getAdvertCosts, getAdvertBalance, getAllCampaigns, Campaign, getKeywordStatistics, getCampaignFullStats } from "@/services/advertisingApi";
+import { getAdvertCosts, getAdvertBalance, getAllCampaigns, Campaign, getKeywordStatistics, getCampaignFullStats, CampaignFullStats, ProductStats, KeywordStat } from "@/services/advertisingApi";
 import { Button } from "./ui/button";
 import { RefreshCw, CheckCircle, PauseCircle, Archive, Target, Zap, Wallet, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
