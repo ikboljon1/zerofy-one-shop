@@ -1,11 +1,12 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Package, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { formatCurrency, calculateTotalStorageCost, calculateAverageQuantity } from "@/utils/formatCurrency";
 
 interface Product {
   nmID: number;
@@ -21,6 +22,7 @@ interface Product {
   discountedPrice?: number;
   clubPrice?: number;
   quantity?: number;
+  dailyStorageCost?: number; // New property for daily storage cost
   expenses?: {
     logistics: number;
     storage: number;
@@ -28,7 +30,7 @@ interface Product {
     acceptance: number;
     deductions?: number;
     ppvz_for_pay?: number;
-    retail_price?: number; // Изменено с retail_amount на retail_price
+    retail_price?: number;
   };
 }
 
@@ -68,7 +70,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       salesAmount: 0,
       transferredAmount: 0,
       soldQuantity: 0,
-      margin: 0  // Added margin to the return object
+      margin: 0
     };
     
     console.log('Calculating for product:', {
@@ -91,22 +93,28 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       retail_price: product.expenses.retail_price
     });
     
+    // Calculate storage costs more accurately based on average quantity
+    const dailyStorageCost = product.dailyStorageCost || 5; // Default to 5 rubles per day if not set
+    const averageQuantity = calculateAverageQuantity(product.quantity || 0, productSales / 30);
+    const storagePeriod = Math.min(30, productSales > 0 ? (product.quantity || 0) / (productSales / 30) : 30);
+    
+    // Use the new calculation for storage costs
+    const calculatedStorageCost = averageQuantity * dailyStorageCost * storagePeriod;
+    
     const totalExpenses = 
       product.expenses.logistics +
-      product.expenses.storage +
       product.expenses.penalties +
       product.expenses.acceptance +
-      (product.expenses.deductions || 0);
+      (product.expenses.deductions || 0) +
+      calculatedStorageCost; // Use calculated storage cost instead of original value
     
     const netProfit = transferredAmount - costPriceTotal - totalExpenses;
     
-    // Calculate margin as a percentage of costs (not revenue)
-    // This prevents division by zero and unrealistic margins
+    // Calculate margin as a percentage of costs
     let margin = 0;
     if (costPriceTotal > 0) {
       margin = (netProfit / costPriceTotal) * 100;
     } else if (netProfit > 0) {
-      // If cost price is 0 but there's profit, cap the margin at 100%
       margin = 100;
     }
     
@@ -118,7 +126,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       salesAmount,
       transferredAmount,
       soldQuantity: productSales,
-      margin: Math.round(margin) // Return the calculated margin
+      margin: Math.round(margin),
+      calculatedStorageCost  // Return the new calculated storage cost
     };
   };
 
@@ -261,12 +270,27 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       console.log("Products data:", data);
       
       const storedProducts = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
-      const costPrices = storedProducts.reduce((acc: Record<number, number>, product: Product) => {
+      
+      // Get stored cost prices and daily storage costs
+      const costPrices: Record<number, number> = {};
+      const dailyStorageCosts: Record<number, number> = {};
+      
+      storedProducts.forEach((product: Product) => {
         if (product.costPrice) {
-          acc[product.nmID] = product.costPrice;
+          costPrices[product.nmID] = product.costPrice;
         }
-        return acc;
-      }, {});
+        if (product.dailyStorageCost) {
+          dailyStorageCosts[product.nmID] = product.dailyStorageCost;
+        }
+      });
+      
+      // Also try to get costs from separate localStorage entries if they exist
+      const storedCostPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore.id}`) || "{}");
+      const storedDailyStorageCosts = JSON.parse(localStorage.getItem(`dailyStorageCosts_${selectedStore.id}`) || "{}");
+      
+      // Merge with stored values, giving priority to the separate storage
+      Object.assign(costPrices, storedCostPrices);
+      Object.assign(dailyStorageCosts, storedDailyStorageCosts);
 
       const nmIds = data.cards.map((product: Product) => product.nmID);
       const prices = await fetchProductPrices(nmIds);
@@ -361,9 +385,13 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           retail_price: 0
         };
         
+        // Apply daily storage cost for this product, default to 5 rubles if not set
+        const productDailyStorageCost = dailyStorageCosts[product.nmID] || 5;
+        
         console.log(`Processing product ${product.nmID}:`, {
           price: currentPrice,
           costPrice: costPrices[product.nmID],
+          dailyStorageCost: productDailyStorageCost,
           quantity: quantity,
           expenses: productExpenses,
           salesAmount: salesMap.get(product.nmID) || 0
@@ -374,6 +402,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           costPrice: costPrices[product.nmID] || 0,
           discountedPrice: currentPrice || 0,
           quantity: quantity,
+          dailyStorageCost: productDailyStorageCost, // Add daily storage cost
           expenses: productExpenses
         };
       });
@@ -401,8 +430,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   const updateCostPrice = (productId: number, costPrice: number) => {
     const updatedProducts = products.map(product => {
       if (product.nmID === productId) {
-        const updatedProduct = { ...product, costPrice };
-        return updatedProduct;
+        return { ...product, costPrice };
       }
       return product;
     });
@@ -410,27 +438,54 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     setProducts(updatedProducts);
     localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedProducts));
     
+    // Also store in separate localStorage for redundancy
     const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore?.id}`) || '{}');
     costPrices[productId] = costPrice;
     localStorage.setItem(`costPrices_${selectedStore?.id}`, JSON.stringify(costPrices));
   };
+  
+  // New function to update daily storage cost for a product
+  const updateDailyStorageCost = (productId: number, dailyStorageCost: number) => {
+    const updatedProducts = products.map(product => {
+      if (product.nmID === productId) {
+        return { ...product, dailyStorageCost };
+      }
+      return product;
+    });
+    
+    setProducts(updatedProducts);
+    localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedProducts));
+    
+    // Also store in separate localStorage for redundancy
+    const dailyStorageCosts = JSON.parse(localStorage.getItem(`dailyStorageCosts_${selectedStore?.id}`) || '{}');
+    dailyStorageCosts[productId] = dailyStorageCost;
+    localStorage.setItem(`dailyStorageCosts_${selectedStore?.id}`, JSON.stringify(dailyStorageCosts));
+  };
 
-  useState(() => {
+  // Load stored products when store changes
+  useEffect(() => {
     if (selectedStore) {
       const storedProducts = localStorage.getItem(`products_${selectedStore.id}`);
       if (storedProducts) {
-        const parsedProducts = JSON.parse(storedProducts);
+        let parsedProducts = JSON.parse(storedProducts);
+        
+        // Get additional data from separate storage
         const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore.id}`) || '{}');
-        const productsWithCostPrices = parsedProducts.map((product: Product) => ({
+        const dailyStorageCosts = JSON.parse(localStorage.getItem(`dailyStorageCosts_${selectedStore.id}`) || '{}');
+        
+        // Apply stored values to products
+        parsedProducts = parsedProducts.map((product: Product) => ({
           ...product,
-          costPrice: costPrices[product.nmID] || product.costPrice || 0
+          costPrice: costPrices[product.nmID] || product.costPrice || 0,
+          dailyStorageCost: dailyStorageCosts[product.nmID] || product.dailyStorageCost || 5
         }));
-        setProducts(productsWithCostPrices);
+        
+        setProducts(parsedProducts);
       } else {
         setProducts([]);
       }
     }
-  });
+  }, [selectedStore]);
 
   if (!selectedStore) {
     return (
@@ -467,6 +522,10 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         <div className={`grid gap-4 ${isMobile ? 'grid-cols-2' : 'md:grid-cols-3'}`}>
           {products.map((product) => {
             const profitDetails = calculateNetProfit(product);
+            
+            // Calculate average storage quantity for display
+            const dailySalesRate = (product.quantity || 0) / 30;
+            const averageQuantity = calculateAverageQuantity(product.quantity || 0, dailySalesRate);
             
             return (
               <Card key={product.nmID} className="flex flex-col h-full">
@@ -524,30 +583,47 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                         placeholder="Введите себестоимость"
                       />
                     </div>
+                    <div className="space-y-1">
+                      <label htmlFor={`storageCost-${product.nmID}`} className="text-xs text-muted-foreground">
+                        Стоимость хранения в день:
+                      </label>
+                      <Input
+                        id={`storageCost-${product.nmID}`}
+                        type="number"
+                        value={product.dailyStorageCost || ""}
+                        onChange={(e) => updateDailyStorageCost(product.nmID, Number(e.target.value))}
+                        className="h-8 text-sm"
+                        placeholder="Стоимость в рублях"
+                      />
+                    </div>
                     <div className="space-y-1.5 border-t pt-2">
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Продано за 30 дней:</span>
                         <span>{profitDetails.soldQuantity} шт.</span>
                       </div>
                       <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Общая логистика:</span>
-                        <span>{product.expenses.logistics.toFixed(2)} ₽</span>
+                        <span className="text-muted-foreground">Средний остаток товара:</span>
+                        <span>{averageQuantity.toFixed(1)} шт.</span>
                       </div>
                       <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Общее хранение:</span>
-                        <span>{product.expenses.storage.toFixed(2)} ₽</span>
+                        <span className="text-muted-foreground">Общая логистика:</span>
+                        <span>{product.expenses?.logistics.toFixed(2) || "0.00"} ₽</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Рассчитанное хранение:</span>
+                        <span>{profitDetails.calculatedStorageCost?.toFixed(2) || "0.00"} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Общие штрафы:</span>
-                        <span>{product.expenses.penalties.toFixed(2)} ₽</span>
+                        <span>{product.expenses?.penalties.toFixed(2) || "0.00"} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Общая приемка:</span>
-                        <span>{product.expenses.acceptance.toFixed(2)} ₽</span>
+                        <span>{product.expenses?.acceptance.toFixed(2) || "0.00"} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Прочие удержания:</span>
-                        <span>{(product.expenses.deductions || 0).toFixed(2)} ₽</span>
+                        <span>{(product.expenses?.deductions || 0).toFixed(2)} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs font-medium border-t pt-2">
                         <span className="text-muted-foreground">Общие расходы:</span>
