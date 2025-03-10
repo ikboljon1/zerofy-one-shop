@@ -4,7 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ClipboardListIcon, 
-  PackageOpen, RefreshCw, Store, DollarSign
+  RefreshCw, 
+  Store, 
+  DollarSign,
+  PackageIcon,
+  TagIcon
 } from 'lucide-react';
 import { 
   fetchAcceptanceCoefficients, 
@@ -16,20 +20,14 @@ import {
   fetchWarehouseRemains
 } from '@/services/warehouseRemainsApi';
 import { 
-  SupplyForm, 
-  WarehouseCoefficientsTable, 
-  SupplyOptionsResults,
-  WarehouseRemains,
   StorageProfitabilityAnalysis,
-  PaidStorageCostReport
+  PaidStorageCostReport,
+  WarehouseRemains
 } from '@/components/supplies';
 import { 
-  SupplyFormData, 
-  WarehouseCoefficient, 
-  Warehouse as WBWarehouse,
-  SupplyOptionsResponse,
   WarehouseRemainItem,
-  PaidStorageItem
+  PaidStorageItem,
+  SupplyFormData
 } from '@/types/supplies';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -38,16 +36,11 @@ import { ensureStoreSelectionPersistence } from '@/utils/storeUtils';
 import { Store as StoreType } from '@/types/store';
 
 const Warehouses: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('inventory');
-  const [wbWarehouses, setWbWarehouses] = useState<WBWarehouse[]>([]);
-  const [coefficients, setCoefficients] = useState<WarehouseCoefficient[]>([]);
-  const [supplyResults, setSupplyResults] = useState<SupplyOptionsResponse | null>(null);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [activeStorageTab, setActiveStorageTab] = useState('inventory');
   const [warehouseRemains, setWarehouseRemains] = useState<WarehouseRemainItem[]>([]);
   const [paidStorageData, setPaidStorageData] = useState<PaidStorageItem[]>([]);
   const [loading, setLoading] = useState({
-    warehouses: false,
-    coefficients: false,
-    options: false,
     remains: false,
     paidStorage: false
   });
@@ -61,58 +54,13 @@ const Warehouses: React.FC = () => {
     if (selected) {
       setSelectedStore(selected);
       // Если есть выбранный магазин, загружаем соответствующие данные
-      if (activeTab === 'supplies') {
-        loadWarehouses(selected.apiKey);
-        loadCoefficients(selected.apiKey);
-      } else if (activeTab === 'inventory') {
-        loadWarehouseRemains(selected.apiKey);
-      } else if (activeTab === 'storage') {
-        loadPaidStorageData(selected.apiKey);
-      }
+      loadWarehouseRemains(selected.apiKey);
+      loadPaidStorageData(selected.apiKey);
     } else if (stores.length > 0) {
       // Если нет выбранного магазина, но есть магазины, выбираем первый
       setSelectedStore(stores[0]);
     }
   }, []);
-
-  useEffect(() => {
-    if (selectedStore) {
-      if (activeTab === 'supplies') {
-        loadWarehouses(selectedStore.apiKey);
-        loadCoefficients(selectedStore.apiKey);
-      } else if (activeTab === 'inventory') {
-        loadWarehouseRemains(selectedStore.apiKey);
-      } else if (activeTab === 'storage') {
-        loadPaidStorageData(selectedStore.apiKey);
-      }
-    }
-  }, [activeTab, selectedStore]);
-
-  const loadWarehouses = async (apiKey: string) => {
-    try {
-      setLoading(prev => ({ ...prev, warehouses: true }));
-      const data = await fetchWarehouses(apiKey);
-      setWbWarehouses(data);
-    } catch (error) {
-      console.error('Ошибка при загрузке складов:', error);
-      toast.error('Не удалось загрузить список складов');
-    } finally {
-      setLoading(prev => ({ ...prev, warehouses: false }));
-    }
-  };
-
-  const loadCoefficients = async (apiKey: string) => {
-    try {
-      setLoading(prev => ({ ...prev, coefficients: true }));
-      const data = await fetchAcceptanceCoefficients(apiKey);
-      setCoefficients(data);
-    } catch (error) {
-      console.error('Ошибка при загрузке коэффициентов:', error);
-      toast.error('Не удалось загрузить коэффициенты приемки');
-    } finally {
-      setLoading(prev => ({ ...prev, coefficients: false }));
-    }
-  };
 
   const loadWarehouseRemains = async (apiKey: string) => {
     if (!apiKey) {
@@ -168,59 +116,14 @@ const Warehouses: React.FC = () => {
     }
   };
 
-  const handleSupplySubmit = async (data: SupplyFormData) => {
-    if (!selectedStore) {
-      toast.error('Выберите магазин для проверки доступности товаров');
-      return;
-    }
-    
-    try {
-      setLoading(prev => ({ ...prev, options: true }));
-      
-      if (!data.selectedWarehouse) {
-        toast.error('Выберите склад назначения');
-        return;
-      }
-      
-      // Проверка доступности товаров на выбранном складе
-      const optionsResponse = await fetchAcceptanceOptions(
-        selectedStore.apiKey,
-        data.items,
-        data.selectedWarehouse
-      );
-      
-      setSupplyResults(optionsResponse);
-      
-      // Проверка на наличие ошибок
-      const hasErrors = optionsResponse.result.some(item => item.isError);
-      
-      if (hasErrors) {
-        toast.warning('Обнаружены проблемы с некоторыми товарами');
-      } else {
-        toast.success('Все товары доступны для поставки');
-      }
-    } catch (error) {
-      console.error('Ошибка при проверке доступности:', error);
-      toast.error('Не удалось проверить доступность товаров');
-    } finally {
-      setLoading(prev => ({ ...prev, options: false }));
-    }
-  };
-
   const handleRefreshData = () => {
     if (!selectedStore) {
       toast.warning('Необходимо выбрать магазин для получения данных');
       return;
     }
     
-    if (activeTab === 'inventory') {
-      loadWarehouseRemains(selectedStore.apiKey);
-    } else if (activeTab === 'supplies') {
-      loadWarehouses(selectedStore.apiKey);
-      loadCoefficients(selectedStore.apiKey);
-    } else if (activeTab === 'storage') {
-      loadPaidStorageData(selectedStore.apiKey);
-    }
+    loadWarehouseRemains(selectedStore.apiKey);
+    loadPaidStorageData(selectedStore.apiKey);
   };
 
   // Calculate average daily sales rates based on historical data
@@ -245,244 +148,157 @@ const Warehouses: React.FC = () => {
     return result;
   };
 
+  const renderStorageContent = () => {
+    return (
+      <>
+        <Tabs defaultValue="inventory" value={activeStorageTab} onValueChange={setActiveStorageTab} className="space-y-4">
+          <TabsList className="grid grid-cols-2 w-full max-w-md">
+            <TabsTrigger value="inventory" className="flex items-center justify-center">
+              <ClipboardListIcon className="h-4 w-4 mr-2" />
+              <span>Остатки</span>
+            </TabsTrigger>
+            <TabsTrigger value="paid-storage" className="flex items-center justify-center">
+              <DollarSign className="h-4 w-4 mr-2" />
+              <span>Платное хранение</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="inventory" className="space-y-4">
+            {loading.remains ? (
+              <Skeleton className="h-[400px] w-full" />
+            ) : (
+              <WarehouseRemains 
+                data={warehouseRemains} 
+                isLoading={loading.remains} 
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent value="paid-storage" className="space-y-4">
+            {loading.paidStorage && paidStorageData.length === 0 ? (
+              <Skeleton className="h-[600px] w-full" />
+            ) : (
+              <PaidStorageCostReport 
+                apiKey={selectedStore?.apiKey || ''}
+                storageData={paidStorageData}
+                isLoading={loading.paidStorage}
+                onRefresh={(apiKey) => selectedStore && loadPaidStorageData(selectedStore.apiKey)}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
+
+        {activeStorageTab === 'inventory' && warehouseRemains.length > 0 && (
+          <div className="mt-8">
+            <StorageProfitabilityAnalysis 
+              warehouseItems={warehouseRemains}
+              paidStorageData={paidStorageData}
+              averageDailySalesRate={calculateAverageDailySales()}
+              dailyStorageCost={calculateDailyStorageCosts()}
+            />
+          </div>
+        )}
+      </>
+    );
+  };
+
   return (
     <div className="container px-4 py-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Управление складами и логистикой</h1>
+        <h1 className="text-2xl font-bold">Управление складами</h1>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={handleRefreshData}
+          disabled={loading.remains || loading.paidStorage}
+          className="flex items-center gap-2"
+        >
+          {(loading.remains || loading.paidStorage) ? (
+            <RefreshCw className="h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4" />
+          )}
+          Обновить данные
+        </Button>
       </div>
 
-      <Tabs defaultValue="inventory" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid grid-cols-3 w-full max-w-md">
-          <TabsTrigger value="inventory" className="flex items-center justify-center">
-            <ClipboardListIcon className="h-4 w-4 mr-2" />
-            <span>Инвентарь</span>
-          </TabsTrigger>
-          <TabsTrigger value="supplies" className="flex items-center justify-center">
-            <PackageOpen className="h-4 w-4 mr-2" />
-            <span>Поставки</span>
-          </TabsTrigger>
-          <TabsTrigger value="storage" className="flex items-center justify-center">
-            <DollarSign className="h-4 w-4 mr-2" />
-            <span>Хранение</span>
-          </TabsTrigger>
-        </TabsList>
+      {!selectedStore ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center">
+              <Store className="mr-2 h-5 w-5" />
+              Выберите магазин
+            </CardTitle>
+            <CardDescription>
+              Для просмотра и управления складами необходимо выбрать магазин в разделе "Магазины"
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+            <Store className="h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">Для работы с отчетами о складах необходимо выбрать магазин</p>
+            <Button 
+              className="mt-4"
+              variant="outline"
+              onClick={() => window.location.href = '/dashboard'}
+            >
+              Перейти к выбору магазина
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="grid grid-cols-3 w-full max-w-md">
+            <TabsTrigger value="overview" className="flex items-center justify-center">
+              <ClipboardListIcon className="h-4 w-4 mr-2" />
+              <span>Обзор</span>
+            </TabsTrigger>
+            <TabsTrigger value="brands" className="flex items-center justify-center">
+              <TagIcon className="h-4 w-4 mr-2" />
+              <span>Бренды</span>
+            </TabsTrigger>
+            <TabsTrigger value="categories" className="flex items-center justify-center">
+              <PackageIcon className="h-4 w-4 mr-2" />
+              <span>Категории</span>
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="inventory" className="space-y-4">
-          {!selectedStore ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                  <Store className="mr-2 h-5 w-5" />
-                  Выберите магазин
-                </CardTitle>
-                <CardDescription>
-                  Для просмотра и управления складами необходимо выбрать магазин в разделе "Магазины"
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <Store className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Для работы с отчетами о складах необходимо выбрать магазин</p>
-                <Button 
-                  className="mt-4"
-                  variant="outline"
-                  onClick={() => window.location.href = '/dashboard'}
-                >
-                  Перейти к выбору магазина
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              <div className="flex justify-between items-center mb-4">
-                <div>
-                  <h2 className="text-lg font-semibold">Остатки товаров на складах</h2>
-                  <p className="text-sm text-muted-foreground">Актуальная информация о количестве товаров</p>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleRefreshData}
-                  disabled={loading.remains}
-                  className="flex items-center gap-2"
-                >
-                  {loading.remains ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                  Обновить данные
-                </Button>
-              </div>
-
-              {loading.remains ? (
-                <div className="grid gap-4">
-                  <Skeleton className="h-[400px] w-full" />
-                  <Skeleton className="h-[300px] w-full" />
-                </div>
-              ) : (
-                <>
-                  <WarehouseRemains 
-                    data={warehouseRemains} 
-                    isLoading={loading.remains} 
-                  />
-                  
-                  {/* Pass paidStorageData to the StorageProfitabilityAnalysis component */}
-                  <div className="mt-8">
-                    <StorageProfitabilityAnalysis 
-                      warehouseItems={warehouseRemains}
-                      paidStorageData={paidStorageData}
-                      averageDailySalesRate={calculateAverageDailySales()}
-                      dailyStorageCost={calculateDailyStorageCosts()}
-                    />
-                  </div>
-                </>
-              )}
-            </>
-          )}
-        </TabsContent>
-
-        <TabsContent value="supplies" className="space-y-4">
-          {!selectedStore ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                  <Store className="mr-2 h-5 w-5" />
-                  Выберите магазин
-                </CardTitle>
-                <CardDescription>
-                  Для просмотра и управления поставками необходимо выбрать магазин в разделе "Магазины"
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <Store className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Для работы с поставками необходимо выбрать магазин</p>
-                <Button 
-                  className="mt-4"
-                  variant="outline"
-                  onClick={() => window.location.href = '/dashboard'}
-                >
-                  Перейти к выбору магазина
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="lg:col-span-1">
-                {loading.warehouses ? (
-                  <Card>
-                    <CardHeader>
-                      <Skeleton className="h-8 w-3/4" />
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-10 w-full" />
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <SupplyForm 
-                    warehouses={wbWarehouses} 
-                    onSupplySubmit={handleSupplySubmit} 
-                  />
-                )}
-              </div>
-              
-              <div className="lg:col-span-2">
-                {supplyResults ? (
-                  <SupplyOptionsResults 
-                    results={supplyResults} 
-                    warehouses={wbWarehouses} 
-                  />
-                ) : (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center">
-                        <PackageOpen className="h-5 w-5 mr-2" />
-                        Коэффициенты приемки
-                      </CardTitle>
-                      <CardDescription>
-                        Информация о доступности приемки товаров на складах WB
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {loading.coefficients ? (
-                        <div className="space-y-2">
-                          <Skeleton className="h-10 w-full" />
-                          <Skeleton className="h-10 w-full" />
-                          <Skeleton className="h-10 w-full" />
-                        </div>
-                      ) : (
-                        <WarehouseCoefficientsTable coefficients={coefficients} />
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
+          <TabsContent value="overview" className="space-y-4">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold">Остатки товаров на складах</h2>
+              <p className="text-sm text-muted-foreground">Актуальная информация о количестве товаров</p>
             </div>
-          )}
-        </TabsContent>
+            {renderStorageContent()}
+          </TabsContent>
 
-        <TabsContent value="storage" className="space-y-4">
-          {!selectedStore ? (
+          <TabsContent value="brands" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                  <Store className="mr-2 h-5 w-5" />
-                  Выберите магазин
-                </CardTitle>
+                <CardTitle>Анализ по брендам</CardTitle>
                 <CardDescription>
-                  Для просмотра данных о платном хранении необходимо выбрать магазин в разделе "Магазины"
+                  Показатели эффективности по брендам
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <Store className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Для работы с отчетами о платном хранении необходимо выбрать магазин</p>
-                <Button 
-                  className="mt-4"
-                  variant="outline"
-                  onClick={() => window.location.href = '/dashboard'}
-                >
-                  Перейти к выбору магазина
-                </Button>
+              <CardContent>
+                <p className="text-muted-foreground">Функциональность в разработке</p>
               </CardContent>
             </Card>
-          ) : (
-            <>
-              <div className="flex justify-between items-center mb-4">
-                <div>
-                  <h2 className="text-lg font-semibold">Отчет о платном хранении</h2>
-                  <p className="text-sm text-muted-foreground">Аналитика затрат на хранение товаров</p>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleRefreshData}
-                  disabled={loading.paidStorage}
-                  className="flex items-center gap-2"
-                >
-                  {loading.paidStorage ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                  Обновить данные
-                </Button>
-              </div>
+          </TabsContent>
 
-              {loading.paidStorage && paidStorageData.length === 0 ? (
-                <Skeleton className="h-[600px] w-full" />
-              ) : (
-                <PaidStorageCostReport 
-                  apiKey={selectedStore.apiKey}
-                  storageData={paidStorageData}
-                  isLoading={loading.paidStorage}
-                  onRefresh={loadPaidStorageData}
-                />
-              )}
-            </>
-          )}
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="categories" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Анализ по категориям</CardTitle>
+                <CardDescription>
+                  Показатели эффективности по категориям товаров
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">Функциональность в разработке</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 };

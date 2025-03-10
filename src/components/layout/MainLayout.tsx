@@ -11,11 +11,9 @@ import {
   Zap,
   Megaphone,
   Settings,
-  LogOut,
-  WarehouseIcon,
-  MenuIcon
+  MenuIcon,
+  WarehouseIcon
 } from "lucide-react";
-import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/use-theme";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -128,12 +126,12 @@ const MainLayout = ({ children, activeTab, onTabChange }: MainLayoutProps) => {
                       variant="ghost" 
                       className="justify-start"
                       onClick={() => {
-                        onTabChange("warehouses");
+                        onTabChange("storage");
                         setShowMobileMenu(false);
                       }}
                     >
                       <WarehouseIcon className="mr-2 h-4 w-4" />
-                      Склады
+                      Хранение
                     </Button>
                     <Button 
                       variant="ghost" 
@@ -221,11 +219,11 @@ const MainLayout = ({ children, activeTab, onTabChange }: MainLayoutProps) => {
                 </Button>
                 <Button 
                   variant="ghost" 
-                  onClick={() => onTabChange("warehouses")}
-                  className={activeTab === "warehouses" ? "bg-accent" : ""}
+                  onClick={() => onTabChange("storage")}
+                  className={activeTab === "storage" ? "bg-accent" : ""}
                 >
                   <WarehouseIcon className="mr-2 h-4 w-4" />
-                  Склады
+                  Хранение
                 </Button>
                 <Button 
                   variant="ghost" 
