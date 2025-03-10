@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
@@ -334,25 +333,7 @@ const Dashboard = () => {
         </TabsContent>
 
         <TabsContent value="ai-analysis" className="space-y-4">
-          {selectedStoreId && (
-            <AIAnalysisSection 
-              storeId={selectedStoreId} 
-              analyticsData={analyticsData}
-              dateFrom={dateRange.from}
-              dateTo={dateRange.to}
-            />
-          )}
-          {!selectedStoreId && (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <p className="text-muted-foreground mb-2">Выберите магазин для AI-анализа данных</p>
-              <Button 
-                onClick={() => setActiveTab("stores")}
-                variant="outline"
-              >
-                Выбрать магазин
-              </Button>
-            </div>
-          )}
+          <AIAnalysisSection />
         </TabsContent>
       </Tabs>
     </div>

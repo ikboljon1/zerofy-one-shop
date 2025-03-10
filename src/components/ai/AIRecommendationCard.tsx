@@ -1,19 +1,66 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, Check, ExternalLink, AlertTriangle, TrendingUp, DollarSign, ShoppingBag, Megaphone, Info } from "lucide-react";
+import { Trash2, Check, ExternalLink, AlertTriangle, TrendingUp, DollarSign, ShoppingBag, Megaphone, Info, Clock, Calendar } from "lucide-react";
 import { AIRecommendation } from "@/types/ai";
 import { Badge } from "@/components/ui/badge";
 
 interface AIRecommendationCardProps {
-  recommendation: AIRecommendation;
-  onDismiss: (id: string) => void;
+  recommendation?: AIRecommendation;
+  onDismiss?: (id: string) => void;
   compact?: boolean;
+  comingSoon?: boolean;
 }
 
-const AIRecommendationCard = ({ recommendation, onDismiss, compact = false }: AIRecommendationCardProps) => {
+const AIRecommendationCard = ({ recommendation, onDismiss, compact = false, comingSoon = false }: AIRecommendationCardProps) => {
   const [showActions, setShowActions] = useState(false);
+  
+  // Coming soon display mode
+  if (comingSoon) {
+    if (compact) {
+      return (
+        <div className="p-3 border rounded-lg bg-card hover:shadow-sm transition-shadow">
+          <div className="flex gap-2">
+            <div className="p-1.5 rounded-full self-start bg-purple-100 text-purple-700">
+              <Clock className="h-4 w-4" />
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <h3 className="font-medium text-sm truncate">Скоро появится</h3>
+              <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                AI-анализ данных станет доступен в ближайшее время
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    return (
+      <Card className="overflow-hidden transition-all duration-300 hover:shadow-md">
+        <CardContent className="p-4">
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <div className="w-12 h-12 mb-3 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center">
+              <Clock className="h-6 w-6 text-purple-500" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Скоро появится</h3>
+            <p className="text-muted-foreground max-w-md mb-4">
+              AI-анализ данных станет доступен в ближайшее время. Мы работаем над улучшением алгоритмов для обеспечения более точных рекомендаций.
+            </p>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Calendar className="h-4 w-4" />
+              <span>Ожидаемый запуск: скоро</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  // If no recommendation provided, return nothing
+  if (!recommendation) {
+    return null;
+  }
   
   // Format timestamp to readable date
   const formattedDate = new Date(recommendation.timestamp).toLocaleString('ru-RU', {
@@ -54,6 +101,7 @@ const AIRecommendationCard = ({ recommendation, onDismiss, compact = false }: AI
     }
   };
 
+  
   if (compact) {
     return (
       <div className="p-3 border rounded-lg bg-card hover:shadow-sm transition-shadow">
@@ -106,14 +154,16 @@ const AIRecommendationCard = ({ recommendation, onDismiss, compact = false }: AI
                   {recommendation.importance === 'high' ? 'Важно' : 
                    recommendation.importance === 'medium' ? 'Средне' : 'Низко'}
                 </Badge>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-8 w-8 p-0" 
-                  onClick={() => onDismiss(recommendation.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {onDismiss && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 w-8 p-0" 
+                    onClick={() => onDismiss(recommendation.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
             
