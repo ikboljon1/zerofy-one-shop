@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -21,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useToast } from "@/hooks/use-toast";
 
 interface StorageProfitabilityAnalysisProps {
   warehouseItems: WarehouseRemainItem[];
@@ -70,8 +70,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     key: keyof AnalysisResult | '',
     direction: 'asc' | 'desc'
   }>({ key: '', direction: 'asc' });
+  const { toast } = useToast();
 
-  // Initialize with stored values if available
   useEffect(() => {
     const storedCostPrices = localStorage.getItem('product_cost_prices');
     if (storedCostPrices) {
@@ -88,20 +88,16 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       setLowStockThreshold(JSON.parse(storedLowStockThresholds));
     }
 
-    // Initialize daily sales and storage costs
     const initialDailySales: Record<number, number> = {};
     const initialStorageCosts: Record<number, number> = {};
     const initialDiscountLevels: Record<number, number> = {};
     const initialLowStockThresholds: Record<number, number> = {};
 
     warehouseItems.forEach(item => {
-      // Try to get actual storage cost from paidStorageData if available
       let itemStorageCost = dailyStorageCost[item.nmId] || 5; // Default to 5 rubles per day
       
-      // If we have paidStorageData, try to find actual cost for this item
       const matchingStorageItems = paidStorageData.filter(psi => psi.nmId === item.nmId);
       if (matchingStorageItems.length > 0) {
-        // Calculate average daily cost from all matching storage items
         const totalCost = matchingStorageItems.reduce((sum, psi) => sum + psi.warehousePrice, 0);
         itemStorageCost = totalCost / matchingStorageItems.length;
       }
@@ -109,7 +105,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       initialDailySales[item.nmId] = averageDailySalesRate[item.nmId] || 0.1; // Default to 0.1 items per day
       initialStorageCosts[item.nmId] = itemStorageCost;
       
-      // Вычисляем оптимальную скидку для каждого товара
       const optimalDiscount = calculateOptimalDiscount(
         item.price || 0,
         costPrices[item.nmId] || 0,
@@ -119,7 +114,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       );
       initialDiscountLevels[item.nmId] = optimalDiscount; // Используем рассчитанное значение вместо фиксированных 30%
       
-      // Calculate low stock threshold (default: 7 days of sales)
       const salesRate = averageDailySalesRate[item.nmId] || 0.1;
       initialLowStockThresholds[item.nmId] = Math.max(3, Math.ceil(salesRate * 7));
     });
@@ -130,7 +124,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     setLowStockThreshold(prevState => ({...prevState, ...initialLowStockThresholds}));
   }, [warehouseItems, averageDailySalesRate, dailyStorageCost, paidStorageData, costPrices]);
 
-  // Calculate profitability analysis
   const analysisResults = useMemo(() => {
     return warehouseItems.map(item => {
       const nmId = item.nmId;
@@ -139,38 +132,28 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       const dailySales = dailySalesRates[nmId] || 0.1;
       const storageCost = storageCostRates[nmId] || 5;
       const discountPercentage = discountLevels[nmId] || 30;
-      const threshold = lowStockThreshold[nmId] || Math.ceil(dailySales * 7); // Default 7 days worth of stock
+      const threshold = lowStockThreshold[nmId] || Math.ceil(dailySales * 7);
       
-      // Calculate current stock level
       const currentStock = item.quantityWarehousesFull || 0;
       
-      // Calculate days of inventory based on current stock and sales rate
       const daysOfInventory = dailySales > 0 ? Math.round(currentStock / dailySales) : 999;
       
-      // Calculate total storage cost for the entire inventory period
       const totalStorageCost = storageCost * daysOfInventory;
       
-      // Calculate profit without discount
       const profitPerItem = sellingPrice - costPrice;
       const profitWithoutDiscount = profitPerItem * currentStock - totalStorageCost;
       
-      // Calculate profit with recommended discount
       const discountedPrice = sellingPrice * (1 - discountPercentage / 100);
       const profitWithDiscountPerItem = discountedPrice - costPrice;
       
-      // Calculate storage cost savings with quicker sales (assuming faster sales with discount)
-      // Используем коэффициент 1.5 для скорости продаж со скидкой (в 1.5 раза быстрее)
       const salesAccelerationFactor = 1.5;
       const discountedDaysOfInventory = Math.round(daysOfInventory / salesAccelerationFactor);
       const discountedStorageCost = storageCost * discountedDaysOfInventory;
       
-      // Calculate total profit with discount (including reduced storage costs)
       const profitWithDiscount = profitWithDiscountPerItem * currentStock - discountedStorageCost;
       
-      // Calculate storage cost savings
       const storageSavings = totalStorageCost - discountedStorageCost;
       
-      // Используем новую функцию для расчета экономии от скидки
       const savingsWithDiscount = calculateDiscountSavings(
         sellingPrice,
         discountPercentage,
@@ -180,14 +163,11 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         salesAccelerationFactor
       );
       
-      // Determine low stock status
       const lowStock = currentStock <= threshold;
       
-      // Calculate stock level percentage (for visualization)
       let stockLevelPercentage = Math.min(100, (currentStock / (threshold * 2)) * 100);
       stockLevelPercentage = Math.max(0, Math.round(stockLevelPercentage));
       
-      // Determine stock level category
       let stockLevel: 'low' | 'medium' | 'high';
       if (currentStock <= threshold) {
         stockLevel = 'low';
@@ -197,12 +177,10 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         stockLevel = 'high';
       }
       
-      // Calculate projected stockout date
       const projectedStockoutDate = dailySales > 0 
         ? new Date(Date.now() + (daysOfInventory * 24 * 60 * 60 * 1000))
         : undefined;
       
-      // Используем функцию для определения рекомендуемого действия
       const action = determineRecommendedAction(
         daysOfInventory,
         savingsWithDiscount,
@@ -231,11 +209,9 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     });
   }, [warehouseItems, costPrices, sellingPrices, dailySalesRates, storageCostRates, discountLevels, lowStockThreshold]);
 
-  // Filter and sort results
   const filteredResults = useMemo(() => {
     let results = [...analysisResults];
     
-    // Apply search filter
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       results = results.filter(result => 
@@ -246,7 +222,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       );
     }
     
-    // Apply tab filter
     if (selectedTab === 'discount') {
       results = results.filter(result => result.action === 'discount' || result.action === 'sell');
     } else if (selectedTab === 'keep') {
@@ -255,7 +230,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       results = results.filter(result => result.lowStock);
     }
     
-    // Apply sorting
     if (sortConfig.key) {
       results.sort((a, b) => {
         if (a[sortConfig.key] < b[sortConfig.key]) {
@@ -271,7 +245,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     return results;
   }, [analysisResults, searchTerm, selectedTab, sortConfig]);
 
-  // Get stats for summary cards
   const analysisSummary = useMemo(() => {
     const totalItems = analysisResults.length;
     const lowStockItems = analysisResults.filter(item => item.lowStock).length;
@@ -284,13 +257,11 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       return sum + (item.savingsWithDiscount > 0 ? item.savingsWithDiscount : 0);
     }, 0);
 
-    // Items that will stock out before the target date
     const itemsStockingOutBeforeTarget = targetDate ? 
       analysisResults.filter(item => 
         item.projectedStockoutDate && item.projectedStockoutDate <= targetDate
       ).length : 0;
     
-    // ROI от оптимизации запасов
     const totalInvestment = analysisResults.reduce((sum, item) => {
       return sum + (item.costPrice * (item.remainItem.quantityWarehousesFull || 0));
     }, 0);
@@ -300,7 +271,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     
     const optimizedROI = totalInvestment > 0 ? 
       (analysisResults.reduce((sum, item) => {
-        // Используем профит с учетом скидки только если действие - "discount" или "sell"
         const profit = (item.action === 'discount' || item.action === 'sell') ? 
           item.profitWithDiscount : item.profitWithoutDiscount;
         return sum + profit;
@@ -323,7 +293,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     };
   }, [analysisResults, targetDate]);
 
-  // Handle sorting
   const requestSort = (key: keyof AnalysisResult) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -332,16 +301,16 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     setSortConfig({ key, direction });
   };
 
-  // Save data updates to localStorage
   const savePriceData = () => {
     localStorage.setItem('product_cost_prices', JSON.stringify(costPrices));
     localStorage.setItem('product_selling_prices', JSON.stringify(sellingPrices));
     localStorage.setItem('product_low_stock_thresholds', JSON.stringify(lowStockThreshold));
     
-    toast.success('Данные успешно сохранены');
+    toast({
+      title: "Данные успешно сохранены"
+    });
   };
 
-  // Update cost price for a product
   const updateCostPrice = (nmId: number, value: number) => {
     setCostPrices(prev => ({
       ...prev,
@@ -349,7 +318,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
-  // Update selling price for a product
   const updateSellingPrice = (nmId: number, value: number) => {
     setSellingPrices(prev => ({
       ...prev,
@@ -357,7 +325,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
-  // Update daily sales rate for a product
   const updateDailySales = (nmId: number, value: number) => {
     setDailySalesRates(prev => ({
       ...prev,
@@ -365,7 +332,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
-  // Update storage cost for a product
   const updateStorageCost = (nmId: number, value: number) => {
     setStorageCostRates(prev => ({
       ...prev,
@@ -373,7 +339,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
-  // Update discount level for a product
   const updateDiscountLevel = (nmId: number, value: number[]) => {
     setDiscountLevels(prev => ({
       ...prev,
@@ -381,7 +346,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
-  // Update low stock threshold for a product
   const updateLowStockThreshold = (nmId: number, value: number) => {
     setLowStockThreshold(prev => ({
       ...prev,
@@ -389,7 +353,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
-  // Get badge color based on action
   const getActionBadge = (action: 'sell' | 'discount' | 'keep') => {
     switch (action) {
       case 'sell':
@@ -403,7 +366,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }
   };
 
-  // Get stock level indicator
   const getStockLevelIndicator = (result: AnalysisResult) => {
     switch (result.stockLevel) {
       case 'low':
@@ -441,7 +403,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }
   };
 
-  // Format a date for display
   const formatDate = (date?: Date) => {
     if (!date) return "Не определено";
     return new Date(date).toLocaleDateString('ru-RU', {
@@ -451,7 +412,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     });
   };
 
-  // Calculate ROI improvement
   const calculateROIimprovement = (result: AnalysisResult) => {
     const investment = result.costPrice * (result.remainItem.quantityWarehousesFull || 0);
     if (investment <= 0) return 0;
@@ -685,7 +645,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                             Артикул: {result.remainItem.vendorCode} | ID: {result.remainItem.nmId}
                           </div>
                           
-                          {/* Stock level indicator */}
                           <div className="mt-1">
                             {getStockLevelIndicator(result)}
                           </div>
