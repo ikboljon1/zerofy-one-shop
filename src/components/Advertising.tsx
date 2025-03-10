@@ -41,6 +41,9 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
   const [selectedStore, setSelectedStore] = useState(propSelectedStore);
   const [advertisingData, setAdvertisingData] = useState<any>(null);
   const [isLoadingAdvertisingData, setIsLoadingAdvertisingData] = useState(false);
+  const [campaignFullStatsCache, setCampaignFullStatsCache] = useState<Record<number, CampaignFullStats>>({});
+  const [campaignProductStatsCache, setCampaignProductStatsCache] = useState<Record<number, ProductStats[]>>({});
+  const [campaignKeywordsCache, setCampaignKeywordsCache] = useState<Record<number, KeywordStat[]>>({});
 
   useEffect(() => {
     const savedSelectedStore = localStorage.getItem(SELECTED_STORE_KEY);
@@ -163,7 +166,9 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
 
         setCampaigns(updatedCampaigns);
         
-        await loadAdvertisingDataForAI(updatedCampaigns.slice(0, 5), dateFrom, dateTo);
+        // Предзагрузим данные для первых 3-х кампаний для ускорения работы AI анализа
+        const topCampaigns = allCampaigns.slice(0, 3);
+        await preloadCampaignDetailsForAI(topCampaigns, dateFrom, dateTo);
       }
       
       const balanceData = await getAdvertBalance(selectedStore.apiKey);
@@ -190,14 +195,18 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
     }
   };
 
-  const loadAdvertisingDataForAI = async (campaigns: Campaign[], dateFrom: Date, dateTo: Date) => {
+  const preloadCampaignDetailsForAI = async (campaigns: Campaign[], dateFrom: Date, dateTo: Date) => {
     if (!selectedStore || campaigns.length === 0) {
       return;
     }
     
     try {
       const campaignIds = campaigns.map(campaign => campaign.advertId);
+      const newStatsCache = { ...campaignFullStatsCache };
+      const newProductsCache = { ...campaignProductStatsCache };
+      const newKeywordsCache = { ...campaignKeywordsCache };
       
+      // Загружаем полную статистику кампаний
       const campaignStats = await getCampaignFullStats(
         selectedStore.apiKey,
         campaignIds,
@@ -205,48 +214,172 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
         dateTo
       );
       
-      const keywordData = await getKeywordStatistics(
-        selectedStore.apiKey,
-        campaignIds[0],
-        dateFrom,
-        dateTo
-      );
-      
-      const campaignsData = campaigns.map((campaign, index) => {
-        const stats = campaignStats.find(s => s.advertId === campaign.advertId) || 
-                     { views: 0, clicks: 0, orders: 0, sum: 0 };
+      // Кэшируем статистику по кампаниям
+      campaignStats.forEach(stats => {
+        newStatsCache[stats.advertId] = stats;
         
-        return {
-          name: campaign.campName,
-          cost: stats.sum || 0,
-          views: stats.views || 0,
-          clicks: stats.clicks || 0,
-          orders: stats.orders || 0
-        };
+        // Собираем статистику по товарам
+        if (stats.days && stats.days.length > 0) {
+          const productsMap = new Map<number, ProductStats>();
+          
+          for (const day of stats.days) {
+            if (day.nm && day.nm.length > 0) {
+              for (const product of day.nm) {
+                if (productsMap.has(product.nmId)) {
+                  const existingProduct = productsMap.get(product.nmId)!;
+                  existingProduct.views += product.views;
+                  existingProduct.clicks += product.clicks;
+                  existingProduct.sum += product.sum;
+                  existingProduct.atbs += product.atbs;
+                  existingProduct.orders += product.orders;
+                  existingProduct.shks += product.shks;
+                  existingProduct.sum_price += product.sum_price;
+                  if (existingProduct.views > 0) {
+                    existingProduct.ctr = (existingProduct.clicks / existingProduct.views) * 100;
+                  }
+                  if (existingProduct.clicks > 0) {
+                    existingProduct.cpc = existingProduct.sum / existingProduct.clicks;
+                    existingProduct.cr = (existingProduct.orders / existingProduct.clicks) * 100;
+                  }
+                } else {
+                  productsMap.set(product.nmId, { ...product });
+                }
+              }
+            }
+          }
+          
+          newProductsCache[stats.advertId] = Array.from(productsMap.values());
+        }
       });
       
-      const keywordsData = [];
-      if (keywordData && keywordData.keywords && keywordData.keywords.length > 0) {
-        for (const day of keywordData.keywords) {
-          for (const keyword of day.stats) {
-            keywordsData.push({
-              keyword: keyword.keyword,
-              views: keyword.views,
-              clicks: keyword.clicks,
-              ctr: keyword.ctr,
-              sum: keyword.sum
-            });
+      // Загружаем статистику по ключевым словам для каждой кампании
+      for (const campaignId of campaignIds) {
+        try {
+          const keywordData = await getKeywordStatistics(
+            selectedStore.apiKey,
+            campaignId,
+            dateFrom,
+            dateTo
+          );
+          
+          const keywordsData: KeywordStat[] = [];
+          if (keywordData && keywordData.keywords && keywordData.keywords.length > 0) {
+            for (const day of keywordData.keywords) {
+              for (const keyword of day.stats) {
+                keywordsData.push(keyword);
+              }
+            }
           }
+          
+          newKeywordsCache[campaignId] = keywordsData;
+        } catch (keywordError) {
+          console.error(`Ошибка при загрузке ключевых слов для кампании ${campaignId}:`, keywordError);
         }
       }
       
-      setAdvertisingData({
-        campaigns: campaignsData,
-        keywords: keywordsData
-      });
+      // Обновляем кэши
+      setCampaignFullStatsCache(newStatsCache);
+      setCampaignProductStatsCache(newProductsCache);
+      setCampaignKeywordsCache(newKeywordsCache);
       
     } catch (error) {
-      console.error('Ошибка при загрузке данных для AI анализа:', error);
+      console.error('Ошибка при предзагрузке данных для AI анализа:', error);
+    }
+  };
+
+  const loadCampaignDataForAI = async (campaign: Campaign) => {
+    if (!selectedStore) return;
+    
+    const campaignId = campaign.advertId;
+    
+    // Проверяем есть ли уже данные в кэше
+    if (!campaignFullStatsCache[campaignId]) {
+      try {
+        setLoading(true);
+        const dateTo = new Date();
+        const dateFrom = new Date();
+        dateFrom.setDate(dateFrom.getDate() - 30);
+        
+        // Загружаем полную статистику кампании
+        const campaignStats = await getCampaignFullStats(
+          selectedStore.apiKey,
+          [campaignId],
+          dateFrom,
+          dateTo
+        );
+        
+        if (campaignStats && campaignStats.length > 0) {
+          const newStatsCache = { ...campaignFullStatsCache };
+          newStatsCache[campaignId] = campaignStats[0];
+          setCampaignFullStatsCache(newStatsCache);
+          
+          // Собираем статистику по товарам
+          if (campaignStats[0].days && campaignStats[0].days.length > 0) {
+            const productsMap = new Map<number, ProductStats>();
+            
+            for (const day of campaignStats[0].days) {
+              if (day.nm && day.nm.length > 0) {
+                for (const product of day.nm) {
+                  if (productsMap.has(product.nmId)) {
+                    const existingProduct = productsMap.get(product.nmId)!;
+                    existingProduct.views += product.views;
+                    existingProduct.clicks += product.clicks;
+                    existingProduct.sum += product.sum;
+                    existingProduct.atbs += product.atbs;
+                    existingProduct.orders += product.orders;
+                    existingProduct.shks += product.shks;
+                    existingProduct.sum_price += product.sum_price;
+                    if (existingProduct.views > 0) {
+                      existingProduct.ctr = (existingProduct.clicks / existingProduct.views) * 100;
+                    }
+                    if (existingProduct.clicks > 0) {
+                      existingProduct.cpc = existingProduct.sum / existingProduct.clicks;
+                      existingProduct.cr = (existingProduct.orders / existingProduct.clicks) * 100;
+                    }
+                  } else {
+                    productsMap.set(product.nmId, { ...product });
+                  }
+                }
+              }
+            }
+            
+            const newProductsCache = { ...campaignProductStatsCache };
+            newProductsCache[campaignId] = Array.from(productsMap.values());
+            setCampaignProductStatsCache(newProductsCache);
+          }
+        }
+        
+        // Загружаем статистику по ключевым словам
+        const keywordData = await getKeywordStatistics(
+          selectedStore.apiKey,
+          campaignId,
+          dateFrom,
+          dateTo
+        );
+        
+        const keywordsData: KeywordStat[] = [];
+        if (keywordData && keywordData.keywords && keywordData.keywords.length > 0) {
+          for (const day of keywordData.keywords) {
+            for (const keyword of day.stats) {
+              keywordsData.push(keyword);
+            }
+          }
+        }
+        
+        const newKeywordsCache = { ...campaignKeywordsCache };
+        newKeywordsCache[campaignId] = keywordsData;
+        setCampaignKeywordsCache(newKeywordsCache);
+        
+      } catch (error) {
+        console.error('Ошибка при загрузке данных для AI анализа:', error);
+        toast({
+          title: "Ошибка загрузки данных",
+          description: error instanceof Error ? error.message : "Не удалось загрузить данные для анализа",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -486,9 +619,17 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
                             <AdvertisingAIAnalysis 
                               storeId={selectedStore.id}
                               campaign={campaign}
+                              campaignStats={campaignFullStatsCache[campaign.advertId]}
+                              campaignProductStats={campaignProductStatsCache[campaign.advertId]}
+                              campaignKeywords={campaignKeywordsCache[campaign.advertId]}
                               dateFrom={new Date(new Date().setDate(new Date().getDate() - 30))}
                               dateTo={new Date()}
                               variant="card"
+                              onAnalysisComplete={() => {
+                                if (!campaignFullStatsCache[campaign.advertId]) {
+                                  loadCampaignDataForAI(campaign);
+                                }
+                              }}
                             />
                           )}
                         </div>

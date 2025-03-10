@@ -88,6 +88,33 @@ export interface AIAnalysisRequest {
       value: number;
       count?: number;
     }>;
+    // Добавлены расширенные данные для анализа рекламы
+    campaignDetails?: {
+      id: number;
+      status: string;
+      type: string;
+      ctr: number;
+      cr: number;
+      dailyStats?: Array<{
+        date: string;
+        views: number;
+        clicks: number;
+        ctr: number;
+        sum: number;
+        orders: number;
+      }>;
+      productStats?: Array<{
+        nmId: number;
+        name: string;
+        views: number;
+        clicks: number;
+        ctr: number;
+        sum: number;
+        orders: number;
+        cr: number;
+        efficiency: number;
+      }>;
+    };
   };
   requestType: 'full_analysis' | 'sales_analysis' | 'expense_analysis' | 'product_recommendations' | 'advertising_analysis';
 }
