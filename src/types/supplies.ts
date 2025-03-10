@@ -1,4 +1,3 @@
-
 export interface WarehouseCoefficient {
   date: string;
   coefficient: number;
@@ -46,6 +45,7 @@ export interface SupplyItem {
 export interface SupplyFormData {
   items: SupplyItem[];
   selectedWarehouse?: number;
+  selectedBoxType?: BoxType;
 }
 
 export interface Warehouse {
@@ -102,14 +102,8 @@ export const BOX_TYPES: Record<BoxType, string> = {
   'Суперсейф': 'supersafe'
 };
 
-// Add missing type property to SupplyFormData
-export interface SupplyFormData {
-  items: SupplyItem[];
-  selectedWarehouse?: number;
-  selectedBoxType?: BoxType;
-}
-
 // Updated WarehouseRemainItem interface with the correct properties
+// and added the missing warehouses property
 export interface WarehouseRemainItem {
   lastChangeDate: string;
   warehouseName: string;
@@ -133,6 +127,22 @@ export interface WarehouseRemainItem {
   volume?: number;
   quantityWarehousesFull?: number;
   quantityWarehouses?: number;
+  // Adding the missing warehouses property as an array of warehouse data
+  warehouses: {
+    warehouseName: string;
+    quantity: number;
+  }[];
+}
+
+// Add WarehouseEfficiency interface for dashboard charts
+export interface WarehouseEfficiency {
+  warehouseName: string;
+  totalItems: number;
+  totalValue: number;
+  turnoverRate: number;
+  utilizationPercent: number;
+  processingSpeed: number;
+  rank: number;
 }
 
 // For API task responses
