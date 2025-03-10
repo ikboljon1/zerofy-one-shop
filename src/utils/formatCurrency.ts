@@ -1,9 +1,18 @@
-
 export const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('ru-RU', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(value);
+};
+
+export const parseCurrencyString = (value: string): number => {
+  // Remove any non-numeric characters except decimal point and minus
+  const numericString = value.replace(/[^\d.-]/g, '');
+  return parseFloat(numericString) || 0;
+};
+
+export const roundToTwoDecimals = (value: number): number => {
+  return Math.round(value * 100) / 100;
 };
 
 export interface ProfitAnalysis {
