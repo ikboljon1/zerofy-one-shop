@@ -1,4 +1,3 @@
-
 export interface WarehouseCoefficient {
   date: string;
   coefficient: number;
@@ -6,7 +5,7 @@ export interface WarehouseCoefficient {
   warehouseName: string;
   allowUnload: boolean;
   boxTypeName: string;
-  boxTypeID?: number;
+  boxTypeID: number;
   storageCoef: string | null;
   deliveryCoef: string | null;
   deliveryBaseLiter: string | null;
@@ -16,31 +15,37 @@ export interface WarehouseCoefficient {
   isSortingCenter: boolean;
 }
 
-export interface SupplyItem {
-  quantity: number;
-  barcode: string;
+export interface SupplyOptionsResponse {
+  result: SupplyOption[];
+  requestId: string;
 }
 
-export interface WarehouseOption {
+export interface SupplyOption {
+  barcode: string;
+  warehouses: WarehouseAvailability[] | null;
+  error?: {
+    title: string;
+    detail: string;
+  };
+  isError: boolean;
+}
+
+export interface WarehouseAvailability {
   warehouseID: number;
   canBox: boolean;
   canMonopallet: boolean;
   canSupersafe: boolean;
 }
 
-export interface SupplyItemResponse {
+export interface SupplyItem {
   barcode: string;
-  warehouses: WarehouseOption[] | null;
-  error?: {
-    title: string;
-    detail: string;
-  };
-  isError?: boolean;
+  quantity?: number;
 }
 
-export interface SupplyOptionsResponse {
-  result: SupplyItemResponse[];
-  requestId?: string;
+export interface SupplyFormData {
+  items: SupplyItem[];
+  selectedWarehouse?: number;
+  selectedBoxType?: BoxType;
 }
 
 export interface Warehouse {
@@ -49,21 +54,6 @@ export interface Warehouse {
   address: string;
   workTime: string;
   acceptsQR: boolean;
-}
-
-export type BoxType = 'Короба' | 'Монопаллеты' | 'Суперсейф' | 'QR-поставка с коробами';
-
-export const BOX_TYPES: Record<BoxType, number | undefined> = {
-  'Короба': 2,
-  'Монопаллеты': 5,
-  'Суперсейф': 6,
-  'QR-поставка с коробами': undefined
-};
-
-export interface SupplyFormData {
-  selectedWarehouse: number | null;
-  selectedBoxType: BoxType;
-  items: SupplyItem[];
 }
 
 export interface WildberriesStock {
@@ -91,55 +81,60 @@ export interface StocksByCategory {
   category: string;
   totalItems: number;
   valueRub: number;
-  topSellingItem?: string;
-  averageTurnover?: string;
-  returns?: number;
-  inTransit?: number;
+  topSellingItem: string;
+  averageTurnover: string;
+  returns: number;
+  inTransit: number;
 }
 
 export interface StocksByWarehouse {
   warehouseName: string;
   totalItems: number;
-  categories: {
-    [category: string]: number;
-  };
+  categories: Record<string, number>;
 }
 
-export interface WarehouseRemainTask {
-  id: string;
-  status: 'new' | 'processing' | 'done' | 'purged' | 'canceled';
-}
+// Adding BoxType and BOX_TYPES enum for SupplyForm
+export type BoxType = 'Короба' | 'Монопаллета' | 'Суперсейф';
 
-export interface WarehouseQuantity {
-  warehouseName: string;
-  quantity: number;
-}
+export const BOX_TYPES: Record<BoxType, string> = {
+  'Короба': 'box',
+  'Монопаллета': 'monopallet',
+  'Суперсейф': 'supersafe'
+};
 
+// Updated WarehouseRemainItem interface with the correct properties
+// and added the missing warehouses property
 export interface WarehouseRemainItem {
-  brand: string;
-  subjectName: string;
-  vendorCode: string;
+  lastChangeDate: string;
+  warehouseName: string;
+  vendorCode: string; // was supplierArticle
   nmId: number;
   barcode: string;
+  brand: string;
+  category: string;
+  subjectName: string; // was subject
+  chrtId: number;
+  price: number;
+  quantity: number;
+  quantityFull: number;
+  quantityType: string;
+  size: string;
   techSize: string;
-  volume: number;
   inWayToClient: number;
   inWayFromClient: number;
-  quantityWarehousesFull: number;
-  warehouses: WarehouseQuantity[];
-  price?: number; // Optional price property
+  isSupply: boolean;
+  isRealization: boolean;
+  volume?: number;
+  quantityWarehousesFull?: number;
+  quantityWarehouses?: number;
+  // Adding the missing warehouses property as an array of warehouse data
+  warehouses: {
+    warehouseName: string;
+    quantity: number;
+  }[];
 }
 
-export interface CreateTaskResponse {
-  data: {
-    taskId: string;
-  };
-}
-
-export interface TaskStatusResponse {
-  data: WarehouseRemainTask;
-}
-
+// Add WarehouseEfficiency interface for dashboard charts
 export interface WarehouseEfficiency {
   warehouseName: string;
   totalItems: number;
@@ -148,4 +143,45 @@ export interface WarehouseEfficiency {
   utilizationPercent: number;
   processingSpeed: number;
   rank: number;
+}
+
+// For API task responses
+export interface CreateTaskResponse {
+  data: {
+    taskId: string;
+  };
+}
+
+export interface TaskStatusResponse {
+  data: {
+    id: string;
+    status: string;
+  };
+}
+
+// Interface for paid storage item from Wildberries API
+export interface PaidStorageItem {
+  date: string;
+  logWarehouseCoef: number;
+  officeId: number;
+  warehouse: string;
+  warehouseCoef: number;
+  giId: number;
+  chrtId: number;
+  size: string;
+  barcode: string;
+  subject: string;
+  brand: string;
+  vendorCode: string;
+  nmId: number;
+  volume: number;
+  calcType: string;
+  warehousePrice: number;
+  barcodesCount: number;
+  palletPlaceCode: number;
+  palletCount: number;
+  originalDate: string;
+  loyaltyDiscount: number;
+  tariffFixDate: string;
+  tariffLowerDate: string;
 }

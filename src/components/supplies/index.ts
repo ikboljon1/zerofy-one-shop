@@ -5,3 +5,4 @@ export { default as SupplyOptionsResults } from './SupplyOptionsResults';
 export { default as WarehouseCoefficientsTable } from './WarehouseCoefficientsTable';
 export { default as WarehouseRemains } from './WarehouseRemains';
 export { default as StorageProfitabilityAnalysis } from './StorageProfitabilityAnalysis';
+export { default as PaidStorageCostReport } from './PaidStorageCostReport';

@@ -3,104 +3,54 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ClipboardListIcon, 
-  PackageOpen, RefreshCw, Store
+  Store, 
+  RefreshCw,
+  DollarSign
 } from 'lucide-react';
-import { 
-  fetchAcceptanceCoefficients, 
-  fetchWarehouses, 
-  fetchAcceptanceOptions,
-} from '@/services/suppliesApi';
-import {
-  fetchWarehouseRemains
-} from '@/services/warehouseRemainsApi';
-import { 
-  SupplyForm, 
-  WarehouseCoefficientsTable, 
-  SupplyOptionsResults,
-  WarehouseRemains,
-} from '@/components/supplies';
-import StorageProfitabilityAnalysis from '@/components/supplies/StorageProfitabilityAnalysis';
-import { 
-  SupplyFormData, 
-  WarehouseCoefficient, 
-  Warehouse as WBWarehouse,
-  SupplyOptionsResponse,
-  WarehouseRemainItem
-} from '@/types/supplies';
-import { toast } from 'sonner';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { fetchWarehouseRemains } from '@/services/warehouseRemainsApi';
+import { fetchFullPaidStorageReport, calculateDailyStorageCosts } from '@/services/suppliesApi';
+import { 
+  WarehouseRemains,
+  StorageProfitabilityAnalysis,
+  PaidStorageCostReport
+} from '@/components/supplies';
 import { ensureStoreSelectionPersistence } from '@/utils/storeUtils';
 import { Store as StoreType } from '@/types/store';
+import { toast } from 'sonner';
+import type { WarehouseRemainItem, PaidStorageItem } from '@/types/supplies';
 
 const Warehouses: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('inventory');
-  const [wbWarehouses, setWbWarehouses] = useState<WBWarehouse[]>([]);
-  const [coefficients, setCoefficients] = useState<WarehouseCoefficient[]>([]);
-  const [supplyResults, setSupplyResults] = useState<SupplyOptionsResponse | null>(null);
+  const [activeTab, setActiveTab] = useState('overview');
   const [warehouseRemains, setWarehouseRemains] = useState<WarehouseRemainItem[]>([]);
+  const [paidStorageData, setPaidStorageData] = useState<PaidStorageItem[]>([]);
   const [loading, setLoading] = useState({
-    warehouses: false,
-    coefficients: false,
-    options: false,
-    remains: false
+    remains: false,
+    paidStorage: false
   });
   const [selectedStore, setSelectedStore] = useState<StoreType | null>(null);
+  const [dailyStorageCosts, setDailyStorageCosts] = useState<Record<number, number>>({});
 
-  // Загрузка выбранного магазина из localStorage при монтировании компонента
   useEffect(() => {
     const stores = ensureStoreSelectionPersistence();
     const selected = stores.find(store => store.isSelected);
     
     if (selected) {
       setSelectedStore(selected);
-      // Если есть выбранный магазин, загружаем соответствующие данные
-      if (activeTab === 'supplies') {
-        loadWarehouses(selected.apiKey);
-        loadCoefficients(selected.apiKey);
-      } else if (activeTab === 'inventory') {
-        loadWarehouseRemains(selected.apiKey);
-      }
+      loadDataForActiveTab(selected.apiKey, activeTab);
     } else if (stores.length > 0) {
-      // Если нет выбранного магазина, но есть магазины, выбираем первый
       setSelectedStore(stores[0]);
     }
-  }, []);
+  }, [activeTab]);
 
-  useEffect(() => {
-    if (selectedStore) {
-      if (activeTab === 'supplies') {
-        loadWarehouses(selectedStore.apiKey);
-        loadCoefficients(selectedStore.apiKey);
-      } else if (activeTab === 'inventory') {
-        loadWarehouseRemains(selectedStore.apiKey);
-      }
-    }
-  }, [activeTab, selectedStore]);
-
-  const loadWarehouses = async (apiKey: string) => {
-    try {
-      setLoading(prev => ({ ...prev, warehouses: true }));
-      const data = await fetchWarehouses(apiKey);
-      setWbWarehouses(data);
-    } catch (error) {
-      console.error('Ошибка при загрузке складов:', error);
-      toast.error('Не удалось загрузить список складов');
-    } finally {
-      setLoading(prev => ({ ...prev, warehouses: false }));
-    }
-  };
-
-  const loadCoefficients = async (apiKey: string) => {
-    try {
-      setLoading(prev => ({ ...prev, coefficients: true }));
-      const data = await fetchAcceptanceCoefficients(apiKey);
-      setCoefficients(data);
-    } catch (error) {
-      console.error('Ошибка при загрузке коэффициентов:', error);
-      toast.error('Не удалось загрузить коэффициенты приемки');
-    } finally {
-      setLoading(prev => ({ ...prev, coefficients: false }));
+  const loadDataForActiveTab = (apiKey: string, tab: string) => {
+    if (tab === 'overview') {
+      loadWarehouseRemains(apiKey);
+      // Также загружаем данные о хранении для анализа рентабельности на главной вкладке
+      loadPaidStorageData(apiKey);
+    } else if (tab === 'storage') {
+      loadPaidStorageData(apiKey);
     }
   };
 
@@ -114,7 +64,6 @@ const Warehouses: React.FC = () => {
       setLoading(prev => ({ ...prev, remains: true }));
       toast.info('Запрос на формирование отчета отправлен. Это может занять некоторое время...');
       
-      // Fetch warehouse remains with grouping
       const data = await fetchWarehouseRemains(apiKey, {
         groupByBrand: true,
         groupBySubject: true,
@@ -123,6 +72,13 @@ const Warehouses: React.FC = () => {
       });
       
       setWarehouseRemains(data);
+      
+      // Обновляем данные о стоимости хранения, если у нас уже есть данные о платном хранении
+      if (paidStorageData.length > 0) {
+        const costs = calculateDailyStorageCosts(data, paidStorageData);
+        setDailyStorageCosts(costs);
+      }
+      
       toast.success('Отчет об остатках на складах успешно загружен');
     } catch (error: any) {
       console.error('Ошибка при загрузке остатков на складах:', error);
@@ -132,80 +88,55 @@ const Warehouses: React.FC = () => {
     }
   };
 
-  const handleSupplySubmit = async (data: SupplyFormData) => {
-    if (!selectedStore) {
-      toast.error('Выберите магазин для проверки доступности товаров');
-      return;
-    }
-    
-    try {
-      setLoading(prev => ({ ...prev, options: true }));
-      
-      if (!data.selectedWarehouse) {
-        toast.error('Выберите склад назначения');
-        return;
-      }
-      
-      // Проверка доступности товаров на выбранном складе
-      const optionsResponse = await fetchAcceptanceOptions(
-        selectedStore.apiKey,
-        data.items,
-        data.selectedWarehouse
-      );
-      
-      setSupplyResults(optionsResponse);
-      
-      // Проверка на наличие ошибок
-      const hasErrors = optionsResponse.result.some(item => item.isError);
-      
-      if (hasErrors) {
-        toast.warning('Обнаружены проблемы с некоторыми товарами');
-      } else {
-        toast.success('Все товары доступны для поставки');
-      }
-    } catch (error) {
-      console.error('Ошибка при проверке доступности:', error);
-      toast.error('Не удалось проверить доступность товаров');
-    } finally {
-      setLoading(prev => ({ ...prev, options: false }));
-    }
-  };
-
-  const handleRefreshData = () => {
-    if (!selectedStore) {
+  const loadPaidStorageData = async (apiKey: string) => {
+    if (!apiKey) {
       toast.warning('Необходимо выбрать магазин для получения данных');
       return;
     }
     
-    if (activeTab === 'inventory') {
-      loadWarehouseRemains(selectedStore.apiKey);
-    } else if (activeTab === 'supplies') {
-      loadWarehouses(selectedStore.apiKey);
-      loadCoefficients(selectedStore.apiKey);
+    try {
+      setLoading(prev => ({ ...prev, paidStorage: true }));
+      toast.info('Запрос отчета о платном хранении. Это может занять некоторое время...');
+      
+      // Получаем данные за 7 дней для лучшего усреднения
+      const data = await fetchFullPaidStorageReport(
+        apiKey, 
+        new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], 
+        new Date().toISOString().split('T')[0]
+      );
+      
+      setPaidStorageData(data);
+      
+      // Рассчитываем стоимость ежедневного хранения, если у нас уже есть данные о товарах на складе
+      if (warehouseRemains.length > 0) {
+        const costs = calculateDailyStorageCosts(warehouseRemains, data);
+        setDailyStorageCosts(costs);
+      }
+      
+      toast.success('Отчет о платном хранении успешно загружен');
+    } catch (error: any) {
+      console.error('Ошибка при загрузке отчета о платном хранении:', error);
+      toast.error(`Не удалось загрузить отчет: ${error.message || 'Неизвестная ошибка'}`);
+    } finally {
+      setLoading(prev => ({ ...prev, paidStorage: false }));
     }
   };
 
-  // Calculate average daily sales rates based on historical data
-  // This would typically come from an API but we'll mock it for now
   const calculateAverageDailySales = () => {
     const result: Record<number, number> = {};
     warehouseRemains.forEach(item => {
-      // Mock data - in a real app, this would be calculated from historical sales
-      result[item.nmId] = Math.random() * 2; // Random value between 0 and 2
+      // Пока это заглушка, которую нужно заменить реальными данными о продажах
+      // В будущей реализации это должно быть получено из API продаж
+      result[item.nmId] = Math.random() * 2;
     });
     return result;
   };
 
-  // Calculate daily storage costs
-  const calculateDailyStorageCosts = () => {
-    const result: Record<number, number> = {};
-    warehouseRemains.forEach(item => {
-      // Calculate based on item volume and a base rate
-      // In a real app, this would come from actual storage costs
-      const volume = item.volume || 1;
-      result[item.nmId] = volume * 5; // 5 rubles per volume unit per day
-    });
-    return result;
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    if (selectedStore) {
+      loadDataForActiveTab(selectedStore.apiKey, value);
+    }
   };
 
   return (
@@ -214,19 +145,19 @@ const Warehouses: React.FC = () => {
         <h1 className="text-2xl font-bold">Управление складами и логистикой</h1>
       </div>
 
-      <Tabs defaultValue="inventory" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <Tabs defaultValue="overview" value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList className="grid grid-cols-2 w-full max-w-md">
-          <TabsTrigger value="inventory" className="flex items-center justify-center">
+          <TabsTrigger value="overview" className="flex items-center justify-center">
             <ClipboardListIcon className="h-4 w-4 mr-2" />
-            <span>Инвентарь</span>
+            <span>Обзор</span>
           </TabsTrigger>
-          <TabsTrigger value="supplies" className="flex items-center justify-center">
-            <PackageOpen className="h-4 w-4 mr-2" />
-            <span>Поставки</span>
+          <TabsTrigger value="storage" className="flex items-center justify-center">
+            <DollarSign className="h-4 w-4 mr-2" />
+            <span>Хранение</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="inventory" className="space-y-4">
+        <TabsContent value="overview" className="space-y-4">
           {!selectedStore ? (
             <Card>
               <CardHeader>
@@ -260,7 +191,7 @@ const Warehouses: React.FC = () => {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={handleRefreshData}
+                  onClick={() => loadWarehouseRemains(selectedStore.apiKey)}
                   disabled={loading.remains}
                   className="flex items-center gap-2"
                 >
@@ -285,12 +216,13 @@ const Warehouses: React.FC = () => {
                     isLoading={loading.remains} 
                   />
                   
-                  {/* Add the new profitability analysis component */}
                   <div className="mt-8">
                     <StorageProfitabilityAnalysis 
                       warehouseItems={warehouseRemains}
+                      paidStorageData={paidStorageData}
                       averageDailySalesRate={calculateAverageDailySales()}
-                      dailyStorageCost={calculateDailyStorageCosts()}
+                      dailyStorageCost={dailyStorageCosts}
+                      selectedStore={selectedStore}
                     />
                   </div>
                 </>
@@ -299,7 +231,7 @@ const Warehouses: React.FC = () => {
           )}
         </TabsContent>
 
-        <TabsContent value="supplies" className="space-y-4">
+        <TabsContent value="storage" className="space-y-4">
           {!selectedStore ? (
             <Card>
               <CardHeader>
@@ -308,12 +240,12 @@ const Warehouses: React.FC = () => {
                   Выберите магазин
                 </CardTitle>
                 <CardDescription>
-                  Для просмотра и управления поставками необходимо выбрать магазин в разделе "Магазины"
+                  Для просмотра данных о платном хранении необходимо выбрать магазин в разделе "Магазины"
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col items-center justify-center py-8 text-center">
                 <Store className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Для работы с поставками необходимо выбрать магазин</p>
+                <p className="text-muted-foreground">Для работы с отчетами о платном хранении необходимо выбрать магазин</p>
                 <Button 
                   className="mt-4"
                   variant="outline"
@@ -324,59 +256,39 @@ const Warehouses: React.FC = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="lg:col-span-1">
-                {loading.warehouses ? (
-                  <Card>
-                    <CardHeader>
-                      <Skeleton className="h-8 w-3/4" />
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-10 w-full" />
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <SupplyForm 
-                    warehouses={wbWarehouses} 
-                    onSupplySubmit={handleSupplySubmit} 
-                  />
-                )}
+            <>
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h2 className="text-lg font-semibold">Отчет о платном хранении</h2>
+                  <p className="text-sm text-muted-foreground">Аналитика затрат на хранение товаров</p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => loadPaidStorageData(selectedStore.apiKey)}
+                  disabled={loading.paidStorage}
+                  className="flex items-center gap-2"
+                >
+                  {loading.paidStorage ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  Обновить данные
+                </Button>
               </div>
-              
-              <div className="lg:col-span-2">
-                {supplyResults ? (
-                  <SupplyOptionsResults 
-                    results={supplyResults} 
-                    warehouses={wbWarehouses} 
-                  />
-                ) : (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center">
-                        <PackageOpen className="h-5 w-5 mr-2" />
-                        Коэффициенты приемки
-                      </CardTitle>
-                      <CardDescription>
-                        Информация о доступности приемки товаров на складах WB
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {loading.coefficients ? (
-                        <div className="space-y-2">
-                          <Skeleton className="h-10 w-full" />
-                          <Skeleton className="h-10 w-full" />
-                          <Skeleton className="h-10 w-full" />
-                        </div>
-                      ) : (
-                        <WarehouseCoefficientsTable coefficients={coefficients} />
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </div>
+
+              {loading.paidStorage && paidStorageData.length === 0 ? (
+                <Skeleton className="h-[600px] w-full" />
+              ) : (
+                <PaidStorageCostReport 
+                  apiKey={selectedStore.apiKey}
+                  storageData={paidStorageData}
+                  isLoading={loading.paidStorage}
+                  onRefresh={loadPaidStorageData}
+                />
+              )}
+            </>
           )}
         </TabsContent>
       </Tabs>
