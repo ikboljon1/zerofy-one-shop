@@ -658,7 +658,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                                 <span>{dailySalesRate.toFixed(2)} шт.</span>
                               </div>
                               <div className="pt-1 border-t">
-                                <p className="text-xs mt-1">{profitabilityAnalysis.recommendation}</p>
+                                <p className="text-xs mt-1">{profitabilityAnalysis.recommendedAction}</p>
                               </div>
                             </div>
                           </PopoverContent>
@@ -724,4 +724,3 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 };
 
 export default ProductsList;
-
