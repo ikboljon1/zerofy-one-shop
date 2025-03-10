@@ -182,7 +182,22 @@ export const getMockWarehouseRemains = (): WarehouseRemainItem[] => {
     isRealization: false,
     volume: 0.5 + (index % 10) / 10,
     quantityWarehousesFull: 10 + index,
-    quantityWarehouses: 10 + index
+    quantityWarehouses: 10 + index,
+    // Add the warehouses property as required by the updated interface
+    warehouses: [
+      {
+        warehouseName: ['Коледино', 'Подольск', 'Электросталь'][index % 3],
+        quantity: 5 + index
+      },
+      {
+        warehouseName: ['Коледино', 'Подольск', 'Электросталь'][(index + 1) % 3],
+        quantity: 3 + (index % 5)
+      },
+      {
+        warehouseName: ['Коледино', 'Подольск', 'Электросталь'][(index + 2) % 3],
+        quantity: 2 + (index % 3)
+      }
+    ].filter((_, i) => i < (index % 3) + 1) // Add varying number of warehouses
   }));
 };
 
