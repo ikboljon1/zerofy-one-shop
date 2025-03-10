@@ -81,7 +81,10 @@ const AdvertisingAIAnalysis = ({ storeId, advertisingData, dateFrom, dateTo }: A
             advertising: advertisingData.campaigns ? advertisingData.campaigns.reduce((sum, camp) => sum + camp.cost, 0) : 0,
             acceptance: 0
           },
-          advertising: advertisingData
+          advertising: {
+            campaigns: advertisingData.campaigns || [],
+            keywords: advertisingData.keywords
+          }
         },
         requestType: 'advertising_analysis'
       };
