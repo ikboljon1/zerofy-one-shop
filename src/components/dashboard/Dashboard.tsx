@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
@@ -9,9 +8,10 @@ import {
   loadStores,
   getOrdersData, 
   getSalesData, 
+  fetchAndUpdateOrders, 
+  fetchAndUpdateSales,
   ensureStoreSelectionPersistence,
-  getSelectedStore,
-  getStoresLastUpdateTime
+  getSelectedStore
 } from "@/utils/storeUtils";
 import OrdersTable from "./OrdersTable";
 import SalesTable from "./SalesTable";
@@ -47,7 +47,6 @@ const Dashboard = () => {
 
   // Analytics data for AI analysis
   const [analyticsData, setAnalyticsData] = useState<any>(null);
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   const filterDataByPeriod = (date: string, period: Period) => {
     const now = new Date();
@@ -149,20 +148,57 @@ const Dashboard = () => {
         setSelectedStoreId(selectedStore.id);
       }
 
-      // Get data from localStorage without API calls
-      const savedOrdersData = await getOrdersData(selectedStore.id);
-      if (savedOrdersData) {
-        setOrders(savedOrdersData.orders || []);
-        setWarehouseDistribution(savedOrdersData.warehouseDistribution || []);
-        setRegionDistribution(savedOrdersData.regionDistribution || []);
+      const ordersResult = await fetchAndUpdateOrders(selectedStore);
+      if (ordersResult) {
+        setOrders(ordersResult.orders);
+        setWarehouseDistribution(ordersResult.warehouseDistribution);
+        setRegionDistribution(ordersResult.regionDistribution);
+      } else {
+        const savedOrdersData = await getOrdersData(selectedStore.id);
+        if (savedOrdersData) {
+          setOrders(savedOrdersData.orders || []);
+          setWarehouseDistribution(savedOrdersData.warehouseDistribution || []);
+          setRegionDistribution(savedOrdersData.regionDistribution || []);
+        }
       }
 
-      const savedSalesData = await getSalesData(selectedStore.id);
-      if (savedSalesData) {
-        setSales(savedSalesData.sales || []);
+      const salesResult = await fetchAndUpdateSales(selectedStore);
+      if (salesResult) {
+        setSales(salesResult);
+      } else {
+        const savedSalesData = await getSalesData(selectedStore.id);
+        if (savedSalesData) {
+          setSales(savedSalesData.sales || []);
+        }
       }
 
-      // Prepare analytics data for AI analysis (simplified)
+      toast({
+        title: "Успех",
+        description: "Данные успешно обновлены",
+      });
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить данные",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const selectedStore = getSelectedStore();
+    
+    if (selectedStore) {
+      if (selectedStore.id !== selectedStoreId) {
+        setSelectedStoreId(selectedStore.id);
+      }
+      
+      fetchData();
+
+      // Prepare analytics data for AI analysis
       const simpleAnalyticsData = {
         currentPeriod: {
           sales: orders.length * 1200, // Simple simulation of sales data
@@ -197,112 +233,31 @@ const Dashboard = () => {
       };
 
       setAnalyticsData(simpleAnalyticsData);
-      
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setIsLoading(false);
-      setInitialLoadComplete(true);
     }
-  };
 
-  useEffect(() => {
-    const selectedStore = getSelectedStore();
-    
-    if (selectedStore) {
-      if (selectedStore.id !== selectedStoreId) {
-        setSelectedStoreId(selectedStore.id);
-      }
-      
-      // Initial fetch without API calls
+    const handleStoreSelectionChange = () => {
+      console.log('Store selection changed, refreshing data...');
       fetchData();
+    };
 
-      const handleStoreSelectionChange = () => {
-        console.log('Store selection changed, refreshing data...');
-        fetchData();
-      };
+    window.addEventListener('store-selection-changed', handleStoreSelectionChange);
 
-      window.addEventListener('store-selection-changed', handleStoreSelectionChange);
+    const refreshInterval = setInterval(() => {
+      console.log('Auto-refreshing data...');
+      fetchData();
+    }, 60000);
 
-      // Only set refresh interval if auto-refresh is needed
-      // No automatic API requests anymore
-      const checkForUpdates = setInterval(() => {
-        const lastUpdateTime = getStoresLastUpdateTime();
-        const now = Date.now();
-        // Only refresh data if it's been more than 30 minutes since last update
-        if (now - lastUpdateTime > 30 * 60 * 1000) {
-          console.log('Checking for updates...');
-          // Not making actual API calls here, just checking if update needed
-        }
-      }, 60000);
-
-      return () => {
-        window.removeEventListener('store-selection-changed', handleStoreSelectionChange);
-        clearInterval(checkForUpdates);
-      };
-    }
+    return () => {
+      window.removeEventListener('store-selection-changed', handleStoreSelectionChange);
+      clearInterval(refreshInterval);
+    };
   }, []);
 
-  // Only fetch new data when store ID changes, but don't make API calls
   useEffect(() => {
-    if (selectedStoreId && !initialLoadComplete) {
+    if (selectedStoreId) {
       fetchData();
     }
   }, [selectedStoreId]);
-
-  // Create immediate UI content for all tabs without waiting for API response
-  const getTabContent = () => {
-    const filteredOrders = orders.length > 0 ? getFilteredOrders(orders).orders : [];
-    const filteredSales = sales.length > 0 ? getFilteredSales(sales) : [];
-
-    return {
-      orders: (
-        <>
-          {orders.length > 0 && (
-            <>
-              <OrderMetrics orders={filteredOrders} />
-              <OrdersChart 
-                orders={filteredOrders} 
-                sales={filteredSales}
-              />
-            </>
-          )}
-          
-          <OrdersTable orders={filteredOrders} />
-        </>
-      ),
-      sales: (
-        <>
-          {sales.length > 0 && (
-            <>
-              <SalesMetrics sales={filteredSales} />
-              <SalesChart sales={filteredSales} />
-            </>
-          )}
-          
-          <SalesTable sales={filteredSales} />
-        </>
-      ),
-      geography: (
-        <GeographySection 
-          warehouseDistribution={warehouseDistribution} 
-          regionDistribution={regionDistribution}
-          sales={filteredSales}
-        />
-      ),
-      overview: (
-        <>
-          <Stats />
-          <TipsSection />
-        </>
-      ),
-      aiAnalysis: (
-        <AIAnalysisSection />
-      )
-    };
-  };
-
-  const tabContent = getTabContent();
 
   return (
     <div className="space-y-4">
@@ -326,7 +281,8 @@ const Dashboard = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          {tabContent.overview}
+          <Stats />
+          <TipsSection />
         </TabsContent>
 
         <TabsContent value="orders" className="space-y-4">
@@ -335,7 +291,17 @@ const Dashboard = () => {
             <div className="flex-grow"></div>
           </div>
           
-          {tabContent.orders}
+          {orders.length > 0 && (
+            <>
+              <OrderMetrics orders={getFilteredOrders(orders).orders} />
+              <OrdersChart 
+                orders={getFilteredOrders(orders).orders} 
+                sales={getFilteredSales(sales)}
+              />
+            </>
+          )}
+          
+          <OrdersTable orders={getFilteredOrders(orders).orders} />
         </TabsContent>
 
         <TabsContent value="sales" className="space-y-4">
@@ -344,7 +310,14 @@ const Dashboard = () => {
             <div className="flex-grow"></div>
           </div>
           
-          {tabContent.sales}
+          {sales.length > 0 && (
+            <>
+              <SalesMetrics sales={getFilteredSales(sales)} />
+              <SalesChart sales={getFilteredSales(sales)} />
+            </>
+          )}
+          
+          <SalesTable sales={getFilteredSales(sales)} />
         </TabsContent>
 
         <TabsContent value="geography" className="space-y-4">
@@ -352,11 +325,15 @@ const Dashboard = () => {
             <PeriodSelector value={period} onChange={setPeriod} />
             <div className="flex-grow"></div>
           </div>
-          {tabContent.geography}
+          <GeographySection 
+            warehouseDistribution={warehouseDistribution} 
+            regionDistribution={regionDistribution}
+            sales={getFilteredSales(sales)}
+          />
         </TabsContent>
 
         <TabsContent value="ai-analysis" className="space-y-4">
-          {tabContent.aiAnalysis}
+          <AIAnalysisSection />
         </TabsContent>
       </Tabs>
     </div>
