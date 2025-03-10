@@ -1,7 +1,6 @@
-
 import { useEffect, useState } from "react";
 import { Card } from "./ui/card";
-import { getAdvertCosts, getAdvertBalance, getAllCampaigns, Campaign } from "@/services/advertisingApi";
+import { getAdvertCosts, getAdvertBalance, getAllCampaigns, Campaign, getKeywordStatistics, getCampaignFullStats } from "@/services/advertisingApi";
 import { Button } from "./ui/button";
 import { RefreshCw, CheckCircle, PauseCircle, Archive, Target, Zap, Wallet, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +15,7 @@ import {
 import { motion } from "framer-motion";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination";
 import { campaignStatusMap, campaignTypeMap } from "./analytics/data/productAdvertisingData";
+import AdvertisingAIAnalysis from "./AdvertisingAIAnalysis";
 
 interface AdvertisingProps {
   selectedStore?: { id: string; apiKey: string } | null;
@@ -39,28 +39,25 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
   const itemsPerPage = 8;
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
   const [selectedStore, setSelectedStore] = useState(propSelectedStore);
+  const [advertisingData, setAdvertisingData] = useState<any>(null);
+  const [isLoadingAdvertisingData, setIsLoadingAdvertisingData] = useState(false);
 
-  // Загрузка выбранного магазина из localStorage
   useEffect(() => {
     const savedSelectedStore = localStorage.getItem(SELECTED_STORE_KEY);
     
-    // Если есть selectedStore из пропсов, используем его и сохраняем
     if (propSelectedStore) {
       setSelectedStore(propSelectedStore);
       localStorage.setItem(SELECTED_STORE_KEY, JSON.stringify(propSelectedStore));
     } 
-    // Иначе пробуем загрузить из localStorage
     else if (savedSelectedStore) {
       setSelectedStore(JSON.parse(savedSelectedStore));
     }
   }, [propSelectedStore]);
 
-  // Загрузка кэшированных данных при изменении selectedStore
   useEffect(() => {
     if (selectedStore) {
       loadCachedData();
       
-      // Сохраняем выбранный магазин для последующих визитов
       localStorage.setItem(SELECTED_STORE_KEY, JSON.stringify(selectedStore));
     }
   }, [selectedStore]);
@@ -131,8 +128,8 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
     }
 
     setLoading(true);
+    setIsLoadingAdvertisingData(true);
     try {
-      // Get all campaigns using the new API endpoint
       const allCampaigns = await getAllCampaigns(selectedStore.apiKey);
       
       if (allCampaigns.length === 0) {
@@ -142,19 +139,17 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
         });
         setCampaigns([]);
         cacheData([], balance);
+        setIsLoadingAdvertisingData(false);
         return;
       }
 
-      // Get campaign details if we have IDs
       if (allCampaigns.length > 0) {
         const dateTo = new Date();
         const dateFrom = new Date();
         dateFrom.setDate(dateFrom.getDate() - 30);
         
-        // Get costs data to fetch campaign names
         const costsData = await getAdvertCosts(dateFrom, dateTo, selectedStore.apiKey);
         
-        // Update campaign names from costs data where available
         const updatedCampaigns = allCampaigns.map(campaign => {
           const costInfo = costsData.find(cost => cost.advertId === campaign.advertId);
           if (costInfo) {
@@ -167,13 +162,13 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
         });
 
         setCampaigns(updatedCampaigns);
+        
+        await loadAdvertisingDataForAI(updatedCampaigns.slice(0, 5), dateFrom, dateTo);
       }
       
-      // Get account balance
       const balanceData = await getAdvertBalance(selectedStore.apiKey);
       setBalance(balanceData.balance);
 
-      // Cache the data
       cacheData(allCampaigns, balanceData.balance);
 
       toast({
@@ -191,6 +186,67 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
       });
     } finally {
       setLoading(false);
+      setIsLoadingAdvertisingData(false);
+    }
+  };
+
+  const loadAdvertisingDataForAI = async (campaigns: Campaign[], dateFrom: Date, dateTo: Date) => {
+    if (!selectedStore || campaigns.length === 0) {
+      return;
+    }
+    
+    try {
+      const campaignIds = campaigns.map(campaign => campaign.advertId);
+      
+      const campaignStats = await getCampaignFullStats(
+        selectedStore.apiKey,
+        campaignIds,
+        dateFrom,
+        dateTo
+      );
+      
+      const keywordData = await getKeywordStatistics(
+        selectedStore.apiKey,
+        campaignIds[0],
+        dateFrom,
+        dateTo
+      );
+      
+      const campaignsData = campaigns.map((campaign, index) => {
+        const stats = campaignStats.find(s => s.advertId === campaign.advertId) || 
+                     { views: 0, clicks: 0, orders: 0, sum: 0 };
+        
+        return {
+          name: campaign.campName,
+          cost: stats.sum || 0,
+          views: stats.views || 0,
+          clicks: stats.clicks || 0,
+          orders: stats.orders || 0
+        };
+      });
+      
+      const keywordsData = [];
+      if (keywordData && keywordData.keywords && keywordData.keywords.length > 0) {
+        for (const day of keywordData.keywords) {
+          for (const keyword of day.stats) {
+            keywordsData.push({
+              keyword: keyword.keyword,
+              views: keyword.views,
+              clicks: keyword.clicks,
+              ctr: keyword.ctr,
+              sum: keyword.sum
+            });
+          }
+        }
+      }
+      
+      setAdvertisingData({
+        campaigns: campaignsData,
+        keywords: keywordsData
+      });
+      
+    } catch (error) {
+      console.error('Ошибка при загрузке данных для AI анализа:', error);
     }
   };
 
@@ -287,13 +343,11 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
     return `${updateDate.toLocaleDateString('ru-RU')} ${updateDate.toLocaleTimeString('ru-RU')}`;
   };
 
-  // Get original status value for display in debug
   const getOriginalStatusValueLabel = (campaign: Campaign) => {
     if (campaign.numericStatus === undefined) return '';
     return `${campaign.numericStatus} - ${campaignStatusMap[campaign.numericStatus.toString()] || 'Unknown'}`;
   };
   
-  // Get original type value for display in debug
   const getOriginalTypeValueLabel = (campaign: Campaign) => {
     if (campaign.numericType === undefined) return '';
     return `${campaign.numericType} - ${campaignTypeMap[campaign.numericType.toString()] || 'Unknown'}`;
@@ -359,14 +413,25 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
               Обновлено: {getFormattedLastUpdate()}
             </div>
           </motion.div>
-          <Button 
-            onClick={fetchData} 
-            disabled={loading} 
-            className="w-full bg-[#9b87f5] hover:bg-[#7E69AB]"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            {loading ? 'Обновление...' : 'Обновить'}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={fetchData} 
+              disabled={loading} 
+              className="flex-1 bg-[#9b87f5] hover:bg-[#7E69AB]"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              {loading ? 'Обновление...' : 'Обновить'}
+            </Button>
+            
+            {selectedStore && advertisingData && (
+              <AdvertisingAIAnalysis 
+                storeId={selectedStore.id}
+                advertisingData={advertisingData}
+                dateFrom={new Date(new Date().setDate(new Date().getDate() - 30))}
+                dateTo={new Date()}
+              />
+            )}
+          </div>
         </div>
       </div>
 
@@ -424,7 +489,6 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
                           Просмотреть
                         </Button>
                       </div>
-                      {/* Debug info if available - can be commented out in production */}
                       {(campaign.numericStatus !== undefined || campaign.numericType !== undefined) && (
                         <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
                           <div className="text-xs text-muted-foreground">
