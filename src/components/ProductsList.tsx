@@ -1,19 +1,11 @@
-import { useState, useEffect } from "react";
-import { Package, RefreshCw, AlertTriangle, TrendingUp, TrendingDown } from "lucide-react";
+
+import { useState } from "react";
+import { Package, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { 
-  formatCurrency, 
-  calculateTotalStorageCost, 
-  calculateAverageQuantity,
-  analyzeProfitability 
-} from "@/utils/formatCurrency";
 
 interface Product {
   nmID: number;
@@ -29,7 +21,6 @@ interface Product {
   discountedPrice?: number;
   clubPrice?: number;
   quantity?: number;
-  dailyStorageCost?: number;
   expenses?: {
     logistics: number;
     storage: number;
@@ -37,7 +28,7 @@ interface Product {
     acceptance: number;
     deductions?: number;
     ppvz_for_pay?: number;
-    retail_price?: number;
+    retail_price?: number; // Изменено с retail_amount на retail_price
   };
 }
 
@@ -77,9 +68,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       salesAmount: 0,
       transferredAmount: 0,
       soldQuantity: 0,
-      margin: 0,
-      calculatedStorageCost: 0,
-      profitabilityAnalysis: null
+      margin: 0  // Added margin to the return object
     };
     
     console.log('Calculating for product:', {
@@ -102,36 +91,22 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       retail_price: product.expenses.retail_price
     });
     
-    const dailySalesRate = productSales / 30;
-    const calculatedStorageCost = calculateTotalStorageCost(
-      product.quantity || 0, 
-      product.dailyStorageCost || 5,
-      dailySalesRate
-    );
-    
-    const storagePerUnit = productSales > 0 ? calculatedStorageCost / productSales : 0;
-    
-    const profitabilityAnalysis = analyzeProfitability(
-      product.costPrice || 0,
-      product.discountedPrice || 0,
-      storagePerUnit,
-      product.quantity || 0,
-      dailySalesRate
-    );
-    
     const totalExpenses = 
       product.expenses.logistics +
+      product.expenses.storage +
       product.expenses.penalties +
       product.expenses.acceptance +
-      (product.expenses.deductions || 0) +
-      calculatedStorageCost;
+      (product.expenses.deductions || 0);
     
     const netProfit = transferredAmount - costPriceTotal - totalExpenses;
     
+    // Calculate margin as a percentage of costs (not revenue)
+    // This prevents division by zero and unrealistic margins
     let margin = 0;
     if (costPriceTotal > 0) {
       margin = (netProfit / costPriceTotal) * 100;
     } else if (netProfit > 0) {
+      // If cost price is 0 but there's profit, cap the margin at 100%
       margin = 100;
     }
     
@@ -143,9 +118,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       salesAmount,
       transferredAmount,
       soldQuantity: productSales,
-      margin: Math.round(margin),
-      calculatedStorageCost,
-      profitabilityAnalysis
+      margin: Math.round(margin) // Return the calculated margin
     };
   };
 
@@ -288,24 +261,12 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       console.log("Products data:", data);
       
       const storedProducts = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
-      
-      const costPrices: Record<number, number> = {};
-      const dailyStorageCosts: Record<number, number> = {};
-      
-      storedProducts.forEach((product: Product) => {
+      const costPrices = storedProducts.reduce((acc: Record<number, number>, product: Product) => {
         if (product.costPrice) {
-          costPrices[product.nmID] = product.costPrice;
+          acc[product.nmID] = product.costPrice;
         }
-        if (product.dailyStorageCost) {
-          dailyStorageCosts[product.nmID] = product.dailyStorageCost;
-        }
-      });
-      
-      const storedCostPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore.id}`) || "{}");
-      const storedDailyStorageCosts = JSON.parse(localStorage.getItem(`dailyStorageCosts_${selectedStore.id}`) || "{}");
-      
-      Object.assign(costPrices, storedCostPrices);
-      Object.assign(dailyStorageCosts, storedDailyStorageCosts);
+        return acc;
+      }, {});
 
       const nmIds = data.cards.map((product: Product) => product.nmID);
       const prices = await fetchProductPrices(nmIds);
@@ -400,12 +361,9 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           retail_price: 0
         };
         
-        const productDailyStorageCost = dailyStorageCosts[product.nmID] || 5;
-        
         console.log(`Processing product ${product.nmID}:`, {
           price: currentPrice,
           costPrice: costPrices[product.nmID],
-          dailyStorageCost: productDailyStorageCost,
           quantity: quantity,
           expenses: productExpenses,
           salesAmount: salesMap.get(product.nmID) || 0
@@ -416,7 +374,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           costPrice: costPrices[product.nmID] || 0,
           discountedPrice: currentPrice || 0,
           quantity: quantity,
-          dailyStorageCost: productDailyStorageCost,
           expenses: productExpenses
         };
       });
@@ -444,7 +401,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   const updateCostPrice = (productId: number, costPrice: number) => {
     const updatedProducts = products.map(product => {
       if (product.nmID === productId) {
-        return { ...product, costPrice };
+        const updatedProduct = { ...product, costPrice };
+        return updatedProduct;
       }
       return product;
     });
@@ -457,43 +415,22 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     localStorage.setItem(`costPrices_${selectedStore?.id}`, JSON.stringify(costPrices));
   };
 
-  const updateDailyStorageCost = (productId: number, dailyStorageCost: number) => {
-    const updatedProducts = products.map(product => {
-      if (product.nmID === productId) {
-        return { ...product, dailyStorageCost };
-      }
-      return product;
-    });
-    
-    setProducts(updatedProducts);
-    localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedProducts));
-    
-    const dailyStorageCosts = JSON.parse(localStorage.getItem(`dailyStorageCosts_${selectedStore?.id}`) || '{}');
-    dailyStorageCosts[productId] = dailyStorageCost;
-    localStorage.setItem(`dailyStorageCosts_${selectedStore?.id}`, JSON.stringify(dailyStorageCosts));
-  };
-
-  useEffect(() => {
+  useState(() => {
     if (selectedStore) {
       const storedProducts = localStorage.getItem(`products_${selectedStore.id}`);
       if (storedProducts) {
-        let parsedProducts = JSON.parse(storedProducts);
-        
+        const parsedProducts = JSON.parse(storedProducts);
         const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore.id}`) || '{}');
-        const dailyStorageCosts = JSON.parse(localStorage.getItem(`dailyStorageCosts_${selectedStore.id}`) || '{}');
-        
-        parsedProducts = parsedProducts.map((product: Product) => ({
+        const productsWithCostPrices = parsedProducts.map((product: Product) => ({
           ...product,
-          costPrice: costPrices[product.nmID] || product.costPrice || 0,
-          dailyStorageCost: dailyStorageCosts[product.nmID] || product.dailyStorageCost || 5
+          costPrice: costPrices[product.nmID] || product.costPrice || 0
         }));
-        
-        setProducts(parsedProducts);
+        setProducts(productsWithCostPrices);
       } else {
         setProducts([]);
       }
     }
-  }, [selectedStore]);
+  });
 
   if (!selectedStore) {
     return (
@@ -530,11 +467,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         <div className={`grid gap-4 ${isMobile ? 'grid-cols-2' : 'md:grid-cols-3'}`}>
           {products.map((product) => {
             const profitDetails = calculateNetProfit(product);
-            
-            const dailySalesRate = (product.quantity || 0) / 30;
-            const averageQuantity = calculateAverageQuantity(product.quantity || 0, dailySalesRate);
-            
-            const { profitabilityAnalysis } = profitDetails;
             
             return (
               <Card key={product.nmID} className="flex flex-col h-full">
@@ -592,108 +524,30 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                         placeholder="Введите себестоимость"
                       />
                     </div>
-                    <div className="space-y-1">
-                      <label htmlFor={`storageCost-${product.nmID}`} className="text-xs text-muted-foreground">
-                        Стоимость хранения в день:
-                      </label>
-                      <Input
-                        id={`storageCost-${product.nmID}`}
-                        type="number"
-                        value={product.dailyStorageCost || ""}
-                        onChange={(e) => updateDailyStorageCost(product.nmID, Number(e.target.value))}
-                        className="h-8 text-sm"
-                        placeholder="Стоимость в рублях"
-                      />
-                    </div>
-                    
-                    {profitabilityAnalysis && product.costPrice > 0 && (
-                      <div className="p-2 rounded-lg border border-dashed mt-2 bg-slate-50 dark:bg-slate-900">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-medium">Рекомендуемая цена:</span>
-                          <span className="text-xs font-semibold">
-                            {formatCurrency(profitabilityAnalysis.recommendedPrice)} ₽
-                          </span>
-                        </div>
-                        
-                        <div className="flex items-center gap-1 mb-2">
-                          {profitabilityAnalysis.priceChange > 0 ? (
-                            <Badge className="text-[10px] py-0 px-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
-                              <TrendingUp className="h-3 w-3 mr-0.5" /> 
-                              Повысить на {formatCurrency(profitabilityAnalysis.priceChange)} ₽
-                            </Badge>
-                          ) : profitabilityAnalysis.priceChange < 0 ? (
-                            <Badge className="text-[10px] py-0 px-1 bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100">
-                              <TrendingDown className="h-3 w-3 mr-0.5" /> 
-                              Снизить на {formatCurrency(Math.abs(profitabilityAnalysis.priceChange))} ₽
-                            </Badge>
-                          ) : (
-                            <Badge className="text-[10px] py-0 px-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
-                              Цена оптимальна
-                            </Badge>
-                          )}
-                        </div>
-                        
-                        <Popover>
-                          <PopoverTrigger className="w-full">
-                            <div className="text-xs flex items-center justify-center border rounded p-1 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">
-                              <AlertTriangle className="h-3 w-3 mr-1 text-amber-500" />
-                              Рекомендации по ценообразованию
-                            </div>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-72 text-xs p-3">
-                            <div className="space-y-2">
-                              <div className="font-medium">Анализ прибыльности:</div>
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Текущая маржа:</span>
-                                <span className={profitabilityAnalysis.margin >= 15 ? "text-green-600" : "text-red-600"}>
-                                  {profitabilityAnalysis.margin.toFixed(1)}%
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Затраты на хранение:</span>
-                                <span>{(profitDetails.calculatedStorageCost / Math.max(1, profitDetails.soldQuantity)).toFixed(2)} ₽/ед.</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Продаж в день:</span>
-                                <span>{dailySalesRate.toFixed(2)} шт.</span>
-                              </div>
-                              <div className="pt-1 border-t">
-                                <p className="text-xs mt-1">{profitabilityAnalysis.recommendedAction}</p>
-                              </div>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    )}
-                    
                     <div className="space-y-1.5 border-t pt-2">
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Продано за 30 дней:</span>
                         <span>{profitDetails.soldQuantity} шт.</span>
                       </div>
                       <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Средний остаток товара:</span>
-                        <span>{averageQuantity.toFixed(1)} шт.</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Общая логистика:</span>
-                        <span>{product.expenses?.logistics.toFixed(2) || "0.00"} ₽</span>
+                        <span>{product.expenses.logistics.toFixed(2)} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Рассчитанное хранение:</span>
-                        <span>{profitDetails.calculatedStorageCost?.toFixed(2) || "0.00"} ₽</span>
+                        <span className="text-muted-foreground">Общее хранение:</span>
+                        <span>{product.expenses.storage.toFixed(2)} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Общие штрафы:</span>
-                        <span>{product.expenses?.penalties.toFixed(2) || "0.00"} ₽</span>
+                        <span>{product.expenses.penalties.toFixed(2)} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Общая приемка:</span>
-                        <span>{product.expenses?.acceptance.toFixed(2) || "0.00"} ₽</span>
+                        <span>{product.expenses.acceptance.toFixed(2)} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Прочие удержания:</span>
-                        <span>{(product.expenses?.deductions || 0).toFixed(2)} ₽</span>
+                        <span>{(product.expenses.deductions || 0).toFixed(2)} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs font-medium border-t pt-2">
                         <span className="text-muted-foreground">Общие расходы:</span>

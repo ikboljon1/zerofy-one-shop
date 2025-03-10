@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 import { SupplyItem, SupplyOptionsResponse, Warehouse, WarehouseCoefficient, PaidStorageItem } from '@/types/supplies';
 
@@ -56,10 +57,20 @@ export const fetchAcceptanceOptions = async (
   }
 };
 
-// New functions for paid storage API
+// Функции для работы с API платного хранения
 
 /**
- * Creates a paid storage report task
+ * Форматирует дату в формат, необходимый для API платного хранения
+ */
+const formatDateForStorageAPI = (date: Date | string): string => {
+  if (typeof date === 'string') {
+    date = new Date(date);
+  }
+  return date.toISOString().split('T')[0]; // YYYY-MM-DD
+};
+
+/**
+ * Создает задание на генерацию отчета о платном хранении
  */
 export const createPaidStorageReportTask = async (
   apiKey: string,
@@ -74,8 +85,8 @@ export const createPaidStorageReportTask = async (
         Authorization: apiKey
       },
       params: {
-        dateFrom,
-        dateTo
+        dateFrom: formatDateForStorageAPI(dateFrom),
+        dateTo: formatDateForStorageAPI(dateTo)
       }
     });
     
@@ -87,7 +98,7 @@ export const createPaidStorageReportTask = async (
 };
 
 /**
- * Checks the status of a paid storage report task
+ * Проверяет статус задания на генерацию отчета о платном хранении
  */
 export const checkPaidStorageReportStatus = async (
   apiKey: string,
@@ -110,7 +121,7 @@ export const checkPaidStorageReportStatus = async (
 };
 
 /**
- * Downloads a paid storage report
+ * Скачивает отчет о платном хранении
  */
 export const downloadPaidStorageReport = async (
   apiKey: string,
@@ -133,13 +144,13 @@ export const downloadPaidStorageReport = async (
 };
 
 /**
- * Helper function to wait for a paid storage report task to complete
+ * Ожидает завершения задания на генерацию отчета о платном хранении
  */
 export const waitForPaidStorageReportCompletion = async (
   apiKey: string,
   taskId: string,
-  maxAttempts = 12,
-  interval = 5000
+  maxAttempts = 12, // Максимальное количество попыток
+  interval = 5000 // Интервал между попытками в миллисекундах
 ): Promise<boolean> => {
   let attempts = 0;
   
@@ -176,7 +187,7 @@ export const waitForPaidStorageReportCompletion = async (
 };
 
 /**
- * Main function to fetch a complete paid storage report
+ * Получает полный отчет о платном хранении
  */
 export const fetchFullPaidStorageReport = async (
   apiKey: string,
@@ -185,15 +196,15 @@ export const fetchFullPaidStorageReport = async (
 ): Promise<PaidStorageItem[]> => {
   try {
     console.log('Создание задания на получение отчета о платном хранении...');
-    // Step 1: Create task
+    // Шаг 1: Создаем задание
     const taskId = await createPaidStorageReportTask(apiKey, dateFrom, dateTo);
     console.log(`Задание создано с ID: ${taskId}. Ожидание завершения...`);
     
-    // Step 2: Wait for completion
+    // Шаг 2: Ожидаем завершения
     await waitForPaidStorageReportCompletion(apiKey, taskId);
     console.log('Задание выполнено. Загрузка отчета...');
     
-    // Step 3: Get report data
+    // Шаг 3: Получаем данные отчета
     const report = await downloadPaidStorageReport(apiKey, taskId);
     console.log(`Отчет загружен. Получено ${report.length} записей.`);
     
@@ -204,7 +215,50 @@ export const fetchFullPaidStorageReport = async (
   }
 };
 
-// For demo or testing purposes
+/**
+ * Автоматически заполняет данные о стоимости хранения для товаров на основе отчета о платном хранении
+ * @param warehouseRemains - Список товаров на складе
+ * @param paidStorageData - Данные отчета о платном хранении
+ * @returns Словарь с ежедневной стоимостью хранения для каждого товара по nmId
+ */
+export const calculateDailyStorageCosts = (
+  warehouseRemains: any[],
+  paidStorageData: PaidStorageItem[]
+): Record<number, number> => {
+  const result: Record<number, number> = {};
+  
+  // Создаем карту поиска по nmId для быстрого доступа
+  const storageMap = new Map<number, PaidStorageItem[]>();
+  
+  // Группируем данные о платном хранении по nmId
+  paidStorageData.forEach(item => {
+    if (!storageMap.has(item.nmId)) {
+      storageMap.set(item.nmId, []);
+    }
+    storageMap.get(item.nmId)?.push(item);
+  });
+  
+  // Рассчитываем стоимость хранения для каждого товара
+  warehouseRemains.forEach(item => {
+    const nmId = item.nmId;
+    const matchingStorageItems = storageMap.get(nmId) || [];
+    
+    if (matchingStorageItems.length > 0) {
+      // Рассчитываем среднюю дневную стоимость хранения из соответствующих записей
+      const totalCost = matchingStorageItems.reduce((sum, psi) => sum + psi.warehousePrice, 0);
+      const avgDailyCost = totalCost / matchingStorageItems.length;
+      result[nmId] = avgDailyCost;
+    } else {
+      // Если нет соответствующих данных, используем приблизительный расчет на основе объема
+      const volume = item.volume || 1;
+      result[nmId] = volume * 5; // Примерный расчет на основе объема
+    }
+  });
+  
+  return result;
+};
+
+// Для демонстрации или тестирования
 export const getMockPaidStorageData = (): PaidStorageItem[] => {
   return Array(20).fill(null).map((_, index) => ({
     date: new Date(Date.now() - (index % 7) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
