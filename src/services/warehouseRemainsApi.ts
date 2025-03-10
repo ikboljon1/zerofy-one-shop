@@ -158,7 +158,35 @@ export const fetchWarehouseRemains = async (
   }
 };
 
-// Transform API data into more usable format
+// For testing or development, return mock data
+export const getMockWarehouseRemains = (): WarehouseRemainItem[] => {
+  return Array(20).fill(null).map((_, index) => ({
+    lastChangeDate: new Date().toISOString(),
+    warehouseName: ['Коледино', 'Подольск', 'Электросталь'][index % 3],
+    vendorCode: `A${1000 + index}`,
+    nmId: 300000 + index,
+    barcode: `2000000${index}`,
+    brand: ['Nike', 'Adidas', 'Puma', 'Reebok', 'New Balance'][index % 5],
+    category: ['Одежда', 'Обувь', 'Аксессуары'][index % 3],
+    subjectName: ['Футболка', 'Джинсы', 'Куртка', 'Обувь', 'Аксессуары'][index % 5],
+    chrtId: 200000 + index,
+    price: 1000 + (index * 100),
+    quantity: 10 + index,
+    quantityFull: 10 + index,
+    quantityType: 'шт',
+    size: ['S', 'M', 'L', 'XL', 'XXL'][index % 5],
+    techSize: ['42', '44', '46', '48', '50'][index % 5],
+    inWayToClient: index,
+    inWayFromClient: index % 3,
+    isSupply: true,
+    isRealization: false,
+    volume: 0.5 + (index % 10) / 10,
+    quantityWarehousesFull: 10 + index,
+    quantityWarehouses: 10 + index
+  }));
+};
+
+// Transform API data into more usable format (UPDATED to use correct property names)
 export const processWarehouseRemains = (data: WarehouseRemainItem[]) => {
   // Get unique brands
   const brands = [...new Set(data.map(item => item.brand))];
@@ -166,15 +194,13 @@ export const processWarehouseRemains = (data: WarehouseRemainItem[]) => {
   // Get unique subjects
   const subjects = [...new Set(data.map(item => item.subjectName))];
   
-  // Get unique warehouses
-  const warehouses = [...new Set(
-    data.flatMap(item => item.warehouses.map(wh => wh.warehouseName))
-  )];
+  // Get unique warehouses - using warehouseName property
+  const warehouses = [...new Set(data.map(item => item.warehouseName))];
   
   // Calculate totals
-  const totalItems = data.reduce((sum, item) => sum + item.quantityWarehousesFull, 0);
-  const totalInWayToClient = data.reduce((sum, item) => sum + item.inWayToClient, 0);
-  const totalInWayFromClient = data.reduce((sum, item) => sum + item.inWayFromClient, 0);
+  const totalItems = data.reduce((sum, item) => sum + (item.quantityWarehousesFull || 0), 0);
+  const totalInWayToClient = data.reduce((sum, item) => sum + (item.inWayToClient || 0), 0);
+  const totalInWayFromClient = data.reduce((sum, item) => sum + (item.inWayFromClient || 0), 0);
   
   // Group by brand
   const byBrand = brands.map(brand => {
@@ -182,9 +208,9 @@ export const processWarehouseRemains = (data: WarehouseRemainItem[]) => {
     return {
       brand,
       count: items.length,
-      totalQuantity: items.reduce((sum, item) => sum + item.quantityWarehousesFull, 0),
-      totalInWayToClient: items.reduce((sum, item) => sum + item.inWayToClient, 0),
-      totalInWayFromClient: items.reduce((sum, item) => sum + item.inWayFromClient, 0),
+      totalQuantity: items.reduce((sum, item) => sum + (item.quantityWarehousesFull || 0), 0),
+      totalInWayToClient: items.reduce((sum, item) => sum + (item.inWayToClient || 0), 0),
+      totalInWayFromClient: items.reduce((sum, item) => sum + (item.inWayFromClient || 0), 0),
     };
   });
   
@@ -194,16 +220,14 @@ export const processWarehouseRemains = (data: WarehouseRemainItem[]) => {
     return {
       subject,
       count: items.length,
-      totalQuantity: items.reduce((sum, item) => sum + item.quantityWarehousesFull, 0),
+      totalQuantity: items.reduce((sum, item) => sum + (item.quantityWarehousesFull || 0), 0),
     };
   });
   
   // Group by warehouse
   const byWarehouse = warehouses.map(warehouse => {
-    const quantity = data.reduce((sum, item) => {
-      const wh = item.warehouses.find(w => w.warehouseName === warehouse);
-      return sum + (wh?.quantity || 0);
-    }, 0);
+    const items = data.filter(item => item.warehouseName === warehouse);
+    const quantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
     
     return {
       warehouse,

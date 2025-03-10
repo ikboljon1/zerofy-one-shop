@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -150,8 +151,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       const search = searchTerm.toLowerCase();
       results = results.filter(result => 
         result.remainItem.brand.toLowerCase().includes(search) ||
-        result.remainItem.subjectName.toLowerCase().includes(search) ||
-        result.remainItem.vendorCode.toLowerCase().includes(search) ||
+        (result.remainItem.subjectName && result.remainItem.subjectName.toLowerCase().includes(search)) ||
+        (result.remainItem.vendorCode && result.remainItem.vendorCode.toLowerCase().includes(search)) ||
         result.remainItem.nmId.toString().includes(search)
       );
     }

@@ -1,3 +1,4 @@
+
 export interface WarehouseCoefficient {
   date: string;
   coefficient: number;
@@ -92,27 +93,60 @@ export interface StocksByWarehouse {
   categories: Record<string, number>;
 }
 
+// Adding BoxType and BOX_TYPES enum for SupplyForm
+export type BoxType = 'Короба' | 'Монопаллета' | 'Суперсейф';
+
+export const BOX_TYPES: Record<BoxType, string> = {
+  'Короба': 'box',
+  'Монопаллета': 'monopallet',
+  'Суперсейф': 'supersafe'
+};
+
+// Add missing type property to SupplyFormData
+export interface SupplyFormData {
+  items: SupplyItem[];
+  selectedWarehouse?: number;
+  selectedBoxType?: BoxType;
+}
+
+// Updated WarehouseRemainItem interface with the correct properties
 export interface WarehouseRemainItem {
+  lastChangeDate: string;
+  warehouseName: string;
+  vendorCode: string; // was supplierArticle
+  nmId: number;
   barcode: string;
   brand: string;
   category: string;
+  subjectName: string; // was subject
   chrtId: number;
-  lastChangeDate: string;
-  nmId: number;
   price: number;
   quantity: number;
   quantityFull: number;
   quantityType: string;
   size: string;
-   складахsubjectName: string;
-  supplierArticle: string;
   techSize: string;
-  warehouseName: string;
+  inWayToClient: number;
+  inWayFromClient: number;
+  isSupply: boolean;
+  isRealization: boolean;
   volume?: number;
   quantityWarehousesFull?: number;
   quantityWarehouses?: number;
-  isSupply: boolean;
-  isRealization: boolean;
+}
+
+// For API task responses
+export interface CreateTaskResponse {
+  data: {
+    taskId: string;
+  };
+}
+
+export interface TaskStatusResponse {
+  data: {
+    id: string;
+    status: string;
+  };
 }
 
 // Interface for paid storage item from Wildberries API
