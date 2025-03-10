@@ -23,15 +23,16 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
       
       // Safely check properties before using includes
       const brand = item.brand || '';
-      const subject = item.subject || '';
-      const supplierArticle = item.supplierArticle || '';
-      const warehouseName = item.warehouseName || '';
+      const subjectName = item.subjectName || '';
+      const vendorCode = item.vendorCode || '';
+      // Get the first warehouse name if available
+      const warehouseName = item.warehouses && item.warehouses.length > 0 ? item.warehouses[0].warehouseName || '' : '';
       const barcode = item.barcode || '';
       
       return (
         brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        supplierArticle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        subjectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        vendorCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
         warehouseName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         barcode.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -93,12 +94,14 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) 
                 {filteredData.length > 0 ? (
                   filteredData.map((item, index) => (
                     <TableRow key={index}>
-                      <TableCell>{item.supplierArticle || "—"}</TableCell>
+                      <TableCell>{item.vendorCode || "—"}</TableCell>
                       <TableCell>{item.brand || "—"}</TableCell>
-                      <TableCell>{item.subject || "—"}</TableCell>
-                      <TableCell>{item.sa || "—"}</TableCell>
-                      <TableCell>{item.warehouseName || "—"}</TableCell>
-                      <TableCell className="text-right font-medium">{item.quantity || 0}</TableCell>
+                      <TableCell>{item.subjectName || "—"}</TableCell>
+                      <TableCell>{item.techSize || "—"}</TableCell>
+                      <TableCell>{item.warehouses && item.warehouses.length > 0 ? item.warehouses[0].warehouseName : "—"}</TableCell>
+                      <TableCell className="text-right font-medium">
+                        {item.warehouses && item.warehouses.length > 0 ? item.warehouses[0].quantity : 0}
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (

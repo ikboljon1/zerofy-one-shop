@@ -43,7 +43,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       const salesRate = averageDailySalesRate[item.nmId] || 0.05;
       
       // Calculate days of inventory
-      const daysOfInventory = salesRate > 0 ? Math.round((item.quantity || 0) / salesRate) : 999;
+      const itemQuantity = item.quantityWarehousesFull || 0;
+      const daysOfInventory = salesRate > 0 ? Math.round(itemQuantity / salesRate) : 999;
       
       // Calculate storage costs
       const dailyCost = dailyStorageCost[item.nmId] || 1; // Default to 1 ruble if not provided
@@ -51,7 +52,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       
       // Estimate revenue with and without discount
       const price = item.price || 0;
-      const quantity = item.quantity || 0;
+      const quantity = itemQuantity;
       const totalValue = price * quantity;
       
       // Estimate profits
@@ -91,15 +92,15 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       
       // Safely check properties before using includes
       const brand = item.brand || '';
-      const subject = item.subject || '';
-      const supplierArticle = item.supplierArticle || '';
-      const name = item.sa || '';
+      const subjectName = item.subjectName || '';
+      const vendorCode = item.vendorCode || '';
+      const techSize = item.techSize || '';
       
       return (
         brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        supplierArticle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        name.toLowerCase().includes(searchTerm.toLowerCase())
+        subjectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        vendorCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        techSize.toLowerCase().includes(searchTerm.toLowerCase())
       );
     });
   }, [profitabilityData, searchTerm]);
@@ -170,10 +171,10 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                       <div className="space-y-1">
                         <div className="font-medium">{entry.item.brand || 'Н/Д'}</div>
                         <div className="text-sm text-muted-foreground">
-                          {entry.item.supplierArticle || 'Н/Д'} - {entry.item.subject || 'Н/Д'}
+                          {entry.item.vendorCode || 'Н/Д'} - {entry.item.subjectName || 'Н/Д'}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          Остаток: {entry.item.quantity || 0} шт.
+                          Остаток: {entry.item.quantityWarehousesFull || 0} шт.
                         </div>
                       </div>
                     </TableCell>
