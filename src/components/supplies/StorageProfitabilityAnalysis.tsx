@@ -361,6 +361,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       let stockLevelPercentage = Math.min(100, (currentStock / (threshold * 2)) * 100);
       stockLevelPercentage = Math.max(0, Math.round(stockLevelPercentage));
       
+      // Use a type assertion here to make sure stockLevel is one of the required literal types
       let stockLevel: 'low' | 'medium' | 'high';
       if (currentStock <= threshold) {
         stockLevel = 'low';
@@ -394,11 +395,11 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         profitWithDiscount,
         savingsWithDiscount,
         action,
-        lowStock: currentStock <= threshold,
-        stockLevel: currentStock <= threshold ? 'low' : (currentStock <= threshold * 3 ? 'medium' : 'high'),
-        stockLevelPercentage: Math.max(0, Math.min(100, Math.round((currentStock / (threshold * 2)) * 100))),
+        lowStock,
+        stockLevel,
+        stockLevelPercentage,
         projectedStockoutDate
-      };
+      } as AnalysisResult;  // Add type assertion here
     });
   }, [warehouseItems, costPrices, sellingPrices, dailySalesRates, storageCostRates, discountLevels, lowStockThreshold]);
 
