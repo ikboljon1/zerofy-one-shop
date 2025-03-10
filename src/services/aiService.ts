@@ -190,41 +190,6 @@ const createOpenAIPrompt = (request: AIAnalysisRequest): string => {
       if (campaign.orders) prompt += `, заказы: ${campaign.orders}`;
       prompt += "\n";
     });
-    
-    if (context.advertising.keywords && context.advertising.keywords.length > 0) {
-      prompt += "\nДанные о ключевых словах:\n";
-      context.advertising.keywords.forEach(keyword => {
-        prompt += `- "${keyword.keyword}": показы ${keyword.views}, клики ${keyword.clicks}, CTR ${keyword.ctr.toFixed(2)}%, затраты ${keyword.sum} руб.`;
-        if (keyword.efficiency) prompt += `, эффективность: ${keyword.efficiency.toFixed(2)} руб/клик`;
-        prompt += "\n";
-      });
-    }
-  }
-  
-  // Обработка подробных данных о рекламной кампании
-  if (context.campaignDetails) {
-    const details = context.campaignDetails;
-    
-    prompt += "\nПодробные данные о рекламной кампании:\n";
-    prompt += `ID кампании: ${details.id}\n`;
-    prompt += `Статус: ${details.status}\n`;
-    prompt += `Тип: ${details.type}\n`;
-    prompt += `CTR (кликабельность): ${details.ctr.toFixed(2)}%\n`;
-    prompt += `CR (конверсия): ${details.cr.toFixed(2)}%\n`;
-    
-    if (details.dailyStats && details.dailyStats.length > 0) {
-      prompt += "\nДинамика по дням:\n";
-      details.dailyStats.forEach(day => {
-        prompt += `- ${day.date}: показы ${day.views}, клики ${day.clicks}, CTR ${day.ctr.toFixed(2)}%, затраты ${day.sum} руб., заказы ${day.orders}\n`;
-      });
-    }
-    
-    if (details.productStats && details.productStats.length > 0) {
-      prompt += "\nСтатистика по товарам:\n";
-      details.productStats.forEach(product => {
-        prompt += `- ${product.name} (ID: ${product.nmId}): показы ${product.views}, клики ${product.clicks}, CTR ${product.ctr.toFixed(2)}%, CR ${product.cr.toFixed(2)}%, затраты ${product.sum} руб., заказы ${product.orders}, эффективность ${product.efficiency.toFixed(2)} руб/заказ\n`;
-      });
-    }
   }
   
   switch (requestType) {
@@ -239,15 +204,6 @@ const createOpenAIPrompt = (request: AIAnalysisRequest): string => {
       break;
     case 'product_recommendations':
       prompt += "\nПожалуйста, проанализируй ассортимент товаров и предложи рекомендации по его оптимизации.";
-      break;
-    case 'advertising_analysis':
-      prompt += "\nПожалуйста, тщательно проанализируй данные рекламной кампании и предложи конкретные рекомендации по оптимизации рекламных инвестиций. Обрати особое внимание на:\n";
-      prompt += "1. Анализ эффективности ключевых слов - какие ключевые слова приносят наибольшую конверсию и ROI, а какие расходуют бюджет впустую.\n";
-      prompt += "2. Анализ эффективности товаров в рекламе - какие товары стоит продвигать активнее, а для каких следует скорректировать стратегию.\n";
-      prompt += "3. Рекомендации по оптимизации ставок - для каких ключевых слов стоит увеличить/уменьшить ставки.\n";
-      prompt += "4. Предложения по улучшению структуры кампании и возможные изменения в стратегии для максимизации ROI.\n";
-      prompt += "5. Конкретные KPI и метрики, которые нужно отслеживать для оценки эффективности рекламы.\n";
-      prompt += "\nВыдели 3-7 детальных, практичных рекомендаций, которые помогут максимально увеличить доход магазина от рекламных вложений.";
       break;
   }
   

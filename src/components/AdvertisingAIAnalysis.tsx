@@ -8,32 +8,42 @@ import { AIRecommendation, AIAnalysisRequest } from "@/types/ai";
 import { analyzeData } from "@/services/aiService";
 import AIRecommendationCard from "./ai/AIRecommendationCard";
 import { getAISettings } from "@/services/aiService";
-import { Campaign, CampaignFullStats, ProductStats, KeywordStat } from "@/services/advertisingApi";
+import { Campaign } from "@/services/advertisingApi";
 
 interface AdvertisingAIAnalysisProps {
   storeId: string;
   campaign: Campaign;
-  campaignStats?: CampaignFullStats;
-  campaignProductStats?: ProductStats[];
-  campaignKeywords?: KeywordStat[];
+  campaignStats?: {
+    name: string;
+    cost: number;
+    views?: number;
+    clicks?: number;
+    orders?: number;
+  };
+  keywords?: Array<{
+    keyword: string;
+    views: number;
+    clicks: number;
+    ctr: number;
+    sum: number;
+    orders?: number;
+    efficiency?: number;
+  }>;
   dateFrom: Date;
   dateTo: Date;
   className?: string;
   variant?: "default" | "outline" | "card";
-  onAnalysisComplete?: (recommendations: AIRecommendation[]) => void;
 }
 
 const AdvertisingAIAnalysis = ({ 
   storeId, 
-  campaign,
+  campaign, 
   campaignStats,
-  campaignProductStats,
-  campaignKeywords,
+  keywords, 
   dateFrom, 
   dateTo,
   className,
-  variant = "outline",
-  onAnalysisComplete
+  variant = "outline"
 }: AdvertisingAIAnalysisProps) => {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -41,10 +51,10 @@ const AdvertisingAIAnalysis = ({
   const [recommendations, setRecommendations] = useState<AIRecommendation[]>([]);
 
   const handleAnalyze = async () => {
-    if (!campaign) {
+    if ((!campaignStats && !campaign) || (!keywords && !campaign)) {
       toast({
         title: "Нет данных для анализа",
-        description: "Необходимы данные о рекламной кампании",
+        description: "Необходимы данные о рекламной кампании и ключевых словах",
         variant: "destructive"
       });
       return;
@@ -63,56 +73,14 @@ const AdvertisingAIAnalysis = ({
     setIsAnalyzing(true);
 
     try {
-      // Подготовка данных о кампании для AI анализа
-      const campaignData = {
+      // Prepare campaign data
+      const campaignData = campaignStats ? campaignStats : {
         name: campaign.campName || "Рекламная кампания",
-        id: campaign.advertId,
-        status: campaign.status,
-        type: campaign.type,
-        // Используем данные статистики, если они есть
-        cost: campaignStats?.sum || 0,
-        views: campaignStats?.views || 0,
-        clicks: campaignStats?.clicks || 0,
-        orders: campaignStats?.orders || 0,
-        ctr: campaignStats?.ctr || 0,
-        cr: campaignStats?.cr || 0,
-        atbs: campaignStats?.atbs || 0, // добавлено в корзину
-        shks: campaignStats?.shks || 0, // продано товаров
-        sum_price: campaignStats?.sum_price || 0 // сумма заказов
+        cost: 0, // We don't have cost in the Campaign type
+        views: 0,
+        clicks: 0,
+        orders: 0
       };
-      
-      // Формируем статистику по дням, если она есть
-      const dailyStats = campaignStats?.days?.map(day => ({
-        date: day.date,
-        views: day.views,
-        clicks: day.clicks,
-        ctr: day.ctr,
-        sum: day.sum,
-        orders: day.orders
-      })) || [];
-      
-      // Обработка статистики по товарам
-      const productStats = campaignProductStats?.map(product => ({
-        nmId: product.nmId,
-        name: product.name || `Товар ${product.nmId}`,
-        views: product.views,
-        clicks: product.clicks,
-        ctr: product.ctr,
-        sum: product.sum,
-        orders: product.orders,
-        cr: product.cr,
-        efficiency: product.orders > 0 ? product.sum / product.orders : 0
-      })) || [];
-      
-      // Обработка статистики по ключевым словам
-      const keywordStats = campaignKeywords?.map(keyword => ({
-        keyword: keyword.keyword,
-        views: keyword.views,
-        clicks: keyword.clicks,
-        ctr: keyword.ctr,
-        sum: keyword.sum,
-        efficiency: keyword.clicks > 0 ? keyword.sum / keyword.clicks : 0
-      })) || [];
       
       // Подготовка данных для отправки в AI
       const request: AIAnalysisRequest = {
@@ -122,35 +90,19 @@ const AdvertisingAIAnalysis = ({
             to: dateTo.toISOString().split('T')[0]
           },
           sales: {
-            total: campaignStats?.sum_price || 0 // Используем сумму заказов как продажи
+            total: 0 // Заглушка, т.к. это обязательное поле в запросе
           },
           expenses: {
-            total: campaignStats?.sum || 0, // Общие расходы на рекламу
+            total: 0, // Заглушка, т.к. это обязательное поле в запросе
             logistics: 0,
             storage: 0,
             penalties: 0,
-            advertising: campaignStats?.sum || 0, // Расходы на рекламу
+            advertising: campaignData.cost || 0,
             acceptance: 0
           },
           advertising: {
-            campaigns: [{
-              name: campaignData.name,
-              cost: campaignData.cost,
-              views: campaignData.views,
-              clicks: campaignData.clicks,
-              orders: campaignData.orders
-            }],
-            keywords: keywordStats
-          },
-          // Добавляем дополнительный контекст для AI
-          campaignDetails: {
-            id: campaignData.id,
-            status: campaignData.status,
-            type: campaignData.type,
-            ctr: campaignData.ctr,
-            cr: campaignData.cr,
-            dailyStats: dailyStats,
-            productStats: productStats
+            campaigns: [campaignData],
+            keywords: keywords || []
           }
         },
         requestType: 'advertising_analysis'
@@ -158,10 +110,6 @@ const AdvertisingAIAnalysis = ({
 
       const newRecommendations = await analyzeData(request, storeId);
       setRecommendations(newRecommendations);
-
-      if (onAnalysisComplete) {
-        onAnalysisComplete(newRecommendations);
-      }
 
       toast({
         title: "Анализ завершен",
@@ -224,7 +172,7 @@ const AdvertisingAIAnalysis = ({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <BrainCircuit className="h-5 w-5 text-purple-500" />
-              Анализ кампании {campaign?.campName || ""}
+              Анализ кампании {campaign?.campName || campaignStats?.name || ""}
             </DialogTitle>
             <DialogDescription>
               Рекомендации по оптимизации рекламной кампании и ключевых слов
