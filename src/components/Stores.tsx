@@ -120,12 +120,12 @@ export default function Stores({ onStoreSelect }: StoresProps) {
 
     try {
       // Validate API key before creating the store
-      const validationResult = await validateApiKey(newStore.apiKey);
+      const isValidApiKey = await validateApiKey(newStore.apiKey);
       
-      if (!validationResult.isValid) {
+      if (!isValidApiKey) {
         toast({
           title: "Ошибка API ключа",
-          description: validationResult.errorMessage || "Указанный API ключ некорректен. Пожалуйста, проверьте ключ и попробуйте снова.",
+          description: "Указанный API ключ некорректен. Пожалуйста, проверьте ключ и попробуйте снова.",
           variant: "destructive",
         });
         setIsLoading(false);

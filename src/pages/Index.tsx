@@ -12,7 +12,6 @@ import Advertising from "@/components/Advertising";
 import MainLayout from "@/components/layout/MainLayout";
 import AnalyticsSection from "@/components/analytics/AnalyticsSection";
 import Dashboard from "@/components/dashboard/Dashboard";
-import AIModels from "@/components/ai/AIModels";
 import { getProductProfitabilityData, getSelectedStore } from "@/utils/storeUtils";
 import { User } from "@/services/userService";
 
@@ -103,16 +102,6 @@ const Index = () => {
             transition={{ duration: 0.3 }}
           >
             <Stores onStoreSelect={setSelectedStore} />
-          </motion.div>
-        );
-      case "ai_models":
-        return (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <AIModels />
           </motion.div>
         );
       case "warehouses":

@@ -9,8 +9,7 @@ import {
   Package,
   WarehouseIcon,
   ChevronDown,
-  ChevronUp,
-  Brain
+  ChevronUp
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -99,11 +98,11 @@ const MobileNavigation = ({ activeTab, onTabChange }: MobileNavigationProps) => 
             <span className="text-xs">Магазин</span>
           </button>
           <button
-            className={`flex flex-col items-center space-y-1 ${activeTab === "ai_models" ? "text-primary" : "text-muted-foreground"}`}
-            onClick={() => onTabChange("ai_models")}
+            className={`flex flex-col items-center space-y-1 ${activeTab === "advertising" ? "text-primary" : "text-muted-foreground"}`}
+            onClick={() => onTabChange("advertising")}
           >
-            <Brain className="h-5 w-5" />
-            <span className="text-xs">AI</span>
+            <Megaphone className="h-5 w-5" />
+            <span className="text-xs">Реклама</span>
           </button>
           <button
             className={`flex flex-col items-center space-y-1 ${activeTab === "profile" ? "text-primary" : "text-muted-foreground"}`}
