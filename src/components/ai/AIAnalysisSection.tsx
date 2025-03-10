@@ -10,6 +10,11 @@ import {
   analyzeData, 
   getSavedRecommendations 
 } from "@/services/aiService";
+import { 
+  getAllCampaigns, 
+  getCampaignFullStats, 
+  getKeywordStatistics 
+} from "@/services/advertisingApi";
 import { AIRecommendation, AIAnalysisRequest } from "@/types/ai";
 import AISettingsDialog from "./AISettingsDialog";
 import AIRecommendationCard from "./AIRecommendationCard";
@@ -30,6 +35,8 @@ const AIAnalysisSection = ({ storeId, analyticsData, dateFrom, dateTo }: AIAnaly
   const [recommendations, setRecommendations] = useState<AIRecommendation[]>([]);
   const [activeTab, setActiveTab] = useState<string>("all");
   const [aiSettings, setAiSettings] = useState(getAISettings());
+  const [advertisingData, setAdvertisingData] = useState<any>(null);
+  const [isLoadingAdvertisingData, setIsLoadingAdvertisingData] = useState(false);
 
   useEffect(() => {
     loadRecommendations();
@@ -70,6 +77,82 @@ const AIAnalysisSection = ({ storeId, analyticsData, dateFrom, dateTo }: AIAnaly
     }
   };
 
+  const loadAdvertisingData = async () => {
+    if (!aiSettings.apiKey) {
+      return null;
+    }
+
+    setIsLoadingAdvertisingData(true);
+    try {
+      // Получаем все рекламные кампании
+      const campaigns = await getAllCampaigns(aiSettings.apiKey);
+      
+      if (campaigns.length === 0) {
+        return null;
+      }
+
+      // Ограничим запрос 5 самыми новыми кампаниями для более быстрого анализа
+      const recentCampaigns = campaigns.slice(0, 5);
+      const campaignIds = recentCampaigns.map(campaign => campaign.advertId);
+
+      // Получаем детальную статистику по кампаниям
+      const campaignStats = await getCampaignFullStats(
+        aiSettings.apiKey,
+        campaignIds,
+        dateFrom,
+        dateTo
+      );
+
+      // Собираем данные о ключевых словах для первой кампании (для демонстрации)
+      const keywordData = await getKeywordStatistics(
+        aiSettings.apiKey,
+        campaignIds[0],
+        dateFrom,
+        dateTo
+      );
+
+      // Формируем структурированные данные о кампаниях
+      const campaignsData = recentCampaigns.map((campaign, index) => {
+        const stats = campaignStats.find(s => s.advertId === campaign.advertId) || 
+                     { views: 0, clicks: 0, orders: 0, sum: 0 };
+        
+        return {
+          name: campaign.campName,
+          cost: stats.sum || 0,
+          views: stats.views || 0,
+          clicks: stats.clicks || 0,
+          orders: stats.orders || 0
+        };
+      });
+
+      // Формируем данные о ключевых словах
+      const keywordsData = [];
+      if (keywordData && keywordData.keywords && keywordData.keywords.length > 0) {
+        for (const day of keywordData.keywords) {
+          for (const keyword of day.stats) {
+            keywordsData.push({
+              keyword: keyword.keyword,
+              views: keyword.views,
+              clicks: keyword.clicks,
+              ctr: keyword.ctr,
+              sum: keyword.sum
+            });
+          }
+        }
+      }
+
+      return {
+        campaigns: campaignsData,
+        keywords: keywordsData
+      };
+    } catch (error) {
+      console.error('Ошибка при загрузке данных о рекламе:', error);
+      return null;
+    } finally {
+      setIsLoadingAdvertisingData(false);
+    }
+  };
+
   const handleAnalyze = async () => {
     if (!analyticsData) {
       toast({
@@ -94,6 +177,15 @@ const AIAnalysisSection = ({ storeId, analyticsData, dateFrom, dateTo }: AIAnaly
     setIsAnalyzing(true);
 
     try {
+      // Загружаем данные о рекламе если их еще нет
+      let adData = advertisingData;
+      if (!adData) {
+        adData = await loadAdvertisingData();
+        if (adData) {
+          setAdvertisingData(adData);
+        }
+      }
+
       // Подготовка данных для отправки в AI
       const request: AIAnalysisRequest = {
         context: {
@@ -145,6 +237,16 @@ const AIAnalysisSection = ({ storeId, analyticsData, dateFrom, dateTo }: AIAnaly
         request.context.returns = analyticsData.productReturns;
       }
 
+      // Добавляем данные о рекламе, если они есть
+      if (adData) {
+        request.context.advertising = adData;
+      }
+
+      // Если пользователь запросил анализ рекламы, меняем тип запроса
+      if (activeTab === "advertising") {
+        request.requestType = 'advertising_analysis';
+      }
+
       const newRecommendations = await analyzeData(request, storeId);
       setRecommendations([...newRecommendations, ...recommendations]);
 
@@ -161,6 +263,22 @@ const AIAnalysisSection = ({ storeId, analyticsData, dateFrom, dateTo }: AIAnaly
       });
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const handleAnalyzeAdvertising = async () => {
+    setActiveTab("advertising");
+    // Предварительно загрузить данные о рекламе перед анализом
+    const adData = await loadAdvertisingData();
+    if (adData) {
+      setAdvertisingData(adData);
+      handleAnalyze();
+    } else {
+      toast({
+        title: "Нет данных о рекламе",
+        description: "Не удалось получить данные о рекламных кампаниях",
+        variant: "destructive"
+      });
     }
   };
 
@@ -255,16 +373,32 @@ const AIAnalysisSection = ({ storeId, analyticsData, dateFrom, dateTo }: AIAnaly
               <p className="text-muted-foreground max-w-md mb-4">
                 Нажмите кнопку "Анализировать", чтобы получить рекомендации по оптимизации работы магазина на основе ваших данных
               </p>
-              <Button onClick={handleAnalyze} disabled={isAnalyzing}>
-                {isAnalyzing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Анализ...
-                  </>
-                ) : (
-                  "Анализировать"
-                )}
-              </Button>
+              <div className="flex gap-3">
+                <Button onClick={handleAnalyze} disabled={isAnalyzing}>
+                  {isAnalyzing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Анализ...
+                    </>
+                  ) : (
+                    "Анализировать"
+                  )}
+                </Button>
+                <Button 
+                  onClick={handleAnalyzeAdvertising} 
+                  disabled={isAnalyzing || isLoadingAdvertisingData}
+                  variant="outline"
+                >
+                  {isLoadingAdvertisingData ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Загрузка данных рекламы...
+                    </>
+                  ) : (
+                    "Анализировать рекламу"
+                  )}
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

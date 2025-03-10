@@ -73,6 +73,15 @@ export interface AIAnalysisRequest {
         clicks?: number;
         orders?: number;
       }>;
+      keywords?: Array<{
+        keyword: string;
+        views: number;
+        clicks: number;
+        ctr: number;
+        sum: number;
+        orders?: number;
+        efficiency?: number;
+      }>;
     };
     returns?: Array<{
       name: string;
@@ -80,5 +89,5 @@ export interface AIAnalysisRequest {
       count?: number;
     }>;
   };
-  requestType: 'full_analysis' | 'sales_analysis' | 'expense_analysis' | 'product_recommendations';
+  requestType: 'full_analysis' | 'sales_analysis' | 'expense_analysis' | 'product_recommendations' | 'advertising_analysis';
 }
