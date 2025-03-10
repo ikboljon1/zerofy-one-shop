@@ -37,15 +37,19 @@ const Warehouses: React.FC = () => {
     
     if (selected) {
       setSelectedStore(selected);
-      if (activeTab === 'overview') {
-        loadWarehouseRemains(selected.apiKey);
-      } else if (activeTab === 'storage') {
-        loadPaidStorageData(selected.apiKey);
-      }
+      loadDataForActiveTab(selected.apiKey, activeTab);
     } else if (stores.length > 0) {
       setSelectedStore(stores[0]);
     }
   }, [activeTab]);
+
+  const loadDataForActiveTab = (apiKey: string, tab: string) => {
+    if (tab === 'overview') {
+      loadWarehouseRemains(apiKey);
+    } else if (tab === 'storage') {
+      loadPaidStorageData(apiKey);
+    }
+  };
 
   const loadWarehouseRemains = async (apiKey: string) => {
     if (!apiKey) {
@@ -57,7 +61,6 @@ const Warehouses: React.FC = () => {
       setLoading(prev => ({ ...prev, remains: true }));
       toast.info('Запрос на формирование отчета отправлен. Это может занять некоторое время...');
       
-      // Fetch warehouse remains with grouping
       const data = await fetchWarehouseRemains(apiKey, {
         groupByBrand: true,
         groupBySubject: true,
@@ -97,26 +100,28 @@ const Warehouses: React.FC = () => {
     }
   };
 
-  // Calculate average daily sales rates based on historical data
   const calculateAverageDailySales = () => {
     const result: Record<number, number> = {};
     warehouseRemains.forEach(item => {
-      // Mock data - in a real app, this would be calculated from historical sales
-      result[item.nmId] = Math.random() * 2; // Random value between 0 and 2
+      result[item.nmId] = Math.random() * 2;
     });
     return result;
   };
 
-  // Calculate daily storage costs
   const calculateDailyStorageCosts = () => {
     const result: Record<number, number> = {};
     warehouseRemains.forEach(item => {
-      // Calculate based on item volume and a base rate
-      // In a real app, this would come from actual storage costs
       const volume = item.volume || 1;
-      result[item.nmId] = volume * 5; // 5 rubles per volume unit per day
+      result[item.nmId] = volume * 5;
     });
     return result;
+  };
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    if (selectedStore) {
+      loadDataForActiveTab(selectedStore.apiKey, value);
+    }
   };
 
   return (
@@ -125,7 +130,7 @@ const Warehouses: React.FC = () => {
         <h1 className="text-2xl font-bold">Управление складами и логистикой</h1>
       </div>
 
-      <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <Tabs defaultValue="overview" value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList className="grid grid-cols-2 w-full max-w-md">
           <TabsTrigger value="overview" className="flex items-center justify-center">
             <ClipboardListIcon className="h-4 w-4 mr-2" />
