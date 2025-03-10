@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,6 +19,7 @@ import {
   SupplyOptionsResults,
   WarehouseRemains,
 } from '@/components/supplies';
+import StorageProfitabilityAnalysis from '@/components/supplies/StorageProfitabilityAnalysis';
 import { 
   SupplyFormData, 
   WarehouseCoefficient, 
@@ -185,6 +185,29 @@ const Warehouses: React.FC = () => {
     }
   };
 
+  // Calculate average daily sales rates based on historical data
+  // This would typically come from an API but we'll mock it for now
+  const calculateAverageDailySales = () => {
+    const result: Record<number, number> = {};
+    warehouseRemains.forEach(item => {
+      // Mock data - in a real app, this would be calculated from historical sales
+      result[item.nmId] = Math.random() * 2; // Random value between 0 and 2
+    });
+    return result;
+  };
+
+  // Calculate daily storage costs
+  const calculateDailyStorageCosts = () => {
+    const result: Record<number, number> = {};
+    warehouseRemains.forEach(item => {
+      // Calculate based on item volume and a base rate
+      // In a real app, this would come from actual storage costs
+      const volume = item.volume || 1;
+      result[item.nmId] = volume * 5; // 5 rubles per volume unit per day
+    });
+    return result;
+  };
+
   return (
     <div className="container px-4 py-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -256,10 +279,21 @@ const Warehouses: React.FC = () => {
                   <Skeleton className="h-[300px] w-full" />
                 </div>
               ) : (
-                <WarehouseRemains 
-                  data={warehouseRemains} 
-                  isLoading={loading.remains} 
-                />
+                <>
+                  <WarehouseRemains 
+                    data={warehouseRemains} 
+                    isLoading={loading.remains} 
+                  />
+                  
+                  {/* Add the new profitability analysis component */}
+                  <div className="mt-8">
+                    <StorageProfitabilityAnalysis 
+                      warehouseItems={warehouseRemains}
+                      averageDailySalesRate={calculateAverageDailySales()}
+                      dailyStorageCost={calculateDailyStorageCosts()}
+                    />
+                  </div>
+                </>
               )}
             </>
           )}
