@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -285,7 +285,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         description: `Рассчитаны средние продажи для ${Object.keys(averageDailySales).length} товаров`,
       });
     } catch (error) {
-      console.error("Ошибка при расчете средних продаж:", error);
+      console.error("Ошибка при расчете средних про��аж:", error);
       toast({
         title: "Ошибка",
         description: error instanceof Error ? error.message : "Не удалось рассчитать средние продажи",
@@ -743,6 +743,16 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                   <Label htmlFor="targetDate" className="text-xs mb-1 block">Показать товары с запасом до</Label>
                   <DatePicker 
                     value={targetDate} 
-                    onValueChange={setTargetDate} 
+                    onValueChange={setTargetDate}
                   />
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default StorageProfitabilityAnalysis;
