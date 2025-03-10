@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { 
   LayoutDashboard, 
   BarChart2, 
-  ShoppingBag,
+  ShoppingBag, 
   Megaphone,
   User,
   Package,
@@ -38,14 +38,14 @@ const MobileNavigation = ({ activeTab, onTabChange }: MobileNavigationProps) => 
           >
             <div className="container flex items-center justify-around py-3">
               <button
-                className={`flex flex-col items-center space-y-1 ${activeTab === "inventory" ? "text-primary" : "text-muted-foreground"}`}
+                className={`flex flex-col items-center space-y-1 ${activeTab === "products" ? "text-primary" : "text-muted-foreground"}`}
                 onClick={() => {
-                  onTabChange("inventory");
+                  onTabChange("products");
                   setShowStoresSubmenu(false);
                 }}
               >
                 <Package className="h-5 w-5" />
-                <span className="text-xs">Инвентарь</span>
+                <span className="text-xs">Товары</span>
               </button>
               <button
                 className={`flex flex-col items-center space-y-1 ${activeTab === "warehouses" ? "text-primary" : "text-muted-foreground"}`}
@@ -79,9 +79,9 @@ const MobileNavigation = ({ activeTab, onTabChange }: MobileNavigationProps) => 
             <span className="text-xs">Аналитика</span>
           </button>
           <button
-            className={`flex flex-col items-center space-y-1 ${(activeTab === "stores" || activeTab === "inventory" || activeTab === "warehouses") ? "text-primary" : "text-muted-foreground"}`}
+            className={`flex flex-col items-center space-y-1 ${(activeTab === "stores" || activeTab === "products" || activeTab === "warehouses") ? "text-primary" : "text-muted-foreground"}`}
             onClick={() => {
-              if (activeTab !== "stores" && activeTab !== "inventory" && activeTab !== "warehouses") {
+              if (activeTab !== "stores" && activeTab !== "products" && activeTab !== "warehouses") {
                 onTabChange("stores");
               }
               setShowStoresSubmenu(!showStoresSubmenu);
