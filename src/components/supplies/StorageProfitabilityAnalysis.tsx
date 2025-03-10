@@ -1,6 +1,5 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Search, ArrowUpDown, Package, TrendingDown, Banknote, AlertTriangle, Clock, ArrowDown, ArrowUp, Download, RefreshCw } from 'lucide-react';
+import { Search, ArrowUpDown, Package, TrendingDown, Banknote, WarehouseIcon, AlertTriangle, Clock, ArrowDown, ArrowUp, Download, RefreshCw } from 'lucide-react';
 import { 
   formatCurrency, 
   calculateDiscountSavings, 
@@ -27,8 +26,8 @@ import axios from 'axios';
 interface StorageProfitabilityAnalysisProps {
   warehouseItems: WarehouseRemainItem[];
   paidStorageData?: PaidStorageItem[]; 
-  averageDailySalesRate?: Record<number, number>;
-  dailyStorageCost?: Record<number, number>;
+  averageDailySalesRate?: Record<number, number>; // nmId -> average daily sales
+  dailyStorageCost?: Record<number, number>; // nmId -> daily storage cost
   selectedStore?: { 
     id: string;
     apiKey: string;
@@ -71,7 +70,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
   const [discountLevels, setDiscountLevels] = useState<Record<number, number>>({});
   const [lowStockThreshold, setLowStockThreshold] = useState<Record<number, number>>({});
   const [targetDate, setTargetDate] = useState<Date | undefined>(
-    new Date(new Date().setDate(new Date().getDate() + 30))
+    new Date(new Date().setDate(new Date().getDate() + 30)) // Default to 30 days in the future
   );
   const [sortConfig, setSortConfig] = useState<{
     key: keyof AnalysisResult | '',
@@ -103,8 +102,10 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     const initialLowStockThresholds: Record<number, number> = {};
 
     warehouseItems.forEach(item => {
-      let itemStorageCost = dailyStorageCost[item.nmId] || 5;
+      // Get the storage cost from the dailyStorageCost prop, which now contains data from paid storage
+      let itemStorageCost = dailyStorageCost[item.nmId] || 5; // Default to 5 rubles per day if no data
       
+      // If no daily storage cost is provided or it's zero, try to calculate from paidStorageData
       if ((!itemStorageCost || itemStorageCost === 5) && paidStorageData.length > 0) {
         const matchingStorageItems = paidStorageData.filter(psi => psi.nmId === item.nmId);
         if (matchingStorageItems.length > 0) {
@@ -113,7 +114,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         }
       }
       
-      initialDailySales[item.nmId] = averageDailySalesRate[item.nmId] || 0.1;
+      initialDailySales[item.nmId] = averageDailySalesRate[item.nmId] || 0.1; // Default to 0.1 items per day
       initialStorageCosts[item.nmId] = itemStorageCost;
       
       const optimalDiscount = calculateOptimalDiscount(
@@ -186,6 +187,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
           });
         }
         
+        // Задержка для избежания ограничений API
         await new Promise(resolve => setTimeout(resolve, 100));
       }
       
@@ -247,8 +249,9 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       
       const data = await response.json();
       
+      // Группировка продаж по nmId и подсчет количества продаж
       const salesMap: Record<number, number> = {};
-      const salesDates: Record<number, Set<string>> = {};
+      const salesDates: Record<number, Set<string>> = {}; // Для отслеживания уникальных дат продаж
 
       data.forEach((item: any) => {
         if (item.doc_type_name === "Продажа") {
@@ -264,16 +267,21 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         }
       });
       
+      // Расчет среднедневных продаж
       const averageDailySales: Record<number, number> = {};
       
       warehouseItems.forEach(item => {
         const nmId = item.nmId;
         const totalSales = salesMap[nmId] || 0;
         
+        // Проверяем количество уникальных дней с продажами
         const uniqueSalesDays = salesDates[nmId] ? salesDates[nmId].size : 0;
         
+        // Если были продажи, используем среднее по дням с продажами
+        // Иначе делим на весь период (30 дней)
         const divisor = uniqueSalesDays > 0 ? uniqueSalesDays : 30;
         
+        // Рассчитываем среднее и округляем до 2 знаков
         const average = totalSales / divisor;
         averageDailySales[nmId] = Math.max(0.01, parseFloat(average.toFixed(2)));
       });
@@ -679,7 +687,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                   </h3>
                 </div>
                 <div className="bg-purple-100 dark:bg-purple-800/30 p-2 rounded-lg">
-                  <AlertTriangle className="h-5 w-5 text-purple-500 dark:text-purple-400" />
+                  <WarehouseIcon className="h-5 w-5 text-purple-500 dark:text-purple-400" />
                 </div>
               </div>
               <div className="mt-4 pt-4 border-t border-purple-100 dark:border-purple-800/30">
@@ -721,242 +729,269 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                 <div className="w-full md:w-auto">
                   <Label htmlFor="targetDate" className="text-xs mb-1 block">Показать товары с запасом до</Label>
                   <DatePicker 
-                    value={targetDate}
-                    onValueChange={setTargetDate}
-                    placeholder="Выберите дату"
+                    value={targetDate} 
+                    onValueChange={setTargetDate} 
                   />
                 </div>
               </div>
             </div>
-
-            <div className="flex gap-2">
+            
+            <div className="flex gap-2 flex-wrap">
               <Button 
                 variant="outline" 
-                size="sm" 
-                onClick={fetchProductPrices}
-                disabled={isLoadingPrices || !selectedStore}
-                className="whitespace-nowrap"
+                onClick={fetchProductPrices} 
+                disabled={isLoadingPrices || !selectedStore?.apiKey}
+                className="whitespace-nowrap flex items-center gap-2"
               >
-                {isLoadingPrices ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Загрузка...
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4 mr-2" />
-                    Загрузить цены
-                  </>
-                )}
+                {isLoadingPrices ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                Получить цены товаров
               </Button>
               
               <Button 
                 variant="outline" 
-                size="sm" 
-                onClick={fetchAverageSales}
-                disabled={isLoadingSales || !selectedStore}
-                className="whitespace-nowrap"
+                onClick={fetchAverageSales} 
+                disabled={isLoadingSales || !selectedStore?.apiKey}
+                className="whitespace-nowrap flex items-center gap-2"
               >
-                {isLoadingSales ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Загрузка...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Рассчитать продажи
-                  </>
-                )}
+                {isLoadingSales ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                Рассчитать продажи в день
               </Button>
               
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={savePriceData}
+              <Button 
+                variant="outline" 
+                onClick={savePriceData} 
                 className="whitespace-nowrap"
               >
-                Сохранить данные
+                Сохранить изменения
               </Button>
             </div>
           </div>
-          
-          <Tabs value={selectedTab} onValueChange={(value: string) => setSelectedTab(value as any)} className="w-full">
-            <TabsList className="grid grid-cols-4 w-full md:w-auto">
-              <TabsTrigger value="all">Все товары ({analysisSummary.totalItems})</TabsTrigger>
-              <TabsTrigger value="discount">На скидку ({analysisSummary.discountItems + analysisSummary.sellItems})</TabsTrigger>
-              <TabsTrigger value="keep">Без скидки ({analysisSummary.keepItems})</TabsTrigger>
+
+          <Tabs defaultValue="all" value={selectedTab} onValueChange={(value) => setSelectedTab(value as any)}>
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="all">Все товары</TabsTrigger>
               <TabsTrigger value="low-stock">Низкий запас ({analysisSummary.lowStockItems})</TabsTrigger>
+              <TabsTrigger value="discount">Товары для скидки ({analysisSummary.discountItems})</TabsTrigger>
+              <TabsTrigger value="keep">Сохранить цены ({analysisSummary.keepItems})</TabsTrigger>
             </TabsList>
-            <TabsContent value={selectedTab} className="mt-4">
-              {filteredResults.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[300px]">Товар</TableHead>
-                      <TableHead className="w-[100px]">Цены</TableHead>
-                      <TableHead className="w-[100px]">Остаток</TableHead>
-                      <TableHead className="w-[120px]">Продажи</TableHead>
-                      <TableHead className="w-[140px]">Прибыль</TableHead>
-                      <TableHead className="w-[100px]">Скидка</TableHead>
-                      <TableHead className="w-[140px]">Действие</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredResults.map((result) => (
-                      <TableRow key={result.remainItem.nmId}>
-                        <TableCell className="align-top">
-                          <div className="font-medium text-sm">{result.remainItem.subjectName || result.remainItem.brand}</div>
-                          <div className="text-xs text-muted-foreground mt-1">Артикул: {result.remainItem.vendorCode || "Нет"}</div>
-                          <div className="text-xs text-muted-foreground mt-1">NM: {result.remainItem.nmId}</div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-2">
-                            <div>
-                              <div className="text-xs text-muted-foreground">Себестоимость</div>
-                              <div className="flex items-center gap-2">
-                                <Input 
-                                  type="number" 
-                                  className="h-8 w-full" 
-                                  value={result.costPrice || ''} 
-                                  onChange={e => updateCostPrice(result.remainItem.nmId, Number(e.target.value))}
-                                />
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-xs text-muted-foreground">Цена продажи</div>
-                              <div className="flex items-center gap-2">
-                                <Input 
-                                  type="number" 
-                                  className="h-8 w-full" 
-                                  value={result.sellingPrice || ''} 
-                                  onChange={e => updateSellingPrice(result.remainItem.nmId, Number(e.target.value))}
-                                />
-                              </div>
-                            </div>
+          </Tabs>
+
+          {targetDate && (
+            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-lg p-4 flex items-center justify-between">
+              <div className="flex items-center">
+                <Clock className="h-5 w-5 text-amber-500 mr-2" />
+                <span>
+                  К {formatDate(targetDate)} требуется пополнить запасы по {analysisSummary.itemsStockingOutBeforeTarget} товарам
+                </span>
+              </div>
+              <Button variant="ghost" size="sm" className="text-amber-600" onClick={() => setTargetDate(undefined)}>
+                Сбросить
+              </Button>
+            </div>
+          )}
+
+          <div className="border rounded-md overflow-hidden">
+            <Table>
+              <TableHeader className="bg-gray-50/80 dark:bg-gray-900/20">
+                <TableRow>
+                  <TableHead className="w-[300px]">Товар</TableHead>
+                  <TableHead 
+                    className="cursor-pointer" 
+                    onClick={() => requestSort('daysOfInventory')}
+                  >
+                    <div className="flex items-center">
+                      Остаток запаса
+                      <ArrowUpDown className="ml-1 h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer"
+                    onClick={() => requestSort('totalStorageCost')}
+                  >
+                    <div className="flex items-center">
+                      Расходы на хранение
+                      <ArrowUpDown className="ml-1 h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer"
+                    onClick={() => requestSort('savingsWithDiscount')}
+                  >
+                    <div className="flex items-center">
+                      Выгода от скидки
+                      <ArrowUpDown className="ml-1 h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead>Рекомендация</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredResults.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-6">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <Package className="h-8 w-8 text-muted-foreground" />
+                        <p className="text-muted-foreground">Нет данных для отображения</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredResults.map((result) => (
+                    <TableRow key={result.remainItem.nmId} className={`group ${
+                      result.lowStock ? 'bg-rose-50/40 dark:bg-rose-950/10 hover:bg-rose-50/60 dark:hover:bg-rose-950/20' : ''
+                    }`}>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="font-medium truncate max-w-[300px]">
+                            {result.remainItem.brand} - {result.remainItem.subjectName}
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-medium">{result.remainItem.quantityWarehousesFull || 0} шт.</div>
-                          <div className="mt-2">
+                          <div className="text-xs text-muted-foreground">
+                            Артикул: {result.remainItem.vendorCode} | ID: {result.remainItem.nmId}
+                          </div>
+                          
+                          <div className="mt-1">
                             {getStockLevelIndicator(result)}
                           </div>
-                          <div className="mt-2">
-                            <div className="text-xs text-muted-foreground">Хранение в день</div>
-                            <div className="flex items-center gap-2">
-                              <Input 
-                                type="number" 
-                                className="h-8 w-full" 
-                                value={result.dailyStorageCost || ''} 
-                                onChange={e => updateStorageCost(result.remainItem.nmId, Number(e.target.value))}
-                              />
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-2">
-                            <div>
-                              <div className="text-xs text-muted-foreground">Продажи в день</div>
-                              <div className="flex items-center gap-2">
-                                <Input 
-                                  type="number" 
-                                  className="h-8 w-full" 
-                                  value={result.dailySales || ''} 
-                                  onChange={e => updateDailySales(result.remainItem.nmId, Number(e.target.value))}
-                                  step="0.01"
+                          
+                          <div className="pt-2 space-y-3 opacity-70 group-hover:opacity-100 transition-opacity">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-xs">Себестоимость:</Label>
+                                <Input
+                                  type="number"
+                                  value={result.costPrice}
+                                  onChange={(e) => updateCostPrice(result.remainItem.nmId, Number(e.target.value))}
+                                  className="h-7 text-xs"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs">Цена продажи:</Label>
+                                <Input
+                                  type="number"
+                                  value={result.sellingPrice}
+                                  onChange={(e) => updateSellingPrice(result.remainItem.nmId, Number(e.target.value))}
+                                  className="h-7 text-xs"
                                 />
                               </div>
                             </div>
-                            <div>
-                              <div className="text-xs text-muted-foreground">Порог низкого запаса</div>
-                              <div className="flex items-center gap-2">
-                                <Input 
-                                  type="number" 
-                                  className="h-8 w-full" 
-                                  value={lowStockThreshold[result.remainItem.nmId] || ''} 
-                                  onChange={e => updateLowStockThreshold(result.remainItem.nmId, Number(e.target.value))}
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-xs">Продаж в день:</Label>
+                                <Input
+                                  type="number"
+                                  value={result.dailySales}
+                                  step="0.1"
+                                  onChange={(e) => updateDailySales(result.remainItem.nmId, Number(e.target.value))}
+                                  className="h-7 text-xs"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs">Порог низкого запаса (шт):</Label>
+                                <Input
+                                  type="number"
+                                  value={lowStockThreshold[result.remainItem.nmId] || Math.ceil(result.dailySales * 7)}
+                                  onChange={(e) => updateLowStockThreshold(result.remainItem.nmId, Number(e.target.value))}
+                                  className="h-7 text-xs"
                                 />
                               </div>
                             </div>
-                            <div>
-                              <div className="flex justify-between items-center">
-                                <span className="text-xs text-muted-foreground">Хватит на</span>
-                                <span className="text-xs font-medium">{result.daysOfInventory} дн.</span>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-xs">Стоимость хранения в день:</Label>
+                                <Input
+                                  type="number"
+                                  value={result.dailyStorageCost}
+                                  onChange={(e) => updateStorageCost(result.remainItem.nmId, Number(e.target.value))}
+                                  className="h-7 text-xs"
+                                />
                               </div>
-                            </div>
-                            <div>
-                              <div className="flex justify-between items-center">
-                                <span className="text-xs text-muted-foreground">Закончится</span>
-                                <span className="text-xs font-medium">{formatDate(result.projectedStockoutDate)}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-2">
-                            <div>
-                              <div className="flex justify-between items-center">
-                                <span className="text-xs text-muted-foreground">Без скидки</span>
-                                <span className="text-xs font-medium">{formatCurrency(result.profitWithoutDiscount)}</span>
-                              </div>
-                            </div>
-                            <div>
-                              <div className="flex justify-between items-center">
-                                <span className="text-xs text-muted-foreground">Со скидкой</span>
-                                <span className="text-xs font-medium">{formatCurrency(result.profitWithDiscount)}</span>
-                              </div>
-                            </div>
-                            <div>
-                              <div className="flex justify-between items-center">
-                                <span className="text-xs text-muted-foreground">Улучшение</span>
-                                <span className={`text-xs font-medium ${result.savingsWithDiscount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                  {result.savingsWithDiscount > 0 ? '+' : ''}{formatCurrency(result.savingsWithDiscount)}
-                                </span>
-                              </div>
-                            </div>
-                            <div>
-                              <div className="flex justify-between items-center">
-                                <span className="text-xs text-muted-foreground">ROI</span>
-                                <span className={`text-xs font-medium ${calculateROIimprovement(result) > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                  {calculateROIimprovement(result) > 0 ? '+' : ''}{calculateROIimprovement(result)}%
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-2">
-                            <div>
-                              <div className="text-xs text-muted-foreground">Рекомендуемая скидка</div>
-                              <div className="my-2">
+                              <div>
+                                <Label className="text-xs">Рекомендуемая скидка: {result.recommendedDiscount}%</Label>
                                 <Slider
-                                  defaultValue={[result.recommendedDiscount]}
-                                  max={70}
-                                  step={1}
-                                  onValueChange={val => updateDiscountLevel(result.remainItem.nmId, val)}
-                                  value={[discountLevels[result.remainItem.nmId] || 0]}
+                                  value={[result.recommendedDiscount]}
+                                  min={0}
+                                  max={90}
+                                  step={5}
+                                  onValueChange={(value) => updateDiscountLevel(result.remainItem.nmId, value)}
+                                  className="py-2"
                                 />
-                                <div className="text-center text-sm font-medium">
-                                  {discountLevels[result.remainItem.nmId] || 0}%
-                                </div>
                               </div>
                             </div>
-                            <div className="mt-3">
-                              {getActionBadge(result.action)}
-                            </div>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">Нет данных для отображения</p>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium flex items-center">
+                          {result.daysOfInventory} 
+                          {result.daysOfInventory < 7 && <AlertTriangle className="ml-1 h-4 w-4 text-red-500" />}
+                          {result.daysOfInventory > 60 && <AlertTriangle className="ml-1 h-4 w-4 text-amber-500" />}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          В наличии: {result.remainItem.quantityWarehousesFull} шт.
+                        </div>
+                        {result.projectedStockoutDate && (
+                          <div className="text-xs mt-1 flex items-center">
+                            <Clock className="h-3 w-3 mr-1 text-muted-foreground" />
+                            <Popover>
+                              <PopoverTrigger className="underline text-xs cursor-help">
+                                Закончится: {formatDate(result.projectedStockoutDate)}
+                              </PopoverTrigger>
+                              <PopoverContent className="w-60 p-2">
+                                <p className="text-xs">
+                                  При текущей скорости продаж ({result.dailySales} шт./день) запасы этого товара закончатся {formatDate(result.projectedStockoutDate)}.
+                                </p>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium">{formatCurrency(result.totalStorageCost)}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {formatCurrency(result.dailyStorageCost)} в день
+                        </div>
+                        {result.totalStorageCost > (result.remainItem.price || 0) * 0.1 * result.remainItem.quantityWarehousesFull && (
+                          <div className="text-xs text-amber-600 mt-1 flex items-center">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Высокие затраты
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className={`font-medium ${result.savingsWithDiscount > 0 ? 'text-green-600' : 'text-red-600'} flex items-center`}>
+                          {result.savingsWithDiscount > 0 
+                            ? <><ArrowUp className="h-3 w-3 mr-1" />{formatCurrency(result.savingsWithDiscount)}</>
+                            : <><ArrowDown className="h-3 w-3 mr-1" />{formatCurrency(Math.abs(result.savingsWithDiscount))}</>}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          При с��идке {result.recommendedDiscount}%
+                        </div>
+                        <div className="text-xs mt-1">
+                          ROI: {(result.action === 'discount' || result.action === 'sell') && calculateROIimprovement(result) > 0 && (
+                            <span className="text-green-600">+{calculateROIimprovement(result)}%</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {getActionBadge(result.action)}
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {result.action === 'sell' && 'Продать быстрее даже с убытком'}
+                          {result.action === 'discount' && `Скидка ${result.recommendedDiscount}% сэкономит на хранении`}
+                          {result.action === 'keep' && 'Скидка не принесет выгоды'}
+                        </div>
+                        {result.lowStock && (
+                          <div className="mt-1 text-xs text-rose-600 flex items-center">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Требуется пополнение
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </CardContent>
     </Card>
