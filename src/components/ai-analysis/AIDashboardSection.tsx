@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Brain, Loader2, Bot, AlertTriangle, RefreshCw } from "lucide-react";
+import { Brain, Loader2, Bot, AlertTriangle } from "lucide-react";
 import { analyzeDataWithAI, AnalysisContext, AIRecommendation } from "@/services/aiAnalysisService";
 import AIRecommendations from "./AIRecommendations";
 import { getSelectedStore, getSelectedAIModel } from "@/utils/storeUtils";
@@ -32,37 +32,12 @@ const AIDashboardSection = ({
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [aiModelError, setAiModelError] = useState<string | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
-  const [hasData, setHasData] = useState<boolean>(false);
-  
-  useEffect(() => {
-    // Проверяем наличие данных при получении пропсов
-    const hasValidData = (salesData && salesData.length > 0) || (ordersData && ordersData.length > 0);
-    console.log('Checking data availability:', { 
-      salesDataLength: salesData?.length || 0, 
-      ordersDataLength: ordersData?.length || 0,
-      hasValidData
-    });
-    setHasData(hasValidData);
-    
-    if (!hasValidData) {
-      setAnalysisError("Отсутствуют данные для анализа. Пожалуйста, загрузите данные о продажах или заказах на странице Заказы или Продажи.");
-    } else {
-      setAnalysisError(null);
-    }
-  }, [salesData, ordersData]);
   
   const runAnalysis = async () => {
     try {
       setIsLoading(true);
       setAiModelError(null);
       setAnalysisError(null);
-      
-      // Проверяем наличие данных для анализа
-      if (!hasData) {
-        setAnalysisError("Отсутствуют данные для анализа. Пожалуйста, перейдите на вкладки 'Заказы' или 'Продажи' и загрузите данные.");
-        setIsLoading(false);
-        return;
-      }
       
       // Проверяем, выбрана ли AI модель
       const selectedAIModel = getSelectedAIModel();
@@ -86,6 +61,13 @@ const AIDashboardSection = ({
           description: "Выберите основной магазин в разделе 'Магазины'",
           variant: "destructive"
         });
+        setIsLoading(false);
+        return;
+      }
+      
+      // Проверяем наличие данных для анализа
+      if (salesData.length === 0 && ordersData.length === 0) {
+        setAnalysisError("Отсутствуют данные для анализа. Пожалуйста, загрузите данные о продажах или заказах.");
         setIsLoading(false);
         return;
       }
@@ -181,10 +163,10 @@ const AIDashboardSection = ({
     }
     
     // При первой загрузке или при изменении данных запускаем анализ только если есть данные
-    if (hasData && selectedAIModel) {
+    if ((salesData.length > 0 || ordersData.length > 0) && selectedAIModel) {
       runAnalysis();
     }
-  }, [hasData]);
+  }, []);
   
   return (
     <div className="space-y-4">
@@ -203,28 +185,6 @@ const AIDashboardSection = ({
           <AlertDescription>
             {analysisError}
           </AlertDescription>
-          {!hasData && (
-            <div className="mt-4">
-              <p className="text-sm text-red-300 mb-2">Чтобы загрузить данные:</p>
-              <ol className="list-decimal list-inside text-sm text-red-300 space-y-1">
-                <li>Перейдите на вкладку "Заказы" или "Продажи"</li>
-                <li>Выберите период для анализа</li>
-                <li>Дождитесь загрузки данных</li>
-                <li>Вернитесь на вкладку "AI Анализ"</li>
-              </ol>
-              <div className="mt-3">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="text-red-300 border-red-800/50 hover:bg-red-900/20"
-                  onClick={() => window.location.hash = "#orders"}
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Перейти к заказам
-                </Button>
-              </div>
-            </div>
-          )}
         </Alert>
       )}
       

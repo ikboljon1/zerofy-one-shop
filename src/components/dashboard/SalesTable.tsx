@@ -1,29 +1,20 @@
-
 import React, { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Calendar, ShoppingBag, ArrowUpDown, PackageX, RefreshCw, AlertTriangle } from "lucide-react";
+import { Search, Calendar, ShoppingBag, ArrowUpDown, PackageX } from "lucide-react";
 import { WildberriesSale } from "@/types/store";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { formatCurrency } from "@/utils/formatCurrency";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface SalesTableProps {
   sales: WildberriesSale[];
   title?: string;
-  isLoading?: boolean;
-  onRefresh?: () => void;
 }
 
-const SalesTable: React.FC<SalesTableProps> = ({ 
-  sales, 
-  title = "Продажи", 
-  isLoading = false,
-  onRefresh
-}) => {
+const SalesTable: React.FC<SalesTableProps> = ({ sales, title = "Продажи" }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<keyof WildberriesSale>("date");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
@@ -86,7 +77,7 @@ const SalesTable: React.FC<SalesTableProps> = ({
           {title}
         </CardTitle>
         <CardDescription>
-          {sales.length > 0 ? `Всего продаж: ${sales.length}` : "Данные не загружены"}
+          Всего продаж: {sales.length}
         </CardDescription>
         <div className="flex gap-2 mt-2">
           <div className="relative flex-1">
@@ -98,45 +89,9 @@ const SalesTable: React.FC<SalesTableProps> = ({
               className="pl-8"
             />
           </div>
-          {onRefresh && (
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={onRefresh}
-              disabled={isLoading}
-            >
-              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            </Button>
-          )}
         </div>
       </CardHeader>
       <CardContent>
-        {sales.length === 0 && (
-          <Alert className="mb-4 bg-yellow-900/20 border-yellow-800/30 text-yellow-300">
-            <AlertTriangle className="h-4 w-4 text-yellow-500" />
-            <AlertDescription>
-              Данные о продажах не загружены. Проверьте, что:
-              <ol className="list-decimal list-inside text-sm mt-2 space-y-1">
-                <li>Выбран правильный магазин в разделе "Магазины"</li>
-                <li>Настроен API ключ для выбранного магазина</li>
-                <li>Выбран подходящий период для анализа</li>
-              </ol>
-              {onRefresh && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="mt-3 text-yellow-300 border-yellow-800/50 hover:bg-yellow-900/20" 
-                  onClick={onRefresh}
-                  disabled={isLoading}
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                  Обновить данные
-                </Button>
-              )}
-            </AlertDescription>
-          </Alert>
-        )}
-        
         <div className="rounded-md border">
           <Table>
             <TableHeader>
@@ -233,9 +188,7 @@ const SalesTable: React.FC<SalesTableProps> = ({
               ) : (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-4">
-                    {isLoading 
-                      ? "Загрузка данных..." 
-                      : (searchTerm ? "Продажи не найдены" : "Продаж нет")}
+                    {searchTerm ? "Продажи не найдены" : "Продаж нет"}
                   </TableCell>
                 </TableRow>
               )}

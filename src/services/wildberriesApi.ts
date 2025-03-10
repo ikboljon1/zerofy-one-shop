@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 import { WildberriesOrder, WildberriesSale } from "@/types/store";
 
@@ -89,7 +90,7 @@ const formatDateRFC3339 = (date: Date, isEnd: boolean = false): string => {
 
 /**
  * Загружает детальный отчет с Wildberries API с поддержкой пагинации
- * Реализация в соотвествии с функцией fetch_wb_report_detail из Python-скрипта
+ * Реализация в соответствии с функцией fetch_wb_report_detail из Python-скрипта
  */
 const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date, rrdid = 0, limit = 100000) => {
   try {
@@ -435,16 +436,8 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
   };
 };
 
-/**
- * Загружает заказы с Wildberries API с поддержкой пагинации согласно документации
- * @param apiKey Ключ API
- * @param dateFrom Начальная дата
- * @returns Массив заказов
- */
 export const fetchWildberriesOrders = async (apiKey: string, dateFrom: Date): Promise<WildberriesOrder[]> => {
   try {
-    console.log(`Загрузка заказов начиная с ${dateFrom.toISOString()}...`);
-    
     const formattedDate = formatDateRFC3339(dateFrom);
     const url = "https://statistics-api.wildberries.ru/api/v1/supplier/orders";
     
@@ -452,70 +445,21 @@ export const fetchWildberriesOrders = async (apiKey: string, dateFrom: Date): Pr
       "Authorization": apiKey,
     };
     
-    let allOrders: WildberriesOrder[] = [];
-    let lastChangeDate = formattedDate;
-    let hasMoreData = true;
-    let requestCount = 0;
+    const params = {
+      "dateFrom": formattedDate
+    };
     
-    while (hasMoreData && requestCount < 10) { // Ограничиваем 10 запросами для безопасности
-      requestCount++;
-      console.log(`Запрос заказов #${requestCount} начиная с даты ${lastChangeDate}...`);
-      
-      const params = {
-        "dateFrom": lastChangeDate,
-        "flag": 0
-      };
-      
-      const response = await axios.get(url, { headers, params });
-      const orders = response.data || [];
-      
-      console.log(`Получено ${orders.length} заказов в запросе #${requestCount}`);
-      
-      if (orders.length === 0) {
-        console.log('Больше заказов нет, завершаем запросы');
-        hasMoreData = false;
-        break;
-      }
-      
-      allOrders = [...allOrders, ...orders];
-      
-      // Получаем дату последнего изменения из последнего элемента для следующего запроса
-      const lastOrder = orders[orders.length - 1];
-      if (lastOrder && lastOrder.lastChangeDate) {
-        lastChangeDate = lastOrder.lastChangeDate;
-        console.log(`Следующий запрос будет с даты: ${lastChangeDate}`);
-        
-        // Делаем паузу 1 секунду между запросами, чтобы не превысить лимит API
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } else {
-        hasMoreData = false;
-      }
-      
-      // Если получили меньше максимального количества записей, значит больше нет
-      if (orders.length < 80000) {
-        console.log('Получено меньше максимального количества записей, завершаем запросы');
-        hasMoreData = false;
-      }
-    }
-    
-    console.log(`Загружено всего ${allOrders.length} заказов`);
-    return allOrders;
+    console.log("Fetching orders from Wildberries API...");
+    const response = await axios.get(url, { headers, params });
+    return response.data || [];
   } catch (error) {
-    console.error("Ошибка при загрузке заказов:", error);
+    console.error("Error fetching orders:", error);
     return [];
   }
 };
 
-/**
- * Загружает продажи с Wildberries API с поддержкой пагинации согласно документации
- * @param apiKey Ключ API
- * @param dateFrom Начальная дата
- * @returns Массив продаж
- */
 export const fetchWildberriesSales = async (apiKey: string, dateFrom: Date): Promise<WildberriesSale[]> => {
   try {
-    console.log(`Загрузка продаж начиная с ${dateFrom.toISOString()}...`);
-    
     const formattedDate = formatDateRFC3339(dateFrom);
     const url = "https://statistics-api.wildberries.ru/api/v1/supplier/sales";
     
@@ -523,56 +467,15 @@ export const fetchWildberriesSales = async (apiKey: string, dateFrom: Date): Pro
       "Authorization": apiKey,
     };
     
-    let allSales: WildberriesSale[] = [];
-    let lastChangeDate = formattedDate;
-    let hasMoreData = true;
-    let requestCount = 0;
+    const params = {
+      "dateFrom": formattedDate
+    };
     
-    while (hasMoreData && requestCount < 10) { // Ограничиваем 10 запросами для безопасности
-      requestCount++;
-      console.log(`Запрос продаж #${requestCount} начиная с даты ${lastChangeDate}...`);
-      
-      const params = {
-        "dateFrom": lastChangeDate,
-        "flag": 0
-      };
-      
-      const response = await axios.get(url, { headers, params });
-      const sales = response.data || [];
-      
-      console.log(`Получено ${sales.length} продаж в запросе #${requestCount}`);
-      
-      if (sales.length === 0) {
-        console.log('Больше продаж нет, завершаем запросы');
-        hasMoreData = false;
-        break;
-      }
-      
-      allSales = [...allSales, ...sales];
-      
-      // Получаем дату последнего изменения из последнего элемента для следующего запроса
-      const lastSale = sales[sales.length - 1];
-      if (lastSale && lastSale.lastChangeDate) {
-        lastChangeDate = lastSale.lastChangeDate;
-        console.log(`Следующий запрос будет с даты: ${lastChangeDate}`);
-        
-        // Делаем паузу 1 секунду между запросами, чтобы не превысить лимит API
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } else {
-        hasMoreData = false;
-      }
-      
-      // Если получили меньше максимального количества записей, значит больше нет
-      if (sales.length < 80000) {
-        console.log('Получено меньше максимального количества записей, завершаем запросы');
-        hasMoreData = false;
-      }
-    }
-    
-    console.log(`Загружено всего ${allSales.length} продаж`);
-    return allSales;
+    console.log("Fetching sales from Wildberries API...");
+    const response = await axios.get(url, { headers, params });
+    return response.data || [];
   } catch (error) {
-    console.error("Ошибка при загрузке продаж:", error);
+    console.error("Error fetching sales:", error);
     return [];
   }
 };
@@ -593,29 +496,22 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       return getDemoData();
     }
     
-    if (!apiKey) {
-      console.error('API key is missing');
-      return getDemoData();
-    }
-    
     // 1. Получаем детальный отчет через пагинацию (в соответствии с Python-скриптом)
     console.log("Starting to fetch all report details with pagination...");
     const reportData = await fetchAllReportDetails(apiKey, dateFrom, dateTo);
     console.log(`Completed fetching all report details. Total records: ${reportData.length}`);
     
     // 2. Получаем данные о платной приемке (в соответствии с Python-скриптом)
+    const formattedDateFrom = formatDate(dateFrom);
+    const formattedDateTo = formatDate(dateTo);
     const paidAcceptanceData = await fetchPaidAcceptanceReport(apiKey, dateFrom, dateTo);
     
-    // 3. Получаем данные о заказах и продажах с использованием улучшенных функций
-    console.log("Fetching orders and sales data with pagination...");
+    // 3. Получаем данные о заказах и продажах
     const ordersData = await fetchWildberriesOrders(apiKey, dateFrom);
     const salesData = await fetchWildberriesSales(apiKey, dateFrom);
     
-    console.log(`Fetched ${ordersData.length} orders and ${salesData.length} sales`);
-    
     // 4. Если данных нет, возвращаем демо-данные
-    if ((!reportData || reportData.length === 0) && 
-        ordersData.length === 0 && salesData.length === 0) {
+    if (!reportData || reportData.length === 0) {
       console.log('No data received from Wildberries API, using demo data');
       return getDemoData();
     }
@@ -626,36 +522,6 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
     
     if (!result || !result.metrics) {
       console.log('Failed to calculate metrics, using demo data');
-      
-      // Если данные отчета отсутствуют, но есть заказы или продажи, создаем базовую структуру
-      if (ordersData.length > 0 || salesData.length > 0) {
-        const basicResponse: WildberriesResponse = {
-          currentPeriod: {
-            sales: 0,
-            transferred: 0,
-            expenses: {
-              total: 0,
-              logistics: 0,
-              storage: 0,
-              penalties: 0,
-              acceptance: 0,
-              advertising: 0,
-            },
-            netProfit: 0,
-            acceptance: 0
-          },
-          dailySales: [],
-          productSales: [],
-          productReturns: [],
-          orders: ordersData,
-          sales: salesData,
-          warehouseDistribution: calculateWarehouseDistribution(ordersData),
-          regionDistribution: calculateRegionDistribution(ordersData)
-        };
-        
-        return basicResponse;
-      }
-      
       return getDemoData();
     }
     
@@ -701,11 +567,44 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       .map(([date, { sales, previousSales }]) => ({ date, sales, previousSales }))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
-    // 8. Рассчитываем распределение по складам и регионам
-    const warehouseDistribution = calculateWarehouseDistribution(ordersData);
-    const regionDistribution = calculateRegionDistribution(ordersData);
+    // 8. Рассчитываем распределение по складам
+    const warehouseCounts: Record<string, number> = {};
+    const totalOrders = ordersData.length;
     
-    // 9. Формируем итоговый ответ с использованием метрик из Python-скрипта
+    ordersData.forEach(order => {
+      if (order.warehouseName) {
+        warehouseCounts[order.warehouseName] = (warehouseCounts[order.warehouseName] || 0) + 1;
+      }
+    });
+    
+    const warehouseDistribution = Object.entries(warehouseCounts)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: (count / totalOrders) * 100
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+    
+    // 9. Рассчитываем распределение по регионам
+    const regionCounts: Record<string, number> = {};
+    
+    ordersData.forEach(order => {
+      if (order.regionName) {
+        regionCounts[order.regionName] = (regionCounts[order.regionName] || 0) + 1;
+      }
+    });
+    
+    const regionDistribution = Object.entries(regionCounts)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: (count / totalOrders) * 100
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+    
+    // 10. Формируем итоговый ответ с использованием метрик из Python-скрипта
     const response: WildberriesResponse = {
       currentPeriod: {
         sales: metrics.total_sales,
@@ -743,56 +642,6 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
     return getDemoData();
   }
 };
-
-/**
- * Рассчитывает распределение заказов по складам
- */
-function calculateWarehouseDistribution(orders: WildberriesOrder[]) {
-  const warehouseCounts: Record<string, number> = {};
-  const totalOrders = orders.length;
-  
-  orders.forEach(order => {
-    if (order.warehouseName) {
-      warehouseCounts[order.warehouseName] = (warehouseCounts[order.warehouseName] || 0) + 1;
-    }
-  });
-  
-  const warehouseDistribution = Object.entries(warehouseCounts)
-    .map(([name, count]) => ({
-      name,
-      count,
-      percentage: totalOrders > 0 ? (count / totalOrders) * 100 : 0
-    }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
-  
-  return warehouseDistribution;
-}
-
-/**
- * Рассчитывает распределение заказов по регионам
- */
-function calculateRegionDistribution(orders: WildberriesOrder[]) {
-  const regionCounts: Record<string, number> = {};
-  const totalOrders = orders.length;
-  
-  orders.forEach(order => {
-    if (order.regionName) {
-      regionCounts[order.regionName] = (regionCounts[order.regionName] || 0) + 1;
-    }
-  });
-  
-  const regionDistribution = Object.entries(regionCounts)
-    .map(([name, count]) => ({
-      name,
-      count,
-      percentage: totalOrders > 0 ? (count / totalOrders) * 100 : 0
-    }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
-  
-  return regionDistribution;
-}
 
 /**
  * Возвращает демо-данные для тестирования и отладки
