@@ -115,6 +115,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       product.costPrice || 0,
       product.discountedPrice || 0,
       storagePerUnit,
+      product.quantity || 0,
       dailySalesRate
     );
     

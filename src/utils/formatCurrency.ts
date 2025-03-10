@@ -1,3 +1,4 @@
+
 /**
  * Форматирует число как валюту (без символа рубля)
  * @param value Число для форматирования
@@ -102,6 +103,8 @@ interface ProfitAnalysis {
   };
   recommendedAction: string;
   recommendedPrice: number;
+  priceChange: number;
+  margin: number;
 }
 
 /**
@@ -126,7 +129,9 @@ export const analyzeProfitability = (
         expectedSalesIncrease: 0 
       },
       recommendedAction: "Укажите корректную себестоимость и количество",
-      recommendedPrice: currentPrice
+      recommendedPrice: currentPrice,
+      priceChange: 0,
+      margin: 0
     };
   }
 
@@ -139,6 +144,7 @@ export const analyzeProfitability = (
   );
   const totalProfitNoDiscount = (currentPrice - costPrice) * quantity - storageCostNoDiscount;
   const roiNoDiscount = (totalProfitNoDiscount / (costPrice * quantity)) * 100;
+  const marginNoDiscount = ((currentPrice - costPrice) / costPrice) * 100;
 
   // Расчет со скидкой
   const discountedPrice = currentPrice * (1 - discountPercent / 100);
@@ -158,6 +164,7 @@ export const analyzeProfitability = (
   // Сравнение и рекомендации
   let recommendedAction = "";
   let recommendedPrice = currentPrice;
+  let priceChange = 0;
 
   const profitDifference = totalProfitWithDiscount - totalProfitNoDiscount;
   const storageSavings = storageCostNoDiscount - storageCostWithDiscount;
@@ -166,23 +173,29 @@ export const analyzeProfitability = (
   if (currentPrice <= costPrice) {
     recommendedAction = `Срочно повысить цену! Текущая цена ниже себестоимости на ${formatCurrency(costPrice - currentPrice)} ₽`;
     recommendedPrice = costPrice * 1.2; // Минимальная маржа 20%
+    priceChange = recommendedPrice - currentPrice;
   } else if (totalProfitNoDiscount < 0) {
     if (storageCostNoDiscount > quantity * (currentPrice - costPrice) * 0.3) {
       recommendedAction = "Срочно снизить остатки! Затраты на хранение превышают 30% от возможной прибыли";
       recommendedPrice = discountedPrice;
+      priceChange = recommendedPrice - currentPrice;
     } else {
       recommendedAction = `Текущая цена убыточна. Рекомендуется повысить до ${formatCurrency(costPrice * 1.3)} ₽`;
       recommendedPrice = costPrice * 1.3;
+      priceChange = recommendedPrice - currentPrice;
     }
   } else if (storageSavings > revenueLoss) {
     recommendedAction = "Рекомендуется снизить цену. Экономия на хранении превысит потери от скидки";
     recommendedPrice = discountedPrice;
+    priceChange = recommendedPrice - currentPrice;
   } else if (roiWithDiscount > roiNoDiscount) {
     recommendedAction = "Рекомендуется применить скидку для ускорения продаж";
     recommendedPrice = discountedPrice;
+    priceChange = recommendedPrice - currentPrice;
   } else {
     recommendedAction = "Сохранить текущую цену";
     recommendedPrice = currentPrice;
+    priceChange = 0;
   }
 
   return {
@@ -200,7 +213,9 @@ export const analyzeProfitability = (
       expectedSalesIncrease
     },
     recommendedAction,
-    recommendedPrice
+    recommendedPrice,
+    priceChange,
+    margin: marginNoDiscount
   };
 };
 
