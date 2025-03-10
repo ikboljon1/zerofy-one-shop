@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,7 +14,8 @@ import {
   calculateDiscountSavings, 
   calculateOptimalDiscount, 
   determineRecommendedAction,
-  roundToTwoDecimals
+  roundToTwoDecimals,
+  calculateStorageCosts
 } from '@/utils/formatCurrency';
 import { WarehouseRemainItem, PaidStorageItem } from '@/types/supplies';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -318,7 +320,12 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       
       const daysOfInventory = dailySales > 0 ? Math.round(currentStock / dailySales) : 999;
       
-      const totalStorageCost = storageCost * daysOfInventory;
+      // Используем более точную функцию calculateStorageCosts вместо упрощенного расчета
+      const totalStorageCost = calculateStorageCosts(
+        currentStock,
+        storageCost,
+        dailySales
+      );
       
       const profitPerItem = sellingPrice - costPrice;
       const profitWithoutDiscount = profitPerItem * currentStock - totalStorageCost;
@@ -328,7 +335,13 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       
       const salesAccelerationFactor = 1.5;
       const discountedDaysOfInventory = Math.round(daysOfInventory / salesAccelerationFactor);
-      const discountedStorageCost = storageCost * discountedDaysOfInventory;
+      
+      // Для расчета хранения со скидкой также используем более точную функцию
+      const discountedStorageCost = calculateStorageCosts(
+        currentStock,
+        storageCost,
+        dailySales * salesAccelerationFactor
+      );
       
       const profitWithDiscount = profitWithDiscountPerItem * currentStock - discountedStorageCost;
       
@@ -381,9 +394,9 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         profitWithDiscount,
         savingsWithDiscount,
         action,
-        lowStock,
-        stockLevel,
-        stockLevelPercentage,
+        lowStock: currentStock <= threshold,
+        stockLevel: currentStock <= threshold ? 'low' : (currentStock <= threshold * 3 ? 'medium' : 'high'),
+        stockLevelPercentage: Math.max(0, Math.min(100, Math.round((currentStock / (threshold * 2)) * 100))),
         projectedStockoutDate
       };
     });
