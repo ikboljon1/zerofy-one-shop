@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { subDays } from "date-fns";
 import { AlertCircle, Target, PackageX, Tag, Loader2, BadgePercent } from "lucide-react";
@@ -13,7 +12,6 @@ import DeductionsChart from "./components/DeductionsChart";
 import PieChartCard from "./components/PieChartCard";
 import ExpenseBreakdown from "./components/ExpenseBreakdown";
 import ProductList from "./components/ProductList";
-import ProfitabilityTips from "./components/ProfitabilityTips";
 import AdvertisingOptimization from "./components/AdvertisingOptimization";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -402,6 +400,7 @@ const AnalyticsSection = () => {
           
           setPenalties([]);
           setDeductions([]);
+          setProductAdvertisingData([]);
           setReturns([]);
         }
       } catch (dbError) {
@@ -419,6 +418,7 @@ const AnalyticsSection = () => {
         
         setPenalties([]);
         setDeductions([]);
+        setProductAdvertisingData([]);
         setReturns([]);
       }
     } finally {
@@ -518,9 +518,6 @@ const AnalyticsSection = () => {
           <SalesChart data={data} />
           <DeductionsChart data={deductionsTimeline} />
         </div>
-
-        {/* Profitability Tips Section */}
-        <ProfitabilityTips />
 
         {/* Advertising Optimization Section */}
         <AdvertisingOptimization />
