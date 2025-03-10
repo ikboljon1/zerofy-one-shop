@@ -24,7 +24,6 @@ import SalesMetrics from "./SalesMetrics";
 import OrdersChart from "./OrdersChart";
 import SalesChart from "./SalesChart";
 import TipsSection from "./TipsSection";
-import WarehouseEfficiencyChart from "./WarehouseEfficiencyChart";
 
 const Dashboard = () => {
   const { toast } = useToast();
