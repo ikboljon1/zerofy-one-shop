@@ -61,12 +61,31 @@ export const calculateStorageCosts = (
 };
 
 /**
+ * Рассчитывает комиссию WB и затраты на логистику
+ * @param price Цена товара
+ * @param commissionPercent Процент комиссии WB
+ * @param logisticCost Фиксированная стоимость логистики
+ * @returns Общие затраты на комиссию и логистику
+ */
+export const calculateWBFeesAndLogistics = (
+  price: number,
+  commissionPercent: number,
+  logisticCost: number
+): number => {
+  const commission = price * (commissionPercent / 100);
+  return commission + logisticCost;
+};
+
+/**
  * Рассчитывает предполагаемую экономию при предоставлении скидки
  * @param originalPrice Исходная цена товара
  * @param discountPercent Процент скидки
  * @param quantity Количество товара
  * @param dailyStorageCost Ежедневная стоимость хранения
  * @param averageDailySales Средняя продаж в день
+ * @param commissionPercent Процент комиссии WB
+ * @param logisticCost Стоимость логистики
+ * @param increasedSalesMultiplier Множитель увеличения скорости продаж при скидке
  * @returns Экономия
  */
 export const calculateDiscountSavings = (
@@ -75,6 +94,8 @@ export const calculateDiscountSavings = (
   quantity: number,
   dailyStorageCost: number,
   averageDailySales: number,
+  commissionPercent: number = 15,
+  logisticCost: number = 100,
   increasedSalesMultiplier = 1.5
 ): number => {
   if (quantity <= 0 || averageDailySales <= 0) return 0;
@@ -99,8 +120,20 @@ export const calculateDiscountSavings = (
   // Экономия на хранении
   const storageSavings = storageCostWithoutDiscount - storageCostWithDiscount;
   
-  // Потеря в выручке из-за скидки
-  const revenueLoss = (originalPrice * (discountPercent / 100)) * quantity;
+  // Цена со скидкой
+  const discountedPrice = originalPrice * (1 - discountPercent / 100);
+  
+  // Комиссия WB и логистика без скидки
+  const feesWithoutDiscount = calculateWBFeesAndLogistics(originalPrice, commissionPercent, logisticCost);
+  
+  // Комиссия WB и логистика со скидкой
+  const feesWithDiscount = calculateWBFeesAndLogistics(discountedPrice, commissionPercent, logisticCost);
+  
+  // Дополнительные затраты на комиссию при скидке для каждой единицы товара
+  const additionalFeesPerItem = feesWithDiscount - feesWithoutDiscount;
+  
+  // Потеря в выручке из-за скидки + дополнительные затраты на комиссию
+  const revenueLoss = ((originalPrice - discountedPrice) + additionalFeesPerItem) * quantity;
   
   // Итоговая экономия (может быть отрицательной, если скидка невыгодна)
   return storageSavings - revenueLoss;
@@ -113,6 +146,8 @@ export const calculateDiscountSavings = (
  * @param quantity Количество товара
  * @param dailyStorageCost Ежедневная стоимость хранения
  * @param averageDailySales Средняя продаж в день
+ * @param commissionPercent Процент комиссии WB
+ * @param logisticCost Стоимость логистики
  * @returns Оптимальный процент скидки
  */
 export const calculateOptimalDiscount = (
@@ -120,10 +155,13 @@ export const calculateOptimalDiscount = (
   costPrice: number,
   quantity: number,
   dailyStorageCost: number,
-  averageDailySales: number
+  averageDailySales: number,
+  commissionPercent: number = 15,
+  logisticCost: number = 100
 ): number => {
-  // Минимальная допустимая цена - должна покрывать себестоимость
-  const minPrice = costPrice * 1.05; // +5% к себестоимости
+  // Минимальная допустимая цена - должна покрывать себестоимость + комиссию + логистику
+  const minFees = calculateWBFeesAndLogistics(0, commissionPercent, logisticCost);
+  const minPrice = (costPrice + minFees) * 1.05; // +5% к минимальной цене с учетом комиссии и логистики
   
   // Максимальная допустимая скидка в процентах
   const maxDiscountPercent = Math.floor(((originalPrice - minPrice) / originalPrice) * 100);
@@ -141,7 +179,9 @@ export const calculateOptimalDiscount = (
       discount,
       quantity,
       dailyStorageCost,
-      averageDailySales
+      averageDailySales,
+      commissionPercent,
+      logisticCost
     );
     
     if (savings > bestSavings) {
