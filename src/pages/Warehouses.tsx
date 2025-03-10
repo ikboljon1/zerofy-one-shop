@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -48,7 +47,7 @@ const Warehouses: React.FC = () => {
   const loadDataForActiveTab = (apiKey: string, tab: string) => {
     if (tab === 'overview') {
       loadWarehouseRemains(apiKey);
-      // Also load storage data for profitability analysis when on overview
+      // Также загружаем данные о хранении для анализа рентабельности на главной вкладке
       loadPaidStorageData(apiKey);
     } else if (tab === 'storage') {
       loadPaidStorageData(apiKey);
@@ -74,7 +73,7 @@ const Warehouses: React.FC = () => {
       
       setWarehouseRemains(data);
       
-      // Update storage costs once we have both warehouse data and storage data
+      // Обновляем данные о стоимости хранения, если у нас уже есть данные о платном хранении
       if (paidStorageData.length > 0) {
         const costs = calculateDailyStorageCosts(data, paidStorageData);
         setDailyStorageCosts(costs);
@@ -99,7 +98,7 @@ const Warehouses: React.FC = () => {
       setLoading(prev => ({ ...prev, paidStorage: true }));
       toast.info('Запрос отчета о платном хранении. Это может занять некоторое время...');
       
-      // Get 7 days of data for a better average
+      // Получаем данные за 7 дней для лучшего усреднения
       const data = await fetchFullPaidStorageReport(
         apiKey, 
         new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], 
@@ -108,7 +107,7 @@ const Warehouses: React.FC = () => {
       
       setPaidStorageData(data);
       
-      // Calculate daily storage costs if we already have warehouse data
+      // Рассчитываем стоимость ежедневного хранения, если у нас уже есть данные о товарах на складе
       if (warehouseRemains.length > 0) {
         const costs = calculateDailyStorageCosts(warehouseRemains, data);
         setDailyStorageCosts(costs);
@@ -126,8 +125,8 @@ const Warehouses: React.FC = () => {
   const calculateAverageDailySales = () => {
     const result: Record<number, number> = {};
     warehouseRemains.forEach(item => {
-      // For now, this is a placeholder that should be replaced with real sales data
-      // In a future implementation, this should be fetched from the sales API
+      // Пока это заглушка, которую нужно заменить реальными данными о продажах
+      // В будущей реализации это должно быть получено из API продаж
       result[item.nmId] = Math.random() * 2;
     });
     return result;
