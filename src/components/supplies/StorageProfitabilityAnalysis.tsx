@@ -9,7 +9,13 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Search, ArrowUpDown, Package, TrendingDown, Banknote, WarehouseIcon, AlertTriangle, Clock, ArrowDown, ArrowUp } from 'lucide-react';
-import { formatCurrency } from '@/utils/formatCurrency';
+import { 
+  formatCurrency, 
+  calculateDiscountSavings, 
+  calculateOptimalDiscount, 
+  determineRecommendedAction,
+  roundToTwoDecimals
+} from '@/utils/formatCurrency';
 import { WarehouseRemainItem, PaidStorageItem } from '@/types/supplies';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -102,7 +108,16 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       
       initialDailySales[item.nmId] = averageDailySalesRate[item.nmId] || 0.1; // Default to 0.1 items per day
       initialStorageCosts[item.nmId] = itemStorageCost;
-      initialDiscountLevels[item.nmId] = 30; // Default to 30% discount
+      
+      // Вычисляем оптимальную скидку для каждого товара
+      const optimalDiscount = calculateOptimalDiscount(
+        item.price || 0,
+        costPrices[item.nmId] || 0,
+        item.quantityWarehousesFull || 0,
+        itemStorageCost,
+        averageDailySalesRate[item.nmId] || 0.1
+      );
+      initialDiscountLevels[item.nmId] = optimalDiscount; // Используем рассчитанное значение вместо фиксированных 30%
       
       // Calculate low stock threshold (default: 7 days of sales)
       const salesRate = averageDailySalesRate[item.nmId] || 0.1;
@@ -113,7 +128,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     setStorageCostRates(prevState => ({...prevState, ...initialStorageCosts}));
     setDiscountLevels(prevState => ({...prevState, ...initialDiscountLevels}));
     setLowStockThreshold(prevState => ({...prevState, ...initialLowStockThresholds}));
-  }, [warehouseItems, averageDailySalesRate, dailyStorageCost, paidStorageData]);
+  }, [warehouseItems, averageDailySalesRate, dailyStorageCost, paidStorageData, costPrices]);
 
   // Calculate profitability analysis
   const analysisResults = useMemo(() => {
@@ -143,8 +158,10 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       const discountedPrice = sellingPrice * (1 - discountPercentage / 100);
       const profitWithDiscountPerItem = discountedPrice - costPrice;
       
-      // Calculate storage cost savings with quicker sales (assuming 50% faster sales with discount)
-      const discountedDaysOfInventory = Math.round(daysOfInventory * 0.5);
+      // Calculate storage cost savings with quicker sales (assuming faster sales with discount)
+      // Используем коэффициент 1.5 для скорости продаж со скидкой (в 1.5 раза быстрее)
+      const salesAccelerationFactor = 1.5;
+      const discountedDaysOfInventory = Math.round(daysOfInventory / salesAccelerationFactor);
       const discountedStorageCost = storageCost * discountedDaysOfInventory;
       
       // Calculate total profit with discount (including reduced storage costs)
@@ -153,8 +170,15 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       // Calculate storage cost savings
       const storageSavings = totalStorageCost - discountedStorageCost;
       
-      // Calculate total benefit of discounting
-      const savingsWithDiscount = profitWithDiscount - profitWithoutDiscount;
+      // Используем новую функцию для расчета экономии от скидки
+      const savingsWithDiscount = calculateDiscountSavings(
+        sellingPrice,
+        discountPercentage,
+        currentStock,
+        storageCost,
+        dailySales,
+        salesAccelerationFactor
+      );
       
       // Determine low stock status
       const lowStock = currentStock <= threshold;
@@ -178,23 +202,13 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         ? new Date(Date.now() + (daysOfInventory * 24 * 60 * 60 * 1000))
         : undefined;
       
-      // Determine recommended action
-      let action: 'sell' | 'discount' | 'keep';
-      
-      if (daysOfInventory > 60 && profitWithDiscountPerItem > 0) {
-        // If inventory will last more than 60 days and we're still profitable with a discount,
-        // recommend discounting to reduce storage costs
-        action = 'discount';
-      } else if (profitWithDiscountPerItem < 0 && profitPerItem < 0) {
-        // If even without discount we're losing money, sell as quickly as possible
-        action = 'sell';
-      } else if (savingsWithDiscount > 0) {
-        // If discounting provides a net benefit, recommend discount
-        action = 'discount';
-      } else {
-        // Otherwise, keep current pricing
-        action = 'keep';
-      }
+      // Используем функцию для определения рекомендуемого действия
+      const action = determineRecommendedAction(
+        daysOfInventory,
+        savingsWithDiscount,
+        profitWithDiscount,
+        profitWithoutDiscount
+      );
       
       return {
         remainItem: item,
@@ -276,6 +290,24 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         item.projectedStockoutDate && item.projectedStockoutDate <= targetDate
       ).length : 0;
     
+    // ROI от оптимизации запасов
+    const totalInvestment = analysisResults.reduce((sum, item) => {
+      return sum + (item.costPrice * (item.remainItem.quantityWarehousesFull || 0));
+    }, 0);
+    
+    const currentROI = totalInvestment > 0 ? 
+      (analysisResults.reduce((sum, item) => sum + item.profitWithoutDiscount, 0) / totalInvestment) * 100 : 0;
+    
+    const optimizedROI = totalInvestment > 0 ? 
+      (analysisResults.reduce((sum, item) => {
+        // Используем профит с учетом скидки только если действие - "discount" или "sell"
+        const profit = (item.action === 'discount' || item.action === 'sell') ? 
+          item.profitWithDiscount : item.profitWithoutDiscount;
+        return sum + profit;
+      }, 0) / totalInvestment) * 100 : 0;
+    
+    const roiImprovement = optimizedROI - currentROI;
+    
     return {
       totalItems,
       lowStockItems,
@@ -284,7 +316,10 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       keepItems,
       totalStorageCost,
       potentialSavings,
-      itemsStockingOutBeforeTarget
+      itemsStockingOutBeforeTarget,
+      currentROI: roundToTwoDecimals(currentROI),
+      optimizedROI: roundToTwoDecimals(optimizedROI),
+      roiImprovement: roundToTwoDecimals(roiImprovement)
     };
   }, [analysisResults, targetDate]);
 
@@ -302,6 +337,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     localStorage.setItem('product_cost_prices', JSON.stringify(costPrices));
     localStorage.setItem('product_selling_prices', JSON.stringify(sellingPrices));
     localStorage.setItem('product_low_stock_thresholds', JSON.stringify(lowStockThreshold));
+    
+    toast.success('Данные успешно сохранены');
   };
 
   // Update cost price for a product
@@ -414,6 +451,17 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     });
   };
 
+  // Calculate ROI improvement
+  const calculateROIimprovement = (result: AnalysisResult) => {
+    const investment = result.costPrice * (result.remainItem.quantityWarehousesFull || 0);
+    if (investment <= 0) return 0;
+    
+    const currentROI = (result.profitWithoutDiscount / investment) * 100;
+    const optimizedROI = (result.profitWithDiscount / investment) * 100;
+    
+    return roundToTwoDecimals(optimizedROI - currentROI);
+  };
+
   return (
     <Card className="overflow-hidden bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
       <CardHeader className="bg-white/50 dark:bg-background/50 backdrop-blur-sm border-b pb-8">
@@ -490,8 +538,13 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
             <CardContent className="p-6">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-sm text-muted-foreground">Затраты на хранение</p>
-                  <h3 className="text-2xl font-bold mt-1">{formatCurrency(analysisSummary.totalStorageCost)}</h3>
+                  <p className="text-sm text-muted-foreground">Рентабельность</p>
+                  <h3 className="text-2xl font-bold mt-1">
+                    {analysisSummary.optimizedROI.toFixed(2)}%
+                    {analysisSummary.roiImprovement > 0 && (
+                      <span className="text-sm text-green-600 ml-2">+{analysisSummary.roiImprovement.toFixed(2)}%</span>
+                    )}
+                  </h3>
                 </div>
                 <div className="bg-purple-100 dark:bg-purple-800/30 p-2 rounded-lg">
                   <WarehouseIcon className="h-5 w-5 text-purple-500 dark:text-purple-400" />
@@ -499,8 +552,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
               </div>
               <div className="mt-4 pt-4 border-t border-purple-100 dark:border-purple-800/30">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs">В среднем на товар</span>
-                  <span className="text-xs font-medium">{formatCurrency(analysisSummary.totalStorageCost / Math.max(1, analysisSummary.totalItems))}</span>
+                  <span className="text-xs">Текущая</span>
+                  <span className="text-xs font-medium">{analysisSummary.currentROI.toFixed(2)}%</span>
                 </div>
               </div>
             </CardContent>
@@ -749,6 +802,11 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                         </div>
                         <div className="text-xs text-muted-foreground">
                           При скидке {result.recommendedDiscount}%
+                        </div>
+                        <div className="text-xs mt-1">
+                          ROI: {(result.action === 'discount' || result.action === 'sell') && calculateROIimprovement(result) > 0 && (
+                            <span className="text-green-600">+{calculateROIimprovement(result)}%</span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
