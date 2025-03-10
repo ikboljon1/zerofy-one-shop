@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Search, ArrowUpDown, Package, TrendingDown, Banknote, WarehouseIcon, AlertTriangle, Clock, ArrowDown, ArrowUp } from 'lucide-react';
+import { Search, ArrowUpDown, Package, TrendingDown, Banknote, WarehouseIcon, AlertTriangle, Clock, ArrowDown, ArrowUp, Download, RefreshCw } from 'lucide-react';
 import { 
   formatCurrency, 
   calculateDiscountSavings, 
@@ -22,12 +21,17 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
+import axios from 'axios';
 
 interface StorageProfitabilityAnalysisProps {
   warehouseItems: WarehouseRemainItem[];
-  paidStorageData?: PaidStorageItem[]; // Add paidStorageData prop
+  paidStorageData?: PaidStorageItem[]; 
   averageDailySalesRate?: Record<number, number>; // nmId -> average daily sales
   dailyStorageCost?: Record<number, number>; // nmId -> daily storage cost
+  selectedStore?: { 
+    id: string;
+    apiKey: string;
+  } | null;
 }
 
 interface AnalysisResult {
@@ -55,6 +59,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
   paidStorageData = [],
   averageDailySalesRate = {},
   dailyStorageCost = {},
+  selectedStore = null,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState<'all' | 'discount' | 'keep' | 'low-stock'>('all');
@@ -71,6 +76,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     key: keyof AnalysisResult | '',
     direction: 'asc' | 'desc'
   }>({ key: '', direction: 'asc' });
+  const [isLoadingPrices, setIsLoadingPrices] = useState(false);
+  const [isLoadingSales, setIsLoadingSales] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -128,6 +135,174 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     setDiscountLevels(prevState => ({...prevState, ...initialDiscountLevels}));
     setLowStockThreshold(prevState => ({...prevState, ...initialLowStockThresholds}));
   }, [warehouseItems, averageDailySalesRate, dailyStorageCost, paidStorageData, costPrices]);
+
+  const fetchProductPrices = async () => {
+    if (!selectedStore?.apiKey || warehouseItems.length === 0) {
+      toast({
+        title: "Ошибка",
+        description: "Не выбран магазин или нет данных о товарах",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsLoadingPrices(true);
+    try {
+      toast({
+        title: "Загрузка цен товаров",
+        description: "Это может занять некоторое время...",
+      });
+      
+      const nmIds = warehouseItems.map(item => item.nmId);
+      const chunkSize = 20;
+      const priceMap: Record<number, number> = {};
+      
+      for (let i = 0; i < nmIds.length; i += chunkSize) {
+        const chunk = nmIds.slice(i, i + chunkSize);
+        const url = new URL("https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter");
+        url.searchParams.append("limit", "1000");
+        url.searchParams.append("nmId", chunk.join(','));
+        
+        const response = await fetch(url.toString(), {
+          method: "GET",
+          headers: {
+            "Authorization": selectedStore.apiKey,
+            "Content-Type": "application/json"
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Ошибка при загрузке цен: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.data?.listGoods) {
+          data.data.listGoods.forEach((item: any) => {
+            if (item.sizes && item.sizes.length > 0) {
+              const firstSize = item.sizes[0];
+              const discountedPrice = firstSize.discountedPrice || 0;
+              priceMap[item.nmID] = discountedPrice;
+            }
+          });
+        }
+        
+        // Задержка для избежания ограничений API
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      setSellingPrices(prevPrices => ({...prevPrices, ...priceMap}));
+      localStorage.setItem('product_selling_prices', JSON.stringify({...JSON.parse(localStorage.getItem('product_selling_prices') || '{}'), ...priceMap}));
+      
+      toast({
+        title: "Успешно",
+        description: `Загружены цены для ${Object.keys(priceMap).length} товаров`,
+      });
+    } catch (error) {
+      console.error("Ошибка при загрузке цен:", error);
+      toast({
+        title: "Ошибка",
+        description: error instanceof Error ? error.message : "Не удалось загрузить цены товаров",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingPrices(false);
+    }
+  };
+  
+  const fetchAverageSales = async () => {
+    if (!selectedStore?.apiKey || warehouseItems.length === 0) {
+      toast({
+        title: "Ошибка",
+        description: "Не выбран магазин или нет данных о товарах",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsLoadingSales(true);
+    try {
+      toast({
+        title: "Расчет среднего числа продаж",
+        description: "Анализ данных о продажах за последние 30 дней...",
+      });
+      
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 30);
+      
+      const url = new URL("https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod");
+      url.searchParams.append("dateFrom", startDate.toISOString().split('T')[0]);
+      url.searchParams.append("dateTo", endDate.toISOString().split('T')[0]);
+      url.searchParams.append("limit", "100000");
+      
+      const response = await fetch(url.toString(), {
+        headers: {
+          "Authorization": selectedStore.apiKey,
+          "Content-Type": "application/json"
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Ошибка при загрузке данных о продажах: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Группировка продаж по nmId и подсчет количества продаж
+      const salesMap: Record<number, number> = {};
+      const salesDates: Record<number, Set<string>> = {}; // Для отслеживания уникальных дат продаж
+
+      data.forEach((item: any) => {
+        if (item.doc_type_name === "Продажа") {
+          const nmId = item.nm_id;
+          
+          if (!salesMap[nmId]) {
+            salesMap[nmId] = 0;
+            salesDates[nmId] = new Set();
+          }
+          
+          salesMap[nmId] += (item.quantity || 0);
+          salesDates[nmId].add(item.doc_date.split('T')[0]);
+        }
+      });
+      
+      // Расчет среднедневных продаж
+      const averageDailySales: Record<number, number> = {};
+      
+      warehouseItems.forEach(item => {
+        const nmId = item.nmId;
+        const totalSales = salesMap[nmId] || 0;
+        
+        // Проверяем количество уникальных дней с продажами
+        const uniqueSalesDays = salesDates[nmId] ? salesDates[nmId].size : 0;
+        
+        // Если были продажи, используем среднее по дням с продажами
+        // Иначе делим на весь период (30 дней)
+        const divisor = uniqueSalesDays > 0 ? uniqueSalesDays : 30;
+        
+        // Рассчитываем среднее и округляем до 2 знаков
+        const average = totalSales / divisor;
+        averageDailySales[nmId] = Math.max(0.01, parseFloat(average.toFixed(2)));
+      });
+      
+      setDailySalesRates(prevRates => ({...prevRates, ...averageDailySales}));
+      
+      toast({
+        title: "Успешно",
+        description: `Рассчитаны средние продажи для ${Object.keys(averageDailySales).length} товаров`,
+      });
+    } catch (error) {
+      console.error("Ошибка при расчете средних продаж:", error);
+      toast({
+        title: "Ошибка",
+        description: error instanceof Error ? error.message : "Не удалось рассчитать средние продажи",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingSales(false);
+    }
+  };
 
   const analysisResults = useMemo(() => {
     return warehouseItems.map(item => {
@@ -561,8 +736,32 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
               </div>
             </div>
             
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={savePriceData} className="whitespace-nowrap">
+            <div className="flex gap-2 flex-wrap">
+              <Button 
+                variant="outline" 
+                onClick={fetchProductPrices} 
+                disabled={isLoadingPrices || !selectedStore?.apiKey}
+                className="whitespace-nowrap flex items-center gap-2"
+              >
+                {isLoadingPrices ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                Получить цены товаров
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                onClick={fetchAverageSales} 
+                disabled={isLoadingSales || !selectedStore?.apiKey}
+                className="whitespace-nowrap flex items-center gap-2"
+              >
+                {isLoadingSales ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                Рассчитать продажи в день
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                onClick={savePriceData} 
+                className="whitespace-nowrap"
+              >
                 Сохранить изменения
               </Button>
             </div>
@@ -765,7 +964,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                             : <><ArrowDown className="h-3 w-3 mr-1" />{formatCurrency(Math.abs(result.savingsWithDiscount))}</>}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          При скидке {result.recommendedDiscount}%
+                          При с��идке {result.recommendedDiscount}%
                         </div>
                         <div className="text-xs mt-1">
                           ROI: {(result.action === 'discount' || result.action === 'sell') && calculateROIimprovement(result) > 0 && (
