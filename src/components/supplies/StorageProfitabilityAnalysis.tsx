@@ -136,52 +136,111 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       // Время полной распродажи запаса (дни)
       const daysOfInventory = dailySales > 0 ? Math.round(currentStock / dailySales) : 999;
       
-      // Изменение: Уточненный расчет общих затрат на хранение
-      // Учитываем, что количество товара постепенно уменьшается
+      // Уточненный расчет общих затрат на хранение
       // Используем формулу: среднее количество × дни × стоимость единицы
-      // Среднее количество = (начальное + конечное) / 2 = (текущее + 0) / 2 = текущее / 2
       const averageStock = currentStock / 2;
       const totalStorageCost = averageStock * daysOfInventory * storageCost;
       
+      // Расчет прибыли на единицу товара
       const profitPerItem = sellingPrice - costPrice;
+      const profitMarginPercentage = sellingPrice > 0 ? (profitPerItem / sellingPrice) * 100 : 0;
       
-      // Рассчитываем общую прибыль за весь период хранения
-      const totalProfit = (profitPerItem * currentStock) - totalStorageCost;
+      // Общая прибыль без учета затрат на хранение
+      const grossProfit = profitPerItem * currentStock;
       
-      // Порог для определения необходимости скидки
-      const totalSalesValue = sellingPrice * currentStock;
-      const profitabilityRatio = totalProfit / totalSalesValue;
+      // Чистая прибыль с учетом затрат на хранение
+      const netProfit = grossProfit - totalStorageCost;
       
-      // Если прибыльность выше 15%, сохраняем цену, иначе рекомендуем скидку
-      const shouldKeepPrice = profitabilityRatio >= 0.15;
+      // Коэффициент оборачиваемости запасов (дней)
+      const stockTurnoverDays = daysOfInventory;
       
-      const discountPercentage = shouldKeepPrice ? 0 : (discountLevels[nmId] || 30);
+      // Рентабельность хранения (отношение чистой прибыли к затратам на хранение)
+      const storageROI = totalStorageCost > 0 ? netProfit / totalStorageCost : 0;
       
-      const discountedPrice = sellingPrice * (1 - discountPercentage / 100);
+      // Доля затрат на хранение в выручке
+      const storageCostToRevenueRatio = (sellingPrice * currentStock) > 0 ? 
+        totalStorageCost / (sellingPrice * currentStock) : 0;
+      
+      // НОВАЯ ЛОГИКА РЕКОМЕНДАЦИЙ
+      
+      // 1. Определяем необходимость скидки на основе комплексного анализа
+      let recommendedDiscount = 0;
+      let action: 'sell' | 'discount' | 'keep' = 'keep';
+      
+      // Если маржа низкая и высокие затраты на хранение относительно выручки
+      const isLowMargin = profitMarginPercentage < 15;
+      const isHighStorageCost = storageCostToRevenueRatio > 0.1; // >10% от выручки
+      const isSlowMoving = stockTurnoverDays > 60; // Более 60 дней на распродажу
+      
+      // Если запасы долго не продаются, затраты на хранение высокие относительно выручки
+      if (isSlowMoving && isHighStorageCost) {
+        // Серьезная проблема - нужна значительная скидка или распродажа
+        recommendedDiscount = 40; // Высокая скидка для ускорения продаж
+        action = 'sell';
+      } 
+      // Если маржа низкая и затраты на хранение относительно высокие
+      else if (isLowMargin && isHighStorageCost) {
+        // Проблема рентабельности - нужна умеренная скидка
+        recommendedDiscount = discountLevels[nmId] || 25;
+        action = 'discount';
+      }
+      // Если товар продается медленно, но маржа нормальная
+      else if (isSlowMoving && !isLowMargin) {
+        // Небольшая скидка для ускорения продаж
+        recommendedDiscount = discountLevels[nmId] || 15;
+        action = 'discount';
+      }
+      // Если маржа достаточная и затраты на хранение приемлемые
+      else {
+        // Сохраняем текущую цену
+        recommendedDiscount = 0;
+        action = 'keep';
+      }
+      
+      // 2. Рассчитываем экономические показатели при применении скидки
+      const discountedPrice = sellingPrice * (1 - recommendedDiscount / 100);
       const profitWithDiscountPerItem = discountedPrice - costPrice;
       
-      // Предположим, что со скидкой товар будет продаваться в 2 раза быстрее
-      const discountedDaysOfInventory = Math.round(daysOfInventory * 0.5);
+      // Коэффициент ускорения продаж в зависимости от размера скидки
+      // Чем больше скидка, тем быстрее будет распродажа
+      const salesAccelerationFactor = 1 + (recommendedDiscount / 100);
       
-      // Изменение: Пересчитываем затраты на хранение при ускоренных продажах
-      // Используем ту же формулу среднего, но с ускоренным периодом
-      const discountedAverageStock = averageStock; // Среднее не меняется
-      const discountedStorageCost = discountedAverageStock * discountedDaysOfInventory * storageCost;
+      // Скорректированное время распродажи с учетом скидки
+      const discountedDaysOfInventory = Math.round(daysOfInventory / salesAccelerationFactor);
       
-      const profitWithoutDiscount = (profitPerItem * currentStock) - totalStorageCost;
+      // Пересчитываем затраты на хранение при ускоренных продажах
+      const discountedStorageCost = averageStock * discountedDaysOfInventory * storageCost;
+      
+      // Итоговые финансовые результаты
+      const profitWithoutDiscount = grossProfit - totalStorageCost;
       const profitWithDiscount = (profitWithDiscountPerItem * currentStock) - discountedStorageCost;
       const savingsWithDiscount = profitWithDiscount - profitWithoutDiscount;
       
-      let action: 'sell' | 'discount' | 'keep';
-      if (shouldKeepPrice) {
-        action = 'keep';
-      } else if (profitWithDiscountPerItem < 0) {
-        action = 'sell';
-      } else {
-        action = 'discount';
+      // 3. Финальная корректировка рекомендации
+      
+      // Если даже с рекомендованной скидкой прибыль отрицательная
+      if (profitWithDiscount < 0 && recommendedDiscount > 0) {
+        // Если стоимость хранения выше оставшейся маржи - распродажа
+        if (Math.abs(profitWithDiscount) > profitWithDiscountPerItem * currentStock * 0.5) {
+          action = 'sell';
+          recommendedDiscount = Math.min(50, discountLevels[nmId] || 50); // Максимум 50% скидки для распродажи
+        }
       }
       
+      // Если чистая прибыль со скидкой выше, чем без скидки, рекомендуем скидку
+      if (savingsWithDiscount > 0 && action === 'keep') {
+        action = 'discount';
+        recommendedDiscount = discountLevels[nmId] || 15;
+      }
+      
+      // Если низкий запас - не рекомендуем скидки (кроме случаев с очень медленными продажами)
       const lowStock = currentStock <= threshold;
+      if (lowStock && stockTurnoverDays < 90) {
+        action = 'keep';
+        recommendedDiscount = 0;
+      }
+      
+      // Определение уровня запаса
       const stockLevelPercentage = Math.min(100, Math.max(0, Math.round((currentStock / (threshold * 2)) * 100)));
       
       let stockLevel: 'low' | 'medium' | 'high';
@@ -206,7 +265,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         dailyStorageCostTotal,
         daysOfInventory,
         totalStorageCost,
-        recommendedDiscount: discountPercentage,
+        recommendedDiscount,
         profitWithoutDiscount,
         profitWithDiscount,
         savingsWithDiscount,
