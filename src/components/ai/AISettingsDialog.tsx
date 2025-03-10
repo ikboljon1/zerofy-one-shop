@@ -8,8 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { getAISettings, saveAISettings, getAvailableProviders } from "@/services/aiService";
-import { AISettings } from "@/types/ai";
+import { getAISettings, saveAISettings, getAvailableProviders, getAvailableModels } from "@/services/aiService";
+import { AISettings, AIModel } from "@/types/ai";
 
 interface AISettingsDialogProps {
   open: boolean;
@@ -22,12 +22,25 @@ const AISettingsDialog = ({ open, onOpenChange }: AISettingsDialogProps) => {
   const [isTesting, setIsTesting] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const providers = getAvailableProviders();
+  const [availableModels, setAvailableModels] = useState<AIModel[]>([]);
 
   useEffect(() => {
     if (open) {
       setSettings(getAISettings());
     }
   }, [open]);
+
+  useEffect(() => {
+    // Update available models when provider changes
+    const models = getAvailableModels(settings.provider);
+    setAvailableModels(models);
+    
+    // Set default model for provider if current model doesn't belong to selected provider
+    const currentModelBelongsToProvider = models.some(model => model.id === settings.model);
+    if (!currentModelBelongsToProvider && models.length > 0) {
+      setSettings(prev => ({...prev, model: models[0].id}));
+    }
+  }, [settings.provider]);
 
   const handleSave = () => {
     try {
@@ -106,6 +119,7 @@ const AISettingsDialog = ({ open, onOpenChange }: AISettingsDialogProps) => {
   };
 
   const selectedProvider = providers.find(p => p.id === settings.provider);
+  const selectedModel = availableModels.find(m => m.id === settings.model);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -147,6 +161,31 @@ const AISettingsDialog = ({ open, onOpenChange }: AISettingsDialogProps) => {
             {selectedProvider && (
               <p className="text-sm text-muted-foreground mt-1">
                 {selectedProvider.description}
+              </p>
+            )}
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="ai-model">Модель AI</Label>
+            <Select 
+              value={settings.model} 
+              onValueChange={(value) => setSettings({...settings, model: value})}
+              disabled={availableModels.length === 0}
+            >
+              <SelectTrigger id="ai-model">
+                <SelectValue placeholder="Выберите модель" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableModels.map((model) => (
+                  <SelectItem key={model.id} value={model.id}>
+                    {model.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedModel && selectedModel.description && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {selectedModel.description}
               </p>
             )}
           </div>

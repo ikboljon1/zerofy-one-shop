@@ -1,5 +1,5 @@
 
-import { AIAnalysisRequest, AIRecommendation, AISettings } from '@/types/ai';
+import { AIAnalysisRequest, AIRecommendation, AISettings, AIModel } from '@/types/ai';
 
 const AI_SETTINGS_KEY = 'marketplace_ai_settings';
 const AI_RECOMMENDATIONS_KEY = 'marketplace_ai_recommendations';
@@ -11,6 +11,7 @@ export const getAISettings = (): AISettings => {
   }
   return {
     provider: 'openai',
+    model: 'gpt-4o',
     apiKey: '',
     isEnabled: false
   };
@@ -24,23 +25,99 @@ export const getAvailableProviders = () => {
   return [
     {
       id: 'openai',
-      name: 'OpenAI GPT-4',
-      description: 'Использует модель GPT-4 для анализа данных',
+      name: 'OpenAI',
+      description: 'Платформа OpenAI с моделями GPT',
       requiresApiKey: true
     },
     {
       id: 'gemini',
-      name: 'Google Gemini Pro',
-      description: 'Использует модель Gemini Pro для анализа данных',
+      name: 'Google Gemini',
+      description: 'Платформа Google с моделями Gemini',
       requiresApiKey: true
     },
     {
       id: 'anthropic',
-      name: 'Anthropic Claude',
-      description: 'Использует модель Claude для анализа данных',
+      name: 'Anthropic',
+      description: 'Платформа Anthropic с моделями Claude',
       requiresApiKey: true
     }
   ];
+};
+
+export const getAvailableModels = (providerId: string): AIModel[] => {
+  switch (providerId) {
+    case 'openai':
+      return [
+        {
+          id: 'gpt-4o',
+          name: 'GPT-4o',
+          providerId: 'openai',
+          description: 'Последняя и самая мощная мультимодальная модель GPT'
+        },
+        {
+          id: 'gpt-4-turbo',
+          name: 'GPT-4 Turbo',
+          providerId: 'openai',
+          description: 'Мощная и быстрая модель с расширенным контекстом'
+        },
+        {
+          id: 'gpt-3.5-turbo',
+          name: 'GPT-3.5 Turbo',
+          providerId: 'openai',
+          description: 'Более экономичная и быстрая модель для обычных задач'
+        }
+      ];
+    case 'gemini':
+      return [
+        {
+          id: 'gemini-1.5-pro',
+          name: 'Gemini 1.5 Pro',
+          providerId: 'gemini',
+          description: 'Мощная универсальная модель для сложных задач и длинного контекста'
+        },
+        {
+          id: 'gemini-1.5-flash',
+          name: 'Gemini 1.5 Flash',
+          providerId: 'gemini',
+          description: 'Более быстрая и экономичная версия Gemini для обычных задач'
+        },
+        {
+          id: 'gemini-2.0-pro-exp-02-05',
+          name: 'Gemini 2.0 Pro',
+          providerId: 'gemini',
+          description: 'Экспериментальная версия Gemini 2.0 Pro (02-05)'
+        },
+        {
+          id: 'gemini-2.0-flash-thinking-exp-01-21',
+          name: 'Gemini 2.0 Flash Thinking',
+          providerId: 'gemini',
+          description: 'Экспериментальная версия Gemini 2.0 Flash с улучшенным мышлением (01-21)'
+        }
+      ];
+    case 'anthropic':
+      return [
+        {
+          id: 'claude-3-opus',
+          name: 'Claude 3 Opus',
+          providerId: 'anthropic',
+          description: 'Самая мощная модель Claude с расширенными возможностями рассуждения'
+        },
+        {
+          id: 'claude-3-sonnet',
+          name: 'Claude 3 Sonnet',
+          providerId: 'anthropic',
+          description: 'Сбалансированная модель Claude по цене и производительности'
+        },
+        {
+          id: 'claude-3-haiku',
+          name: 'Claude 3 Haiku',
+          providerId: 'anthropic',
+          description: 'Быстрая и экономичная модель Claude для простых задач'
+        }
+      ];
+    default:
+      return [];
+  }
 };
 
 export const getSavedRecommendations = (storeId: string): AIRecommendation[] => {
@@ -159,7 +236,7 @@ export const analyzeData = async (
             'Authorization': `Bearer ${settings.apiKey}`
           },
           body: JSON.stringify({
-            model: 'gpt-4o',
+            model: settings.model,
             messages: [
               {
                 role: 'system',
@@ -207,12 +284,121 @@ export const analyzeData = async (
         break;
         
       case 'gemini':
-        // Для Google Gemini API - аналогичная реализация
-        throw new Error('Поддержка Gemini будет добавлена позже');
+        // Реализация для Google Gemini API
+        const geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/' + settings.model + ':generateContent?key=' + settings.apiKey;
+        
+        const geminiResponse = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: 'user',
+                parts: [
+                  {
+                    text: createOpenAIPrompt(request)
+                  }
+                ]
+              }
+            ],
+            generationConfig: {
+              temperature: 0.3,
+              maxOutputTokens: 2000
+            }
+          })
+        });
+        
+        if (!geminiResponse.ok) {
+          throw new Error(`Ошибка Gemini API: ${geminiResponse.statusText}`);
+        }
+        
+        const geminiData = await geminiResponse.json();
+        let geminiResponseText = '';
+        
+        if (geminiData.candidates && geminiData.candidates[0] && geminiData.candidates[0].content) {
+          const parts = geminiData.candidates[0].content.parts;
+          if (parts && parts.length > 0) {
+            geminiResponseText = parts[0].text;
+          }
+        }
+        
+        try {
+          // Извлекаем JSON-объект из ответа
+          const jsonMatch = geminiResponseText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsedResult = JSON.parse(jsonMatch[0]);
+            if (parsedResult.recommendations) {
+              recommendations = parsedResult.recommendations.map((rec: any, index: number) => ({
+                id: `${Date.now()}-${index}`,
+                title: rec.title,
+                description: rec.description,
+                category: rec.category || 'general',
+                importance: rec.importance || 'medium',
+                timestamp: Date.now(),
+                actionable: rec.actionable || false,
+                action: rec.action
+              }));
+            }
+          }
+        } catch (parseError) {
+          console.error('Ошибка при разборе ответа Gemini:', parseError);
+          throw new Error('Не удалось разобрать ответ от Gemini');
+        }
+        break;
         
       case 'anthropic':
-        // Для Anthropic Claude API - аналогичная реализация
-        throw new Error('Поддержка Claude будет добавлена позже');
+        // Реализация для Anthropic Claude API
+        const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': settings.apiKey,
+            'anthropic-version': '2023-06-01'
+          },
+          body: JSON.stringify({
+            model: settings.model,
+            messages: [
+              {
+                role: 'user',
+                content: createOpenAIPrompt(request)
+              }
+            ],
+            max_tokens: 2000
+          })
+        });
+        
+        if (!claudeResponse.ok) {
+          throw new Error(`Ошибка Claude API: ${claudeResponse.statusText}`);
+        }
+        
+        const claudeData = await claudeResponse.json();
+        const claudeResponseText = claudeData.content[0].text;
+        
+        try {
+          // Извлекаем JSON-объект из ответа
+          const jsonMatch = claudeResponseText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsedResult = JSON.parse(jsonMatch[0]);
+            if (parsedResult.recommendations) {
+              recommendations = parsedResult.recommendations.map((rec: any, index: number) => ({
+                id: `${Date.now()}-${index}`,
+                title: rec.title,
+                description: rec.description,
+                category: rec.category || 'general',
+                importance: rec.importance || 'medium',
+                timestamp: Date.now(),
+                actionable: rec.actionable || false,
+                action: rec.action
+              }));
+            }
+          }
+        } catch (parseError) {
+          console.error('Ошибка при разборе ответа Claude:', parseError);
+          throw new Error('Не удалось разобрать ответ от Claude');
+        }
+        break;
         
       default:
         throw new Error('Неизвестный провайдер AI');

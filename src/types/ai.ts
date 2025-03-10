@@ -6,8 +6,16 @@ export interface AIProvider {
   requiresApiKey: boolean;
 }
 
+export interface AIModel {
+  id: string;
+  name: string;
+  providerId: string;
+  description?: string;
+}
+
 export interface AISettings {
   provider: string;
+  model: string;
   apiKey: string;
   isEnabled: boolean;
 }
