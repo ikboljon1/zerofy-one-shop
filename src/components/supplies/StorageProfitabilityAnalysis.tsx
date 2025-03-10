@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -141,9 +142,10 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       const currentStock = item.quantityWarehousesFull || 0;
       
       // Extract product name, color and size information
-      const productName = item.supplierArticle || item.subjectName || '';
+      // Fix: Use the correct property names from the WarehouseRemainItem type
+      const productName = item.vendorCode || item.subjectName || '';
       const productColor = item.techSize || '';
-      const productSize = item.sa || '';
+      const productSize = item.size || '';
       
       // Calculate days of inventory based on current stock and sales rate
       const daysOfInventory = dailySales > 0 ? Math.round(currentStock / dailySales) : 999;
@@ -159,7 +161,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       const discountedPrice = sellingPrice * (1 - discountPercentage / 100);
       const profitWithDiscountPerItem = discountedPrice - costPrice;
       
-      // Calculate storage cost savings with quicker sales (assuming 50% faster sales with discount)\n      const discountedDaysOfInventory = Math.round(daysOfInventory * 0.5);
+      // Calculate storage cost savings with quicker sales (assuming 50% faster sales with discount)
+      const discountedDaysOfInventory = Math.round(daysOfInventory * 0.5);
       const discountedStorageCost = itemStorageCost * discountedDaysOfInventory;
       
       // Calculate total profit with discount (including reduced storage costs)
@@ -630,7 +633,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         </div>
       </CardContent>
     </Card>
-);
+  );
 };
 
 export default StorageProfitabilityAnalysis;
