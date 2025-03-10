@@ -159,8 +159,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       const discountedPrice = sellingPrice * (1 - discountPercentage / 100);
       const profitWithDiscountPerItem = discountedPrice - costPrice;
       
-      // Calculate storage cost savings with quicker sales (assuming 50% faster sales with discount)
-      const discountedDaysOfInventory = Math.round(daysOfInventory * 0.5);
+      // Calculate storage cost savings with quicker sales (assuming 50% faster sales with discount)\n      const discountedDaysOfInventory = Math.round(daysOfInventory * 0.5);
       const discountedStorageCost = itemStorageCost * discountedDaysOfInventory;
       
       // Calculate total profit with discount (including reduced storage costs)
@@ -603,4 +602,35 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                   >
                     <div className="flex items-center">
                       Остаток запаса
-                      <ArrowUpDown className="ml-1 h-4 w-4
+                      <ArrowUpDown className="ml-1 h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead>Хранение в день</TableHead>
+                  <TableHead>Название</TableHead>
+                  <TableHead>Цвет</TableHead>
+                  <TableHead>Размер</TableHead>
+                  <TableHead>Действие</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredResults.map(result => (
+                  <TableRow key={result.remainItem.nmId}>
+                    <TableCell>{result.remainItem.brand}</TableCell>
+                    <TableCell>{getStockLevelIndicator(result)}</TableCell>
+                    <TableCell>{formatCurrency(result.dailyStorageCost)}</TableCell>
+                    <TableCell>{result.productName}</TableCell>
+                    <TableCell>{result.productColor}</TableCell>
+                    <TableCell>{result.productSize}</TableCell>
+                    <TableCell>{getActionBadge(result.action)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+);
+};
+
+export default StorageProfitabilityAnalysis;
