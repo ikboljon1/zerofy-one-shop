@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -753,4 +754,32 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-sm text-muted-foreground">Рентабельность</p>
-                  <
+                  <h3 className="text-2xl font-bold mt-1">{analysisSummary.currentROI}%</h3>
+                </div>
+                <div className="bg-purple-100 dark:bg-purple-800/30 p-2 rounded-lg">
+                  <Percent className="h-5 w-5 text-purple-500 dark:text-purple-400" />
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-purple-100 dark:border-purple-800/30">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs">Потенциал улучшения</span>
+                  <span className="text-xs font-medium text-purple-600">+{analysisSummary.roiImprovement}%</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </CardHeader>
+
+      {/* Add any additional content needed here to complete the component */}
+      {/* This is a placeholder to ensure the component renders correctly */}
+      <CardContent>
+        <div className="space-y-4">
+          {/* Your additional content would go here */}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default StorageProfitabilityAnalysis;
