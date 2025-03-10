@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchWarehouseRemains } from '@/services/warehouseRemainsApi';
-import { fetchFullPaidStorageReport } from '@/services/suppliesApi';
+import { fetchFullPaidStorageReport, calculateDailyStorageCosts } from '@/services/suppliesApi';
 import { 
   WarehouseRemains,
   StorageProfitabilityAnalysis,
@@ -31,6 +31,7 @@ const Warehouses: React.FC = () => {
     paidStorage: false
   });
   const [selectedStore, setSelectedStore] = useState<StoreType | null>(null);
+  const [dailyStorageCosts, setDailyStorageCosts] = useState<Record<number, number>>({});
 
   useEffect(() => {
     const stores = ensureStoreSelectionPersistence();
@@ -72,6 +73,13 @@ const Warehouses: React.FC = () => {
       });
       
       setWarehouseRemains(data);
+      
+      // Update storage costs once we have both warehouse data and storage data
+      if (paidStorageData.length > 0) {
+        const costs = calculateDailyStorageCosts(data, paidStorageData);
+        setDailyStorageCosts(costs);
+      }
+      
       toast.success('Отчет об остатках на складах успешно загружен');
     } catch (error: any) {
       console.error('Ошибка при загрузке остатков на складах:', error);
@@ -91,8 +99,20 @@ const Warehouses: React.FC = () => {
       setLoading(prev => ({ ...prev, paidStorage: true }));
       toast.info('Запрос отчета о платном хранении. Это может занять некоторое время...');
       
-      const data = await fetchFullPaidStorageReport(apiKey, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], new Date().toISOString().split('T')[0]);
+      // Get 7 days of data for a better average
+      const data = await fetchFullPaidStorageReport(
+        apiKey, 
+        new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], 
+        new Date().toISOString().split('T')[0]
+      );
+      
       setPaidStorageData(data);
+      
+      // Calculate daily storage costs if we already have warehouse data
+      if (warehouseRemains.length > 0) {
+        const costs = calculateDailyStorageCosts(warehouseRemains, data);
+        setDailyStorageCosts(costs);
+      }
       
       toast.success('Отчет о платном хранении успешно загружен');
     } catch (error: any) {
@@ -106,30 +126,10 @@ const Warehouses: React.FC = () => {
   const calculateAverageDailySales = () => {
     const result: Record<number, number> = {};
     warehouseRemains.forEach(item => {
+      // For now, this is a placeholder that should be replaced with real sales data
+      // In a future implementation, this should be fetched from the sales API
       result[item.nmId] = Math.random() * 2;
     });
-    return result;
-  };
-
-  const calculateDailyStorageCosts = () => {
-    const result: Record<number, number> = {};
-    
-    warehouseRemains.forEach(item => {
-      // Try to find actual storage cost from paid storage data
-      const matchingStorageItems = paidStorageData.filter(psi => psi.nmId === item.nmId);
-      
-      if (matchingStorageItems.length > 0) {
-        // Calculate average daily storage cost from all matching items
-        const totalCost = matchingStorageItems.reduce((sum, psi) => sum + psi.warehousePrice, 0);
-        const avgCost = totalCost / matchingStorageItems.length;
-        result[item.nmId] = avgCost;
-      } else {
-        // Fallback to volume-based calculation if no matching data
-        const volume = item.volume || 1;
-        result[item.nmId] = volume * 5;
-      }
-    });
-    
     return result;
   };
 
@@ -222,7 +222,7 @@ const Warehouses: React.FC = () => {
                       warehouseItems={warehouseRemains}
                       paidStorageData={paidStorageData}
                       averageDailySalesRate={calculateAverageDailySales()}
-                      dailyStorageCost={calculateDailyStorageCosts()}
+                      dailyStorageCost={dailyStorageCosts}
                       selectedStore={selectedStore}
                     />
                   </div>

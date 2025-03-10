@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 import { SupplyItem, SupplyOptionsResponse, Warehouse, WarehouseCoefficient, PaidStorageItem } from '@/types/supplies';
 
@@ -202,6 +203,46 @@ export const fetchFullPaidStorageReport = async (
     console.error('Ошибка в процессе получения отчета о платном хранении:', error);
     throw error;
   }
+};
+
+/**
+ * Calculate daily storage costs for each product
+ */
+export const calculateDailyStorageCosts = (
+  warehouseRemains: any[],
+  paidStorageData: PaidStorageItem[]
+): Record<number, number> => {
+  const result: Record<number, number> = {};
+  
+  // Create a lookup map by nmId for quick access
+  const storageMap = new Map<number, PaidStorageItem[]>();
+  
+  // Group paid storage items by nmId
+  paidStorageData.forEach(item => {
+    if (!storageMap.has(item.nmId)) {
+      storageMap.set(item.nmId, []);
+    }
+    storageMap.get(item.nmId)?.push(item);
+  });
+  
+  // Calculate storage costs for each product
+  warehouseRemains.forEach(item => {
+    const nmId = item.nmId;
+    const matchingStorageItems = storageMap.get(nmId) || [];
+    
+    if (matchingStorageItems.length > 0) {
+      // Calculate average daily storage cost from matching items
+      const totalCost = matchingStorageItems.reduce((sum, psi) => sum + psi.warehousePrice, 0);
+      const avgDailyCost = totalCost / matchingStorageItems.length;
+      result[nmId] = avgDailyCost;
+    } else {
+      // Fallback to volume-based calculation if no matching data
+      const volume = item.volume || 1;
+      result[nmId] = volume * 5; // Calculate based on volume
+    }
+  });
+  
+  return result;
 };
 
 // For demo or testing purposes
