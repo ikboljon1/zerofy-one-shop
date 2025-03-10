@@ -109,6 +109,16 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     setLowStockThreshold(prevState => ({...prevState, ...initialLowStockThresholds}));
   }, [warehouseItems, averageDailySalesRate, dailyStorageCost, paidStorageData]);
 
+  const formatDaysOfInventory = (days: number): string => {
+    if (days >= 300) {
+      return `${Math.round(days / 30)} мес.`;
+    } else if (days > 60) {
+      return `${Math.round(days / 7)} нед.`;
+    } else {
+      return `${days} дн.`;
+    }
+  };
+
   const analysisResults = useMemo(() => {
     return warehouseItems.map(item => {
       const nmId = item.nmId;
@@ -671,7 +681,9 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                               {result.remainItem.quantityWarehousesFull || 0} шт
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {result.daysOfInventory} дней
+                              <Badge variant={result.daysOfInventory > 90 ? "warning" : "outline"} className="text-[10px] h-5 font-normal">
+                                {formatDaysOfInventory(result.daysOfInventory)}
+                              </Badge>
                             </span>
                           </div>
                           
