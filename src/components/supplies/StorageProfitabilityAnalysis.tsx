@@ -745,3 +745,4 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                     value={targetDate} 
                     onValueChange={setTargetDate} 
                   />
+                </div>
