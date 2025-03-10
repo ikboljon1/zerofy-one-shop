@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -325,10 +326,11 @@ const Warehouses: React.FC = () => {
                     isLoading={loading.remains} 
                   />
                   
-                  {/* Add the new profitability analysis component */}
+                  {/* Pass paidStorageData to the StorageProfitabilityAnalysis component */}
                   <div className="mt-8">
                     <StorageProfitabilityAnalysis 
                       warehouseItems={warehouseRemains}
+                      paidStorageData={paidStorageData}
                       averageDailySalesRate={calculateAverageDailySales()}
                       dailyStorageCost={calculateDailyStorageCosts()}
                     />
