@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Package, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,6 +57,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const [storageCostRates, setStorageCostRates] = useState<Record<number, number>>({});
 
   const calculateNetProfit = (product: Product) => {
     if (!product.expenses) return {
@@ -406,7 +407,22 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedProducts));
   };
 
-  useState(() => {
+  const updateStorageCost = (nmId: number, value: number) => {
+    setStorageCostRates(prev => ({
+      ...prev,
+      [nmId]: value
+    }));
+
+    // Save to localStorage to persist the changes
+    const storedCosts = JSON.parse(localStorage.getItem('product_storage_costs') || '{}');
+    const updatedCosts = {
+      ...storedCosts,
+      [nmId]: value
+    };
+    localStorage.setItem('product_storage_costs', JSON.stringify(updatedCosts));
+  };
+
+  useEffect(() => {
     if (selectedStore) {
       const storedProducts = localStorage.getItem(`products_${selectedStore.id}`);
       if (storedProducts) {
@@ -415,7 +431,13 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         setProducts([]);
       }
     }
-  });
+
+    // Load stored storage costs
+    const storedCosts = localStorage.getItem('product_storage_costs');
+    if (storedCosts) {
+      setStorageCostRates(JSON.parse(storedCosts));
+    }
+  }, [selectedStore]);
 
   if (!selectedStore) {
     return (
@@ -427,6 +449,15 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       </Card>
     );
   }
+
+  const savePriceData = () => {
+    localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(products));
+    localStorage.setItem('product_storage_costs', JSON.stringify(storageCostRates));
+    
+    toast({
+      title: "Данные успешно сохранены"
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -507,6 +538,19 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                         onChange={(e) => updateCostPrice(product.nmID, Number(e.target.value))}
                         className="h-8 text-sm"
                         placeholder="Введите себестоимость"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor={`storageCost-${product.nmID}`} className="text-xs text-muted-foreground">
+                        Стоимость хранения в день:
+                      </label>
+                      <Input
+                        id={`storageCost-${product.nmID}`}
+                        type="number"
+                        value={storageCostRates[product.nmID] || ""}
+                        onChange={(e) => updateStorageCost(product.nmID, Number(e.target.value))}
+                        className="h-8 text-sm"
+                        placeholder="Введите стоимость хранения"
                       />
                     </div>
                     <div className="space-y-1.5 border-t pt-2">
