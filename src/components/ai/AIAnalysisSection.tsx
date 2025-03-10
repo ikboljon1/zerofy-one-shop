@@ -14,7 +14,6 @@ import { AIRecommendation, AIAnalysisRequest } from "@/types/ai";
 import AISettingsDialog from "./AISettingsDialog";
 import AIRecommendationCard from "./AIRecommendationCard";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ru } from "date-fns/locale";
 
 interface AIAnalysisSectionProps {
   storeId: string;

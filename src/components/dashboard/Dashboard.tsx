@@ -1,156 +1,290 @@
-import { useState, useEffect } from "react";
-import { Grid, GridItem, Divider } from "@tremor/react";
+import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/components/ui/use-toast";
-import { refreshStoreStats, fetchAndUpdateOrders, fetchAndUpdateSales, getAnalyticsData } from "@/utils/storeUtils";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import PeriodSelector from "./PeriodSelector";
-import SalesMetrics from "./SalesMetrics";
-import OrderMetrics from "./OrderMetrics";
-import SalesChart from "./SalesChart";
-import OrdersChart from "./OrdersChart";
-import TipsSection from "./TipsSection";
-import GeographySection from "./GeographySection";
-import SalesTable from "./SalesTable";
-import OrdersTable from "./OrdersTable";
-import WarehouseEfficiencyChart from "./WarehouseEfficiencyChart";
+import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import AIAnalysisSection from "../ai/AIAnalysisSection";
+import { Button } from "@/components/ui/button";
+import { 
+  loadStores,
+  getOrdersData, 
+  getSalesData, 
+  fetchAndUpdateOrders, 
+  fetchAndUpdateSales,
+  ensureStoreSelectionPersistence,
+  getSelectedStore
+} from "@/utils/storeUtils";
+import OrdersTable from "./OrdersTable";
+import SalesTable from "./SalesTable";
+import GeographySection from "./GeographySection";
+import Stats from "@/components/Stats";
+import PeriodSelector, { Period } from "./PeriodSelector";
+import { WildberriesOrder, WildberriesSale } from "@/types/store";
+import OrderMetrics from "./OrderMetrics";
+import SalesMetrics from "./SalesMetrics";
+import OrdersChart from "./OrdersChart";
+import SalesChart from "./SalesChart";
+import TipsSection from "./TipsSection";
 
-const Dashboard = ({ store }: { store: any }) => {
+const Dashboard = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const [isLoading, setIsLoading] = useState(true);
-  const [dateRange, setDateRange] = useState({ from: new Date(), to: new Date() });
-  const [salesData, setSalesData] = useState<any>(null);
-  const [ordersData, setOrdersData] = useState<any>(null);
-  const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [period, setPeriod] = useState<Period>("today");
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
+  
+  const [orders, setOrders] = useState<WildberriesOrder[]>([]);
+  const [sales, setSales] = useState<WildberriesSale[]>([]);
+  const [warehouseDistribution, setWarehouseDistribution] = useState<any[]>([]);
+  const [regionDistribution, setRegionDistribution] = useState<any[]>([]);
+
+  const filterDataByPeriod = (date: string, period: Period) => {
+    const now = new Date();
+    const itemDate = new Date(date);
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+
+    switch (period) {
+      case "today":
+        return itemDate >= todayStart;
+      case "yesterday":
+        return itemDate >= yesterdayStart && itemDate < todayStart;
+      case "week":
+        const weekAgo = new Date(todayStart);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return itemDate >= weekAgo;
+      case "2weeks":
+        const twoWeeksAgo = new Date(todayStart);
+        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+        return itemDate >= twoWeeksAgo;
+      case "4weeks":
+        const fourWeeksAgo = new Date(todayStart);
+        fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+        return itemDate >= fourWeeksAgo;
+      default:
+        return true;
+    }
+  };
+
+  const getFilteredOrders = (orders: WildberriesOrder[]) => {
+    const filteredOrders = orders.filter(order => filterDataByPeriod(order.date, period));
+
+    const warehouseCounts: Record<string, number> = {};
+    const regionCounts: Record<string, number> = {};
+    const totalOrders = filteredOrders.length;
+
+    filteredOrders.forEach(order => {
+      if (order.warehouseName) {
+        warehouseCounts[order.warehouseName] = (warehouseCounts[order.warehouseName] || 0) + 1;
+      }
+      if (order.regionName) {
+        regionCounts[order.regionName] = (regionCounts[order.regionName] || 0) + 1;
+      }
+    });
+
+    const newWarehouseDistribution = Object.entries(warehouseCounts)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: (count / totalOrders) * 100
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    const newRegionDistribution = Object.entries(regionCounts)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: (count / totalOrders) * 100
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    return {
+      orders: filteredOrders,
+      warehouseDistribution: newWarehouseDistribution,
+      regionDistribution: newRegionDistribution
+    };
+  };
+
+  const getFilteredSales = (sales: WildberriesSale[]) => {
+    return sales.filter(sale => filterDataByPeriod(sale.date, period));
+  };
 
   useEffect(() => {
-    if (store) {
-      loadData();
+    if (orders.length > 0) {
+      const { orders: filteredOrders, warehouseDistribution: newWarehouseDistribution, regionDistribution: newRegionDistribution } = getFilteredOrders(orders);
+      setWarehouseDistribution(newWarehouseDistribution);
+      setRegionDistribution(newRegionDistribution);
     }
-  }, [store]);
+  }, [period, orders]);
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const fetchData = async () => {
     try {
-      const sales = await fetchAndUpdateSales(store);
-      const orders = await fetchAndUpdateOrders(store);
-      setSalesData(sales);
-      setOrdersData(orders);
-    } catch (error) {
-      console.error("Error loading data:", error);
+      setIsLoading(true);
+      const selectedStore = getSelectedStore();
+      
+      if (!selectedStore) {
+        toast({
+          title: "Внимание",
+          description: "Выберите основной магазин в разделе 'Магазины'",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (selectedStore.id !== selectedStoreId) {
+        setSelectedStoreId(selectedStore.id);
+      }
+
+      const ordersResult = await fetchAndUpdateOrders(selectedStore);
+      if (ordersResult) {
+        setOrders(ordersResult.orders);
+        setWarehouseDistribution(ordersResult.warehouseDistribution);
+        setRegionDistribution(ordersResult.regionDistribution);
+      } else {
+        const savedOrdersData = await getOrdersData(selectedStore.id);
+        if (savedOrdersData) {
+          setOrders(savedOrdersData.orders || []);
+          setWarehouseDistribution(savedOrdersData.warehouseDistribution || []);
+          setRegionDistribution(savedOrdersData.regionDistribution || []);
+        }
+      }
+
+      const salesResult = await fetchAndUpdateSales(selectedStore);
+      if (salesResult) {
+        setSales(salesResult);
+      } else {
+        const savedSalesData = await getSalesData(selectedStore.id);
+        if (savedSalesData) {
+          setSales(savedSalesData.sales || []);
+        }
+      }
+
       toast({
-        title: "Ошибка загрузки данных",
-        description: "Не удалось загрузить данные о продажах и заказах",
-        variant: "destructive",
+        title: "Успех",
+        description: "Данные успешно обновлены",
+      });
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить данные",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDateRangeChange = (newDateRange: { from: Date; to: Date }) => {
-    setDateRange(newDateRange);
-  };
-
-  const handleRefreshData = async () => {
-    setRefreshing(true);
-    try {
-      const updatedStore = await refreshStoreStats(store);
-      if (updatedStore) {
-        toast({
-          title: "Данные обновлены",
-          description: "Статистика магазина успешно обновлена",
-        });
+  useEffect(() => {
+    const selectedStore = getSelectedStore();
+    
+    if (selectedStore) {
+      if (selectedStore.id !== selectedStoreId) {
+        setSelectedStoreId(selectedStore.id);
       }
-      await loadData();
-    } catch (error) {
-      console.error("Error refreshing data:", error);
-      toast({
-        title: "Ошибка обновления данных",
-        description: "Не удалось обновить статистику магазина",
-        variant: "destructive",
-      });
-    } finally {
-      setRefreshing(false);
+      
+      fetchData();
     }
-  };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <CardTitle>Загрузка...</CardTitle>
-        </div>
-        <Grid numItemsSm={1} numItemsLg={3} className="gap-6">
-          <GridItem>
-            <Card><CardContent><Skeleton className="w-full h-32" /></CardContent></Card>
-          </GridItem>
-          <GridItem>
-            <Card><CardContent><Skeleton className="w-full h-32" /></CardContent></Card>
-          </GridItem>
-          <GridItem>
-            <Card><CardContent><Skeleton className="w-full h-32" /></CardContent></Card>
-          </GridItem>
-        </Grid>
-        <Card><CardContent><Skeleton className="w-full h-64" /></CardContent></Card>
-        <Card><CardContent><Skeleton className="w-full h-64" /></CardContent></Card>
-      </div>
-    );
-  }
+    const handleStoreSelectionChange = () => {
+      console.log('Store selection changed, refreshing data...');
+      fetchData();
+    };
 
-  const analyticsData = getAnalyticsData(store.id);
+    window.addEventListener('store-selection-changed', handleStoreSelectionChange);
+
+    const refreshInterval = setInterval(() => {
+      console.log('Auto-refreshing data...');
+      fetchData();
+    }, 60000);
+
+    return () => {
+      window.removeEventListener('store-selection-changed', handleStoreSelectionChange);
+      clearInterval(refreshInterval);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (selectedStoreId) {
+      fetchData();
+    }
+  }, [selectedStoreId]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <CardTitle>Панель управления</CardTitle>
-        <Button onClick={handleRefreshData} disabled={refreshing}>
-          {refreshing ? "Обновление..." : "Обновить данные"}
-        </Button>
+        <h2 className={`${isMobile ? 'text-xl' : 'text-3xl'} font-bold`}>Дашборд</h2>
+        {isLoading && (
+          <div className="flex items-center text-sm text-muted-foreground">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Обновление данных...
+          </div>
+        )}
       </div>
-      
-      <PeriodSelector onDateRangeChange={handleDateRangeChange} />
-      
-      <SalesMetrics store={store} analyticsData={analyticsData.data} dateRange={dateRange} />
-      
-      <Grid numItemsSm={1} numItemsLg={2} className="gap-6">
-        <GridItem>
-          <SalesChart store={store} analyticsData={analyticsData.data} dateRange={dateRange} />
-        </GridItem>
-        <GridItem>
-          <OrdersChart store={store} ordersData={ordersData} dateRange={dateRange} />
-        </GridItem>
-      </Grid>
-      
-      <AIAnalysisSection 
-        storeId={store.id} 
-        analyticsData={analyticsData.data} 
-        dateFrom={dateRange.from} 
-        dateTo={dateRange.to} 
-      />
-      
-      <Tabs defaultValue="sales" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="sales">Продажи</TabsTrigger>
-          <TabsTrigger value="orders">Заказы</TabsTrigger>
+
+      <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className={`${isMobile ? 'w-full grid grid-cols-4 gap-1' : ''}`}>
+          <TabsTrigger value="overview" className={isMobile ? 'text-xs py-1 px-1' : ''}>Обзор</TabsTrigger>
+          <TabsTrigger value="orders" className={isMobile ? 'text-xs py-1 px-1' : ''}>Заказы</TabsTrigger>
+          <TabsTrigger value="sales" className={isMobile ? 'text-xs py-1 px-1' : ''}>Продажи</TabsTrigger>
+          <TabsTrigger value="geography" className={isMobile ? 'text-xs py-1 px-1' : ''}>География</TabsTrigger>
         </TabsList>
-        <TabsContent value="sales">
-          <SalesTable store={store} salesData={salesData} dateRange={dateRange} />
+
+        <TabsContent value="overview" className="space-y-4">
+          <Stats />
+          <TipsSection />
         </TabsContent>
-        <TabsContent value="orders">
-          <OrdersTable store={store} ordersData={ordersData} dateRange={dateRange} />
+
+        <TabsContent value="orders" className="space-y-4">
+          <div className={`mb-4 ${isMobile ? 'w-full' : 'flex items-center gap-4'}`}>
+            <PeriodSelector value={period} onChange={setPeriod} />
+            <div className="flex-grow"></div>
+          </div>
+          
+          {orders.length > 0 && (
+            <>
+              <OrderMetrics orders={getFilteredOrders(orders).orders} />
+              <OrdersChart 
+                orders={getFilteredOrders(orders).orders} 
+                sales={getFilteredSales(sales)}
+              />
+            </>
+          )}
+          
+          <OrdersTable orders={getFilteredOrders(orders).orders} />
+        </TabsContent>
+
+        <TabsContent value="sales" className="space-y-4">
+          <div className={`mb-4 ${isMobile ? 'w-full' : 'flex items-center gap-4'}`}>
+            <PeriodSelector value={period} onChange={setPeriod} />
+            <div className="flex-grow"></div>
+          </div>
+          
+          {sales.length > 0 && (
+            <>
+              <SalesMetrics sales={getFilteredSales(sales)} />
+              <SalesChart sales={getFilteredSales(sales)} />
+            </>
+          )}
+          
+          <SalesTable sales={getFilteredSales(sales)} />
+        </TabsContent>
+
+        <TabsContent value="geography" className="space-y-4">
+          <div className={`mb-4 ${isMobile ? 'w-full' : 'flex items-center gap-4'}`}>
+            <PeriodSelector value={period} onChange={setPeriod} />
+            <div className="flex-grow"></div>
+          </div>
+          <GeographySection 
+            warehouseDistribution={warehouseDistribution} 
+            regionDistribution={regionDistribution}
+            sales={getFilteredSales(sales)}
+          />
         </TabsContent>
       </Tabs>
-      
-      <WarehouseEfficiencyChart store={store} ordersData={ordersData} />
-      
-      <GeographySection store={store} ordersData={ordersData} />
-      
-      <TipsSection />
     </div>
   );
 };
