@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -136,15 +137,24 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       const totalStorageCost = dailyStorageCostTotal * daysOfInventory;
       
       const profitPerItem = sellingPrice - costPrice;
-      const profitPerDay = profitPerItem * dailySales - dailyStorageCostTotal;
       
-      const shouldKeepPrice = profitPerDay >= 1000;
+      // Изменение: Теперь рассчитываем общую прибыль за весь период хранения
+      const totalProfit = (profitPerItem * currentStock) - totalStorageCost;
+      
+      // Порог для определения необходимости скидки: если общая прибыль меньше 
+      // определенного процента от суммы продаж, рекомендуем скидку
+      const totalSalesValue = sellingPrice * currentStock;
+      const profitabilityRatio = totalProfit / totalSalesValue;
+      
+      // Если прибыльность выше 15%, сохраняем цену, иначе рекомендуем скидку
+      const shouldKeepPrice = profitabilityRatio >= 0.15;
       
       const discountPercentage = shouldKeepPrice ? 0 : (discountLevels[nmId] || 30);
       
       const discountedPrice = sellingPrice * (1 - discountPercentage / 100);
       const profitWithDiscountPerItem = discountedPrice - costPrice;
       
+      // Предположим, что со скидкой товар будет продаваться в 2 раза быстрее
       const discountedDaysOfInventory = Math.round(daysOfInventory * 0.5);
       const discountedStorageCost = dailyStorageCostTotal * discountedDaysOfInventory;
       
