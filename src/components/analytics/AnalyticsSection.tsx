@@ -18,6 +18,7 @@ import { fetchWildberriesStats } from "@/services/wildberriesApi";
 import { getAdvertCosts, getAdvertBalance, getAdvertPayments } from "@/services/advertisingApi";
 import { getAnalyticsData } from "@/utils/storeUtils";
 import { formatCurrency, roundToTwoDecimals } from "@/utils/formatCurrency";
+import AIAnalysisSection from "@/components/ai/AIAnalysisSection";
 
 import { 
   demoData, 
@@ -131,6 +132,7 @@ const AnalyticsSection = () => {
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [dataTimestamp, setDataTimestamp] = useState<number>(Date.now());
   const [quickSelectOpen, setQuickSelectOpen] = useState<boolean>(false);
+  const [showAIAnalysis, setShowAIAnalysis] = useState<boolean>(false);
   const isMobile = useIsMobile();
   const { toast } = useToast();
 
@@ -497,15 +499,32 @@ const AnalyticsSection = () => {
   return (
     <div className="space-y-8">
       <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-100 dark:border-blue-800/30 shadow-lg">
-        <DateRangePicker 
-          dateFrom={dateFrom}
-          dateTo={dateTo}
-          setDateFrom={setDateFrom}
-          setDateTo={setDateTo}
-          onApplyDateRange={handleDateChange}
-          onUpdate={handleDateChange}
-        />
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+          <DateRangePicker 
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            setDateFrom={setDateFrom}
+            setDateTo={setDateTo}
+            onApplyDateRange={handleDateChange}
+            onUpdate={handleDateChange}
+          />
+          <Button 
+            variant="outline" 
+            onClick={() => setShowAIAnalysis(!showAIAnalysis)}
+          >
+            {showAIAnalysis ? "Скрыть AI анализ" : "Показать AI анализ"}
+          </Button>
+        </div>
       </div>
+
+      {showAIAnalysis && selectedStoreId && (
+        <AIAnalysisSection 
+          storeId={selectedStoreId} 
+          analyticsData={data} 
+          dateFrom={dateFrom} 
+          dateTo={dateTo} 
+        />
+      )}
 
       <div className="space-y-8">
         <KeyMetrics data={data} />
@@ -568,3 +587,4 @@ const AnalyticsSection = () => {
 };
 
 export default AnalyticsSection;
+
