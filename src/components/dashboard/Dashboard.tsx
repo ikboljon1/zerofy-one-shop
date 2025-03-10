@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
@@ -24,6 +25,7 @@ import SalesMetrics from "./SalesMetrics";
 import OrdersChart from "./OrdersChart";
 import SalesChart from "./SalesChart";
 import TipsSection from "./TipsSection";
+import AIAnalysisSection from "@/components/ai/AIAnalysisSection";
 
 const Dashboard = () => {
   const { toast } = useToast();
@@ -37,6 +39,15 @@ const Dashboard = () => {
   const [sales, setSales] = useState<WildberriesSale[]>([]);
   const [warehouseDistribution, setWarehouseDistribution] = useState<any[]>([]);
   const [regionDistribution, setRegionDistribution] = useState<any[]>([]);
+  
+  // Date range for AI Analysis
+  const [dateRange, setDateRange] = useState({
+    from: new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+    to: new Date()
+  });
+
+  // Analytics data for AI analysis
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
 
   const filterDataByPeriod = (date: string, period: Period) => {
     const now = new Date();
@@ -187,6 +198,42 @@ const Dashboard = () => {
       }
       
       fetchData();
+
+      // Prepare analytics data for AI analysis
+      const simpleAnalyticsData = {
+        currentPeriod: {
+          sales: orders.length * 1200, // Simple simulation of sales data
+          expenses: {
+            total: orders.length * 700,
+            logistics: orders.length * 300,
+            storage: orders.length * 150,
+            penalties: orders.length * 50,
+            advertising: orders.length * 150,
+            acceptance: orders.length * 50
+          }
+        },
+        previousPeriod: {
+          sales: orders.length * 1100,
+          expenses: {
+            total: orders.length * 650
+          }
+        },
+        // Sample data structure for AI analysis
+        topProfitableProducts: orders.slice(0, 5).map((order, index) => ({
+          name: order.productName || `Product ${index + 1}`,
+          profit: (Math.random() * 5000 + 1000).toFixed(2),
+          margin: Math.round(Math.random() * 40 + 20),
+          quantitySold: Math.round(Math.random() * 50 + 10)
+        })),
+        topUnprofitableProducts: orders.slice(5, 10).map((order, index) => ({
+          name: order.productName || `Product ${index + 1}`,
+          profit: (-Math.random() * 2000 - 500).toFixed(2),
+          margin: Math.round(Math.random() * 10 - 20),
+          quantitySold: Math.round(Math.random() * 5 + 1)
+        }))
+      };
+
+      setAnalyticsData(simpleAnalyticsData);
     }
 
     const handleStoreSelectionChange = () => {
@@ -226,11 +273,12 @@ const Dashboard = () => {
       </div>
 
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className={`${isMobile ? 'w-full grid grid-cols-4 gap-1' : ''}`}>
+        <TabsList className={`${isMobile ? 'w-full grid grid-cols-5 gap-1' : ''}`}>
           <TabsTrigger value="overview" className={isMobile ? 'text-xs py-1 px-1' : ''}>Обзор</TabsTrigger>
           <TabsTrigger value="orders" className={isMobile ? 'text-xs py-1 px-1' : ''}>Заказы</TabsTrigger>
           <TabsTrigger value="sales" className={isMobile ? 'text-xs py-1 px-1' : ''}>Продажи</TabsTrigger>
           <TabsTrigger value="geography" className={isMobile ? 'text-xs py-1 px-1' : ''}>География</TabsTrigger>
+          <TabsTrigger value="ai-analysis" className={isMobile ? 'text-xs py-1 px-1' : ''}>AI-анализ</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -283,6 +331,28 @@ const Dashboard = () => {
             regionDistribution={regionDistribution}
             sales={getFilteredSales(sales)}
           />
+        </TabsContent>
+
+        <TabsContent value="ai-analysis" className="space-y-4">
+          {selectedStoreId && (
+            <AIAnalysisSection 
+              storeId={selectedStoreId} 
+              analyticsData={analyticsData}
+              dateFrom={dateRange.from}
+              dateTo={dateRange.to}
+            />
+          )}
+          {!selectedStoreId && (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <p className="text-muted-foreground mb-2">Выберите магазин для AI-анализа данных</p>
+              <Button 
+                onClick={() => setActiveTab("stores")}
+                variant="outline"
+              >
+                Выбрать магазин
+              </Button>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
