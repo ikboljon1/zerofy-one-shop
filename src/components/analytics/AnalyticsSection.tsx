@@ -12,7 +12,6 @@ import DeductionsChart from "./components/DeductionsChart";
 import PieChartCard from "./components/PieChartCard";
 import ExpenseBreakdown from "./components/ExpenseBreakdown";
 import ProductList from "./components/ProductList";
-import AdvertisingOptimization from "./components/AdvertisingOptimization";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
@@ -330,7 +329,6 @@ const AnalyticsSection = () => {
         setDeductionsTimeline(newDeductionsTimeline);
         setDataTimestamp(Date.now());
         
-        // Сохраняем данные в БД
         try {
           await axios.post('http://localhost:3001/api/analytics', {
             storeId: selectedStore.id,
@@ -346,7 +344,6 @@ const AnalyticsSection = () => {
           });
         } catch (dbError) {
           console.error('Error saving analytics to DB:', dbError);
-          // В случае ошибки сохраняем в localStorage как запасной вариант
           localStorage.setItem(`${ANALYTICS_STORAGE_KEY}_${selectedStore.id}`, JSON.stringify({
             storeId: selectedStore.id,
             dateFrom: dateFrom.toISOString(),
@@ -375,7 +372,6 @@ const AnalyticsSection = () => {
         variant: "destructive"
       });
       
-      // Загрузка из базы данных при ошибке API
       try {
         const analyticsData = await getAnalyticsData(selectedStoreId || '');
         if (analyticsData && analyticsData.data) {
@@ -518,9 +514,6 @@ const AnalyticsSection = () => {
           <SalesChart data={data} />
           <DeductionsChart data={deductionsTimeline} />
         </div>
-
-        {/* Advertising Optimization Section */}
-        <AdvertisingOptimization />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <PieChartCard 
