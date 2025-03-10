@@ -16,9 +16,19 @@ interface DatePickerProps {
   value?: Date;
   onValueChange?: (date?: Date) => void;
   placeholder?: string;
+  onChange?: (date?: Date) => void; // Added for backwards compatibility
 }
 
-export function DatePicker({ value, onValueChange, placeholder = "Выберите дату" }: DatePickerProps) {
+export function DatePicker({ value, onValueChange, onChange, placeholder = "Выберите дату" }: DatePickerProps) {
+  // If onChange is provided but onValueChange is not, use onChange
+  const handleDateChange = (date?: Date) => {
+    if (onValueChange) {
+      onValueChange(date);
+    } else if (onChange) {
+      onChange(date);
+    }
+  };
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -37,7 +47,7 @@ export function DatePicker({ value, onValueChange, placeholder = "Выберит
         <Calendar
           mode="single"
           selected={value}
-          onSelect={onValueChange}
+          onSelect={handleDateChange}
           initialFocus
           locale={ru}
           className="pointer-events-auto"
