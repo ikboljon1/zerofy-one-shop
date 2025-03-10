@@ -1,4 +1,3 @@
-
 export const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('ru-RU', {
     minimumFractionDigits: 0,
@@ -44,12 +43,9 @@ export const calculateTotalStorageCost = (
   // Calculate days to sell all inventory
   const daysToSellAll = currentQuantity / dailySalesRate;
   
-  // Calculate average quantity over the period (half of current)
-  const averageQuantity = calculateAverageQuantity(currentQuantity, dailySalesRate);
-  
-  // Calculate total storage cost based on average quantity 
-  // The dailyStorageCost is already PER ITEM, so we multiply by quantity
-  return averageQuantity * daysToSellAll * dailyStorageCost;
+  // Calculate total storage cost: daily cost per item × quantity × days
+  // This is the direct storage cost calculation: cost per item per day × number of items × days to sell
+  return dailyStorageCost * currentQuantity * daysToSellAll;
 };
 
 export const analyzeProfitability = (
