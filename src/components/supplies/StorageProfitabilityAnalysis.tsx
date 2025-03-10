@@ -49,7 +49,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     direction: 'asc' | 'desc'
   }>({ key: '', direction: 'asc' });
 
-  // Initialize with stored values if available
   React.useEffect(() => {
     const storedCostPrices = localStorage.getItem('product_cost_prices');
     if (storedCostPrices) {
@@ -61,15 +60,14 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       setSellingPrices(JSON.parse(storedSellingPrices));
     }
 
-    // Initialize daily sales and storage costs
     const initialDailySales: Record<number, number> = {};
     const initialStorageCosts: Record<number, number> = {};
     const initialDiscountLevels: Record<number, number> = {};
 
     warehouseItems.forEach(item => {
-      initialDailySales[item.nmId] = averageDailySalesRate[item.nmId] || 0.1; // Default to 0.1 items per day
-      initialStorageCosts[item.nmId] = dailyStorageCost[item.nmId] || 5; // Default to 5 rubles per day
-      initialDiscountLevels[item.nmId] = 30; // Default to 30% discount
+      initialDailySales[item.nmId] = averageDailySalesRate[item.nmId] || 0.1;
+      initialStorageCosts[item.nmId] = dailyStorageCost[item.nmId] || 5;
+      initialDiscountLevels[item.nmId] = 30;
     });
 
     setDailySalesRates(initialDailySales);
@@ -77,59 +75,48 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     setDiscountLevels(initialDiscountLevels);
   }, [warehouseItems, averageDailySalesRate, dailyStorageCost]);
 
-  // Calculate profitability analysis
   const analysisResults = useMemo(() => {
     return warehouseItems.map(item => {
       const nmId = item.nmId;
       const costPrice = costPrices[nmId] || 0;
       const sellingPrice = sellingPrices[nmId] || (item.price || 0);
       const dailySales = dailySalesRates[nmId] || 0.1;
-      const storageCost = storageCostRates[nmId] || 5;
-      const discountPercentage = discountLevels[nmId] || 30;
-      
-      // Calculate days of inventory based on current stock and sales rate
+      const storageCostPerUnit = storageCostRates[nmId] || 5;
       const currentStock = item.quantityWarehousesFull || 0;
       const daysOfInventory = dailySales > 0 ? Math.round(currentStock / dailySales) : 999;
-      
-      // Calculate total storage cost for the entire inventory period
-      const totalStorageCost = storageCost * daysOfInventory;
-      
-      // Calculate profit without discount
+
+      const dailyStorageCostTotal = storageCostPerUnit * currentStock;
+      const totalStorageCost = dailyStorageCostTotal * daysOfInventory;
+
       const profitPerItem = sellingPrice - costPrice;
       const profitWithoutDiscount = profitPerItem * currentStock;
-      
-      // Calculate profit with recommended discount
+
+      const discountPercentage = discountLevels[nmId] || 30;
       const discountedPrice = sellingPrice * (1 - discountPercentage / 100);
       const profitWithDiscountPerItem = discountedPrice - costPrice;
       const profitWithDiscount = profitWithDiscountPerItem * currentStock;
-      
-      // Calculate storage cost savings with quicker sales (assuming 50% faster sales with discount)
+
       const discountedDaysOfInventory = Math.round(daysOfInventory * 0.5);
-      const discountedStorageCost = storageCost * discountedDaysOfInventory;
+      const discountedStorageCost = dailyStorageCostTotal * discountedDaysOfInventory;
       const storageSavings = totalStorageCost - discountedStorageCost;
-      
-      // Calculate total benefit of discounting
+
       const netBenefitOfDiscount = storageSavings + profitWithDiscount - profitWithoutDiscount;
-      
-      // Determine recommended action
+
       let action: 'sell' | 'discount' | 'keep';
       if (profitWithDiscountPerItem < 0 && profitPerItem < 0) {
-        // If even without discount we're losing money, sell as quickly as possible
         action = 'sell';
       } else if (netBenefitOfDiscount > 0) {
-        // If discounting provides a net benefit, recommend discount
         action = 'discount';
       } else {
-        // Otherwise, keep current pricing
         action = 'keep';
       }
-      
+
       return {
         remainItem: item,
         costPrice,
         sellingPrice,
         dailySales,
-        dailyStorageCost: storageCost,
+        dailyStorageCost: dailyStorageCostTotal,
         daysOfInventory,
         totalStorageCost,
         recommendedDiscount: discountPercentage,
@@ -141,11 +128,9 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     });
   }, [warehouseItems, costPrices, sellingPrices, dailySalesRates, storageCostRates, discountLevels]);
 
-  // Filter and sort results
   const filteredResults = useMemo(() => {
     let results = [...analysisResults];
-    
-    // Apply search filter
+
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       results = results.filter(result => 
@@ -155,15 +140,13 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         result.remainItem.nmId.toString().includes(search)
       );
     }
-    
-    // Apply tab filter
+
     if (selectedTab === 'discount') {
       results = results.filter(result => result.action === 'discount' || result.action === 'sell');
     } else if (selectedTab === 'keep') {
       results = results.filter(result => result.action === 'keep');
     }
-    
-    // Apply sorting
+
     if (sortConfig.key) {
       results.sort((a, b) => {
         if (a[sortConfig.key] < b[sortConfig.key]) {
@@ -175,11 +158,10 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         return 0;
       });
     }
-    
+
     return results;
   }, [analysisResults, searchTerm, selectedTab, sortConfig]);
 
-  // Handle sorting
   const requestSort = (key: keyof AnalysisResult) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -188,13 +170,11 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     setSortConfig({ key, direction });
   };
 
-  // Save cost and price updates to localStorage
   const savePriceData = () => {
     localStorage.setItem('product_cost_prices', JSON.stringify(costPrices));
     localStorage.setItem('product_selling_prices', JSON.stringify(sellingPrices));
   };
 
-  // Update cost price for a product
   const updateCostPrice = (nmId: number, value: number) => {
     setCostPrices(prev => ({
       ...prev,
@@ -202,7 +182,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
-  // Update selling price for a product
   const updateSellingPrice = (nmId: number, value: number) => {
     setSellingPrices(prev => ({
       ...prev,
@@ -210,7 +189,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
-  // Update daily sales rate for a product
   const updateDailySales = (nmId: number, value: number) => {
     setDailySalesRates(prev => ({
       ...prev,
@@ -218,7 +196,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
-  // Update storage cost for a product
   const updateStorageCost = (nmId: number, value: number) => {
     setStorageCostRates(prev => ({
       ...prev,
@@ -226,7 +203,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
-  // Update discount level for a product
   const updateDiscountLevel = (nmId: number, value: number[]) => {
     setDiscountLevels(prev => ({
       ...prev,
@@ -234,7 +210,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
-  // Get badge color based on action
   const getActionBadge = (action: 'sell' | 'discount' | 'keep') => {
     switch (action) {
       case 'sell':
