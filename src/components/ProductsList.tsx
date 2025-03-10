@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Package, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,7 +27,7 @@ interface Product {
     acceptance: number;
     deductions?: number;
     ppvz_for_pay?: number;
-    retail_price?: number; // Изменено с retail_amount на retail_price
+    retail_price?: number;
   };
 }
 
@@ -68,7 +67,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       salesAmount: 0,
       transferredAmount: 0,
       soldQuantity: 0,
-      margin: 0  // Added margin to the return object
+      margin: 0
     };
     
     console.log('Calculating for product:', {
@@ -100,13 +99,10 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     
     const netProfit = transferredAmount - costPriceTotal - totalExpenses;
     
-    // Calculate margin as a percentage of costs (not revenue)
-    // This prevents division by zero and unrealistic margins
     let margin = 0;
     if (costPriceTotal > 0) {
       margin = (netProfit / costPriceTotal) * 100;
     } else if (netProfit > 0) {
-      // If cost price is 0 but there's profit, cap the margin at 100%
       margin = 100;
     }
     
@@ -118,7 +114,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       salesAmount,
       transferredAmount,
       soldQuantity: productSales,
-      margin: Math.round(margin) // Return the calculated margin
+      margin: Math.round(margin)
     };
   };
 
@@ -401,31 +397,20 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   const updateCostPrice = (productId: number, costPrice: number) => {
     const updatedProducts = products.map(product => {
       if (product.nmID === productId) {
-        const updatedProduct = { ...product, costPrice };
-        return updatedProduct;
+        return { ...product, costPrice };
       }
       return product;
     });
     
     setProducts(updatedProducts);
     localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedProducts));
-    
-    const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore?.id}`) || '{}');
-    costPrices[productId] = costPrice;
-    localStorage.setItem(`costPrices_${selectedStore?.id}`, JSON.stringify(costPrices));
   };
 
   useState(() => {
     if (selectedStore) {
       const storedProducts = localStorage.getItem(`products_${selectedStore.id}`);
       if (storedProducts) {
-        const parsedProducts = JSON.parse(storedProducts);
-        const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore.id}`) || '{}');
-        const productsWithCostPrices = parsedProducts.map((product: Product) => ({
-          ...product,
-          costPrice: costPrices[product.nmID] || product.costPrice || 0
-        }));
-        setProducts(productsWithCostPrices);
+        setProducts(JSON.parse(storedProducts));
       } else {
         setProducts([]);
       }
@@ -531,27 +516,27 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Общая логистика:</span>
-                        <span>{product.expenses.logistics.toFixed(2)} ₽</span>
+                        <span>{product.expenses?.logistics > 0 ? product.expenses.logistics.toFixed(2) : "0"} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Общее хранение:</span>
-                        <span>{product.expenses.storage.toFixed(2)} ₽</span>
+                        <span>{product.expenses?.storage > 0 ? product.expenses.storage.toFixed(2) : "0"} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Общие штрафы:</span>
-                        <span>{product.expenses.penalties.toFixed(2)} ₽</span>
+                        <span>{product.expenses?.penalties > 0 ? product.expenses.penalties.toFixed(2) : "0"} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Общая приемка:</span>
-                        <span>{product.expenses.acceptance.toFixed(2)} ₽</span>
+                        <span>{product.expenses?.acceptance > 0 ? product.expenses.acceptance.toFixed(2) : "0"} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Прочие удержания:</span>
-                        <span>{(product.expenses.deductions || 0).toFixed(2)} ₽</span>
+                        <span>{product.expenses?.deductions && product.expenses.deductions > 0 ? product.expenses.deductions.toFixed(2) : "0"} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs font-medium border-t pt-2">
                         <span className="text-muted-foreground">Общие расходы:</span>
-                        <span>{profitDetails.totalExpenses.toFixed(2)} ₽</span>
+                        <span>{profitDetails.totalExpenses > 0 ? profitDetails.totalExpenses.toFixed(2) : "0"} ₽</span>
                       </div>
                       <div className="flex justify-between text-sm font-medium border-t pt-2">
                         <span>Чистая прибыль:</span>
