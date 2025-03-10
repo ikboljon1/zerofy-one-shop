@@ -1,5 +1,5 @@
-import { Store, NewStore, STATS_STORAGE_KEY, AIModel, NewAIModel, AI_MODELS_STORAGE_KEY } from "@/types/store";
-import { fetchWildberriesStats } from "@/services/wildberriesApi";
+import { Store, NewStore, STATS_STORAGE_KEY, AIModel, NewAIModel, AI_MODELS_STORAGE_KEY, WildberriesOrder, WildberriesSale } from "@/types/store";
+import { fetchWildberriesStats, fetchWildberriesOrders, fetchWildberriesSales } from "@/services/wildberriesApi";
 
 const STORES_STORAGE_KEY = 'marketplace_stores';
 
@@ -182,43 +182,130 @@ export const getSelectedStore = () => {
   }
 };
 
-// Функции для обновления заказов и продаж из API
-export const fetchAndUpdateOrders = async (store: any) => {
-  // Заглушка для функции, которая будет получать данные о заказах из API
-  // В реальной имплементации здесь будет запрос к API маркетплейса
-  
-  // Для демонстрации используем моковые данные
-  const mockOrders = [];
-  const mockWarehouseDistribution = [];
-  const mockRegionDistribution = [];
-  
-  // Сохраняем полученные данные в localStorage
-  localStorage.setItem(`marketplace_orders_${store.id}`, JSON.stringify({
-    orders: mockOrders,
-    warehouseDistribution: mockWarehouseDistribution,
-    regionDistribution: mockRegionDistribution
-  }));
-  
-  return {
-    orders: mockOrders,
-    warehouseDistribution: mockWarehouseDistribution,
-    regionDistribution: mockRegionDistribution
-  };
+// Функция для загрузки и обновления данных о заказах
+export const fetchAndUpdateOrders = async (store: Store) => {
+  try {
+    if (!store.apiKey) {
+      console.error('API ключ не предоставлен для магазина:', store.name);
+      return null;
+    }
+
+    console.log(`Начинаем загрузку заказов для магазина ${store.name}...`);
+    
+    // Определяем дату, с которой начнем загрузку (30 дней назад)
+    const dateFrom = new Date();
+    dateFrom.setDate(dateFrom.getDate() - 30);
+    
+    // Вызываем API Wildberries для загрузки заказов
+    const orders = await fetchWildberriesOrders(store.apiKey, dateFrom);
+    
+    if (!orders || orders.length === 0) {
+      console.log('Нет заказов для обработки');
+      return null;
+    }
+    
+    console.log(`Успешно загружено ${orders.length} заказов`);
+    
+    // Рассчитываем распределение по складам и регионам
+    const warehouseDistribution = calculateWarehouseDistribution(orders);
+    const regionDistribution = calculateRegionDistribution(orders);
+    
+    // Сохраняем полученные данные в localStorage
+    localStorage.setItem(`marketplace_orders_${store.id}`, JSON.stringify({
+      orders,
+      warehouseDistribution,
+      regionDistribution,
+      lastUpdated: new Date().toISOString()
+    }));
+    
+    return {
+      orders,
+      warehouseDistribution,
+      regionDistribution
+    };
+  } catch (error) {
+    console.error('Ошибка при загрузке и обновлении заказов:', error);
+    return null;
+  }
 };
 
-export const fetchAndUpdateSales = async (store: any) => {
-  // Заглушка для функции, которая будет получать данные о продажах из API
-  // В реальной имплементации здесь будет запрос к API маркетплейса
+// Функция для загрузки и обновления данных о продажах
+export const fetchAndUpdateSales = async (store: Store) => {
+  try {
+    if (!store.apiKey) {
+      console.error('API ключ не предоставлен для магазина:', store.name);
+      return null;
+    }
+
+    console.log(`Начинаем загрузку продаж для магазина ${store.name}...`);
+    
+    // Определяем дату, с которой начнем загрузку (30 дней назад)
+    const dateFrom = new Date();
+    dateFrom.setDate(dateFrom.getDate() - 30);
+    
+    // Вызываем API Wildberries для загрузки продаж
+    const sales = await fetchWildberriesSales(store.apiKey, dateFrom);
+    
+    if (!sales || sales.length === 0) {
+      console.log('Нет продаж для обработки');
+      return null;
+    }
+    
+    console.log(`Успешно загружено ${sales.length} продаж`);
+    
+    // Сохраняем полученные данные в localStorage
+    localStorage.setItem(`marketplace_sales_${store.id}`, JSON.stringify({
+      sales,
+      lastUpdated: new Date().toISOString()
+    }));
+    
+    return sales;
+  } catch (error) {
+    console.error('Ошибка при загрузке и обновлении продаж:', error);
+    return null;
+  }
+};
+
+// Рассчитывает распределение заказов по складам
+const calculateWarehouseDistribution = (orders: WildberriesOrder[]) => {
+  const warehouseCounts: Record<string, number> = {};
+  const totalOrders = orders.length;
   
-  // Для демонстрации используем моковые данные
-  const mockSales = [];
+  orders.forEach(order => {
+    if (order.warehouseName) {
+      warehouseCounts[order.warehouseName] = (warehouseCounts[order.warehouseName] || 0) + 1;
+    }
+  });
   
-  // Сохраняем полученные данные в localStorage
-  localStorage.setItem(`marketplace_sales_${store.id}`, JSON.stringify({
-    sales: mockSales
-  }));
+  return Object.entries(warehouseCounts)
+    .map(([name, count]) => ({
+      name,
+      count,
+      percentage: totalOrders > 0 ? (count / totalOrders) * 100 : 0
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+};
+
+// Рассчитывает распределение заказов по регионам
+const calculateRegionDistribution = (orders: WildberriesOrder[]) => {
+  const regionCounts: Record<string, number> = {};
+  const totalOrders = orders.length;
   
-  return mockSales;
+  orders.forEach(order => {
+    if (order.regionName) {
+      regionCounts[order.regionName] = (regionCounts[order.regionName] || 0) + 1;
+    }
+  });
+  
+  return Object.entries(regionCounts)
+    .map(([name, count]) => ({
+      name,
+      count,
+      percentage: totalOrders > 0 ? (count / totalOrders) * 100 : 0
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
 };
 
 // === Функции для работы с AI моделями ===
