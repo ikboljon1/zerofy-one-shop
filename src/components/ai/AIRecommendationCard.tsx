@@ -9,9 +9,10 @@ import { Badge } from "@/components/ui/badge";
 interface AIRecommendationCardProps {
   recommendation: AIRecommendation;
   onDismiss: (id: string) => void;
+  compact?: boolean;
 }
 
-const AIRecommendationCard = ({ recommendation, onDismiss }: AIRecommendationCardProps) => {
+const AIRecommendationCard = ({ recommendation, onDismiss, compact = false }: AIRecommendationCardProps) => {
   const [showActions, setShowActions] = useState(false);
   
   // Format timestamp to readable date
@@ -27,15 +28,15 @@ const AIRecommendationCard = ({ recommendation, onDismiss }: AIRecommendationCar
   const getIcon = () => {
     switch (recommendation.category) {
       case 'sales':
-        return <TrendingUp className="h-5 w-5" />;
+        return <TrendingUp className={`${compact ? 'h-4 w-4' : 'h-5 w-5'}`} />;
       case 'expenses':
-        return <DollarSign className="h-5 w-5" />;
+        return <DollarSign className={`${compact ? 'h-4 w-4' : 'h-5 w-5'}`} />;
       case 'products':
-        return <ShoppingBag className="h-5 w-5" />;
+        return <ShoppingBag className={`${compact ? 'h-4 w-4' : 'h-5 w-5'}`} />;
       case 'advertising':
-        return <Megaphone className="h-5 w-5" />;
+        return <Megaphone className={`${compact ? 'h-4 w-4' : 'h-5 w-5'}`} />;
       default:
-        return <Info className="h-5 w-5" />;
+        return <Info className={`${compact ? 'h-4 w-4' : 'h-5 w-5'}`} />;
     }
   };
   
@@ -52,6 +53,36 @@ const AIRecommendationCard = ({ recommendation, onDismiss }: AIRecommendationCar
         return 'bg-blue-100 text-blue-800 hover:bg-blue-200';
     }
   };
+
+  if (compact) {
+    return (
+      <div className="p-3 border rounded-lg bg-card hover:shadow-sm transition-shadow">
+        <div className="flex gap-2">
+          <div className={`p-1.5 rounded-full self-start ${
+            recommendation.category === 'sales' ? 'bg-blue-100 text-blue-700' :
+            recommendation.category === 'expenses' ? 'bg-red-100 text-red-700' :
+            recommendation.category === 'products' ? 'bg-green-100 text-green-700' :
+            recommendation.category === 'advertising' ? 'bg-purple-100 text-purple-700' :
+            'bg-gray-100 text-gray-700'
+          }`}>
+            {getIcon()}
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="font-medium text-sm truncate">{recommendation.title}</h3>
+              <Badge variant="outline" className={`${getImportanceColor()} text-xs shrink-0`}>
+                {recommendation.importance === 'high' ? 'Важно' : 
+                 recommendation.importance === 'medium' ? 'Средне' : 'Низко'}
+              </Badge>
+            </div>
+            
+            <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{recommendation.description}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Card className="overflow-hidden transition-all duration-300 hover:shadow-md">

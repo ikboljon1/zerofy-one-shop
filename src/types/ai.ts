@@ -89,5 +89,5 @@ export interface AIAnalysisRequest {
       count?: number;
     }>;
   };
-  requestType: 'full_analysis' | 'sales_analysis' | 'expense_analysis' | 'product_recommendations' | 'advertising_analysis';
+  requestType: 'full_analysis' | 'sales_analysis' | 'expense_analysis' | 'product_recommendations' | 'advertising_analysis' | 'warehouse_analysis' | 'supply_analysis';
 }

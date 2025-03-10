@@ -76,7 +76,7 @@ const AdvertisingAIAnalysis = ({
       // Prepare campaign data
       const campaignData = campaignStats ? campaignStats : {
         name: campaign.campName || "Рекламная кампания",
-        cost: 0, // We don't have cost in the Campaign type
+        cost: 0, 
         views: 0,
         clicks: 0,
         orders: 0
