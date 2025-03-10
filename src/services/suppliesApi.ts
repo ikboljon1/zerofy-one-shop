@@ -6,7 +6,8 @@ import {
   Warehouse,
   WildberriesStock,
   StocksByCategory,
-  StocksByWarehouse
+  StocksByWarehouse,
+  PaidStorageItem
 } from '@/types/supplies';
 
 // Базовый URL для API поставок
@@ -471,4 +472,149 @@ export const processStocksByWarehouse = (stocks: WildberriesStock[]): StocksByWa
   });
   
   return Object.values(warehousesMap);
+};
+
+// Функция для создания задания на отчет о платном хранении
+export const createPaidStorageReport = async (
+  apiKey: string,
+  dateFrom: string,
+  dateTo: string
+): Promise<string> => {
+  try {
+    console.log(`Создание отчета о платном хранении с ${dateFrom} по ${dateTo}`);
+    
+    // В реальном приложении:
+    // const response = await axios.get(
+    //   "https://seller-analytics-api.wildberries.ru/api/v1/paid_storage",
+    //   {
+    //     headers: { Authorization: apiKey },
+    //     params: { dateFrom, dateTo }
+    //   }
+    // );
+    // return response.data.data.taskId;
+    
+    // Для демонстрации возвращаем фиктивный taskId
+    return "mock-task-id-" + Date.now();
+  } catch (error) {
+    console.error('Ошибка при создании отчета о платном хранении:', error);
+    throw error;
+  }
+};
+
+// Функция для проверки статуса задания
+export const getPaidStorageReportStatus = async (
+  apiKey: string,
+  taskId: string
+): Promise<string> => {
+  try {
+    console.log(`Проверка статуса отчета: ${taskId}`);
+    
+    // В реальном приложении:
+    // const response = await axios.get(
+    //   `https://seller-analytics-api.wildberries.ru/api/v1/paid_storage/tasks/${taskId}/status`,
+    //   {
+    //     headers: { Authorization: apiKey }
+    //   }
+    // );
+    // return response.data.data.status;
+    
+    // Для демонстрации сразу возвращаем статус "done"
+    return "done";
+  } catch (error) {
+    console.error('Ошибка при проверке статуса отчета:', error);
+    throw error;
+  }
+};
+
+// Функция для получения отчета о платном хранении
+export const downloadPaidStorageReport = async (
+  apiKey: string,
+  taskId: string
+): Promise<PaidStorageItem[]> => {
+  try {
+    console.log(`Загрузка отчета: ${taskId}`);
+    
+    // В реальном приложении:
+    // const response = await axios.get(
+    //   `https://seller-analytics-api.wildberries.ru/api/v1/paid_storage/tasks/${taskId}/download`,
+    //   {
+    //     headers: { Authorization: apiKey }
+    //   }
+    // );
+    // return response.data;
+    
+    // Моковые данные отчета
+    const mockData: PaidStorageItem[] = Array.from({ length: 30 }, (_, i) => ({
+      date: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      logWarehouseCoef: Math.random() * 0.5 + 1, // 1.0 - 1.5
+      officeId: [507, 686, 1193, 1699][Math.floor(Math.random() * 4)],
+      warehouse: ["Коледино", "Подольск", "Электросталь", "Казань"][Math.floor(Math.random() * 4)],
+      warehouseCoef: Math.random() * 1 + 1.2, // 1.2 - 2.2
+      giId: 123456 + i,
+      chrtId: 1234567 + i,
+      size: ["42", "44", "46", "48", "0"][Math.floor(Math.random() * 5)],
+      barcode: `2000${Math.floor(Math.random() * 1000000000)}`,
+      subject: ["Футболки", "Джинсы", "Куртки", "Платья", "Обувь"][Math.floor(Math.random() * 5)],
+      brand: ["BrandX", "FashionY", "SportZ", "CasualA", "TrendB"][Math.floor(Math.random() * 5)],
+      vendorCode: `ART-${1000 + i}`,
+      nmId: 1000000 + i,
+      volume: Math.random() * 30 + 5, // 5 - 35
+      calcType: ["короба: без габаритов", "короба: с габаритами", "монопаллеты"][Math.floor(Math.random() * 3)],
+      warehousePrice: Math.random() * 20 + 5, // 5 - 25 рублей
+      barcodesCount: Math.floor(Math.random() * 10) + 1, // 1-10 единиц
+      palletPlaceCode: Math.floor(Math.random() * 10),
+      palletCount: Math.random() * 0.5,
+      originalDate: new Date(Date.now() - (i + 10) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      loyaltyDiscount: Math.random() * 15, // 0-15 рублей скидки
+      tariffFixDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      tariffLowerDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    }));
+    
+    return mockData;
+  } catch (error) {
+    console.error('Ошибка при загрузке отчета о платном хранении:', error);
+    throw error;
+  }
+};
+
+// Функция для получения полного отчета (workflow)
+export const fetchFullPaidStorageReport = async (
+  apiKey: string,
+  dateFrom: string = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  dateTo: string = new Date().toISOString().split('T')[0]
+): Promise<PaidStorageItem[]> => {
+  try {
+    // 1. Создать отчет
+    const taskId = await createPaidStorageReport(apiKey, dateFrom, dateTo);
+    
+    // 2. Проверять статус отчета, пока он не будет готов
+    let status = "";
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    while (status !== "done" && attempts < maxAttempts) {
+      attempts++;
+      status = await getPaidStorageReportStatus(apiKey, taskId);
+      
+      if (status === "done") {
+        break;
+      } else if (status === "processing" || status === "new") {
+        // В реальном приложении здесь стоит добавить паузу
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } else {
+        throw new Error(`Неожиданный статус отчета: ${status}`);
+      }
+    }
+    
+    if (status !== "done") {
+      throw new Error(`Отчет не был готов после ${maxAttempts} попыток`);
+    }
+    
+    // 3. Загрузить отчет
+    const reportData = await downloadPaidStorageReport(apiKey, taskId);
+    return reportData;
+  } catch (error) {
+    console.error('Ошибка при получении отчета о платном хранении:', error);
+    throw error;
+  }
 };
