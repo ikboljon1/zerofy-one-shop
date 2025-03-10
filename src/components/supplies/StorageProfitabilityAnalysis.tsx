@@ -602,3 +602,40 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                                 <Label className="text-xs">Цена продажи:</Label>
                                 <Input
                                   type="number"
+                                  value={result.sellingPrice}
+                                  onChange={(e) => updateSellingPrice(result.remainItem.nmId, Number(e.target.value))}
+                                  className="h-7 text-xs"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="text-sm font-medium">{result.daysOfInventory} дней</div>
+                          {result.projectedStockoutDate && (
+                            <div className="text-xs text-muted-foreground">
+                              Закончится: {formatDate(result.projectedStockoutDate)}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>{formatCurrency(result.totalStorageCost)}</TableCell>
+                      <TableCell className={result.savingsWithDiscount > 0 ? 'text-green-600' : 'text-muted-foreground'}>
+                        {formatCurrency(result.savingsWithDiscount)}
+                      </TableCell>
+                      <TableCell>{getActionBadge(result.action)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default StorageProfitabilityAnalysis;
