@@ -6,10 +6,12 @@ import {
   ShoppingBag, 
   Megaphone,
   User,
-  Package,
   WarehouseIcon,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Monitor,
+  Tag,
+  FolderOpen
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -38,24 +40,34 @@ const MobileNavigation = ({ activeTab, onTabChange }: MobileNavigationProps) => 
           >
             <div className="container flex items-center justify-around py-3">
               <button
-                className={`flex flex-col items-center space-y-1 ${activeTab === "products" ? "text-primary" : "text-muted-foreground"}`}
+                className={`flex flex-col items-center space-y-1 ${activeTab === "overview" ? "text-primary" : "text-muted-foreground"}`}
                 onClick={() => {
-                  onTabChange("products");
+                  onTabChange("overview");
                   setShowStoresSubmenu(false);
                 }}
               >
-                <Package className="h-5 w-5" />
-                <span className="text-xs">Товары</span>
+                <Monitor className="h-5 w-5" />
+                <span className="text-xs">Обзор</span>
               </button>
               <button
-                className={`flex flex-col items-center space-y-1 ${activeTab === "warehouses" ? "text-primary" : "text-muted-foreground"}`}
+                className={`flex flex-col items-center space-y-1 ${activeTab === "brands" ? "text-primary" : "text-muted-foreground"}`}
                 onClick={() => {
-                  onTabChange("warehouses");
+                  onTabChange("brands");
                   setShowStoresSubmenu(false);
                 }}
               >
-                <WarehouseIcon className="h-5 w-5" />
-                <span className="text-xs">Склады</span>
+                <Tag className="h-5 w-5" />
+                <span className="text-xs">Бренды</span>
+              </button>
+              <button
+                className={`flex flex-col items-center space-y-1 ${activeTab === "categories" ? "text-primary" : "text-muted-foreground"}`}
+                onClick={() => {
+                  onTabChange("categories");
+                  setShowStoresSubmenu(false);
+                }}
+              >
+                <FolderOpen className="h-5 w-5" />
+                <span className="text-xs">Категории</span>
               </button>
             </div>
           </motion.div>
@@ -79,9 +91,9 @@ const MobileNavigation = ({ activeTab, onTabChange }: MobileNavigationProps) => 
             <span className="text-xs">Аналитика</span>
           </button>
           <button
-            className={`flex flex-col items-center space-y-1 ${(activeTab === "stores" || activeTab === "products" || activeTab === "warehouses") ? "text-primary" : "text-muted-foreground"}`}
+            className={`flex flex-col items-center space-y-1 ${(activeTab === "stores" || activeTab === "overview" || activeTab === "brands" || activeTab === "categories") ? "text-primary" : "text-muted-foreground"}`}
             onClick={() => {
-              if (activeTab !== "stores" && activeTab !== "products" && activeTab !== "warehouses") {
+              if (activeTab !== "stores" && activeTab !== "overview" && activeTab !== "brands" && activeTab !== "categories") {
                 onTabChange("stores");
               }
               setShowStoresSubmenu(!showStoresSubmenu);

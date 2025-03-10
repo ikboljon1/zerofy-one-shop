@@ -2,7 +2,6 @@ import { useState } from "react";
 import { 
   Home, 
   BarChart2, 
-  Package, 
   ShoppingBag, 
   User,
   Calculator,
@@ -12,8 +11,10 @@ import {
   Megaphone,
   Settings,
   LogOut,
-  WarehouseIcon,
-  MenuIcon
+  MenuIcon,
+  Monitor,
+  Tag,
+  FolderOpen
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -106,12 +107,12 @@ const MainLayout = ({ children, activeTab, onTabChange }: MainLayoutProps) => {
                       variant="ghost" 
                       className="justify-start"
                       onClick={() => {
-                        onTabChange("products");
+                        onTabChange("overview");
                         setShowMobileMenu(false);
                       }}
                     >
-                      <Package className="mr-2 h-4 w-4" />
-                      Товары
+                      <Monitor className="mr-2 h-4 w-4" />
+                      Обзор
                     </Button>
                     <Button 
                       variant="ghost" 
@@ -128,12 +129,23 @@ const MainLayout = ({ children, activeTab, onTabChange }: MainLayoutProps) => {
                       variant="ghost" 
                       className="justify-start"
                       onClick={() => {
-                        onTabChange("warehouses");
+                        onTabChange("brands");
                         setShowMobileMenu(false);
                       }}
                     >
-                      <WarehouseIcon className="mr-2 h-4 w-4" />
-                      Склады
+                      <Tag className="mr-2 h-4 w-4" />
+                      Бренды
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="justify-start"
+                      onClick={() => {
+                        onTabChange("categories");
+                        setShowMobileMenu(false);
+                      }}
+                    >
+                      <FolderOpen className="mr-2 h-4 w-4" />
+                      Категории
                     </Button>
                     <Button 
                       variant="ghost" 
@@ -205,11 +217,11 @@ const MainLayout = ({ children, activeTab, onTabChange }: MainLayoutProps) => {
                 </Button>
                 <Button 
                   variant="ghost" 
-                  onClick={() => onTabChange("products")}
-                  className={activeTab === "products" ? "bg-accent" : ""}
+                  onClick={() => onTabChange("overview")}
+                  className={activeTab === "overview" ? "bg-accent" : ""}
                 >
-                  <Package className="mr-2 h-4 w-4" />
-                  Товары
+                  <Monitor className="mr-2 h-4 w-4" />
+                  Обзор
                 </Button>
                 <Button 
                   variant="ghost" 
@@ -221,11 +233,19 @@ const MainLayout = ({ children, activeTab, onTabChange }: MainLayoutProps) => {
                 </Button>
                 <Button 
                   variant="ghost" 
-                  onClick={() => onTabChange("warehouses")}
-                  className={activeTab === "warehouses" ? "bg-accent" : ""}
+                  onClick={() => onTabChange("brands")}
+                  className={activeTab === "brands" ? "bg-accent" : ""}
                 >
-                  <WarehouseIcon className="mr-2 h-4 w-4" />
-                  Склады
+                  <Tag className="mr-2 h-4 w-4" />
+                  Бренды
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => onTabChange("categories")}
+                  className={activeTab === "categories" ? "bg-accent" : ""}
+                >
+                  <FolderOpen className="mr-2 h-4 w-4" />
+                  Категории
                 </Button>
                 <Button 
                   variant="ghost" 

@@ -1,10 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ClipboardListIcon, 
-  PackageOpen, RefreshCw, Store, DollarSign
+  RefreshCw, Store, DollarSign,
+  Monitor,
+  Tag,
+  FolderOpen
 } from 'lucide-react';
 import { 
   fetchAcceptanceCoefficients, 
@@ -38,7 +40,7 @@ import { ensureStoreSelectionPersistence } from '@/utils/storeUtils';
 import { Store as StoreType } from '@/types/store';
 
 const Warehouses: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('inventory');
+  const [activeTab, setActiveTab] = useState('overview');
   const [wbWarehouses, setWbWarehouses] = useState<WBWarehouse[]>([]);
   const [coefficients, setCoefficients] = useState<WarehouseCoefficient[]>([]);
   const [supplyResults, setSupplyResults] = useState<SupplyOptionsResponse | null>(null);
@@ -61,14 +63,7 @@ const Warehouses: React.FC = () => {
     if (selected) {
       setSelectedStore(selected);
       // Если есть выбранный магазин, загружаем соответствующие данные
-      if (activeTab === 'supplies') {
-        loadWarehouses(selected.apiKey);
-        loadCoefficients(selected.apiKey);
-      } else if (activeTab === 'inventory') {
-        loadWarehouseRemains(selected.apiKey);
-      } else if (activeTab === 'storage') {
-        loadPaidStorageData(selected.apiKey);
-      }
+      loadWarehouseRemains(selected.apiKey);
     } else if (stores.length > 0) {
       // Если нет выбранного магазина, но есть магазины, выбираем первый
       setSelectedStore(stores[0]);
@@ -77,14 +72,7 @@ const Warehouses: React.FC = () => {
 
   useEffect(() => {
     if (selectedStore) {
-      if (activeTab === 'supplies') {
-        loadWarehouses(selectedStore.apiKey);
-        loadCoefficients(selectedStore.apiKey);
-      } else if (activeTab === 'inventory') {
-        loadWarehouseRemains(selectedStore.apiKey);
-      } else if (activeTab === 'storage') {
-        loadPaidStorageData(selectedStore.apiKey);
-      }
+      loadWarehouseRemains(selectedStore.apiKey);
     }
   }, [activeTab, selectedStore]);
 
@@ -213,14 +201,7 @@ const Warehouses: React.FC = () => {
       return;
     }
     
-    if (activeTab === 'inventory') {
-      loadWarehouseRemains(selectedStore.apiKey);
-    } else if (activeTab === 'supplies') {
-      loadWarehouses(selectedStore.apiKey);
-      loadCoefficients(selectedStore.apiKey);
-    } else if (activeTab === 'storage') {
-      loadPaidStorageData(selectedStore.apiKey);
-    }
+    loadWarehouseRemains(selectedStore.apiKey);
   };
 
   // Calculate average daily sales rates based on historical data
@@ -251,23 +232,23 @@ const Warehouses: React.FC = () => {
         <h1 className="text-2xl font-bold">Управление складами и логистикой</h1>
       </div>
 
-      <Tabs defaultValue="inventory" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid grid-cols-3 w-full max-w-md">
-          <TabsTrigger value="inventory" className="flex items-center justify-center">
-            <ClipboardListIcon className="h-4 w-4 mr-2" />
-            <span>Инвентарь</span>
+          <TabsTrigger value="overview" className="flex items-center justify-center">
+            <Monitor className="h-4 w-4 mr-2" />
+            <span>Обзор</span>
           </TabsTrigger>
-          <TabsTrigger value="supplies" className="flex items-center justify-center">
-            <PackageOpen className="h-4 w-4 mr-2" />
-            <span>Поставки</span>
+          <TabsTrigger value="brands" className="flex items-center justify-center">
+            <Tag className="h-4 w-4 mr-2" />
+            <span>Бренды</span>
           </TabsTrigger>
-          <TabsTrigger value="storage" className="flex items-center justify-center">
-            <DollarSign className="h-4 w-4 mr-2" />
-            <span>Хранение</span>
+          <TabsTrigger value="categories" className="flex items-center justify-center">
+            <FolderOpen className="h-4 w-4 mr-2" />
+            <span>Категории</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="inventory" className="space-y-4">
+        <TabsContent value="overview" className="space-y-4">
           {!selectedStore ? (
             <Card>
               <CardHeader>
@@ -341,7 +322,7 @@ const Warehouses: React.FC = () => {
           )}
         </TabsContent>
 
-        <TabsContent value="supplies" className="space-y-4">
+        <TabsContent value="brands" className="space-y-4">
           {!selectedStore ? (
             <Card>
               <CardHeader>
@@ -350,93 +331,12 @@ const Warehouses: React.FC = () => {
                   Выберите магазин
                 </CardTitle>
                 <CardDescription>
-                  Для просмотра и управления поставками необходимо выбрать магазин в разделе "Магазины"
+                  Для просмотра данных по брендам необходимо выбрать магазин в разделе "Магазины"
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col items-center justify-center py-8 text-center">
                 <Store className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Для работы с поставками необходимо выбрать магазин</p>
-                <Button 
-                  className="mt-4"
-                  variant="outline"
-                  onClick={() => window.location.href = '/dashboard'}
-                >
-                  Перейти к выбору магазина
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="lg:col-span-1">
-                {loading.warehouses ? (
-                  <Card>
-                    <CardHeader>
-                      <Skeleton className="h-8 w-3/4" />
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-10 w-full" />
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <SupplyForm 
-                    warehouses={wbWarehouses} 
-                    onSupplySubmit={handleSupplySubmit} 
-                  />
-                )}
-              </div>
-              
-              <div className="lg:col-span-2">
-                {supplyResults ? (
-                  <SupplyOptionsResults 
-                    results={supplyResults} 
-                    warehouses={wbWarehouses} 
-                  />
-                ) : (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center">
-                        <PackageOpen className="h-5 w-5 mr-2" />
-                        Коэффициенты приемки
-                      </CardTitle>
-                      <CardDescription>
-                        Информация о доступности приемки товаров на складах WB
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {loading.coefficients ? (
-                        <div className="space-y-2">
-                          <Skeleton className="h-10 w-full" />
-                          <Skeleton className="h-10 w-full" />
-                          <Skeleton className="h-10 w-full" />
-                        </div>
-                      ) : (
-                        <WarehouseCoefficientsTable coefficients={coefficients} />
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="storage" className="space-y-4">
-          {!selectedStore ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                  <Store className="mr-2 h-5 w-5" />
-                  Выберите магазин
-                </CardTitle>
-                <CardDescription>
-                  Для просмотра данных о платном хранении необходимо выбрать магазин в разделе "Магазины"
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <Store className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Для работы с отчетами о платном хранении необходимо выбрать магазин</p>
+                <p className="text-muted-foreground">Для работы с данными по брендам необходимо выбрать магазин</p>
                 <Button 
                   className="mt-4"
                   variant="outline"
@@ -450,17 +350,17 @@ const Warehouses: React.FC = () => {
             <>
               <div className="flex justify-between items-center mb-4">
                 <div>
-                  <h2 className="text-lg font-semibold">Отчет о платном хранении</h2>
-                  <p className="text-sm text-muted-foreground">Аналитика затрат на хранение товаров</p>
+                  <h2 className="text-lg font-semibold">Анализ по брендам</h2>
+                  <p className="text-sm text-muted-foreground">Распределение товаров по брендам</p>
                 </div>
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={handleRefreshData}
-                  disabled={loading.paidStorage}
+                  disabled={loading.remains}
                   className="flex items-center gap-2"
                 >
-                  {loading.paidStorage ? (
+                  {loading.remains ? (
                     <RefreshCw className="h-4 w-4 animate-spin" />
                   ) : (
                     <RefreshCw className="h-4 w-4" />
@@ -469,14 +369,73 @@ const Warehouses: React.FC = () => {
                 </Button>
               </div>
 
-              {loading.paidStorage && paidStorageData.length === 0 ? (
+              {loading.remains ? (
                 <Skeleton className="h-[600px] w-full" />
               ) : (
-                <PaidStorageCostReport 
-                  apiKey={selectedStore.apiKey}
-                  storageData={paidStorageData}
-                  isLoading={loading.paidStorage}
-                  onRefresh={loadPaidStorageData}
+                <WarehouseRemains 
+                  data={warehouseRemains} 
+                  isLoading={loading.remains}
+                  initialTabValue="brands" 
+                />
+              )}
+            </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="categories" className="space-y-4">
+          {!selectedStore ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center">
+                  <Store className="mr-2 h-5 w-5" />
+                  Выберите магазин
+                </CardTitle>
+                <CardDescription>
+                  Для просмотра данных по категориям необходимо выбрать магазин в разделе "Магазины"
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <Store className="h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">Для работы с данными по категориям необходимо выбрать магазин</p>
+                <Button 
+                  className="mt-4"
+                  variant="outline"
+                  onClick={() => window.location.href = '/dashboard'}
+                >
+                  Перейти к выбору магазина
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h2 className="text-lg font-semibold">Анализ по категориям</h2>
+                  <p className="text-sm text-muted-foreground">Распределение товаров по категориям</p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleRefreshData}
+                  disabled={loading.remains}
+                  className="flex items-center gap-2"
+                >
+                  {loading.remains ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  Обновить данные
+                </Button>
+              </div>
+
+              {loading.remains ? (
+                <Skeleton className="h-[600px] w-full" />
+              ) : (
+                <WarehouseRemains 
+                  data={warehouseRemains} 
+                  isLoading={loading.remains}
+                  initialTabValue="categories" 
                 />
               )}
             </>
