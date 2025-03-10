@@ -7,9 +7,9 @@ import {
   Megaphone,
   User,
   Package,
+  WarehouseIcon,
   ChevronDown,
-  ChevronUp,
-  WarehouseIcon
+  ChevronUp
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -48,14 +48,14 @@ const MobileNavigation = ({ activeTab, onTabChange }: MobileNavigationProps) => 
                 <span className="text-xs">Товары</span>
               </button>
               <button
-                className={`flex flex-col items-center space-y-1 ${activeTab === "storage" ? "text-primary" : "text-muted-foreground"}`}
+                className={`flex flex-col items-center space-y-1 ${activeTab === "warehouses" ? "text-primary" : "text-muted-foreground"}`}
                 onClick={() => {
-                  onTabChange("storage");
+                  onTabChange("warehouses");
                   setShowStoresSubmenu(false);
                 }}
               >
                 <WarehouseIcon className="h-5 w-5" />
-                <span className="text-xs">Хранение</span>
+                <span className="text-xs">Склады</span>
               </button>
             </div>
           </motion.div>
@@ -79,9 +79,9 @@ const MobileNavigation = ({ activeTab, onTabChange }: MobileNavigationProps) => 
             <span className="text-xs">Аналитика</span>
           </button>
           <button
-            className={`flex flex-col items-center space-y-1 ${(activeTab === "stores" || activeTab === "products" || activeTab === "storage") ? "text-primary" : "text-muted-foreground"}`}
+            className={`flex flex-col items-center space-y-1 ${(activeTab === "stores" || activeTab === "products" || activeTab === "warehouses") ? "text-primary" : "text-muted-foreground"}`}
             onClick={() => {
-              if (activeTab !== "stores" && activeTab !== "products" && activeTab !== "storage") {
+              if (activeTab !== "stores" && activeTab !== "products" && activeTab !== "warehouses") {
                 onTabChange("stores");
               }
               setShowStoresSubmenu(!showStoresSubmenu);
