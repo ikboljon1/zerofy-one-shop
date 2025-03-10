@@ -1,7 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useNavigate } from "react-router-dom";
 import Chart from "@/components/Chart";
 import ProductsComponent from "@/components/Products";
 import Stores from "@/components/Stores";
@@ -14,26 +14,40 @@ import AnalyticsSection from "@/components/analytics/AnalyticsSection";
 import Dashboard from "@/components/dashboard/Dashboard";
 import { getProductProfitabilityData, getSelectedStore } from "@/utils/storeUtils";
 import { User } from "@/services/userService";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
   const isMobile = useIsMobile();
   const [selectedStore, setSelectedStore] = useState<{id: string; apiKey: string} | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Load user data from localStorage
+    // Check if user is authenticated
     const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    
+    if (!storedUser) {
+      // User is not authenticated, redirect to landing page
+      toast({
+        title: "Доступ запрещен",
+        description: "Пожалуйста, войдите в систему для доступа к дашборду",
+        variant: "destructive"
+      });
+      navigate('/', { replace: true });
+      return;
     }
+    
+    // User is authenticated, set user data
+    setUser(JSON.parse(storedUser));
     
     // Initialize selected store
     const store = getSelectedStore();
     if (store) {
       setSelectedStore(store);
     }
-  }, []);
+  }, [navigate]);
 
   const getProductsData = () => {
     const store = selectedStore || getSelectedStore();

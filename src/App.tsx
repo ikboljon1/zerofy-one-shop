@@ -14,6 +14,17 @@ import { useEffect, useState } from "react";
 
 const queryClient = new QueryClient();
 
+// Protected route component that checks authentication
+const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+  const isAuthenticated = localStorage.getItem('user') !== null;
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  
+  return children;
+};
+
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
@@ -34,11 +45,33 @@ const App = () => {
             <Route path="/" element={
               isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />
             } />
-            <Route path="/dashboard" element={<Index />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/warehouses" element={<Warehouses />} />
-            <Route path="/advertising" element={<Advertising />} />
-            <Route path="/admin" element={<Admin />} />
+            
+            {/* Protected routes */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <Index />
+              </ProtectedRoute>
+            } />
+            <Route path="/products" element={
+              <ProtectedRoute>
+                <Products />
+              </ProtectedRoute>
+            } />
+            <Route path="/warehouses" element={
+              <ProtectedRoute>
+                <Warehouses />
+              </ProtectedRoute>
+            } />
+            <Route path="/advertising" element={
+              <ProtectedRoute>
+                <Advertising />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin" element={
+              <ProtectedRoute>
+                <Admin />
+              </ProtectedRoute>
+            } />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
