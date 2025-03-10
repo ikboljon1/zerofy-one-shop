@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
@@ -12,7 +11,8 @@ import {
   fetchAndUpdateOrders, 
   fetchAndUpdateSales,
   ensureStoreSelectionPersistence,
-  getSelectedStore
+  getSelectedStore,
+  getAnalyticsData
 } from "@/utils/storeUtils";
 import OrdersTable from "./OrdersTable";
 import SalesTable from "./SalesTable";
@@ -26,6 +26,7 @@ import OrdersChart from "./OrdersChart";
 import SalesChart from "./SalesChart";
 import TipsSection from "./TipsSection";
 import AIAnalysisSection from "@/components/ai/AIAnalysisSection";
+import AIMetricsAnalysis from "./AIMetricsAnalysis";
 
 const Dashboard = () => {
   const { toast } = useToast();
@@ -40,13 +41,11 @@ const Dashboard = () => {
   const [warehouseDistribution, setWarehouseDistribution] = useState<any[]>([]);
   const [regionDistribution, setRegionDistribution] = useState<any[]>([]);
   
-  // Date range for AI Analysis
   const [dateRange, setDateRange] = useState({
-    from: new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+    from: new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000),
     to: new Date()
   });
 
-  // Analytics data for AI analysis
   const [analyticsData, setAnalyticsData] = useState<any>(null);
 
   const filterDataByPeriod = (date: string, period: Period) => {
@@ -199,39 +198,7 @@ const Dashboard = () => {
       
       fetchData();
 
-      // Prepare analytics data for AI analysis
-      const simpleAnalyticsData = {
-        currentPeriod: {
-          sales: orders.length * 1200, // Simple simulation of sales data
-          expenses: {
-            total: orders.length * 700,
-            logistics: orders.length * 300,
-            storage: orders.length * 150,
-            penalties: orders.length * 50,
-            advertising: orders.length * 150,
-            acceptance: orders.length * 50
-          }
-        },
-        previousPeriod: {
-          sales: orders.length * 1100,
-          expenses: {
-            total: orders.length * 650
-          }
-        },
-        // Sample data structure for AI analysis
-        topProfitableProducts: orders.slice(0, 5).map((order, index) => ({
-          name: order.subject || `Product ${index + 1}`,
-          profit: (Math.random() * 5000 + 1000).toFixed(2),
-          margin: Math.round(Math.random() * 40 + 20),
-          quantitySold: Math.round(Math.random() * 50 + 10)
-        })),
-        topUnprofitableProducts: orders.slice(5, 10).map((order, index) => ({
-          name: order.subject || `Product ${index + 1}`,
-          profit: (-Math.random() * 2000 - 500).toFixed(2),
-          margin: Math.round(Math.random() * 10 - 20),
-          quantitySold: Math.round(Math.random() * 5 + 1)
-        }))
-      };
+      const simpleAnalyticsData = getAnalyticsData(selectedStore.id);
 
       setAnalyticsData(simpleAnalyticsData);
     }
@@ -283,7 +250,17 @@ const Dashboard = () => {
 
         <TabsContent value="overview" className="space-y-4">
           <Stats />
-          <TipsSection />
+          {selectedStoreId && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <AIMetricsAnalysis 
+                storeId={selectedStoreId}
+                analyticsData={analyticsData}
+                dateFrom={dateRange.from}
+                dateTo={dateRange.to}
+              />
+              <TipsSection />
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="orders" className="space-y-4">

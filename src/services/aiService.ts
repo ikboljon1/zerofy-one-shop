@@ -294,6 +294,171 @@ const generateFallbackRecommendations = (requestType: string): AIRecommendation[
           action: "Создать тестовые кампании разных типов с ограниченным бюджетом"
         }
       ];
+    case 'product_recommendations':
+      return [
+        {
+          id: `fallback-${timestamp}-1`,
+          title: "Оптимизация товарного ассортимента",
+          description: "Сосредоточьтесь на развитии наиболее прибыльных товаров и категорий. Выявляйте товары с высокой маржинальностью и увеличивайте их долю в ассортименте.",
+          category: 'products',
+          importance: 'high',
+          timestamp: timestamp,
+          actionable: true,
+          action: "Провести аудит ассортимента и выделить топ-10 наиболее прибыльных товаров"
+        },
+        {
+          id: `fallback-${timestamp}-2`,
+          title: "Анализ и корректировка цен",
+          description: "Регулярно анализируйте цены конкурентов и корректируйте свои цены для поддержания конкурентоспособности. Используйте динамическое ценообразование в зависимости от спроса и сезонности.",
+          category: 'products',
+          importance: 'medium',
+          timestamp: timestamp,
+          actionable: true,
+          action: "Настроить еженедельный мониторинг цен конкурентов и автоматическую корректировку своих цен"
+        },
+        {
+          id: `fallback-${timestamp}-3`,
+          title: "Оптимизация карточек товаров",
+          description: "Улучшите качество фотографий, описаний и характеристик товаров. Добавьте видео и инфографику для наиболее популярных товаров.",
+          category: 'products',
+          importance: 'medium',
+          timestamp: timestamp,
+          actionable: true,
+          action: "Обновить контент для топ-20 товаров по продажам"
+        }
+      ];
+    case 'sales_analysis':
+      return [
+        {
+          id: `fallback-${timestamp}-1`,
+          title: "Внедрение программы лояльности",
+          description: "Разработайте систему скидок и бонусов для постоянных клиентов. Это позволит увеличить средний чек и частоту покупок.",
+          category: 'sales',
+          importance: 'high',
+          timestamp: timestamp,
+          actionable: true,
+          action: "Разработать и внедрить программу лояльности с системой накопительных скидок"
+        },
+        {
+          id: `fallback-${timestamp}-2`,
+          title: "Сезонные акции и распродажи",
+          description: "Планируйте акции и специальные предложения в соответствии с сезонностью и праздниками. Это поможет увеличить продажи в пиковые периоды и поддержать их в низкий сезон.",
+          category: 'sales',
+          importance: 'medium',
+          timestamp: timestamp,
+          actionable: true,
+          action: "Составить календарь акций и распродаж на год вперед"
+        },
+        {
+          id: `fallback-${timestamp}-3`,
+          title: "Аналитика покупательского поведения",
+          description: "Внедрите систему аналитики для отслеживания поведения покупателей: какие товары чаще всего покупают вместе, в какое время суток совершается больше покупок и т.д.",
+          category: 'sales',
+          importance: 'medium',
+          timestamp: timestamp,
+          actionable: true,
+          action: "Настроить систему отслеживания покупательского поведения и регулярные отчеты"
+        }
+      ];
+    case 'expense_analysis':
+      return [
+        {
+          id: `fallback-${timestamp}-1`,
+          title: "Оптимизация логистических расходов",
+          description: "Пересмотрите схемы доставки и хранения товаров. Используйте склады, расположенные ближе к основным регионам продаж, для снижения затрат на логистику.",
+          category: 'expenses',
+          importance: 'high',
+          timestamp: timestamp,
+          actionable: true,
+          action: "Провести аудит логистических процессов и выявить возможности для оптимизации"
+        },
+        {
+          id: `fallback-${timestamp}-2`,
+          title: "Снижение штрафов и возвратов",
+          description: "Улучшите качество упаковки и контроль качества товаров перед отправкой. Это поможет снизить количество возвратов и штрафов со стороны маркетплейса.",
+          category: 'expenses',
+          importance: 'medium',
+          timestamp: timestamp,
+          actionable: true,
+          action: "Разработать систему контроля качества товаров перед отправкой"
+        },
+        {
+          id: `fallback-${timestamp}-3`,
+          title: "Оптимизация рекламного бюджета",
+          description: "Проанализируйте эффективность рекламных кампаний и перераспределите бюджет в пользу наиболее эффективных каналов и инструментов.",
+          category: 'expenses',
+          importance: 'medium',
+          timestamp: timestamp,
+          actionable: true,
+          action: "Провести аудит рекламных кампаний и оптимизировать распределение бюджета"
+        }
+      ];
+    case 'warehouse_analysis':
+      return [
+        {
+          id: `fallback-${timestamp}-1`,
+          title: "Оптимизация товарных запасов",
+          description: "Внедрите систему управления запасами для поддержания оптимального уровня товаров на складе. Это поможет избежать как избыточных запасов, так и дефицита товаров.",
+          category: 'expenses',
+          importance: 'high',
+          timestamp: timestamp,
+          actionable: true,
+          action: "Разработать и внедрить систему управления запасами с учетом сезонности и спроса"
+        },
+        {
+          id: `fallback-${timestamp}-2`,
+          title: "Распродажа неликвидных товаров",
+          description: "Проведите распродажу товаров, которые долго лежат на складе и имеют низкую оборачиваемость. Это поможет освободить складские площади и средства, вложенные в эти товары.",
+          category: 'products',
+          importance: 'medium',
+          timestamp: timestamp,
+          actionable: true,
+          action: "Подготовить список неликвидных товаров и провести распродажу со скидками до 50%"
+        },
+        {
+          id: `fallback-${timestamp}-3`,
+          title: "Оптимизация распределения по складам",
+          description: "Распределяйте товары по складам с учетом региональных продаж. Размещайте популярные товары на складах, расположенных ближе к основным регионам продаж.",
+          category: 'expenses',
+          importance: 'medium',
+          timestamp: timestamp,
+          actionable: true,
+          action: "Провести анализ региональных продаж и оптимизировать распределение товаров по складам"
+        }
+      ];
+    case 'supply_analysis':
+      return [
+        {
+          id: `fallback-${timestamp}-1`,
+          title: "Оптимизация графика поставок",
+          description: "Разработайте оптимальный график поставок с учетом сезонности, спроса и времени, необходимого для приемки товаров маркетплейсом.",
+          category: 'expenses',
+          importance: 'high',
+          timestamp: timestamp,
+          actionable: true,
+          action: "Разработать и внедрить оптимальный график поставок на основе исторических данных"
+        },
+        {
+          id: `fallback-${timestamp}-2`,
+          title: "Контроль качества поставок",
+          description: "Внедрите систему контроля качества товаров перед отправкой на склады маркетплейса. Это поможет избежать отказов в приемке и возвратов.",
+          category: 'expenses',
+          importance: 'medium',
+          timestamp: timestamp,
+          actionable: true,
+          action: "Разработать и внедрить систему контроля качества товаров перед отправкой"
+        },
+        {
+          id: `fallback-${timestamp}-3`,
+          title: "Оптимизация упаковки",
+          description: "Пересмотрите подход к упаковке товаров для минимизации объема и веса, что позволит снизить затраты на логистику.",
+          category: 'expenses',
+          importance: 'medium',
+          timestamp: timestamp,
+          actionable: true,
+          action: "Провести аудит упаковки товаров и разработать более эффективные решения"
+        }
+      ];
     default:
       return [
         {

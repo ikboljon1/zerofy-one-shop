@@ -88,7 +88,7 @@ export interface AIAnalysisRequest {
       value: number;
       count?: number;
     }>;
-    // Добавлены расширенные данные для анализа рекламы
+    // Данные для анализа рекламы
     campaignDetails?: {
       id: number;
       status: string;
@@ -115,6 +115,38 @@ export interface AIAnalysisRequest {
         efficiency: number;
       }>;
     };
+    // Новые данные для анализа остатков
+    warehouse?: {
+      totalItems: number;
+      remainsValue: number;
+      remainsQuantity: number;
+      warehouses: Array<{
+        name: string;
+        quantity: number;
+        value: number;
+      }>;
+      products: Array<{
+        name: string;
+        quantity: number;
+        value: number;
+        daysInStock: number;
+        turnoverRate?: number;
+      }>;
+    };
+    // Новые данные для анализа поставок
+    supplies?: {
+      totalSupplies: number;
+      totalItems: number;
+      totalValue: number;
+      supplies: Array<{
+        date: string;
+        items: number;
+        value: number;
+        status: string;
+      }>;
+      pendingItems: number;
+      pendingValue: number;
+    };
   };
-  requestType: 'full_analysis' | 'sales_analysis' | 'expense_analysis' | 'product_recommendations' | 'advertising_analysis';
+  requestType: 'full_analysis' | 'sales_analysis' | 'expense_analysis' | 'product_recommendations' | 'advertising_analysis' | 'warehouse_analysis' | 'supply_analysis';
 }
