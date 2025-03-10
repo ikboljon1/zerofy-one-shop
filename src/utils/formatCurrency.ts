@@ -1,4 +1,3 @@
-
 /**
  * Форматирует число как валюту (без символа рубля)
  * @param value Число для форматирования
@@ -35,189 +34,193 @@ export const roundToTwoDecimals = (value: number): number => {
 };
 
 /**
- * Рассчитывает среднее количество товара за период с учетом постепенного уменьшения
+ * Рассчитывает среднее количество товара за период с учетом дней до полной продажи
  * @param initialQuantity Начальное количество товара
  * @param salesRate Продаж в день (единиц в день)
- * @param days Период расчета в днях (по умолчанию 30)
+ * @param days Период расчета в днях
  * @returns Среднее количество товара
  */
-export const calculateAverageQuantity = (initialQuantity: number, salesRate: number, days = 30): number => {
-  if (initialQuantity <= 0) return 0;
+export const calculateAverageQuantity = (initialQuantity: number, salesRate: number, days = 28): number => {
+  if (initialQuantity <= 0 || salesRate <= 0) return initialQuantity;
   
-  // Если продаж в день очень мало или нет
-  if (salesRate <= 0.01) {
-    return initialQuantity;
-  }
+  // Дни до полной продажи
+  const daysUntilSoldOut = initialQuantity / salesRate;
   
-  // Время до исчерпания запаса (в днях)
-  const daysUntilZero = initialQuantity / salesRate;
-  
-  // Если запас закончится раньше расчетного периода
-  if (daysUntilZero < days) {
-    // Среднее количество при линейном уменьшении от initialQuantity до 0 за daysUntilZero дней
+  // Если товар продастся раньше расчетного периода
+  if (daysUntilSoldOut < days) {
+    // Среднее количество за период продажи
     return initialQuantity / 2;
-  } else {
-    // За период days товар уменьшится на (salesRate * days)
-    const endQuantity = initialQuantity - (salesRate * days);
-    // Среднее количество при линейном уменьшении от initialQuantity до endQuantity
-    return (initialQuantity + endQuantity) / 2;
   }
+  
+  // Если товар не успеет продаться за расчетный период
+  const endQuantity = initialQuantity - (salesRate * days);
+  return (initialQuantity + endQuantity) / 2;
 };
 
 /**
- * Рассчитывает общие затраты на хранение с учетом постепенного уменьшения товара
- * @param initialQuantity Начальное количество товара
- * @param dailyCostPerUnit Стоимость хранения одной единицы в день
- * @param salesRate Продаж в день (единиц в день)
- * @param days Период расчета в днях (по умолчанию 30)
+ * Рассчитывает затраты на хранение с учетом постепенного уменьшения количества
+ * @param initialQuantity Начальное количество
+ * @param dailyCostPerUnit Стоимость хранения единицы в день
+ * @param salesRate Продаж в день
+ * @param days Период в днях
  * @returns Общие затраты на хранение
  */
 export const calculateTotalStorageCost = (
-  initialQuantity: number, 
-  dailyCostPerUnit: number, 
+  initialQuantity: number,
+  dailyCostPerUnit: number,
   salesRate: number,
-  days = 30
+  days = 28
 ): number => {
   if (initialQuantity <= 0 || dailyCostPerUnit <= 0) return 0;
   
-  // Если товар не продается или продается очень медленно
-  if (salesRate <= 0.01) {
-    return initialQuantity * dailyCostPerUnit * days; // Расчет при неизменном количестве
-  }
+  // Дни до полной продажи
+  const daysUntilSoldOut = salesRate > 0 ? initialQuantity / salesRate : days;
   
-  // Время до исчерпания запаса (в днях)
-  const daysUntilZero = initialQuantity / salesRate;
+  // Используем фактический период (минимум из дней до продажи и расчетного периода)
+  const actualDays = Math.min(daysUntilSoldOut, days);
   
-  // Ограничиваем период расчета до указанного количества дней или до исчерпания запаса, если это произойдет раньше
-  const daysToCalculate = Math.min(daysUntilZero, days);
+  // Среднее количество за период
+  const avgQuantity = calculateAverageQuantity(initialQuantity, salesRate, actualDays);
   
-  // Среднее количество товара за период с учетом постепенного уменьшения
-  const averageQuantity = calculateAverageQuantity(initialQuantity, salesRate, days);
-  
-  // Общие затраты на хранение: среднее количество × стоимость хранения в день × количество дней
-  return averageQuantity * dailyCostPerUnit * daysToCalculate;
+  // Общие затраты на хранение
+  return avgQuantity * dailyCostPerUnit * actualDays;
 };
 
-/**
- * Рассчитывает рекомендуемую цену на основе себестоимости и затрат на хранение
- * @param costPrice Себестоимость товара
- * @param storageCost Затраты на хранение одной единицы
- * @param desiredMargin Желаемая маржа в процентах (по умолчанию 30%)
- * @returns Рекомендуемая цена
- */
-export const calculateRecommendedPrice = (
-  costPrice: number,
-  storageCost: number,
-  desiredMargin = 30
-): number => {
-  if (costPrice <= 0) return 0;
-  
-  // Общие затраты на единицу товара (себестоимость + хранение)
-  const totalCost = costPrice + storageCost;
-  
-  // Рассчитываем цену с учетом желаемой маржи
-  // Формула: Цена = Затраты / (1 - Маржа/100)
-  const recommendedPrice = totalCost / (1 - desiredMargin / 100);
-  
-  return roundToTwoDecimals(recommendedPrice);
-};
+interface ProfitAnalysis {
+  withoutDiscount: {
+    daysToSell: number;
+    storageCost: number;
+    totalProfit: number;
+    roi: number;
+  };
+  withDiscount: {
+    daysToSell: number;
+    storageCost: number;
+    totalProfit: number;
+    roi: number;
+    expectedSalesIncrease: number;
+  };
+  recommendedAction: string;
+  recommendedPrice: number;
+}
 
 /**
- * Анализирует прибыльность товара и дает рекомендации по ценообразованию
- * @param costPrice Себестоимость товара
- * @param currentPrice Текущая цена товара
- * @param storageCost Затраты на хранение одной единицы
- * @param salesRate Продаж в день (единиц в день)
- * @returns Объект с рекомендациями
+ * Анализирует прибыльность товара с учетом затрат на хранение
  */
 export const analyzeProfitability = (
   costPrice: number,
   currentPrice: number,
   storageCost: number,
-  salesRate: number
-): {
-  isProfit: boolean;
-  margin: number;
-  recommendedPrice: number;
-  priceChange: number;
-  recommendation: string;
-} => {
-  // Если нет данных о себестоимости, не можем дать рекомендации
-  if (costPrice <= 0) {
+  quantity: number,
+  salesRate: number,
+  discountPercent = 20
+): ProfitAnalysis => {
+  if (costPrice <= 0 || quantity <= 0) {
     return {
-      isProfit: false,
-      margin: 0,
-      recommendedPrice: currentPrice,
-      priceChange: 0,
-      recommendation: "Укажите себестоимость товара для получения рекомендаций"
+      withoutDiscount: { daysToSell: 0, storageCost: 0, totalProfit: 0, roi: 0 },
+      withDiscount: { 
+        daysToSell: 0, 
+        storageCost: 0, 
+        totalProfit: 0, 
+        roi: 0,
+        expectedSalesIncrease: 0 
+      },
+      recommendedAction: "Укажите корректную себестоимость и количество",
+      recommendedPrice: currentPrice
     };
   }
+
+  // Расчет без скидки
+  const daysToSellNoDiscount = salesRate > 0 ? quantity / salesRate : 28;
+  const storageCostNoDiscount = calculateTotalStorageCost(
+    quantity,
+    storageCost,
+    salesRate
+  );
+  const totalProfitNoDiscount = (currentPrice - costPrice) * quantity - storageCostNoDiscount;
+  const roiNoDiscount = (totalProfitNoDiscount / (costPrice * quantity)) * 100;
+
+  // Расчет со скидкой
+  const discountedPrice = currentPrice * (1 - discountPercent / 100);
+  const expectedSalesIncrease = 1.5; // Ожидаемое увеличение продаж при скидке
+  const discountedSalesRate = salesRate * expectedSalesIncrease;
+  const daysToSellDiscount = discountedSalesRate > 0 ? quantity / discountedSalesRate : 28;
   
-  // Общие затраты на единицу товара
-  const totalCost = costPrice + storageCost;
+  const storageCostWithDiscount = calculateTotalStorageCost(
+    quantity,
+    storageCost,
+    discountedSalesRate
+  );
   
-  // Текущая прибыль на единицу товара
-  const profit = currentPrice - totalCost;
-  
-  // Определяем, прибыльный ли товар
-  const isProfit = profit > 0;
-  
-  // Рассчитываем текущую маржу
-  const margin = costPrice > 0 ? (profit / costPrice) * 100 : 0;
-  
-  // Рассчитываем рекомендуемую цену (с желаемой маржой 20%)
-  // Для убыточных товаров с высокими затратами на хранение используем минимальную маржу
-  const desiredMargin = isProfit ? 20 : 10;
-  const recommendedPrice = calculateRecommendedPrice(costPrice, storageCost, desiredMargin);
-  
-  // Разница между рекомендуемой и текущей ценой
-  const priceChange = recommendedPrice - currentPrice;
-  
-  // Формируем рекомендацию
-  let recommendation = "";
-  
-  // Проверяем убыточность из-за расходов на хранение
-  const storageImpact = storageCost / totalCost * 100; // Процент затрат на хранение в общих затратах
-  
-  if (!isProfit) {
-    // Если товар убыточный
-    if (storageImpact > 20) {
-      // Если затраты на хранение составляют значительную часть общих затрат (более 20%)
-      recommendation = "Товар убыточный из-за высоких затрат на хранение. Срочно распродать со скидкой.";
-    } else if (currentPrice < costPrice) {
-      // Если текущая цена ниже себестоимости
-      recommendation = "Цена ниже себестоимости. Рекомендуется срочно повысить цену до минимум " + formatCurrency(recommendedPrice) + " ₽.";
+  const totalProfitWithDiscount = (discountedPrice - costPrice) * quantity - storageCostWithDiscount;
+  const roiWithDiscount = (totalProfitWithDiscount / (costPrice * quantity)) * 100;
+
+  // Сравнение и рекомендации
+  let recommendedAction = "";
+  let recommendedPrice = currentPrice;
+
+  const profitDifference = totalProfitWithDiscount - totalProfitNoDiscount;
+  const storageSavings = storageCostNoDiscount - storageCostWithDiscount;
+  const revenueLoss = quantity * (currentPrice - discountedPrice);
+
+  if (currentPrice <= costPrice) {
+    recommendedAction = `Срочно повысить цену! Текущая цена ниже себестоимости на ${formatCurrency(costPrice - currentPrice)} ₽`;
+    recommendedPrice = costPrice * 1.2; // Минимальная маржа 20%
+  } else if (totalProfitNoDiscount < 0) {
+    if (storageCostNoDiscount > quantity * (currentPrice - costPrice) * 0.3) {
+      recommendedAction = "Срочно снизить остатки! Затраты на хранение превышают 30% от возможной прибыли";
+      recommendedPrice = discountedPrice;
     } else {
-      // Общий случай убыточности
-      recommendation = "Товар убыточный. Рекомендуется повысить цену или ускорить продажи, чтобы снизить затраты на хранение.";
+      recommendedAction = `Текущая цена убыточна. Рекомендуется повысить до ${formatCurrency(costPrice * 1.3)} ₽`;
+      recommendedPrice = costPrice * 1.3;
     }
-  } else if (margin < 15) {
-    // Если товар прибыльный, но с низкой маржой
-    if (storageImpact > 15) {
-      // Если затраты на хранение значительные
-      recommendation = "Низкая маржинальность из-за затрат на хранение. Рекомендуется ускорить продажи через акции.";
-    } else {
-      recommendation = "Низкая маржинальность. Рекомендуется повысить цену до " + formatCurrency(recommendedPrice) + " ₽.";
-    }
-  } else if (salesRate < 0.1 && storageCost > totalCost * 0.1) {
-    // Если продажи очень медленные и затраты на хранение существенные
-    recommendation = "Низкие продажи при высоких затратах на хранение. Рекомендуется временная скидка для ускорения продаж.";
-  } else if (priceChange > currentPrice * 0.1) {
-    // Если рекомендуемая цена существенно выше текущей (на 10% и более)
-    recommendation = "Цена ниже оптимальной. Рекомендуется повысить до " + formatCurrency(recommendedPrice) + " ₽.";
-  } else if (priceChange < -currentPrice * 0.1) {
-    // Если рекомендуемая цена существенно ниже текущей (на 10% и более)
-    recommendation = "Цена выше оптимальной. Рекомендуется снизить до " + formatCurrency(recommendedPrice) + " ₽ для ускорения продаж.";
+  } else if (storageSavings > revenueLoss) {
+    recommendedAction = "Рекомендуется снизить цену. Экономия на хранении превысит потери от скидки";
+    recommendedPrice = discountedPrice;
+  } else if (roiWithDiscount > roiNoDiscount) {
+    recommendedAction = "Рекомендуется применить скидку для ускорения продаж";
+    recommendedPrice = discountedPrice;
   } else {
-    // Если текущая цена близка к оптимальной
-    recommendation = "Текущая цена близка к оптимальной. Поддерживайте баланс цены и скорости продаж.";
+    recommendedAction = "Сохранить текущую цену";
+    recommendedPrice = currentPrice;
   }
-  
+
   return {
-    isProfit,
-    margin: roundToTwoDecimals(margin),
-    recommendedPrice,
-    priceChange: roundToTwoDecimals(priceChange),
-    recommendation
+    withoutDiscount: {
+      daysToSell: daysToSellNoDiscount,
+      storageCost: storageCostNoDiscount,
+      totalProfit: totalProfitNoDiscount,
+      roi: roiNoDiscount
+    },
+    withDiscount: {
+      daysToSell: daysToSellDiscount,
+      storageCost: storageCostWithDiscount,
+      totalProfit: totalProfitWithDiscount,
+      roi: roiWithDiscount,
+      expectedSalesIncrease
+    },
+    recommendedAction,
+    recommendedPrice
   };
+};
+
+/**
+ * Рассчитывает рекомендуемую цену на основе анализа прибыльности
+ */
+export const calculateRecommendedPrice = (
+  costPrice: number,
+  currentPrice: number,
+  storageCost: number,
+  quantity: number,
+  salesRate: number
+): number => {
+  const analysis = analyzeProfitability(
+    costPrice,
+    currentPrice,
+    storageCost,
+    quantity,
+    salesRate
+  );
+  
+  return analysis.recommendedPrice;
 };
