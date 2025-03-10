@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -753,3 +754,213 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                 variant="outline" 
                 size="sm" 
                 onClick={fetchAverageSales}
+                disabled={isLoadingSales || !selectedStore}
+                className="whitespace-nowrap"
+              >
+                {isLoadingSales ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Загрузка...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Рассчитать продажи
+                  </>
+                )}
+              </Button>
+              
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={savePriceData}
+                className="whitespace-nowrap"
+              >
+                Сохранить данные
+              </Button>
+            </div>
+          </div>
+          
+          <Tabs value={selectedTab} onValueChange={(value: string) => setSelectedTab(value as any)} className="w-full">
+            <TabsList className="grid grid-cols-4 w-full md:w-auto">
+              <TabsTrigger value="all">Все товары ({analysisSummary.totalItems})</TabsTrigger>
+              <TabsTrigger value="discount">На скидку ({analysisSummary.discountItems + analysisSummary.sellItems})</TabsTrigger>
+              <TabsTrigger value="keep">Без скидки ({analysisSummary.keepItems})</TabsTrigger>
+              <TabsTrigger value="low-stock">Низкий запас ({analysisSummary.lowStockItems})</TabsTrigger>
+            </TabsList>
+            <TabsContent value={selectedTab} className="mt-4">
+              {filteredResults.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[300px]">Товар</TableHead>
+                      <TableHead className="w-[100px]">Цены</TableHead>
+                      <TableHead className="w-[100px]">Остаток</TableHead>
+                      <TableHead className="w-[120px]">Продажи</TableHead>
+                      <TableHead className="w-[140px]">Прибыль</TableHead>
+                      <TableHead className="w-[100px]">Скидка</TableHead>
+                      <TableHead className="w-[140px]">Действие</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredResults.map((result) => (
+                      <TableRow key={result.remainItem.nmId}>
+                        <TableCell className="align-top">
+                          <div className="font-medium text-sm">{result.remainItem.subjectName || result.remainItem.brand}</div>
+                          <div className="text-xs text-muted-foreground mt-1">Артикул: {result.remainItem.vendorCode || "Нет"}</div>
+                          <div className="text-xs text-muted-foreground mt-1">NM: {result.remainItem.nmId}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-2">
+                            <div>
+                              <div className="text-xs text-muted-foreground">Себестоимость</div>
+                              <div className="flex items-center gap-2">
+                                <Input 
+                                  type="number" 
+                                  className="h-8 w-full" 
+                                  value={result.costPrice || ''} 
+                                  onChange={e => updateCostPrice(result.remainItem.nmId, Number(e.target.value))}
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-muted-foreground">Цена продажи</div>
+                              <div className="flex items-center gap-2">
+                                <Input 
+                                  type="number" 
+                                  className="h-8 w-full" 
+                                  value={result.sellingPrice || ''} 
+                                  onChange={e => updateSellingPrice(result.remainItem.nmId, Number(e.target.value))}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium">{result.remainItem.quantityWarehousesFull || 0} шт.</div>
+                          <div className="mt-2">
+                            {getStockLevelIndicator(result)}
+                          </div>
+                          <div className="mt-2">
+                            <div className="text-xs text-muted-foreground">Хранение в день</div>
+                            <div className="flex items-center gap-2">
+                              <Input 
+                                type="number" 
+                                className="h-8 w-full" 
+                                value={result.dailyStorageCost || ''} 
+                                onChange={e => updateStorageCost(result.remainItem.nmId, Number(e.target.value))}
+                              />
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-2">
+                            <div>
+                              <div className="text-xs text-muted-foreground">Продажи в день</div>
+                              <div className="flex items-center gap-2">
+                                <Input 
+                                  type="number" 
+                                  className="h-8 w-full" 
+                                  value={result.dailySales || ''} 
+                                  onChange={e => updateDailySales(result.remainItem.nmId, Number(e.target.value))}
+                                  step="0.01"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-muted-foreground">Порог низкого запаса</div>
+                              <div className="flex items-center gap-2">
+                                <Input 
+                                  type="number" 
+                                  className="h-8 w-full" 
+                                  value={lowStockThreshold[result.remainItem.nmId] || ''} 
+                                  onChange={e => updateLowStockThreshold(result.remainItem.nmId, Number(e.target.value))}
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground">Хватит на</span>
+                                <span className="text-xs font-medium">{result.daysOfInventory} дн.</span>
+                              </div>
+                            </div>
+                            <div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground">Закончится</span>
+                                <span className="text-xs font-medium">{formatDate(result.projectedStockoutDate)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-2">
+                            <div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground">Без скидки</span>
+                                <span className="text-xs font-medium">{formatCurrency(result.profitWithoutDiscount)}</span>
+                              </div>
+                            </div>
+                            <div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground">Со скидкой</span>
+                                <span className="text-xs font-medium">{formatCurrency(result.profitWithDiscount)}</span>
+                              </div>
+                            </div>
+                            <div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground">Улучшение</span>
+                                <span className={`text-xs font-medium ${result.savingsWithDiscount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                  {result.savingsWithDiscount > 0 ? '+' : ''}{formatCurrency(result.savingsWithDiscount)}
+                                </span>
+                              </div>
+                            </div>
+                            <div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground">ROI</span>
+                                <span className={`text-xs font-medium ${calculateROIimprovement(result) > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                  {calculateROIimprovement(result) > 0 ? '+' : ''}{calculateROIimprovement(result)}%
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-2">
+                            <div>
+                              <div className="text-xs text-muted-foreground">Рекомендуемая скидка</div>
+                              <div className="my-2">
+                                <Slider
+                                  defaultValue={[result.recommendedDiscount]}
+                                  max={70}
+                                  step={1}
+                                  onValueChange={val => updateDiscountLevel(result.remainItem.nmId, val)}
+                                  value={[discountLevels[result.remainItem.nmId] || 0]}
+                                />
+                                <div className="text-center text-sm font-medium">
+                                  {discountLevels[result.remainItem.nmId] || 0}%
+                                </div>
+                              </div>
+                            </div>
+                            <div className="mt-3">
+                              {getActionBadge(result.action)}
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">Нет данных для отображения</p>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default StorageProfitabilityAnalysis;
