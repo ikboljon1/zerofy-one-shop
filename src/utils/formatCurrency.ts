@@ -35,33 +35,6 @@ export const roundToTwoDecimals = (value: number): number => {
 };
 
 /**
- * Рассчитывает затраты на хранение с учетом постепенного уменьшения количества товара
- * @param quantity Начальное количество товара
- * @param dailyStorageCost Стоимость хранения единицы товара в день
- * @param salesRate Скорость продаж в день
- * @returns Общие затраты на хранение
- */
-export const calculateStorageCosts = (
-  quantity: number,
-  dailyStorageCost: number,
-  salesRate: number
-): number => {
-  if (quantity <= 0 || salesRate <= 0) return 0;
-  
-  // Количество дней до полной продажи
-  const totalDays = Math.ceil(quantity / salesRate);
-  
-  // Среднее количество товара на складе в течение всего периода продаж
-  // Вместо формулы quantity * totalDays используем формулу для арифметической прогрессии
-  // Среднее количество = (начальное + конечное) / 2
-  // Общее количество единиц хранения = среднее количество * дней
-  const averageQuantity = quantity / 2; // Среднее между начальным кол-вом и 0
-  const totalStorageCost = averageQuantity * totalDays * dailyStorageCost;
-  
-  return totalStorageCost;
-};
-
-/**
  * Рассчитывает предполагаемую экономию при предоставлении скидки
  * @param originalPrice Исходная цена товара
  * @param discountPercent Процент скидки
@@ -80,25 +53,17 @@ export const calculateDiscountSavings = (
 ): number => {
   if (quantity <= 0 || salesRate <= 0) return 0;
   
-  // Стоимость хранения без скидки
-  const storageCostWithoutDiscount = calculateStorageCosts(
-    quantity, 
-    dailyStorageCost, 
-    salesRate
-  );
+  // Дни до продажи всех товаров без скидки
+  const daysToSellOriginal = quantity / salesRate;
   
   // Предполагаемое увеличение скорости продаж при скидке
   const increasedSalesRate = salesRate * increasedSalesMultiplier;
   
-  // Стоимость хранения со скидкой
-  const storageCostWithDiscount = calculateStorageCosts(
-    quantity, 
-    dailyStorageCost, 
-    increasedSalesRate
-  );
+  // Дни до продажи всех товаров со скидкой
+  const daysToSellDiscounted = quantity / increasedSalesRate;
   
   // Экономия на хранении
-  const storageSavings = storageCostWithoutDiscount - storageCostWithDiscount;
+  const storageSavings = dailyStorageCost * (daysToSellOriginal - daysToSellDiscounted);
   
   // Потеря в выручке из-за скидки
   const revenueLoss = (originalPrice * (discountPercent / 100)) * quantity;
