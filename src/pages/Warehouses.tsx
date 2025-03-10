@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -46,6 +47,8 @@ const Warehouses: React.FC = () => {
   const loadDataForActiveTab = (apiKey: string, tab: string) => {
     if (tab === 'overview') {
       loadWarehouseRemains(apiKey);
+      // Also load storage data for profitability analysis when on overview
+      loadPaidStorageData(apiKey);
     } else if (tab === 'storage') {
       loadPaidStorageData(apiKey);
     }
@@ -110,10 +113,23 @@ const Warehouses: React.FC = () => {
 
   const calculateDailyStorageCosts = () => {
     const result: Record<number, number> = {};
+    
     warehouseRemains.forEach(item => {
-      const volume = item.volume || 1;
-      result[item.nmId] = volume * 5;
+      // Try to find actual storage cost from paid storage data
+      const matchingStorageItems = paidStorageData.filter(psi => psi.nmId === item.nmId);
+      
+      if (matchingStorageItems.length > 0) {
+        // Calculate average daily storage cost from all matching items
+        const totalCost = matchingStorageItems.reduce((sum, psi) => sum + psi.warehousePrice, 0);
+        const avgCost = totalCost / matchingStorageItems.length;
+        result[item.nmId] = avgCost;
+      } else {
+        // Fallback to volume-based calculation if no matching data
+        const volume = item.volume || 1;
+        result[item.nmId] = volume * 5;
+      }
     });
+    
     return result;
   };
 

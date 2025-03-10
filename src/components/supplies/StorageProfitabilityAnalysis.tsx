@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -94,12 +95,16 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     const initialLowStockThresholds: Record<number, number> = {};
 
     warehouseItems.forEach(item => {
-      let itemStorageCost = dailyStorageCost[item.nmId] || 5; // Default to 5 rubles per day
+      // Get the storage cost from the dailyStorageCost prop, which now contains data from paid storage
+      let itemStorageCost = dailyStorageCost[item.nmId] || 5; // Default to 5 rubles per day if no data
       
-      const matchingStorageItems = paidStorageData.filter(psi => psi.nmId === item.nmId);
-      if (matchingStorageItems.length > 0) {
-        const totalCost = matchingStorageItems.reduce((sum, psi) => sum + psi.warehousePrice, 0);
-        itemStorageCost = totalCost / matchingStorageItems.length;
+      // If no daily storage cost is provided or it's zero, try to calculate from paidStorageData
+      if ((!itemStorageCost || itemStorageCost === 5) && paidStorageData.length > 0) {
+        const matchingStorageItems = paidStorageData.filter(psi => psi.nmId === item.nmId);
+        if (matchingStorageItems.length > 0) {
+          const totalCost = matchingStorageItems.reduce((sum, psi) => sum + psi.warehousePrice, 0);
+          itemStorageCost = totalCost / matchingStorageItems.length;
+        }
       }
       
       initialDailySales[item.nmId] = averageDailySalesRate[item.nmId] || 0.1; // Default to 0.1 items per day
@@ -112,7 +117,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         itemStorageCost,
         averageDailySalesRate[item.nmId] || 0.1
       );
-      initialDiscountLevels[item.nmId] = optimalDiscount; // Используем рассчитанное значение вместо фиксированных 30%
+      initialDiscountLevels[item.nmId] = optimalDiscount;
       
       const salesRate = averageDailySalesRate[item.nmId] || 0.1;
       initialLowStockThresholds[item.nmId] = Math.max(3, Math.ceil(salesRate * 7));
