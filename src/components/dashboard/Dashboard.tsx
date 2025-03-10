@@ -220,13 +220,13 @@ const Dashboard = () => {
         },
         // Sample data structure for AI analysis
         topProfitableProducts: orders.slice(0, 5).map((order, index) => ({
-          name: order.productName || `Product ${index + 1}`,
+          name: order.subject || `Product ${index + 1}`,
           profit: (Math.random() * 5000 + 1000).toFixed(2),
           margin: Math.round(Math.random() * 40 + 20),
           quantitySold: Math.round(Math.random() * 50 + 10)
         })),
         topUnprofitableProducts: orders.slice(5, 10).map((order, index) => ({
-          name: order.productName || `Product ${index + 1}`,
+          name: order.subject || `Product ${index + 1}`,
           profit: (-Math.random() * 2000 - 500).toFixed(2),
           margin: Math.round(Math.random() * 10 - 20),
           quantitySold: Math.round(Math.random() * 5 + 1)
