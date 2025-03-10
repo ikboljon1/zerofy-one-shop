@@ -1,5 +1,6 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -730,3 +731,241 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                   <Label htmlFor="targetDate" className="text-xs mb-1 block">Показать товары с запасом до</Label>
                   <DatePicker 
                     value={targetDate}
+                    onChange={setTargetDate}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col md:flex-row gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-1"
+                onClick={fetchProductPrices}
+                disabled={isLoadingPrices || !selectedStore?.apiKey}
+              >
+                {isLoadingPrices ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                Загрузить цены товаров
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-1"
+                onClick={fetchAverageSales}
+                disabled={isLoadingSales || !selectedStore?.apiKey}
+              >
+                {isLoadingSales ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                Рассчитать среднедневные продажи
+              </Button>
+              
+              <Button 
+                variant="default" 
+                size="sm" 
+                className="flex items-center gap-1"
+                onClick={savePriceData}
+              >
+                Сохранить данные
+              </Button>
+            </div>
+          </div>
+
+          <Tabs 
+            defaultValue="all" 
+            value={selectedTab}
+            onValueChange={(value) => setSelectedTab(value as 'all' | 'discount' | 'keep' | 'low-stock')}
+            className="w-full"
+          >
+            <TabsList className="w-full md:w-auto">
+              <TabsTrigger value="all" className="flex items-center gap-1">
+                <Package className="h-4 w-4" />
+                <span>Все товары</span>
+                <Badge variant="secondary" className="ml-1 bg-muted/80">{filteredResults.length}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="discount" className="flex items-center gap-1">
+                <TrendingDown className="h-4 w-4" />
+                <span>Товары на скидку</span>
+                <Badge variant="secondary" className="ml-1 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-500">
+                  {analysisSummary.discountItems + analysisSummary.sellItems}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="keep" className="flex items-center gap-1">
+                <Banknote className="h-4 w-4" />
+                <span>Сохранить цену</span>
+                <Badge variant="secondary" className="ml-1 bg-muted/80">{analysisSummary.keepItems}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="low-stock" className="flex items-center gap-1">
+                <AlertTriangle className="h-4 w-4" />
+                <span>Низкий запас</span>
+                <Badge variant="secondary" className="ml-1 bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-500">
+                  {analysisSummary.lowStockItems}
+                </Badge>
+              </TabsTrigger>
+            </TabsList>
+
+            <div className="mt-6">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Товар</TableHead>
+                    <TableHead 
+                      className="cursor-pointer"
+                      onClick={() => requestSort('dailyStorageCost')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Стоимость хранения в день
+                        <ArrowUpDown className="h-3 w-3" />
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer"
+                      onClick={() => requestSort('totalStorageCost')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Расходы на хранение
+                        <ArrowUpDown className="h-3 w-3" />
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer"
+                      onClick={() => requestSort('action')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Рекомендация
+                        <ArrowUpDown className="h-3 w-3" />
+                      </div>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredResults.length > 0 ? (
+                    filteredResults.map(result => (
+                      <TableRow key={result.remainItem.nmId}>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{result.remainItem.brand || 'Неизвестный бренд'}</span>
+                              {result.lowStock && <AlertTriangle className="h-4 w-4 text-rose-500" />}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {result.remainItem.title || result.remainItem.subjectName || 'Неизвестное наименование'}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Размер: {result.remainItem.techSize || 'Не указан'}, 
+                              Цвет: {result.remainItem.supplierArticle || 'Не указан'}
+                            </div>
+                            <div className="text-xs mt-1 flex items-center gap-2">
+                              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
+                                Артикул: {result.remainItem.vendorCode || result.remainItem.supplierArticle || result.remainItem.nmId}
+                              </Badge>
+                              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
+                                Остаток: {result.remainItem.quantityWarehousesFull || 0} шт.
+                              </Badge>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <span className="font-medium">{formatCurrency(result.dailyStorageCost)}</span>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" size="sm" className="text-xs h-6 mt-1">
+                                  Изменить
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-72 p-4">
+                                <div className="space-y-4">
+                                  <h4 className="font-medium">Стоимость хранения в день</h4>
+                                  <div className="flex gap-2">
+                                    <Input 
+                                      type="number" 
+                                      value={storageCostRates[result.remainItem.nmId] || ''} 
+                                      onChange={(e) => updateStorageCost(result.remainItem.nmId, Number(e.target.value))} 
+                                      min={0}
+                                      step={0.1}
+                                      className="w-full"
+                                    />
+                                    <span className="text-sm pt-1.5">₽</span>
+                                  </div>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <span className="font-medium">{formatCurrency(result.totalStorageCost)}</span>
+                            <div className="text-xs text-muted-foreground">
+                              Прогноз на {result.daysOfInventory} дней
+                            </div>
+                            <div className="text-xs mt-1">
+                              <Badge 
+                                variant="outline" 
+                                className={`
+                                  ${result.savingsWithDiscount > 0 ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400' : ''}
+                                `}
+                              >
+                                {result.savingsWithDiscount > 0 ? (
+                                  <span className="flex items-center gap-1">
+                                    <ArrowDown className="h-3 w-3" />
+                                    {formatCurrency(result.savingsWithDiscount)}
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-1">
+                                    Нет экономии
+                                  </span>
+                                )}
+                              </Badge>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-2">
+                            {getActionBadge(result.action)}
+                            
+                            <div className="flex items-center gap-1 text-xs mt-1">
+                              <Clock className="h-3 w-3 text-muted-foreground" />
+                              <span>Закончится: {formatDate(result.projectedStockoutDate)}</span>
+                            </div>
+                            
+                            {getStockLevelIndicator(result)}
+                            
+                            {(result.action === 'discount' || result.action === 'sell') && (
+                              <div className="mt-2">
+                                <div className="flex justify-between text-xs mb-1">
+                                  <span>Скидка: {discountLevels[result.remainItem.nmId] || 0}%</span>
+                                  <span className="text-green-600">+{calculateROIimprovement(result)}% ROI</span>
+                                </div>
+                                <Slider
+                                  value={[discountLevels[result.remainItem.nmId] || 0]}
+                                  min={0}
+                                  max={70}
+                                  step={1}
+                                  onValueChange={(value) => updateDiscountLevel(result.remainItem.nmId, value)}
+                                  className="mt-1"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
+                        Нет данных для отображения
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </Tabs>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default StorageProfitabilityAnalysis;
