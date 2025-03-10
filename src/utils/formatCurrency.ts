@@ -1,3 +1,4 @@
+
 export const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('ru-RU', {
     minimumFractionDigits: 0,
@@ -46,7 +47,8 @@ export const calculateTotalStorageCost = (
   // Calculate average quantity over the period (half of current)
   const averageQuantity = calculateAverageQuantity(currentQuantity, dailySalesRate);
   
-  // Calculate total storage cost based on average quantity
+  // Calculate total storage cost based on average quantity 
+  // The dailyStorageCost is already PER ITEM, so we multiply by quantity
   return averageQuantity * daysToSellAll * dailyStorageCost;
 };
 
