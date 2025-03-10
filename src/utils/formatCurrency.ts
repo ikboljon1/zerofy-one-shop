@@ -37,14 +37,14 @@ export const roundToTwoDecimals = (value: number): number => {
 /**
  * Рассчитывает среднее количество товара за период с учетом постепенного уменьшения
  * @param initialQuantity Начальное количество товара
- * @param salesRate Скорость продаж (единиц в день)
+ * @param salesRate Продаж в день (единиц в день)
  * @param days Период расчета в днях (по умолчанию 30)
  * @returns Среднее количество товара
  */
 export const calculateAverageQuantity = (initialQuantity: number, salesRate: number, days = 30): number => {
   if (initialQuantity <= 0) return 0;
   
-  // Если скорость продаж очень низкая или нулевая
+  // Если продаж в день очень мало или нет
   if (salesRate <= 0.01) {
     return initialQuantity;
   }
@@ -68,7 +68,7 @@ export const calculateAverageQuantity = (initialQuantity: number, salesRate: num
  * Рассчитывает общие затраты на хранение с учетом постепенного уменьшения товара
  * @param initialQuantity Начальное количество товара
  * @param dailyCostPerUnit Стоимость хранения одной единицы в день
- * @param salesRate Скорость продаж (единиц в день)
+ * @param salesRate Продаж в день (единиц в день)
  * @param days Период расчета в днях (по умолчанию 30)
  * @returns Общие затраты на хранение
  */
@@ -127,7 +127,7 @@ export const calculateRecommendedPrice = (
  * @param costPrice Себестоимость товара
  * @param currentPrice Текущая цена товара
  * @param storageCost Затраты на хранение одной единицы
- * @param salesRate Скорость продаж (единиц в день)
+ * @param salesRate Продаж в день (единиц в день)
  * @returns Объект с рекомендациями
  */
 export const analyzeProfitability = (
@@ -165,8 +165,10 @@ export const analyzeProfitability = (
   // Рассчитываем текущую маржу
   const margin = costPrice > 0 ? (profit / costPrice) * 100 : 0;
   
-  // Рассчитываем рекомендуемую цену (с желаемой маржой 30%)
-  const recommendedPrice = calculateRecommendedPrice(costPrice, storageCost);
+  // Рассчитываем рекомендуемую цену (с желаемой маржой 20%)
+  // Для убыточных товаров с высокими затратами на хранение используем минимальную маржу
+  const desiredMargin = isProfit ? 20 : 10;
+  const recommendedPrice = calculateRecommendedPrice(costPrice, storageCost, desiredMargin);
   
   // Разница между рекомендуемой и текущей ценой
   const priceChange = recommendedPrice - currentPrice;
@@ -174,17 +176,40 @@ export const analyzeProfitability = (
   // Формируем рекомендацию
   let recommendation = "";
   
+  // Проверяем убыточность из-за расходов на хранение
+  const storageImpact = storageCost / totalCost * 100; // Процент затрат на хранение в общих затратах
+  
   if (!isProfit) {
-    recommendation = "Товар убыточный. Рекомендуется повысить цену или сократить затраты на хранение.";
+    // Если товар убыточный
+    if (storageImpact > 20) {
+      // Если затраты на хранение составляют значительную часть общих затрат (более 20%)
+      recommendation = "Товар убыточный из-за высоких затрат на хранение. Срочно распродать со скидкой.";
+    } else if (currentPrice < costPrice) {
+      // Если текущая цена ниже себестоимости
+      recommendation = "Цена ниже себестоимости. Рекомендуется срочно повысить цену до минимум " + formatCurrency(recommendedPrice) + " ₽.";
+    } else {
+      // Общий случай убыточности
+      recommendation = "Товар убыточный. Рекомендуется повысить цену или ускорить продажи, чтобы снизить затраты на хранение.";
+    }
   } else if (margin < 15) {
-    recommendation = "Низкая маржинальность. Рекомендуется повысить цену или ускорить продажи.";
+    // Если товар прибыльный, но с низкой маржой
+    if (storageImpact > 15) {
+      // Если затраты на хранение значительные
+      recommendation = "Низкая маржинальность из-за затрат на хранение. Рекомендуется ускорить продажи через акции.";
+    } else {
+      recommendation = "Низкая маржинальность. Рекомендуется повысить цену до " + formatCurrency(recommendedPrice) + " ₽.";
+    }
   } else if (salesRate < 0.1 && storageCost > totalCost * 0.1) {
-    recommendation = "Высокие затраты на хранение при низких продажах. Рекомендуется снизить цену для ускорения продаж.";
+    // Если продажи очень медленные и затраты на хранение существенные
+    recommendation = "Низкие продажи при высоких затратах на хранение. Рекомендуется временная скидка для ускорения продаж.";
   } else if (priceChange > currentPrice * 0.1) {
-    recommendation = "Цена ниже рекомендуемой. Возможно повышение цены без существенного влияния на спрос.";
+    // Если рекомендуемая цена существенно выше текущей (на 10% и более)
+    recommendation = "Цена ниже оптимальной. Рекомендуется повысить до " + formatCurrency(recommendedPrice) + " ₽.";
   } else if (priceChange < -currentPrice * 0.1) {
-    recommendation = "Цена выше рекомендуемой. Снижение цены может увеличить оборот.";
+    // Если рекомендуемая цена существенно ниже текущей (на 10% и более)
+    recommendation = "Цена выше оптимальной. Рекомендуется снизить до " + formatCurrency(recommendedPrice) + " ₽ для ускорения продаж.";
   } else {
+    // Если текущая цена близка к оптимальной
     recommendation = "Текущая цена близка к оптимальной. Поддерживайте баланс цены и скорости продаж.";
   }
   
