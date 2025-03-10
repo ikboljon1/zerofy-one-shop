@@ -38,23 +38,22 @@ export const roundToTwoDecimals = (value: number): number => {
  * Рассчитывает затраты на хранение с учетом постепенного уменьшения количества товара
  * @param quantity Начальное количество товара
  * @param dailyStorageCost Стоимость хранения единицы товара в день
- * @param salesRate Скорость продаж в день
+ * @param averageDailySales Средняя продаж в день
  * @returns Общие затраты на хранение
  */
 export const calculateStorageCosts = (
   quantity: number,
   dailyStorageCost: number,
-  salesRate: number
+  averageDailySales: number
 ): number => {
-  if (quantity <= 0 || salesRate <= 0) return 0;
+  if (quantity <= 0 || averageDailySales <= 0) return 0;
   
   // Количество дней до полной продажи
-  const totalDays = Math.ceil(quantity / salesRate);
+  const totalDays = Math.ceil(quantity / averageDailySales);
   
   // Среднее количество товара на складе в течение всего периода продаж
-  // Вместо формулы quantity * totalDays используем формулу для арифметической прогрессии
+  // Используем формулу для арифметической прогрессии
   // Среднее количество = (начальное + конечное) / 2
-  // Общее количество единиц хранения = среднее количество * дней
   const averageQuantity = quantity / 2; // Среднее между начальным кол-вом и 0
   const totalStorageCost = averageQuantity * totalDays * dailyStorageCost;
   
@@ -67,7 +66,7 @@ export const calculateStorageCosts = (
  * @param discountPercent Процент скидки
  * @param quantity Количество товара
  * @param dailyStorageCost Ежедневная стоимость хранения
- * @param salesRate Скорость продаж в день
+ * @param averageDailySales Средняя продаж в день
  * @returns Экономия
  */
 export const calculateDiscountSavings = (
@@ -75,26 +74,26 @@ export const calculateDiscountSavings = (
   discountPercent: number,
   quantity: number,
   dailyStorageCost: number,
-  salesRate: number,
+  averageDailySales: number,
   increasedSalesMultiplier = 1.5
 ): number => {
-  if (quantity <= 0 || salesRate <= 0) return 0;
+  if (quantity <= 0 || averageDailySales <= 0) return 0;
   
   // Стоимость хранения без скидки
   const storageCostWithoutDiscount = calculateStorageCosts(
     quantity, 
     dailyStorageCost, 
-    salesRate
+    averageDailySales
   );
   
-  // Предполагаемое увеличение скорости продаж при скидке
-  const increasedSalesRate = salesRate * increasedSalesMultiplier;
+  // Предполагаемое увеличение средней продаж в день при скидке
+  const increasedAverageDailySales = averageDailySales * increasedSalesMultiplier;
   
   // Стоимость хранения со скидкой
   const storageCostWithDiscount = calculateStorageCosts(
     quantity, 
     dailyStorageCost, 
-    increasedSalesRate
+    increasedAverageDailySales
   );
   
   // Экономия на хранении
@@ -113,7 +112,7 @@ export const calculateDiscountSavings = (
  * @param costPrice Себестоимость товара
  * @param quantity Количество товара
  * @param dailyStorageCost Ежедневная стоимость хранения
- * @param salesRate Скорость продаж в день
+ * @param averageDailySales Средняя продаж в день
  * @returns Оптимальный процент скидки
  */
 export const calculateOptimalDiscount = (
@@ -121,7 +120,7 @@ export const calculateOptimalDiscount = (
   costPrice: number,
   quantity: number,
   dailyStorageCost: number,
-  salesRate: number
+  averageDailySales: number
 ): number => {
   // Минимальная допустимая цена - должна покрывать себестоимость
   const minPrice = costPrice * 1.05; // +5% к себестоимости
@@ -142,7 +141,7 @@ export const calculateOptimalDiscount = (
       discount,
       quantity,
       dailyStorageCost,
-      salesRate
+      averageDailySales
     );
     
     if (savings > bestSavings) {
