@@ -2,10 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { 
   SupplyFormData, 
+  BoxType, 
+  BOX_TYPES, 
   SupplyItem, 
-  Warehouse,
-  BoxType,
-  BOX_TYPES
+  Warehouse
 } from '@/types/supplies';
 import { Plus, Trash2, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,7 @@ interface SupplyFormProps {
 
 const SupplyForm: React.FC<SupplyFormProps> = ({ warehouses, onSupplySubmit }) => {
   const [formData, setFormData] = useState<SupplyFormData>({
-    selectedWarehouse: undefined,
+    selectedWarehouse: null,
     selectedBoxType: 'Короба',
     items: [{ barcode: '', quantity: 1 }]
   });

@@ -1,288 +1,474 @@
-
 import axios from 'axios';
-import { SupplyItem, SupplyOptionsResponse, Warehouse, WarehouseCoefficient, PaidStorageItem } from '@/types/supplies';
+import { 
+  WarehouseCoefficient,
+  SupplyOptionsResponse,
+  SupplyItem,
+  Warehouse,
+  WildberriesStock,
+  StocksByCategory,
+  StocksByWarehouse
+} from '@/types/supplies';
 
-const API_BASE_URL = 'https://seller-analytics-api.wildberries.ru/api/v1';
+// Базовый URL для API поставок
+const SUPPLIES_API_BASE_URL = 'https://supplies-api.wildberries.ru/api/v1';
 
-export const fetchWarehouses = async (apiKey: string): Promise<Warehouse[]> => {
+// Функция для получения коэффициентов приемки
+export const fetchAcceptanceCoefficients = async (
+  apiKey: string,
+  warehouseIDs?: number[]
+): Promise<WarehouseCoefficient[]> => {
   try {
-    const response = await axios.get<Warehouse[]>(`${API_BASE_URL}/warehouses`, {
-      headers: {
-        Authorization: apiKey,
+    // Формируем параметры запроса
+    const params: Record<string, string> = {};
+    if (warehouseIDs && warehouseIDs.length > 0) {
+      params.warehouseIDs = warehouseIDs.join(',');
+    }
+
+    // В реальном приложении здесь был бы запрос к API
+    // Сейчас используем моковые данные для демонстрации
+    console.log(`Запрос коэффициентов приемки для складов: ${warehouseIDs?.join(', ') || 'всех'}`);
+    
+    // Имитация запроса
+    const mockCoefficients: WarehouseCoefficient[] = [
+      {
+        date: new Date().toISOString(),
+        coefficient: 0,
+        warehouseID: 217081,
+        warehouseName: "СЦ Брянск 2",
+        allowUnload: true,
+        boxTypeName: "Короба",
+        boxTypeID: 2,
+        storageCoef: "1.5",
+        deliveryCoef: "2.0",
+        deliveryBaseLiter: "10",
+        deliveryAdditionalLiter: "5",
+        storageBaseLiter: "10",
+        storageAdditionalLiter: "3",
+        isSortingCenter: true
       },
-    });
-    return response.data;
+      {
+        date: new Date().toISOString(),
+        coefficient: 1,
+        warehouseID: 205349,
+        warehouseName: "Вёшки",
+        allowUnload: true,
+        boxTypeName: "Монопаллеты",
+        boxTypeID: 5,
+        storageCoef: "2.0",
+        deliveryCoef: "3.0",
+        deliveryBaseLiter: "15",
+        deliveryAdditionalLiter: "7",
+        storageBaseLiter: "20",
+        storageAdditionalLiter: null,
+        isSortingCenter: false
+      },
+      {
+        date: new Date().toISOString(),
+        coefficient: -1,
+        warehouseID: 211622,
+        warehouseName: "Подольск",
+        allowUnload: false,
+        boxTypeName: "Суперсейф",
+        boxTypeID: 6,
+        storageCoef: null,
+        deliveryCoef: null,
+        deliveryBaseLiter: null,
+        deliveryAdditionalLiter: null,
+        storageBaseLiter: null,
+        storageAdditionalLiter: null,
+        isSortingCenter: true
+      }
+    ];
+    
+    // В реальном приложении:
+    // const response = await axios.get(`${SUPPLIES_API_BASE_URL}/acceptance/coefficients`, {
+    //   headers: { Authorization: apiKey },
+    //   params
+    // });
+    // return response.data;
+    
+    return mockCoefficients;
   } catch (error) {
-    console.error('Ошибка при запросе к API:', error);
+    console.error('Ошибка при получении коэффициентов приемки:', error);
     throw error;
   }
 };
 
-export const fetchAcceptanceCoefficients = async (apiKey: string): Promise<WarehouseCoefficient[]> => {
-  try {
-    const response = await axios.get<WarehouseCoefficient[]>(`${API_BASE_URL}/acceptance_coefficients`, {
-      headers: {
-        Authorization: apiKey,
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Ошибка при запросе к API:', error);
-    throw error;
-  }
-};
-
+// Функция для получения опций приемки
 export const fetchAcceptanceOptions = async (
   apiKey: string,
   items: SupplyItem[],
-  warehouseID: number
+  warehouseID?: number
 ): Promise<SupplyOptionsResponse> => {
   try {
-    const response = await axios.post<SupplyOptionsResponse>(
-      `${API_BASE_URL}/acceptance_options`,
-      {
-        items,
-        warehouseID,
-      },
-      {
-        headers: {
-          Authorization: apiKey,
-        },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    console.error('Ошибка при запросе к API:', error);
-    throw error;
-  }
-};
+    // Формируем параметры запроса
+    const params: Record<string, string> = {};
+    if (warehouseID) {
+      params.warehouseID = warehouseID.toString();
+    }
 
-// Функции для работы с API платного хранения
-
-/**
- * Форматирует дату в формат, необходимый для API платного хранения
- */
-const formatDateForStorageAPI = (date: Date | string): string => {
-  if (typeof date === 'string') {
-    date = new Date(date);
-  }
-  return date.toISOString().split('T')[0]; // YYYY-MM-DD
-};
-
-/**
- * Создает задание на генерацию отчета о платном хранении
- */
-export const createPaidStorageReportTask = async (
-  apiKey: string,
-  dateFrom: string,
-  dateTo: string
-): Promise<string> => {
-  try {
-    const url = `${API_BASE_URL}/paid_storage`;
+    console.log(`Запрос опций приемки для ${items.length} товаров`);
     
-    const response = await axios.get(url, {
-      headers: {
-        Authorization: apiKey
-      },
-      params: {
-        dateFrom: formatDateForStorageAPI(dateFrom),
-        dateTo: formatDateForStorageAPI(dateTo)
-      }
-    });
-    
-    return response.data.data.taskId;
-  } catch (error: any) {
-    console.error('Ошибка при создании отчета о платном хранении:', error);
-    throw new Error(`Ошибка при создании отчета: ${error.response?.status || 'Неизвестная ошибка'}`);
-  }
-};
-
-/**
- * Проверяет статус задания на генерацию отчета о платном хранении
- */
-export const checkPaidStorageReportStatus = async (
-  apiKey: string,
-  taskId: string
-): Promise<string> => {
-  try {
-    const url = `${API_BASE_URL}/paid_storage/tasks/${taskId}/status`;
-    
-    const response = await axios.get(url, {
-      headers: {
-        Authorization: apiKey
-      }
-    });
-    
-    return response.data.data.status;
-  } catch (error: any) {
-    console.error('Ошибка при проверке статуса отчета:', error);
-    throw new Error(`Ошибка при проверке статуса: ${error.response?.status || 'Неизвестная ошибка'}`);
-  }
-};
-
-/**
- * Скачивает отчет о платном хранении
- */
-export const downloadPaidStorageReport = async (
-  apiKey: string,
-  taskId: string
-): Promise<PaidStorageItem[]> => {
-  try {
-    const url = `${API_BASE_URL}/paid_storage/tasks/${taskId}/download`;
-    
-    const response = await axios.get(url, {
-      headers: {
-        Authorization: apiKey
-      }
-    });
-    
-    return response.data;
-  } catch (error: any) {
-    console.error('Ошибка при скачивании отчета:', error);
-    throw new Error(`Ошибка при скачивании отчета: ${error.response?.status || 'Неизвестная ошибка'}`);
-  }
-};
-
-/**
- * Ожидает завершения задания на генерацию отчета о платном хранении
- */
-export const waitForPaidStorageReportCompletion = async (
-  apiKey: string,
-  taskId: string,
-  maxAttempts = 12, // Максимальное количество попыток
-  interval = 5000 // Интервал между попытками в миллисекундах
-): Promise<boolean> => {
-  let attempts = 0;
-  
-  return new Promise((resolve, reject) => {
-    const checkStatus = async () => {
-      try {
-        const status = await checkPaidStorageReportStatus(apiKey, taskId);
-        
-        if (status === 'done') {
-          resolve(true);
-          return;
-        }
-        
-        if (status === 'purged' || status === 'canceled') {
-          reject(new Error(`Задание было ${status === 'purged' ? 'удалено' : 'отменено'}`));
-          return;
-        }
-        
-        attempts++;
-        
-        if (attempts >= maxAttempts) {
-          reject(new Error('Превышено время ожидания формирования отчета'));
-          return;
-        }
-        
-        setTimeout(checkStatus, interval);
-      } catch (error) {
-        reject(error);
-      }
+    // Моковый ответ
+    const mockResponse: SupplyOptionsResponse = {
+      result: items.map(item => ({
+        barcode: item.barcode,
+        warehouses: item.barcode.length < 5 ? null : [
+          {
+            warehouseID: 205349,
+            canBox: true,
+            canMonopallet: false,
+            canSupersafe: false
+          },
+          {
+            warehouseID: 211622,
+            canBox: false,
+            canMonopallet: true,
+            canSupersafe: false
+          }
+        ],
+        error: item.barcode.length < 5 ? {
+          title: "barcode validation error",
+          detail: `barcode ${item.barcode} is not found`
+        } : undefined,
+        isError: item.barcode.length < 5
+      })),
+      requestId: "kr53d2bRKYmkK2N6zaNKHs"
     };
     
-    checkStatus();
-  });
-};
-
-/**
- * Получает полный отчет о платном хранении
- */
-export const fetchFullPaidStorageReport = async (
-  apiKey: string,
-  dateFrom: string,
-  dateTo: string
-): Promise<PaidStorageItem[]> => {
-  try {
-    console.log('Создание задания на получение отчета о платном хранении...');
-    // Шаг 1: Создаем задание
-    const taskId = await createPaidStorageReportTask(apiKey, dateFrom, dateTo);
-    console.log(`Задание создано с ID: ${taskId}. Ожидание завершения...`);
+    // В реальном приложении:
+    // const response = await axios.post(`${SUPPLIES_API_BASE_URL}/acceptance/options`, items, {
+    //   headers: { Authorization: apiKey },
+    //   params
+    // });
+    // return response.data;
     
-    // Шаг 2: Ожидаем завершения
-    await waitForPaidStorageReportCompletion(apiKey, taskId);
-    console.log('Задание выполнено. Загрузка отчета...');
-    
-    // Шаг 3: Получаем данные отчета
-    const report = await downloadPaidStorageReport(apiKey, taskId);
-    console.log(`Отчет загружен. Получено ${report.length} записей.`);
-    
-    return report;
+    return mockResponse;
   } catch (error) {
-    console.error('Ошибка в процессе получения отчета о платном хранении:', error);
+    console.error('Ошибка при получении опций приемки:', error);
     throw error;
   }
 };
 
-/**
- * Автоматически заполняет данные о стоимости хранения для товаров на основе отчета о платном хранении
- * @param warehouseRemains - Список товаров на складе
- * @param paidStorageData - Данные отчета о платном хранении
- * @returns Словарь с ежедневной стоимостью хранения для каждого товара по nmId
- */
-export const calculateDailyStorageCosts = (
-  warehouseRemains: any[],
-  paidStorageData: PaidStorageItem[]
-): Record<number, number> => {
-  const result: Record<number, number> = {};
-  
-  // Создаем карту поиска по nmId для быстрого доступа
-  const storageMap = new Map<number, PaidStorageItem[]>();
-  
-  // Группируем данные о платном хранении по nmId
-  paidStorageData.forEach(item => {
-    if (!storageMap.has(item.nmId)) {
-      storageMap.set(item.nmId, []);
-    }
-    storageMap.get(item.nmId)?.push(item);
-  });
-  
-  // Рассчитываем стоимость хранения для каждого товара
-  warehouseRemains.forEach(item => {
-    const nmId = item.nmId;
-    const matchingStorageItems = storageMap.get(nmId) || [];
+// Функция для получения списка складов
+export const fetchWarehouses = async (apiKey: string): Promise<Warehouse[]> => {
+  try {
+    console.log('Запрос списка складов');
     
-    if (matchingStorageItems.length > 0) {
-      // Рассчитываем среднюю дневную стоимость хранения из соответствующих записей
-      const totalCost = matchingStorageItems.reduce((sum, psi) => sum + psi.warehousePrice, 0);
-      const avgDailyCost = totalCost / matchingStorageItems.length;
-      result[nmId] = avgDailyCost;
-    } else {
-      // Если нет соответствующих данных, используем приблизительный расчет на основе объема
-      const volume = item.volume || 1;
-      result[nmId] = volume * 5; // Примерный расчет на основе объема
-    }
-  });
-  
-  return result;
+    // Моковый ответ для демонстрации
+    const mockWarehouses: Warehouse[] = [
+      {
+        ID: 210515,
+        name: "Вёшки",
+        address: "Липкинское шоссе, 2-й километр, вл1с1, посёлок Вёшки, городской округ Мытищи, Московская область",
+        workTime: "24/7",
+        acceptsQR: false
+      },
+      {
+        ID: 205349,
+        name: "Коледино",
+        address: "ул. Коледино, стр. 1, д. Коледино, Подольский р-н, Московская область",
+        workTime: "24/7",
+        acceptsQR: true
+      },
+      {
+        ID: 211622,
+        name: "Подольск",
+        address: "ул. Поклонная, д. 3А, г. Подольск, Московская область",
+        workTime: "Пн-Пт: 9:00-18:00",
+        acceptsQR: true
+      },
+      {
+        ID: 217081,
+        name: "СЦ Брянск 2",
+        address: "ул. Промышленная, д. 3, г. Брянск",
+        workTime: "24/7",
+        acceptsQR: false
+      }
+    ];
+    
+    // В реальном приложении:
+    // const response = await axios.get(`${SUPPLIES_API_BASE_URL}/warehouses`, {
+    //   headers: { Authorization: apiKey }
+    // });
+    // return response.data;
+    
+    return mockWarehouses;
+  } catch (error) {
+    console.error('Ошибка при получении списка складов:', error);
+    throw error;
+  }
 };
 
-// Для демонстрации или тестирования
-export const getMockPaidStorageData = (): PaidStorageItem[] => {
-  return Array(20).fill(null).map((_, index) => ({
-    date: new Date(Date.now() - (index % 7) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    logWarehouseCoef: 1,
-    officeId: 500 + (index % 3),
-    warehouse: ['Коледино', 'Подольск', 'Электросталь'][index % 3],
-    warehouseCoef: 1.5 + (index % 5) / 10,
-    giId: 100000 + index,
-    chrtId: 200000 + index,
-    size: ['S', 'M', 'L', 'XL', 'XXL'][index % 5],
-    barcode: `2000000${index}`,
-    subject: ['Футболка', 'Джинсы', 'Куртка', 'Обувь', 'Аксессуары'][index % 5],
-    brand: ['Nike', 'Adidas', 'Puma', 'Reebok', 'New Balance'][index % 5],
-    vendorCode: `A${1000 + index}`,
-    nmId: 300000 + index,
-    volume: 0.5 + (index % 10) / 10,
-    calcType: 'короба: без габаритов',
-    warehousePrice: 5 + (index % 20),
-    barcodesCount: 1 + (index % 5),
-    palletPlaceCode: 0,
-    palletCount: 0,
-    originalDate: new Date(Date.now() - (index % 7) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    loyaltyDiscount: index % 3 === 0 ? (2 + index % 5) : 0,
-    tariffFixDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    tariffLowerDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-  }));
+// Функция для получения списка складов
+export const fetchStocks = async (apiKey: string, dateFrom: string = '2020-01-01'): Promise<WildberriesStock[]> => {
+  // In real environment, this would make an API call to the Wildberries API
+  // For demonstration purposes, we'll return mock data
+  console.log(`Fetching stocks with API key: ${apiKey} from date: ${dateFrom}`);
+  
+  // Mock data based on the example response
+  const mockStocks: WildberriesStock[] = [
+    {
+      lastChangeDate: "2023-07-05T11:13:35",
+      warehouseName: "Краснодар",
+      supplierArticle: "443284",
+      nmId: 1439871458,
+      barcode: "2037401340280",
+      quantity: 33,
+      inWayToClient: 1,
+      inWayFromClient: 0,
+      quantityFull: 34,
+      category: "Посуда и инвентарь",
+      subject: "Формы для запекания",
+      brand: "X",
+      techSize: "0",
+      Price: 185,
+      Discount: 0,
+      isSupply: true,
+      isRealization: false,
+      SCCode: "Tech"
+    },
+    {
+      lastChangeDate: "2023-07-05T12:15:30",
+      warehouseName: "Коледино",
+      supplierArticle: "T-159",
+      nmId: 2539871459,
+      barcode: "2037401340281",
+      quantity: 42,
+      inWayToClient: 5,
+      inWayFromClient: 2,
+      quantityFull: 49,
+      category: "Одежда",
+      subject: "Футболки",
+      brand: "BrandX",
+      techSize: "44",
+      Price: 1200,
+      Discount: 15,
+      isSupply: true,
+      isRealization: false,
+      SCCode: "Fashion"
+    },
+    {
+      lastChangeDate: "2023-07-06T09:23:41",
+      warehouseName: "Электросталь",
+      supplierArticle: "J-220",
+      nmId: 1439871460,
+      barcode: "2037401340282",
+      quantity: 18,
+      inWayToClient: 2,
+      inWayFromClient: 1,
+      quantityFull: 21,
+      category: "Одежда",
+      subject: "Джинсы",
+      brand: "JeansCo",
+      techSize: "46",
+      Price: 2300,
+      Discount: 10,
+      isSupply: true,
+      isRealization: false,
+      SCCode: "Fashion"
+    },
+    {
+      lastChangeDate: "2023-07-06T10:45:12",
+      warehouseName: "Подольск",
+      supplierArticle: "SH-105",
+      nmId: 1439871461,
+      barcode: "2037401340283",
+      quantity: 27,
+      inWayToClient: 3,
+      inWayFromClient: 0,
+      quantityFull: 30,
+      category: "Обувь",
+      subject: "Кроссовки",
+      brand: "SportWear",
+      techSize: "42",
+      Price: 3500,
+      Discount: 20,
+      isSupply: true,
+      isRealization: false,
+      SCCode: "Shoes"
+    },
+    {
+      lastChangeDate: "2023-07-06T11:30:55",
+      warehouseName: "Краснодар",
+      supplierArticle: "D-310",
+      nmId: 1439871462,
+      barcode: "2037401340284",
+      quantity: 15,
+      inWayToClient: 2,
+      inWayFromClient: 1,
+      quantityFull: 18,
+      category: "Одежда",
+      subject: "Платья",
+      brand: "FashionLady",
+      techSize: "42",
+      Price: 2800,
+      Discount: 15,
+      isSupply: true,
+      isRealization: false,
+      SCCode: "Fashion"
+    },
+    {
+      lastChangeDate: "2023-07-07T09:15:22",
+      warehouseName: "Коледино",
+      supplierArticle: "JK-75",
+      nmId: 1439871463,
+      barcode: "2037401340285",
+      quantity: 20,
+      inWayToClient: 1,
+      inWayFromClient: 0,
+      quantityFull: 21,
+      category: "Одежда",
+      subject: "Куртки",
+      brand: "OutdoorStyle",
+      techSize: "48",
+      Price: 4500,
+      Discount: 10,
+      isSupply: true,
+      isRealization: false,
+      SCCode: "Fashion"
+    },
+    {
+      lastChangeDate: "2023-07-07T10:20:18",
+      warehouseName: "Электросталь",
+      supplierArticle: "SW-42",
+      nmId: 1439871464,
+      barcode: "2037401340286",
+      quantity: 30,
+      inWayToClient: 4,
+      inWayFromClient: 2,
+      quantityFull: 36,
+      category: "Одежда",
+      subject: "Свитера",
+      brand: "WarmWear",
+      techSize: "46",
+      Price: 2100,
+      Discount: 5,
+      isSupply: true,
+      isRealization: false,
+      SCCode: "Fashion"
+    },
+    {
+      lastChangeDate: "2023-07-07T14:35:42",
+      warehouseName: "Подольск",
+      supplierArticle: "BG-18",
+      nmId: 1439871465,
+      barcode: "2037401340287",
+      quantity: 25,
+      inWayToClient: 2,
+      inWayFromClient: 1,
+      quantityFull: 28,
+      category: "Аксессуары",
+      subject: "Сумки",
+      brand: "BagStyle",
+      techSize: "0",
+      Price: 1800,
+      Discount: 10,
+      isSupply: true,
+      isRealization: false,
+      SCCode: "Accessories"
+    },
+    {
+      lastChangeDate: "2023-07-08T08:10:33",
+      warehouseName: "Краснодар",
+      supplierArticle: "TS-220",
+      nmId: 1439871466,
+      barcode: "2037401340288",
+      quantity: 40,
+      inWayToClient: 5,
+      inWayFromClient: 2,
+      quantityFull: 47,
+      category: "Электроника",
+      subject: "Наушники",
+      brand: "SoundMax",
+      techSize: "0",
+      Price: 1500,
+      Discount: 20,
+      isSupply: true,
+      isRealization: false,
+      SCCode: "Electronics"
+    },
+    {
+      lastChangeDate: "2023-07-08T09:25:17",
+      warehouseName: "Коледино",
+      supplierArticle: "BS-77",
+      nmId: 1439871467,
+      barcode: "2037401340289",
+      quantity: 22,
+      inWayToClient: 3,
+      inWayFromClient: 1,
+      quantityFull: 26,
+      category: "Одежда",
+      subject: "Рубашки",
+      brand: "BusinessStyle",
+      techSize: "44",
+      Price: 1900,
+      Discount: 15,
+      isSupply: true,
+      isRealization: false,
+      SCCode: "Fashion"
+    }
+  ];
+  
+  return mockStocks;
+};
+
+// Transform raw stocks data into category-based summary
+export const processStocksByCategory = (stocks: WildberriesStock[]): StocksByCategory[] => {
+  const categoriesMap: Record<string, StocksByCategory> = {};
+  
+  stocks.forEach(stock => {
+    if (!categoriesMap[stock.category]) {
+      categoriesMap[stock.category] = {
+        category: stock.category,
+        totalItems: 0,
+        valueRub: 0,
+        topSellingItem: '',
+        averageTurnover: '7 дней',
+        returns: 0,
+        inTransit: 0
+      };
+    }
+    
+    const category = categoriesMap[stock.category];
+    category.totalItems += stock.quantity;
+    category.valueRub += stock.quantity * (stock.Price * (1 - stock.Discount / 100));
+    category.inTransit += stock.inWayToClient;
+    
+    // Just for demo purposes, set the top selling item to be the most expensive one
+    if (!category.topSellingItem || stock.Price > 0) {
+      category.topSellingItem = stock.subject;
+    }
+    
+    // Random returns for demo
+    category.returns = Math.floor(category.totalItems * 0.03);
+  });
+  
+  return Object.values(categoriesMap);
+};
+
+// Transform raw stocks data into warehouse-based summary
+export const processStocksByWarehouse = (stocks: WildberriesStock[]): StocksByWarehouse[] => {
+  const warehousesMap: Record<string, StocksByWarehouse> = {};
+  
+  stocks.forEach(stock => {
+    if (!warehousesMap[stock.warehouseName]) {
+      warehousesMap[stock.warehouseName] = {
+        warehouseName: stock.warehouseName,
+        totalItems: 0,
+        categories: {}
+      };
+    }
+    
+    const warehouse = warehousesMap[stock.warehouseName];
+    warehouse.totalItems += stock.quantity;
+    
+    if (!warehouse.categories[stock.category]) {
+      warehouse.categories[stock.category] = 0;
+    }
+    
+    warehouse.categories[stock.category] += stock.quantity;
+  });
+  
+  return Object.values(warehousesMap);
 };

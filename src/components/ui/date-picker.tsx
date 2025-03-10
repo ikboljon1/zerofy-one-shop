@@ -15,10 +15,9 @@ import {
 interface DatePickerProps {
   value?: Date;
   onValueChange?: (date?: Date) => void;
-  placeholder?: string;
 }
 
-export function DatePicker({ value, onValueChange, placeholder = "Выберите дату" }: DatePickerProps) {
+export function DatePicker({ value, onValueChange }: DatePickerProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -30,19 +29,16 @@ export function DatePicker({ value, onValueChange, placeholder = "Выберит
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {value ? format(value, "dd.MM.yyyy", { locale: ru }) : <span>{placeholder}</span>}
+          {value ? format(value, "PPP", { locale: ru }) : <span>Выберите дату</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto p-0">
         <Calendar
           mode="single"
           selected={value}
           onSelect={onValueChange}
           initialFocus
           locale={ru}
-          className="pointer-events-auto"
-          fromDate={new Date(2020, 0, 1)}
-          toDate={new Date(2030, 11, 31)}
         />
       </PopoverContent>
     </Popover>
