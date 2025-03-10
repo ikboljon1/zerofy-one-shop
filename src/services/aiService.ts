@@ -256,293 +256,6 @@ const createOpenAIPrompt = (request: AIAnalysisRequest): string => {
   return prompt;
 };
 
-// Функция для генерации рекомендаций при отсутствии ответа от API или ошибке
-const generateFallbackRecommendations = (requestType: string): AIRecommendation[] => {
-  const timestamp = Date.now();
-  
-  switch (requestType) {
-    case 'advertising_analysis':
-      return [
-        {
-          id: `fallback-${timestamp}-1`,
-          title: "Оптимизация карточек товаров для повышения видимости",
-          description: "Тщательно проработайте карточки товаров: заполните все характеристики, добавьте качественные фотографии и видео, напишите подробные и привлекательные описания с использованием релевантных ключевых слов. Это улучшит ранжирование в поиске Wildberries.",
-          category: 'products',
-          importance: 'high',
-          timestamp: timestamp,
-          actionable: true,
-          action: "Провести аудит и оптимизацию всех карточек товаров"
-        },
-        {
-          id: `fallback-${timestamp}-2`,
-          title: "Настройка отслеживания конверсии",
-          description: "Внедрите систематическое отслеживание основных показателей эффективности: CTR, CR, стоимость клика и стоимость заказа. Регулярно анализируйте эти метрики для своевременной корректировки рекламной стратегии.",
-          category: 'advertising',
-          importance: 'medium',
-          timestamp: timestamp,
-          actionable: true,
-          action: "Настроить регулярный мониторинг ключевых метрик"
-        },
-        {
-          id: `fallback-${timestamp}-3`,
-          title: "Тестирование разных типов рекламных кампаний",
-          description: "Попробуйте различные форматы рекламы на Wildberries (автоматические, поисковые, каталожные) для определения наиболее эффективного подхода для ваших товаров.",
-          category: 'advertising',
-          importance: 'medium',
-          timestamp: timestamp,
-          actionable: true,
-          action: "Создать тестовые кампании разных типов с ограниченным бюджетом"
-        }
-      ];
-    case 'product_recommendations':
-      return [
-        {
-          id: `fallback-${timestamp}-1`,
-          title: "Оптимизация товарного ассортимента",
-          description: "Сосредоточьтесь на развитии наиболее прибыльных товаров и категорий. Выявляйте товары с высокой маржинальностью и увеличивайте их долю в ассортименте.",
-          category: 'products',
-          importance: 'high',
-          timestamp: timestamp,
-          actionable: true,
-          action: "Провести аудит ассортимента и выделить топ-10 наиболее прибыльных товаров"
-        },
-        {
-          id: `fallback-${timestamp}-2`,
-          title: "Анализ и корректировка цен",
-          description: "Регулярно анализируйте цены конкурентов и корректируйте свои цены для поддержания конкурентоспособности. Используйте динамическое ценообразование в зависимости от спроса и сезонности.",
-          category: 'products',
-          importance: 'medium',
-          timestamp: timestamp,
-          actionable: true,
-          action: "Настроить еженедельный мониторинг цен конкурентов и автоматическую корректировку своих цен"
-        },
-        {
-          id: `fallback-${timestamp}-3`,
-          title: "Оптимизация карточек товаров",
-          description: "Улучшите качество фотографий, описаний и характеристик товаров. Добавьте видео и инфографику для наиболее популярных товаров.",
-          category: 'products',
-          importance: 'medium',
-          timestamp: timestamp,
-          actionable: true,
-          action: "Обновить контент для топ-20 товаров по продажам"
-        }
-      ];
-    case 'sales_analysis':
-      return [
-        {
-          id: `fallback-${timestamp}-1`,
-          title: "Внедрение программы лояльности",
-          description: "Разработайте систему скидок и бонусов для постоянных клиентов. Это позволит увеличить средний чек и частоту покупок.",
-          category: 'sales',
-          importance: 'high',
-          timestamp: timestamp,
-          actionable: true,
-          action: "Разработать и внедрить программу лояльности с системой накопительных скидок"
-        },
-        {
-          id: `fallback-${timestamp}-2`,
-          title: "Сезонные акции и распродажи",
-          description: "Планируйте акции и специальные предложения в соответствии с сезонностью и праздниками. Это поможет увеличить продажи в пиковые периоды и поддержать их в низкий сезон.",
-          category: 'sales',
-          importance: 'medium',
-          timestamp: timestamp,
-          actionable: true,
-          action: "Составить календарь акций и распродаж на год вперед"
-        },
-        {
-          id: `fallback-${timestamp}-3`,
-          title: "Аналитика покупательского поведения",
-          description: "Внедрите систему аналитики для отслеживания поведения покупателей: какие товары чаще всего покупают вместе, в какое время суток совершается больше покупок и т.д.",
-          category: 'sales',
-          importance: 'medium',
-          timestamp: timestamp,
-          actionable: true,
-          action: "Настроить систему отслеживания покупательского поведения и регулярные отчеты"
-        }
-      ];
-    case 'expense_analysis':
-      return [
-        {
-          id: `fallback-${timestamp}-1`,
-          title: "Оптимизация логистических расходов",
-          description: "Пересмотрите схемы доставки и хранения товаров. Используйте склады, расположенные ближе к основным регионам продаж, для снижения затрат на логистику.",
-          category: 'expenses',
-          importance: 'high',
-          timestamp: timestamp,
-          actionable: true,
-          action: "Провести аудит логистических процессов и выявить возможности для оптимизации"
-        },
-        {
-          id: `fallback-${timestamp}-2`,
-          title: "Снижение штрафов и возвратов",
-          description: "Улучшите качество упаковки и контроль качества товаров перед отправкой. Это поможет снизить количество возвратов и штрафов со стороны маркетплейса.",
-          category: 'expenses',
-          importance: 'medium',
-          timestamp: timestamp,
-          actionable: true,
-          action: "Разработать систему контроля качества товаров перед отправкой"
-        },
-        {
-          id: `fallback-${timestamp}-3`,
-          title: "Оптимизация рекламного бюджета",
-          description: "Проанализируйте эффективность рекламных кампаний и перераспределите бюджет в пользу наиболее эффективных каналов и инструментов.",
-          category: 'expenses',
-          importance: 'medium',
-          timestamp: timestamp,
-          actionable: true,
-          action: "Провести аудит рекламных кампаний и оптимизировать распределение бюджета"
-        }
-      ];
-    case 'warehouse_analysis':
-      return [
-        {
-          id: `fallback-${timestamp}-1`,
-          title: "Оптимизация товарных запасов",
-          description: "Внедрите систему управления запасами для поддержания оптимального уровня товаров на складе. Это поможет избежать как избыточных запасов, так и дефицита товаров.",
-          category: 'expenses',
-          importance: 'high',
-          timestamp: timestamp,
-          actionable: true,
-          action: "Разработать и внедрить систему управления запасами с учетом сезонности и спроса"
-        },
-        {
-          id: `fallback-${timestamp}-2`,
-          title: "Распродажа неликвидных товаров",
-          description: "Проведите распродажу товаров, которые долго лежат на складе и имеют низкую оборачиваемость. Это поможет освободить складские площади и средства, вложенные в эти товары.",
-          category: 'products',
-          importance: 'medium',
-          timestamp: timestamp,
-          actionable: true,
-          action: "Подготовить список неликвидных товаров и провести распродажу со скидками до 50%"
-        },
-        {
-          id: `fallback-${timestamp}-3`,
-          title: "Оптимизация распределения по складам",
-          description: "Распределяйте товары по складам с учетом региональных продаж. Размещайте популярные товары на складах, расположенных ближе к основным регионам продаж.",
-          category: 'expenses',
-          importance: 'medium',
-          timestamp: timestamp,
-          actionable: true,
-          action: "Провести анализ региональных продаж и оптимизировать распределение товаров по складам"
-        }
-      ];
-    case 'supply_analysis':
-      return [
-        {
-          id: `fallback-${timestamp}-1`,
-          title: "Оптимизация графика поставок",
-          description: "Разработайте оптимальный график поставок с учетом сезонности, спроса и времени, необходимого для приемки товаров маркетплейсом.",
-          category: 'expenses',
-          importance: 'high',
-          timestamp: timestamp,
-          actionable: true,
-          action: "Разработать и внедрить оптимальный график поставок на основе исторических данных"
-        },
-        {
-          id: `fallback-${timestamp}-2`,
-          title: "Контроль качества поставок",
-          description: "Внедрите систему контроля качества товаров перед отправкой на склады маркетплейса. Это поможет избежать отказов в приемке и возвратов.",
-          category: 'expenses',
-          importance: 'medium',
-          timestamp: timestamp,
-          actionable: true,
-          action: "Разработать и внедрить систему контроля качества товаров перед отправкой"
-        },
-        {
-          id: `fallback-${timestamp}-3`,
-          title: "Оптимизация упаковки",
-          description: "Пересмотрите подход к упаковке товаров для минимизации объема и веса, что позволит снизить затраты на логистику.",
-          category: 'expenses',
-          importance: 'medium',
-          timestamp: timestamp,
-          actionable: true,
-          action: "Провести аудит упаковки товаров и разработать более эффективные решения"
-        }
-      ];
-    default:
-      return [
-        {
-          id: `fallback-${timestamp}-1`,
-          title: "Необходимо больше данных для анализа",
-          description: "В текущий момент недостаточно данных для проведения качественного анализа. Рекомендуется продолжить сбор статистики для более точных рекомендаций.",
-          category: 'general',
-          importance: 'medium',
-          timestamp: timestamp,
-          actionable: false
-        }
-      ];
-  }
-};
-
-// Улучшенный обработчик ответов от AI-моделей
-const tryParseAIResponse = (responseText: string, requestType: string): AIRecommendation[] => {
-  try {
-    console.log('Оригинальный ответ AI:', responseText);
-    
-    // Пытаемся найти JSON в ответе
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      console.warn('JSON не найден в ответе AI');
-      return generateFallbackRecommendations(requestType);
-    }
-    
-    let jsonStr = jsonMatch[0];
-    
-    // Проверяем, является ли строка валидным JSON
-    try {
-      JSON.parse(jsonStr);
-    } catch (e) {
-      console.warn('Обнаружен невалидный JSON, пытаемся исправить...');
-      
-      // Если ответ обрезан, пытаемся закрыть JSON-структуру
-      if (!jsonStr.includes('}]}')) {
-        // Находим последнюю полную рекомендацию
-        const lastCompleteRecommendation = jsonStr.lastIndexOf('"}');
-        if (lastCompleteRecommendation !== -1) {
-          // Закрываем JSON после последней полной рекомендации
-          jsonStr = jsonStr.substring(0, lastCompleteRecommendation + 2) + ']}';
-        } else {
-          // Если не нашли полной рекомендации, просто завершаем массив и объект
-          jsonStr = jsonStr + ']}';
-        }
-        
-        try {
-          // Проверяем исправленную версию
-          JSON.parse(jsonStr);
-          console.log('JSON успешно исправлен');
-        } catch (e) {
-          console.error('Не удалось исправить JSON:', e);
-          return generateFallbackRecommendations(requestType);
-        }
-      }
-    }
-    
-    const parsedResult = JSON.parse(jsonStr);
-    if (parsedResult.recommendations && Array.isArray(parsedResult.recommendations)) {
-      return parsedResult.recommendations.map((rec: any, index: number) => ({
-        id: `${Date.now()}-${index}`,
-        title: rec.title || 'Рекомендация без заголовка',
-        description: rec.description || 'Описание отсутствует',
-        category: ['sales', 'expenses', 'products', 'advertising', 'general'].includes(rec.category) 
-          ? rec.category 
-          : 'general',
-        importance: ['low', 'medium', 'high'].includes(rec.importance) 
-          ? rec.importance 
-          : 'medium',
-        timestamp: Date.now(),
-        actionable: Boolean(rec.actionable),
-        action: rec.action
-      }));
-    } else {
-      console.warn('Структура recommendations не найдена или не является массивом');
-      return generateFallbackRecommendations(requestType);
-    }
-  } catch (error) {
-    console.error('Ошибка при обработке ответа AI:', error);
-    return generateFallbackRecommendations(requestType);
-  }
-};
-
 export const analyzeData = async (
   request: AIAnalysisRequest, 
   storeId: string
@@ -590,7 +303,28 @@ export const analyzeData = async (
         const data = await response.json();
         const aiResponse = data.choices[0].message.content;
         
-        recommendations = tryParseAIResponse(aiResponse, request.requestType);
+        try {
+          // Извлекаем JSON-объект из ответа
+          const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsedResult = JSON.parse(jsonMatch[0]);
+            if (parsedResult.recommendations) {
+              recommendations = parsedResult.recommendations.map((rec: any, index: number) => ({
+                id: `${Date.now()}-${index}`,
+                title: rec.title,
+                description: rec.description,
+                category: rec.category || 'general',
+                importance: rec.importance || 'medium',
+                timestamp: Date.now(),
+                actionable: rec.actionable || false,
+                action: rec.action
+              }));
+            }
+          }
+        } catch (parseError) {
+          console.error('Ошибка при разборе ответа AI:', parseError);
+          throw new Error('Не удалось разобрать ответ от AI');
+        }
         break;
         
       case 'gemini':
@@ -634,7 +368,28 @@ export const analyzeData = async (
           }
         }
         
-        recommendations = tryParseAIResponse(geminiResponseText, request.requestType);
+        try {
+          // Извлекаем JSON-объект из ответа
+          const jsonMatch = geminiResponseText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsedResult = JSON.parse(jsonMatch[0]);
+            if (parsedResult.recommendations) {
+              recommendations = parsedResult.recommendations.map((rec: any, index: number) => ({
+                id: `${Date.now()}-${index}`,
+                title: rec.title,
+                description: rec.description,
+                category: rec.category || 'general',
+                importance: rec.importance || 'medium',
+                timestamp: Date.now(),
+                actionable: rec.actionable || false,
+                action: rec.action
+              }));
+            }
+          }
+        } catch (parseError) {
+          console.error('Ошибка при разборе ответа Gemini:', parseError);
+          throw new Error('Не удалось разобрать ответ от Gemini');
+        }
         break;
         
       case 'anthropic':
@@ -665,17 +420,32 @@ export const analyzeData = async (
         const claudeData = await claudeResponse.json();
         const claudeResponseText = claudeData.content[0].text;
         
-        recommendations = tryParseAIResponse(claudeResponseText, request.requestType);
+        try {
+          // Извлекаем JSON-объект из ответа
+          const jsonMatch = claudeResponseText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsedResult = JSON.parse(jsonMatch[0]);
+            if (parsedResult.recommendations) {
+              recommendations = parsedResult.recommendations.map((rec: any, index: number) => ({
+                id: `${Date.now()}-${index}`,
+                title: rec.title,
+                description: rec.description,
+                category: rec.category || 'general',
+                importance: rec.importance || 'medium',
+                timestamp: Date.now(),
+                actionable: rec.actionable || false,
+                action: rec.action
+              }));
+            }
+          }
+        } catch (parseError) {
+          console.error('Ошибка при разборе ответа Claude:', parseError);
+          throw new Error('Не удалось разобрать ответ от Claude');
+        }
         break;
         
       default:
         throw new Error('Неизвестный провайдер AI');
-    }
-    
-    // Проверка получили ли мы хоть какие-то рекомендации
-    if (!recommendations || recommendations.length === 0) {
-      console.warn('Не получено рекомендаций от AI, используем запасные варианты');
-      recommendations = generateFallbackRecommendations(request.requestType);
     }
     
     // Сохраняем рекомендации

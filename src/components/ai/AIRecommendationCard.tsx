@@ -1,158 +1,120 @@
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Trash2, Check, ExternalLink, AlertTriangle, TrendingUp, DollarSign, ShoppingBag, Megaphone, Info } from "lucide-react";
 import { AIRecommendation } from "@/types/ai";
-import { CircleAlert, CircleCheck, Lightbulb, X, AlertTriangle, TrendingUp, Package, Receipt, BanknoteIcon, Megaphone } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface AIRecommendationCardProps {
   recommendation: AIRecommendation;
-  onDismiss?: (id: string) => void;
-  compact?: boolean;
+  onDismiss: (id: string) => void;
 }
 
-const AIRecommendationCard = ({ recommendation, onDismiss, compact = false }: AIRecommendationCardProps) => {
-  const getImportanceColor = (importance: string) => {
-    switch (importance) {
-      case 'high':
-        return 'text-red-500 bg-red-100 dark:bg-red-900/20';
-      case 'medium':
-        return 'text-yellow-500 bg-yellow-100 dark:bg-yellow-900/20';
-      case 'low':
-        return 'text-green-500 bg-green-100 dark:bg-green-900/20';
-      default:
-        return 'text-blue-500 bg-blue-100 dark:bg-blue-900/20';
-    }
-  };
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
+const AIRecommendationCard = ({ recommendation, onDismiss }: AIRecommendationCardProps) => {
+  const [showActions, setShowActions] = useState(false);
+  
+  // Format timestamp to readable date
+  const formattedDate = new Date(recommendation.timestamp).toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  
+  // Select icon based on category
+  const getIcon = () => {
+    switch (recommendation.category) {
       case 'sales':
-        return <TrendingUp className="h-4 w-4" />;
-      case 'products':
-        return <Package className="h-4 w-4" />;
+        return <TrendingUp className="h-5 w-5" />;
       case 'expenses':
-        return <Receipt className="h-4 w-4" />;
+        return <DollarSign className="h-5 w-5" />;
+      case 'products':
+        return <ShoppingBag className="h-5 w-5" />;
       case 'advertising':
-        return <Megaphone className="h-4 w-4" />;
-      case 'general':
+        return <Megaphone className="h-5 w-5" />;
       default:
-        return <Lightbulb className="h-4 w-4" />;
+        return <Info className="h-5 w-5" />;
     }
   };
   
-  const getCategoryText = (category: string) => {
-    switch (category) {
-      case 'sales':
-        return 'Продажи';
-      case 'products':
-        return 'Товары';
-      case 'expenses':
-        return 'Расходы';
-      case 'advertising':
-        return 'Реклама';
-      case 'general':
+  // Get color for importance
+  const getImportanceColor = () => {
+    switch (recommendation.importance) {
+      case 'high':
+        return 'bg-red-100 text-red-800 hover:bg-red-200';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200';
+      case 'low':
+        return 'bg-green-100 text-green-800 hover:bg-green-200';
       default:
-        return 'Общее';
+        return 'bg-blue-100 text-blue-800 hover:bg-blue-200';
     }
   };
 
-  const formattedDate = new Date(recommendation.timestamp).toLocaleDateString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
-
-  if (compact) {
-    return (
-      <Card className="overflow-hidden border relative">
-        <div className={`absolute top-0 left-0 w-1 h-full ${recommendation.importance === 'high' ? 'bg-red-500' : recommendation.importance === 'medium' ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
-        <CardContent className="p-3 pl-4">
-          <div className="flex justify-between items-start gap-2">
-            <div>
-              <h4 className="font-medium text-sm">{recommendation.title}</h4>
-              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{recommendation.description}</p>
-            </div>
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              <Badge variant="outline" className="text-xs flex items-center gap-1 py-0">
-                {getCategoryIcon(recommendation.category)}
-                <span className="hidden sm:inline">{getCategoryText(recommendation.category)}</span>
-              </Badge>
-              {onDismiss && (
+  return (
+    <Card className="overflow-hidden transition-all duration-300 hover:shadow-md">
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <div className={`p-2 rounded-full ${
+            recommendation.category === 'sales' ? 'bg-blue-100 text-blue-700' :
+            recommendation.category === 'expenses' ? 'bg-red-100 text-red-700' :
+            recommendation.category === 'products' ? 'bg-green-100 text-green-700' :
+            recommendation.category === 'advertising' ? 'bg-purple-100 text-purple-700' :
+            'bg-gray-100 text-gray-700'
+          }`}>
+            {getIcon()}
+          </div>
+          
+          <div className="flex-1">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="font-semibold text-lg">{recommendation.title}</h3>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className={getImportanceColor()}>
+                  {recommendation.importance === 'high' ? 'Важно' : 
+                   recommendation.importance === 'medium' ? 'Средне' : 'Низко'}
+                </Badge>
                 <Button 
                   variant="ghost" 
-                  size="icon" 
-                  className="h-6 w-6" 
+                  size="sm" 
+                  className="h-8 w-8 p-0" 
                   onClick={() => onDismiss(recommendation.id)}
                 >
-                  <X className="h-3 w-3" />
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            
+            <p className="text-muted-foreground mb-2">{recommendation.description}</p>
+            
+            <div className="flex items-center justify-between mt-3">
+              <span className="text-xs text-muted-foreground">{formattedDate}</span>
+              
+              {recommendation.actionable && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8" 
+                  onClick={() => setShowActions(!showActions)}
+                >
+                  {showActions ? 'Скрыть действия' : 'Показать действия'}
                 </Button>
               )}
             </div>
           </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="overflow-hidden">
-      <div className={`h-1.5 w-full ${recommendation.importance === 'high' ? 'bg-red-500' : recommendation.importance === 'medium' ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <CardTitle className="text-lg">{recommendation.title}</CardTitle>
-          {onDismiss && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8 -mr-2 -mt-2" 
-              onClick={() => onDismiss(recommendation.id)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
         </div>
-        <CardDescription className="flex items-center gap-2 pt-1">
-          <Badge variant="outline" className="flex items-center gap-1 py-1">
-            {getCategoryIcon(recommendation.category)}
-            {getCategoryText(recommendation.category)}
-          </Badge>
-          <Badge 
-            variant="outline" 
-            className={`flex items-center gap-1 py-1 ${getImportanceColor(recommendation.importance)}`}
-          >
-            {recommendation.importance === 'high' ? (
-              <AlertTriangle className="h-3.5 w-3.5" />
-            ) : recommendation.importance === 'medium' ? (
-              <CircleAlert className="h-3.5 w-3.5" />
-            ) : (
-              <CircleCheck className="h-3.5 w-3.5" />
-            )}
-            {recommendation.importance === 'high' 
-              ? 'Высокий приоритет' 
-              : recommendation.importance === 'medium' 
-                ? 'Средний приоритет' 
-                : 'Низкий приоритет'}
-          </Badge>
-          <span className="text-muted-foreground text-xs">{formattedDate}</span>
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm">{recommendation.description}</p>
-      </CardContent>
-      {recommendation.actionable && recommendation.action && (
-        <CardFooter className="pt-0">
-          <div className="w-full rounded-md bg-purple-50 dark:bg-purple-900/10 p-3 border border-purple-200 dark:border-purple-800">
-            <div className="flex gap-2 items-start">
-              <Lightbulb className="h-5 w-5 text-purple-500 mt-0.5" />
-              <div>
-                <h5 className="font-medium text-sm mb-1">Рекомендуемое действие</h5>
-                <p className="text-sm text-muted-foreground">{recommendation.action}</p>
-              </div>
+        
+        {recommendation.actionable && showActions && recommendation.action && (
+          <div className="mt-4 p-3 bg-muted rounded-md border">
+            <div className="flex items-start gap-2 mb-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+              <p className="text-sm font-medium">Рекомендуемое действие:</p>
             </div>
+            <p className="text-sm text-muted-foreground ml-7">{recommendation.action}</p>
           </div>
-        </CardFooter>
-      )}
+        )}
+      </CardContent>
     </Card>
   );
 };
