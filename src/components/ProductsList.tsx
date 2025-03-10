@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Package, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,7 @@ interface Product {
   discountedPrice?: number;
   clubPrice?: number;
   quantity?: number;
-  dailyStorageCost?: number; // New property for daily storage cost
+  dailyStorageCost?: number;
   expenses?: {
     logistics: number;
     storage: number;
@@ -93,24 +92,22 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       retail_price: product.expenses.retail_price
     });
     
-    // Calculate storage costs more accurately based on average quantity
-    const dailyStorageCost = product.dailyStorageCost || 5; // Default to 5 rubles per day if not set
-    const averageQuantity = calculateAverageQuantity(product.quantity || 0, productSales / 30);
-    const storagePeriod = Math.min(30, productSales > 0 ? (product.quantity || 0) / (productSales / 30) : 30);
-    
-    // Use the new calculation for storage costs
-    const calculatedStorageCost = averageQuantity * dailyStorageCost * storagePeriod;
+    const dailySalesRate = productSales / 30;
+    const calculatedStorageCost = calculateTotalStorageCost(
+      product.quantity || 0, 
+      product.dailyStorageCost || 5,
+      dailySalesRate
+    );
     
     const totalExpenses = 
       product.expenses.logistics +
       product.expenses.penalties +
       product.expenses.acceptance +
       (product.expenses.deductions || 0) +
-      calculatedStorageCost; // Use calculated storage cost instead of original value
+      calculatedStorageCost;
     
     const netProfit = transferredAmount - costPriceTotal - totalExpenses;
     
-    // Calculate margin as a percentage of costs
     let margin = 0;
     if (costPriceTotal > 0) {
       margin = (netProfit / costPriceTotal) * 100;
@@ -127,7 +124,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       transferredAmount,
       soldQuantity: productSales,
       margin: Math.round(margin),
-      calculatedStorageCost  // Return the new calculated storage cost
+      calculatedStorageCost
     };
   };
 
@@ -271,7 +268,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       
       const storedProducts = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
       
-      // Get stored cost prices and daily storage costs
       const costPrices: Record<number, number> = {};
       const dailyStorageCosts: Record<number, number> = {};
       
@@ -284,11 +280,9 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         }
       });
       
-      // Also try to get costs from separate localStorage entries if they exist
       const storedCostPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore.id}`) || "{}");
       const storedDailyStorageCosts = JSON.parse(localStorage.getItem(`dailyStorageCosts_${selectedStore.id}`) || "{}");
       
-      // Merge with stored values, giving priority to the separate storage
       Object.assign(costPrices, storedCostPrices);
       Object.assign(dailyStorageCosts, storedDailyStorageCosts);
 
@@ -385,7 +379,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           retail_price: 0
         };
         
-        // Apply daily storage cost for this product, default to 5 rubles if not set
         const productDailyStorageCost = dailyStorageCosts[product.nmID] || 5;
         
         console.log(`Processing product ${product.nmID}:`, {
@@ -402,7 +395,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           costPrice: costPrices[product.nmID] || 0,
           discountedPrice: currentPrice || 0,
           quantity: quantity,
-          dailyStorageCost: productDailyStorageCost, // Add daily storage cost
+          dailyStorageCost: productDailyStorageCost,
           expenses: productExpenses
         };
       });
@@ -438,13 +431,11 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     setProducts(updatedProducts);
     localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedProducts));
     
-    // Also store in separate localStorage for redundancy
     const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore?.id}`) || '{}');
     costPrices[productId] = costPrice;
     localStorage.setItem(`costPrices_${selectedStore?.id}`, JSON.stringify(costPrices));
   };
-  
-  // New function to update daily storage cost for a product
+
   const updateDailyStorageCost = (productId: number, dailyStorageCost: number) => {
     const updatedProducts = products.map(product => {
       if (product.nmID === productId) {
@@ -456,24 +447,20 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     setProducts(updatedProducts);
     localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedProducts));
     
-    // Also store in separate localStorage for redundancy
     const dailyStorageCosts = JSON.parse(localStorage.getItem(`dailyStorageCosts_${selectedStore?.id}`) || '{}');
     dailyStorageCosts[productId] = dailyStorageCost;
     localStorage.setItem(`dailyStorageCosts_${selectedStore?.id}`, JSON.stringify(dailyStorageCosts));
   };
 
-  // Load stored products when store changes
   useEffect(() => {
     if (selectedStore) {
       const storedProducts = localStorage.getItem(`products_${selectedStore.id}`);
       if (storedProducts) {
         let parsedProducts = JSON.parse(storedProducts);
         
-        // Get additional data from separate storage
         const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore.id}`) || '{}');
         const dailyStorageCosts = JSON.parse(localStorage.getItem(`dailyStorageCosts_${selectedStore.id}`) || '{}');
         
-        // Apply stored values to products
         parsedProducts = parsedProducts.map((product: Product) => ({
           ...product,
           costPrice: costPrices[product.nmID] || product.costPrice || 0,
@@ -523,7 +510,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           {products.map((product) => {
             const profitDetails = calculateNetProfit(product);
             
-            // Calculate average storage quantity for display
             const dailySalesRate = (product.quantity || 0) / 30;
             const averageQuantity = calculateAverageQuantity(product.quantity || 0, dailySalesRate);
             

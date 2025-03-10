@@ -1,4 +1,5 @@
 
+
 /**
  * Форматирует число как валюту (без символа рубля)
  * @param value Число для форматирования
@@ -41,20 +42,23 @@ export const roundToTwoDecimals = (value: number): number => {
  * @returns Среднее количество товара
  */
 export const calculateAverageQuantity = (initialQuantity: number, salesRate: number): number => {
-  if (initialQuantity <= 0 || salesRate <= 0) return 0;
+  if (initialQuantity <= 0) return 0;
   
-  // Если скорость продаж очень низкая, считаем что среднее количество примерно равно текущему
-  if (salesRate < 0.01) return initialQuantity;
+  // Если скорость продаж очень низкая или нулевая
+  if (salesRate <= 0.01) {
+    return initialQuantity;
+  }
   
   // Время до исчерпания запаса (в днях)
   const daysUntilZero = initialQuantity / salesRate;
   
-  // Среднее количество за период (начальное количество + 0) / 2
+  // Среднее количество за период: (начальное количество + 0) / 2
+  // Это отражает линейное уменьшение количества от initialQuantity до 0
   return initialQuantity / 2;
 };
 
 /**
- * Рассчитывает общие затраты на хранение с учетом среднего количества
+ * Рассчитывает общие затраты на хранение с учетом постепенного уменьшения товара
  * @param initialQuantity Начальное количество товара
  * @param dailyCostPerUnit Стоимость хранения одной единицы в день
  * @param salesRate Скорость продаж (единиц в день)
@@ -67,20 +71,21 @@ export const calculateTotalStorageCost = (
 ): number => {
   if (initialQuantity <= 0 || dailyCostPerUnit <= 0) return 0;
   
-  // Если скорость продаж почти нулевая, то берем обычную формулу
-  if (salesRate < 0.01) {
-    return initialQuantity * dailyCostPerUnit * 30; // Расчет за 30 дней
+  // Если товар не продается или продается очень медленно
+  if (salesRate <= 0.01) {
+    return initialQuantity * dailyCostPerUnit * 30; // Расчет за 30 дней при неизменном количестве
   }
-  
-  // Среднее количество товара за период
-  const averageQuantity = calculateAverageQuantity(initialQuantity, salesRate);
   
   // Время до исчерпания запаса (в днях)
   const daysUntilZero = initialQuantity / salesRate;
   
-  // Если товар закончится быстрее чем за 30 дней
+  // Ограничиваем период расчета до 30 дней или до исчерпания запаса, если это произойдет раньше
   const daysToCalculate = Math.min(daysUntilZero, 30);
   
-  // Общие затраты на хранение
+  // Среднее количество товара за период с учетом постепенного уменьшения
+  const averageQuantity = calculateAverageQuantity(initialQuantity, salesRate);
+  
+  // Общие затраты на хранение: среднее количество × стоимость хранения в день × количество дней
   return averageQuantity * dailyCostPerUnit * daysToCalculate;
 };
+
