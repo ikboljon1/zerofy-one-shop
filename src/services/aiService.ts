@@ -256,128 +256,6 @@ const createOpenAIPrompt = (request: AIAnalysisRequest): string => {
   return prompt;
 };
 
-// Функция для генерации рекомендаций при отсутствии ответа от API или ошибке
-const generateFallbackRecommendations = (requestType: string): AIRecommendation[] => {
-  const timestamp = Date.now();
-  
-  switch (requestType) {
-    case 'advertising_analysis':
-      return [
-        {
-          id: `fallback-${timestamp}-1`,
-          title: "Оптимизация карточек товаров для повышения видимости",
-          description: "Тщательно проработайте карточки товаров: заполните все характеристики, добавьте качественные фотографии и видео, напишите подробные и привлекательные описания с использованием релевантных ключевых слов. Это улучшит ранжирование в поиске Wildberries.",
-          category: 'products',
-          importance: 'high',
-          timestamp: timestamp,
-          actionable: true,
-          action: "Провести аудит и оптимизацию всех карточек товаров"
-        },
-        {
-          id: `fallback-${timestamp}-2`,
-          title: "Настройка отслеживания конверсии",
-          description: "Внедрите систематическое отслеживание основных показателей эффективности: CTR, CR, стоимость клика и стоимость заказа. Регулярно анализируйте эти метрики для своевременной корректировки рекламной стратегии.",
-          category: 'advertising',
-          importance: 'medium',
-          timestamp: timestamp,
-          actionable: true,
-          action: "Настроить регулярный мониторинг ключевых метрик"
-        },
-        {
-          id: `fallback-${timestamp}-3`,
-          title: "Тестирование разных типов рекламных кампаний",
-          description: "Попробуйте различные форматы рекламы на Wildberries (автоматические, поисковые, каталожные) для определения наиболее эффективного подхода для ваших товаров.",
-          category: 'advertising',
-          importance: 'medium',
-          timestamp: timestamp,
-          actionable: true,
-          action: "Создать тестовые кампании разных типов с ограниченным бюджетом"
-        }
-      ];
-    default:
-      return [
-        {
-          id: `fallback-${timestamp}-1`,
-          title: "Необходимо больше данных для анализа",
-          description: "В текущий момент недостаточно данных для проведения качественного анализа. Рекомендуется продолжить сбор статистики для более точных рекомендаций.",
-          category: 'general',
-          importance: 'medium',
-          timestamp: timestamp,
-          actionable: false
-        }
-      ];
-  }
-};
-
-// Улучшенный обработчик ответов от AI-моделей
-const tryParseAIResponse = (responseText: string, requestType: string): AIRecommendation[] => {
-  try {
-    console.log('Оригинальный ответ AI:', responseText);
-    
-    // Пытаемся найти JSON в ответе
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      console.warn('JSON не найден в ответе AI');
-      return generateFallbackRecommendations(requestType);
-    }
-    
-    let jsonStr = jsonMatch[0];
-    
-    // Проверяем, является ли строка валидным JSON
-    try {
-      JSON.parse(jsonStr);
-    } catch (e) {
-      console.warn('Обнаружен невалидный JSON, пытаемся исправить...');
-      
-      // Если ответ обрезан, пытаемся закрыть JSON-структуру
-      if (!jsonStr.includes('}]}')) {
-        // Находим последнюю полную рекомендацию
-        const lastCompleteRecommendation = jsonStr.lastIndexOf('"}');
-        if (lastCompleteRecommendation !== -1) {
-          // Закрываем JSON после последней полной рекомендации
-          jsonStr = jsonStr.substring(0, lastCompleteRecommendation + 2) + ']}';
-        } else {
-          // Если не нашли полной рекомендации, просто завершаем массив и объект
-          jsonStr = jsonStr + ']}';
-        }
-        
-        try {
-          // Проверяем исправленную версию
-          JSON.parse(jsonStr);
-          console.log('JSON успешно исправлен');
-        } catch (e) {
-          console.error('Не удалось исправить JSON:', e);
-          return generateFallbackRecommendations(requestType);
-        }
-      }
-    }
-    
-    const parsedResult = JSON.parse(jsonStr);
-    if (parsedResult.recommendations && Array.isArray(parsedResult.recommendations)) {
-      return parsedResult.recommendations.map((rec: any, index: number) => ({
-        id: `${Date.now()}-${index}`,
-        title: rec.title || 'Рекомендация без заголовка',
-        description: rec.description || 'Описание отсутствует',
-        category: ['sales', 'expenses', 'products', 'advertising', 'general'].includes(rec.category) 
-          ? rec.category 
-          : 'general',
-        importance: ['low', 'medium', 'high'].includes(rec.importance) 
-          ? rec.importance 
-          : 'medium',
-        timestamp: Date.now(),
-        actionable: Boolean(rec.actionable),
-        action: rec.action
-      }));
-    } else {
-      console.warn('Структура recommendations не найдена или не является массивом');
-      return generateFallbackRecommendations(requestType);
-    }
-  } catch (error) {
-    console.error('Ошибка при обработке ответа AI:', error);
-    return generateFallbackRecommendations(requestType);
-  }
-};
-
 export const analyzeData = async (
   request: AIAnalysisRequest, 
   storeId: string
@@ -425,7 +303,28 @@ export const analyzeData = async (
         const data = await response.json();
         const aiResponse = data.choices[0].message.content;
         
-        recommendations = tryParseAIResponse(aiResponse, request.requestType);
+        try {
+          // Извлекаем JSON-объект из ответа
+          const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsedResult = JSON.parse(jsonMatch[0]);
+            if (parsedResult.recommendations) {
+              recommendations = parsedResult.recommendations.map((rec: any, index: number) => ({
+                id: `${Date.now()}-${index}`,
+                title: rec.title,
+                description: rec.description,
+                category: rec.category || 'general',
+                importance: rec.importance || 'medium',
+                timestamp: Date.now(),
+                actionable: rec.actionable || false,
+                action: rec.action
+              }));
+            }
+          }
+        } catch (parseError) {
+          console.error('Ошибка при разборе ответа AI:', parseError);
+          throw new Error('Не удалось разобрать ответ от AI');
+        }
         break;
         
       case 'gemini':
@@ -469,7 +368,28 @@ export const analyzeData = async (
           }
         }
         
-        recommendations = tryParseAIResponse(geminiResponseText, request.requestType);
+        try {
+          // Извлекаем JSON-объект из ответа
+          const jsonMatch = geminiResponseText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsedResult = JSON.parse(jsonMatch[0]);
+            if (parsedResult.recommendations) {
+              recommendations = parsedResult.recommendations.map((rec: any, index: number) => ({
+                id: `${Date.now()}-${index}`,
+                title: rec.title,
+                description: rec.description,
+                category: rec.category || 'general',
+                importance: rec.importance || 'medium',
+                timestamp: Date.now(),
+                actionable: rec.actionable || false,
+                action: rec.action
+              }));
+            }
+          }
+        } catch (parseError) {
+          console.error('Ошибка при разборе ответа Gemini:', parseError);
+          throw new Error('Не удалось разобрать ответ от Gemini');
+        }
         break;
         
       case 'anthropic':
@@ -500,17 +420,32 @@ export const analyzeData = async (
         const claudeData = await claudeResponse.json();
         const claudeResponseText = claudeData.content[0].text;
         
-        recommendations = tryParseAIResponse(claudeResponseText, request.requestType);
+        try {
+          // Извлекаем JSON-объект из ответа
+          const jsonMatch = claudeResponseText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsedResult = JSON.parse(jsonMatch[0]);
+            if (parsedResult.recommendations) {
+              recommendations = parsedResult.recommendations.map((rec: any, index: number) => ({
+                id: `${Date.now()}-${index}`,
+                title: rec.title,
+                description: rec.description,
+                category: rec.category || 'general',
+                importance: rec.importance || 'medium',
+                timestamp: Date.now(),
+                actionable: rec.actionable || false,
+                action: rec.action
+              }));
+            }
+          }
+        } catch (parseError) {
+          console.error('Ошибка при разборе ответа Claude:', parseError);
+          throw new Error('Не удалось разобрать ответ от Claude');
+        }
         break;
         
       default:
         throw new Error('Неизвестный провайдер AI');
-    }
-    
-    // Проверка получили ли мы хоть какие-то рекомендации
-    if (!recommendations || recommendations.length === 0) {
-      console.warn('Не получено рекомендаций от AI, используем запасные варианты');
-      recommendations = generateFallbackRecommendations(request.requestType);
     }
     
     // Сохраняем рекомендации
