@@ -753,3 +753,4 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-sm text-muted-foreground">Рентабельность</p>
+                  <
