@@ -130,11 +130,18 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       const currentStock = item.quantityWarehousesFull || 0;
       const threshold = lowStockThreshold[nmId] || Math.ceil(dailySales * 7);
       
+      // Ежедневные затраты на хранение полного запаса
       const dailyStorageCostTotal = storageCost * currentStock;
       
+      // Время полной распродажи запаса (дни)
       const daysOfInventory = dailySales > 0 ? Math.round(currentStock / dailySales) : 999;
       
-      const totalStorageCost = dailyStorageCostTotal * daysOfInventory;
+      // Изменение: Уточненный расчет общих затрат на хранение
+      // Учитываем, что количество товара постепенно уменьшается
+      // Используем формулу: среднее количество × дни × стоимость единицы
+      // Среднее количество = (начальное + конечное) / 2 = (текущее + 0) / 2 = текущее / 2
+      const averageStock = currentStock / 2;
+      const totalStorageCost = averageStock * daysOfInventory * storageCost;
       
       const profitPerItem = sellingPrice - costPrice;
       
@@ -156,8 +163,10 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       // Предположим, что со скидкой товар будет продаваться в 2 раза быстрее
       const discountedDaysOfInventory = Math.round(daysOfInventory * 0.5);
       
-      // Изменение: При сокращении срока хранения вдвое, общие затраты на хранение тоже снижаются в два раза
-      const discountedStorageCost = totalStorageCost / 2;
+      // Изменение: Пересчитываем затраты на хранение при ускоренных продажах
+      // Используем ту же формулу среднего, но с ускоренным периодом
+      const discountedAverageStock = averageStock; // Среднее не меняется
+      const discountedStorageCost = discountedAverageStock * discountedDaysOfInventory * storageCost;
       
       const profitWithoutDiscount = (profitPerItem * currentStock) - totalStorageCost;
       const profitWithDiscount = (profitWithDiscountPerItem * currentStock) - discountedStorageCost;
