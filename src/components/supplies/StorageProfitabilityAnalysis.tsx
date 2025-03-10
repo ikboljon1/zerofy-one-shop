@@ -138,11 +138,10 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       
       const profitPerItem = sellingPrice - costPrice;
       
-      // Изменение: Теперь рассчитываем общую прибыль за весь период хранения
+      // Рассчитываем общую прибыль за весь период хранения
       const totalProfit = (profitPerItem * currentStock) - totalStorageCost;
       
-      // Порог для определения необходимости скидки: если общая прибыль меньше 
-      // определенного процента от суммы продаж, рекомендуем скидку
+      // Порог для определения необходимости скидки
       const totalSalesValue = sellingPrice * currentStock;
       const profitabilityRatio = totalProfit / totalSalesValue;
       
@@ -156,7 +155,9 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       
       // Предположим, что со скидкой товар будет продаваться в 2 раза быстрее
       const discountedDaysOfInventory = Math.round(daysOfInventory * 0.5);
-      const discountedStorageCost = dailyStorageCostTotal * discountedDaysOfInventory;
+      
+      // Изменение: При сокращении срока хранения вдвое, общие затраты на хранение тоже снижаются в два раза
+      const discountedStorageCost = totalStorageCost / 2;
       
       const profitWithoutDiscount = (profitPerItem * currentStock) - totalStorageCost;
       const profitWithDiscount = (profitWithDiscountPerItem * currentStock) - discountedStorageCost;
@@ -748,4 +749,3 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
 };
 
 export default StorageProfitabilityAnalysis;
-
