@@ -1,12 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -109,8 +102,10 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     const initialLowStockThresholds: Record<number, number> = {};
 
     warehouseItems.forEach(item => {
+      // Get the storage cost from the dailyStorageCost prop, which now contains data from paid storage
       let itemStorageCost = dailyStorageCost[item.nmId] || 5; // Default to 5 rubles per day if no data
       
+      // If no daily storage cost is provided or it's zero, try to calculate from paidStorageData
       if ((!itemStorageCost || itemStorageCost === 5) && paidStorageData.length > 0) {
         const matchingStorageItems = paidStorageData.filter(psi => psi.nmId === item.nmId);
         if (matchingStorageItems.length > 0) {
@@ -192,6 +187,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
           });
         }
         
+        // Задержка для избежания ограничений API
         await new Promise(resolve => setTimeout(resolve, 100));
       }
       
@@ -253,8 +249,9 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       
       const data = await response.json();
       
+      // Группировка продаж по nmId и подсчет количества продаж
       const salesMap: Record<number, number> = {};
-      const salesDates: Record<number, Set<string>> = {};
+      const salesDates: Record<number, Set<string>> = {}; // Для отслеживания уникальных дат продаж
 
       data.forEach((item: any) => {
         if (item.doc_type_name === "Продажа") {
@@ -270,16 +267,21 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         }
       });
       
+      // Расчет среднедневных продаж
       const averageDailySales: Record<number, number> = {};
       
       warehouseItems.forEach(item => {
         const nmId = item.nmId;
         const totalSales = salesMap[nmId] || 0;
         
+        // Проверяем количество уникальных дней с продажами
         const uniqueSalesDays = salesDates[nmId] ? salesDates[nmId].size : 0;
         
+        // Если были продажи, используем среднее по дням с продажами
+        // Иначе делим на весь период (30 дней)
         const divisor = uniqueSalesDays > 0 ? uniqueSalesDays : 30;
         
+        // Рассчитываем среднее и округляем до 2 знаков
         const average = totalSales / divisor;
         averageDailySales[nmId] = Math.max(0.01, parseFloat(average.toFixed(2)));
       });
@@ -645,7 +647,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
               </div>
               <div className="mt-4 pt-4 border-t border-amber-100 dark:border-amber-800/30">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs">Потенциальная экономи��</span>
+                  <span className="text-xs">Потенциальная экономия</span>
                   <span className="text-xs font-medium text-green-600">{formatCurrency(analysisSummary.potentialSavings)}</span>
                 </div>
               </div>
@@ -727,15 +729,273 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                 <div className="w-full md:w-auto">
                   <Label htmlFor="targetDate" className="text-xs mb-1 block">Показать товары с запасом до</Label>
                   <DatePicker 
-                    value={targetDate}
-                    onChange={date => setTargetDate(date)}
+                    value={targetDate} 
+                    onValueChange={setTargetDate} 
                   />
                 </div>
               </div>
             </div>
+            
+            <div className="flex gap-2 flex-wrap">
+              <Button 
+                variant="outline" 
+                onClick={fetchProductPrices} 
+                disabled={isLoadingPrices || !selectedStore?.apiKey}
+                className="whitespace-nowrap flex items-center gap-2"
+              >
+                {isLoadingPrices ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                Получить цены товаров
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                onClick={fetchAverageSales} 
+                disabled={isLoadingSales || !selectedStore?.apiKey}
+                className="whitespace-nowrap flex items-center gap-2"
+              >
+                {isLoadingSales ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                Рассчитать продажи в день
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                onClick={savePriceData} 
+                className="whitespace-nowrap"
+              >
+                Сохранить изменения
+              </Button>
+            </div>
+          </div>
+
+          <Tabs defaultValue="all" value={selectedTab} onValueChange={(value) => setSelectedTab(value as any)}>
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="all">Все товары</TabsTrigger>
+              <TabsTrigger value="low-stock">Низкий запас ({analysisSummary.lowStockItems})</TabsTrigger>
+              <TabsTrigger value="discount">Товары для скидки ({analysisSummary.discountItems})</TabsTrigger>
+              <TabsTrigger value="keep">Сохранить цены ({analysisSummary.keepItems})</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {targetDate && (
+            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-lg p-4 flex items-center justify-between">
+              <div className="flex items-center">
+                <Clock className="h-5 w-5 text-amber-500 mr-2" />
+                <span>
+                  К {formatDate(targetDate)} требуется пополнить запасы по {analysisSummary.itemsStockingOutBeforeTarget} товарам
+                </span>
+              </div>
+              <Button variant="ghost" size="sm" className="text-amber-600" onClick={() => setTargetDate(undefined)}>
+                Сбросить
+              </Button>
+            </div>
+          )}
+
+          <div className="border rounded-md overflow-hidden">
+            <Table>
+              <TableHeader className="bg-gray-50/80 dark:bg-gray-900/20">
+                <TableRow>
+                  <TableHead className="w-[300px]">Товар</TableHead>
+                  <TableHead 
+                    className="cursor-pointer" 
+                    onClick={() => requestSort('daysOfInventory')}
+                  >
+                    <div className="flex items-center">
+                      Остаток запаса
+                      <ArrowUpDown className="ml-1 h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer"
+                    onClick={() => requestSort('totalStorageCost')}
+                  >
+                    <div className="flex items-center">
+                      Расходы на хранение
+                      <ArrowUpDown className="ml-1 h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer"
+                    onClick={() => requestSort('savingsWithDiscount')}
+                  >
+                    <div className="flex items-center">
+                      Выгода от скидки
+                      <ArrowUpDown className="ml-1 h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead>Рекомендация</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredResults.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-6">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <Package className="h-8 w-8 text-muted-foreground" />
+                        <p className="text-muted-foreground">Нет данных для отображения</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredResults.map((result) => (
+                    <TableRow key={result.remainItem.nmId} className={`group ${
+                      result.lowStock ? 'bg-rose-50/40 dark:bg-rose-950/10 hover:bg-rose-50/60 dark:hover:bg-rose-950/20' : ''
+                    }`}>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="font-medium truncate max-w-[300px]">
+                            {result.remainItem.brand} - {result.remainItem.subjectName}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Артикул: {result.remainItem.vendorCode} | ID: {result.remainItem.nmId}
+                          </div>
+                          
+                          <div className="mt-1">
+                            {getStockLevelIndicator(result)}
+                          </div>
+                          
+                          <div className="pt-2 space-y-3 opacity-70 group-hover:opacity-100 transition-opacity">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-xs">Себестоимость:</Label>
+                                <Input
+                                  type="number"
+                                  value={result.costPrice}
+                                  onChange={(e) => updateCostPrice(result.remainItem.nmId, Number(e.target.value))}
+                                  className="h-7 text-xs"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs">Цена продажи:</Label>
+                                <Input
+                                  type="number"
+                                  value={result.sellingPrice}
+                                  onChange={(e) => updateSellingPrice(result.remainItem.nmId, Number(e.target.value))}
+                                  className="h-7 text-xs"
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-xs">Продаж в день:</Label>
+                                <Input
+                                  type="number"
+                                  value={result.dailySales}
+                                  step="0.1"
+                                  onChange={(e) => updateDailySales(result.remainItem.nmId, Number(e.target.value))}
+                                  className="h-7 text-xs"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs">Порог низкого запаса (шт):</Label>
+                                <Input
+                                  type="number"
+                                  value={lowStockThreshold[result.remainItem.nmId] || Math.ceil(result.dailySales * 7)}
+                                  onChange={(e) => updateLowStockThreshold(result.remainItem.nmId, Number(e.target.value))}
+                                  className="h-7 text-xs"
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-xs">Стоимость хранения в день:</Label>
+                                <Input
+                                  type="number"
+                                  value={result.dailyStorageCost}
+                                  onChange={(e) => updateStorageCost(result.remainItem.nmId, Number(e.target.value))}
+                                  className="h-7 text-xs"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs">Рекомендуемая скидка: {result.recommendedDiscount}%</Label>
+                                <Slider
+                                  value={[result.recommendedDiscount]}
+                                  min={0}
+                                  max={90}
+                                  step={5}
+                                  onValueChange={(value) => updateDiscountLevel(result.remainItem.nmId, value)}
+                                  className="py-2"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium flex items-center">
+                          {result.daysOfInventory} 
+                          {result.daysOfInventory < 7 && <AlertTriangle className="ml-1 h-4 w-4 text-red-500" />}
+                          {result.daysOfInventory > 60 && <AlertTriangle className="ml-1 h-4 w-4 text-amber-500" />}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          В наличии: {result.remainItem.quantityWarehousesFull} шт.
+                        </div>
+                        {result.projectedStockoutDate && (
+                          <div className="text-xs mt-1 flex items-center">
+                            <Clock className="h-3 w-3 mr-1 text-muted-foreground" />
+                            <Popover>
+                              <PopoverTrigger className="underline text-xs cursor-help">
+                                Закончится: {formatDate(result.projectedStockoutDate)}
+                              </PopoverTrigger>
+                              <PopoverContent className="w-60 p-2">
+                                <p className="text-xs">
+                                  При текущей скорости продаж ({result.dailySales} шт./день) запасы этого товара закончатся {formatDate(result.projectedStockoutDate)}.
+                                </p>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium">{formatCurrency(result.totalStorageCost)}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {formatCurrency(result.dailyStorageCost)} в день
+                        </div>
+                        {result.totalStorageCost > (result.remainItem.price || 0) * 0.1 * result.remainItem.quantityWarehousesFull && (
+                          <div className="text-xs text-amber-600 mt-1 flex items-center">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Высокие затраты
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className={`font-medium ${result.savingsWithDiscount > 0 ? 'text-green-600' : 'text-red-600'} flex items-center`}>
+                          {result.savingsWithDiscount > 0 
+                            ? <><ArrowUp className="h-3 w-3 mr-1" />{formatCurrency(result.savingsWithDiscount)}</>
+                            : <><ArrowDown className="h-3 w-3 mr-1" />{formatCurrency(Math.abs(result.savingsWithDiscount))}</>}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          При с��идке {result.recommendedDiscount}%
+                        </div>
+                        <div className="text-xs mt-1">
+                          ROI: {(result.action === 'discount' || result.action === 'sell') && calculateROIimprovement(result) > 0 && (
+                            <span className="text-green-600">+{calculateROIimprovement(result)}%</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {getActionBadge(result.action)}
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {result.action === 'sell' && 'Продать быстрее даже с убытком'}
+                          {result.action === 'discount' && `Скидка ${result.recommendedDiscount}% сэкономит на хранении`}
+                          {result.action === 'keep' && 'Скидка не принесет выгоды'}
+                        </div>
+                        {result.lowStock && (
+                          <div className="mt-1 text-xs text-rose-600 flex items-center">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Требуется пополнение
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
         </div>
       </CardContent>
     </Card>
   );
 };
+
+export default StorageProfitabilityAnalysis;
