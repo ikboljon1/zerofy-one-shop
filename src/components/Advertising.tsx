@@ -413,25 +413,14 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
               Обновлено: {getFormattedLastUpdate()}
             </div>
           </motion.div>
-          <div className="flex gap-2">
-            <Button 
-              onClick={fetchData} 
-              disabled={loading} 
-              className="flex-1 bg-[#9b87f5] hover:bg-[#7E69AB]"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              {loading ? 'Обновление...' : 'Обновить'}
-            </Button>
-            
-            {selectedStore && advertisingData && (
-              <AdvertisingAIAnalysis 
-                storeId={selectedStore.id}
-                advertisingData={advertisingData}
-                dateFrom={new Date(new Date().setDate(new Date().getDate() - 30))}
-                dateTo={new Date()}
-              />
-            )}
-          </div>
+          <Button 
+            onClick={fetchData} 
+            disabled={loading} 
+            className="w-full bg-[#9b87f5] hover:bg-[#7E69AB]"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'Обновление...' : 'Обновить'}
+          </Button>
         </div>
       </div>
 
@@ -447,7 +436,6 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
               >
                 <Card
                   className={`h-full overflow-hidden cursor-pointer transition-all duration-300 ${getStatusColor(campaign.status)} border-[1.5px] hover:border-primary/50`}
-                  onClick={() => setSelectedCampaign(campaign)}
                 >
                   <div className="flex flex-col h-full">
                     <div className={`w-full py-1.5 px-3 ${
@@ -469,25 +457,41 @@ const Advertising = ({ selectedStore: propSelectedStore }: AdvertisingProps) => 
                     
                     <div className="p-4 flex-1 flex flex-col">
                       <h3 className="font-medium text-base line-clamp-2 leading-tight mb-2">{campaign.campName}</h3>
-                      <div className="mt-auto pt-2 flex justify-between items-center">
+                      <div className="mt-auto pt-2 flex flex-col gap-2">
                         {campaign.changeTime && (
                           <div className="text-xs text-muted-foreground">
                             Изменено: {new Date(campaign.changeTime).toLocaleDateString('ru-RU')}
                           </div>
                         )}
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className={`text-xs ml-auto ${
-                            campaign.status === 'active' ? 'text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20' :
-                            campaign.status === 'paused' ? 'text-yellow-600 border-yellow-300 hover:bg-yellow-50 dark:hover:bg-yellow-900/20' :
-                            campaign.status === 'archived' ? 'text-gray-600 border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/20' :
-                            campaign.status === 'completed' ? 'text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20' :
-                            'text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                          }`}
-                        >
-                          Просмотреть
-                        </Button>
+                        <div className="flex justify-between gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className={`text-xs ${
+                              campaign.status === 'active' ? 'text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20' :
+                              campaign.status === 'paused' ? 'text-yellow-600 border-yellow-300 hover:bg-yellow-50 dark:hover:bg-yellow-900/20' :
+                              campaign.status === 'archived' ? 'text-gray-600 border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/20' :
+                              campaign.status === 'completed' ? 'text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20' :
+                              'text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                            }`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCampaign(campaign);
+                            }}
+                          >
+                            Просмотреть
+                          </Button>
+                          
+                          {selectedStore && (
+                            <AdvertisingAIAnalysis 
+                              storeId={selectedStore.id}
+                              campaign={campaign}
+                              dateFrom={new Date(new Date().setDate(new Date().getDate() - 30))}
+                              dateTo={new Date()}
+                              variant="card"
+                            />
+                          )}
+                        </div>
                       </div>
                       {(campaign.numericStatus !== undefined || campaign.numericType !== undefined) && (
                         <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">

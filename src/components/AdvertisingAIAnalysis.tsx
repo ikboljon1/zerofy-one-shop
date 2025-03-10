@@ -2,49 +2,59 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Card } from "@/components/ui/card";
 import { BrainCircuit, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { AIRecommendation, AIAnalysisRequest } from "@/types/ai";
 import { analyzeData } from "@/services/aiService";
 import AIRecommendationCard from "./ai/AIRecommendationCard";
 import { getAISettings } from "@/services/aiService";
+import { Campaign } from "@/services/advertisingApi";
 
 interface AdvertisingAIAnalysisProps {
   storeId: string;
-  advertisingData: {
-    campaigns?: Array<{
-      name: string;
-      cost: number;
-      views?: number;
-      clicks?: number;
-      orders?: number;
-    }>;
-    keywords?: Array<{
-      keyword: string;
-      views: number;
-      clicks: number;
-      ctr: number;
-      sum: number;
-      orders?: number;
-      efficiency?: number;
-    }>;
+  campaign: Campaign;
+  campaignStats?: {
+    name: string;
+    cost: number;
+    views?: number;
+    clicks?: number;
+    orders?: number;
   };
+  keywords?: Array<{
+    keyword: string;
+    views: number;
+    clicks: number;
+    ctr: number;
+    sum: number;
+    orders?: number;
+    efficiency?: number;
+  }>;
   dateFrom: Date;
   dateTo: Date;
+  className?: string;
+  variant?: "default" | "outline" | "card";
 }
 
-const AdvertisingAIAnalysis = ({ storeId, advertisingData, dateFrom, dateTo }: AdvertisingAIAnalysisProps) => {
+const AdvertisingAIAnalysis = ({ 
+  storeId, 
+  campaign, 
+  campaignStats,
+  keywords, 
+  dateFrom, 
+  dateTo,
+  className,
+  variant = "outline"
+}: AdvertisingAIAnalysisProps) => {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [recommendations, setRecommendations] = useState<AIRecommendation[]>([]);
 
   const handleAnalyze = async () => {
-    if (!advertisingData || (!advertisingData.campaigns && !advertisingData.keywords)) {
+    if ((!campaignStats && !campaign) || (!keywords && !campaign)) {
       toast({
         title: "Нет данных для анализа",
-        description: "Необходимы данные о рекламных кампаниях и ключевых словах",
+        description: "Необходимы данные о рекламной кампании и ключевых словах",
         variant: "destructive"
       });
       return;
@@ -63,6 +73,15 @@ const AdvertisingAIAnalysis = ({ storeId, advertisingData, dateFrom, dateTo }: A
     setIsAnalyzing(true);
 
     try {
+      // Prepare campaign data
+      const campaignData = campaignStats ? campaignStats : {
+        name: campaign.campName || "Рекламная кампания",
+        cost: 0, // We don't have cost in the Campaign type
+        views: 0,
+        clicks: 0,
+        orders: 0
+      };
+      
       // Подготовка данных для отправки в AI
       const request: AIAnalysisRequest = {
         context: {
@@ -78,12 +97,12 @@ const AdvertisingAIAnalysis = ({ storeId, advertisingData, dateFrom, dateTo }: A
             logistics: 0,
             storage: 0,
             penalties: 0,
-            advertising: advertisingData.campaigns ? advertisingData.campaigns.reduce((sum, camp) => sum + camp.cost, 0) : 0,
+            advertising: campaignData.cost || 0,
             acceptance: 0
           },
           advertising: {
-            campaigns: advertisingData.campaigns || [],
-            keywords: advertisingData.keywords
+            campaigns: [campaignData],
+            keywords: keywords || []
           }
         },
         requestType: 'advertising_analysis'
@@ -119,23 +138,31 @@ const AdvertisingAIAnalysis = ({ storeId, advertisingData, dateFrom, dateTo }: A
     }
   };
 
+  const getButtonVariantClass = () => {
+    if (variant === "card") {
+      return "w-full mt-2 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border-purple-200 dark:border-purple-800 hover:border-purple-300 dark:hover:border-purple-700";
+    }
+    return "bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border-purple-200 dark:border-purple-800 hover:border-purple-300 dark:hover:border-purple-700";
+  };
+
   return (
     <>
       <Button 
         onClick={handleAnalyze} 
         disabled={isAnalyzing}
         variant="outline"
-        className="ml-auto bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border-purple-200 dark:border-purple-800 hover:border-purple-300 dark:hover:border-purple-700"
+        className={`${getButtonVariantClass()} ${className}`}
+        size={variant === "card" ? "sm" : "default"}
       >
         {isAnalyzing ? (
           <>
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            Анализ рекламы...
+            Анализ...
           </>
         ) : (
           <>
             <BrainCircuit className="h-4 w-4 mr-2 text-purple-500" />
-            AI анализ рекламы
+            AI анализ
           </>
         )}
       </Button>
@@ -145,10 +172,10 @@ const AdvertisingAIAnalysis = ({ storeId, advertisingData, dateFrom, dateTo }: A
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <BrainCircuit className="h-5 w-5 text-purple-500" />
-              Анализ рекламы
+              Анализ кампании {campaign?.campName || campaignStats?.name || ""}
             </DialogTitle>
             <DialogDescription>
-              Рекомендации по оптимизации рекламных кампаний и ключевых слов
+              Рекомендации по оптимизации рекламной кампании и ключевых слов
             </DialogDescription>
           </DialogHeader>
 
@@ -166,7 +193,7 @@ const AdvertisingAIAnalysis = ({ storeId, advertisingData, dateFrom, dateTo }: A
                 <BrainCircuit className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold mb-2">Нет рекомендаций</h3>
                 <p className="text-muted-foreground max-w-md mb-4">
-                  AI не нашел значимых рекомендаций по оптимизации рекламы. Это может означать, что ваши рекламные кампании уже оптимизированы или недостаточно данных для анализа.
+                  AI не нашел значимых рекомендаций по оптимизации рекламы. Это может означать, что ваша рекламная кампания уже оптимизирована или недостаточно данных для анализа.
                 </p>
               </div>
             )}
