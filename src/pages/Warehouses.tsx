@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchWarehouseRemains } from '@/services/warehouseRemainsApi';
-import { fetchFullPaidStorageReport } from '@/services/suppliesApi';
+import { fetchFullPaidStorageReport, calculateDailyStorageCosts } from '@/services/suppliesApi';
 import { 
   WarehouseRemains,
   StorageProfitabilityAnalysis,
@@ -31,6 +30,7 @@ const Warehouses: React.FC = () => {
     paidStorage: false
   });
   const [selectedStore, setSelectedStore] = useState<StoreType | null>(null);
+  const [dailyStorageCosts, setDailyStorageCosts] = useState<Record<number, number>>({});
 
   useEffect(() => {
     const stores = ensureStoreSelectionPersistence();
@@ -47,7 +47,7 @@ const Warehouses: React.FC = () => {
   const loadDataForActiveTab = (apiKey: string, tab: string) => {
     if (tab === 'overview') {
       loadWarehouseRemains(apiKey);
-      // Also load storage data for profitability analysis when on overview
+      // Также загружаем данные о хранении для анализа рентабельности на главной вкладке
       loadPaidStorageData(apiKey);
     } else if (tab === 'storage') {
       loadPaidStorageData(apiKey);
@@ -72,6 +72,13 @@ const Warehouses: React.FC = () => {
       });
       
       setWarehouseRemains(data);
+      
+      // Обновляем данные о стоимости хранения, если у нас уже есть данные о платном хранении
+      if (paidStorageData.length > 0) {
+        const costs = calculateDailyStorageCosts(data, paidStorageData);
+        setDailyStorageCosts(costs);
+      }
+      
       toast.success('Отчет об остатках на складах успешно загружен');
     } catch (error: any) {
       console.error('Ошибка при загрузке остатков на складах:', error);
@@ -91,8 +98,20 @@ const Warehouses: React.FC = () => {
       setLoading(prev => ({ ...prev, paidStorage: true }));
       toast.info('Запрос отчета о платном хранении. Это может занять некоторое время...');
       
-      const data = await fetchFullPaidStorageReport(apiKey, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], new Date().toISOString().split('T')[0]);
+      // Получаем данные за 7 дней для лучшего усреднения
+      const data = await fetchFullPaidStorageReport(
+        apiKey, 
+        new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], 
+        new Date().toISOString().split('T')[0]
+      );
+      
       setPaidStorageData(data);
+      
+      // Рассчитываем стоимость ежедневного хранения, если у нас уже есть данные о товарах на складе
+      if (warehouseRemains.length > 0) {
+        const costs = calculateDailyStorageCosts(warehouseRemains, data);
+        setDailyStorageCosts(costs);
+      }
       
       toast.success('Отчет о платном хранении успешно загружен');
     } catch (error: any) {
@@ -106,30 +125,10 @@ const Warehouses: React.FC = () => {
   const calculateAverageDailySales = () => {
     const result: Record<number, number> = {};
     warehouseRemains.forEach(item => {
+      // Пока это заглушка, которую нужно заменить реальными данными о продажах
+      // В будущей реализации это должно быть получено из API продаж
       result[item.nmId] = Math.random() * 2;
     });
-    return result;
-  };
-
-  const calculateDailyStorageCosts = () => {
-    const result: Record<number, number> = {};
-    
-    warehouseRemains.forEach(item => {
-      // Try to find actual storage cost from paid storage data
-      const matchingStorageItems = paidStorageData.filter(psi => psi.nmId === item.nmId);
-      
-      if (matchingStorageItems.length > 0) {
-        // Calculate average daily storage cost from all matching items
-        const totalCost = matchingStorageItems.reduce((sum, psi) => sum + psi.warehousePrice, 0);
-        const avgCost = totalCost / matchingStorageItems.length;
-        result[item.nmId] = avgCost;
-      } else {
-        // Fallback to volume-based calculation if no matching data
-        const volume = item.volume || 1;
-        result[item.nmId] = volume * 5;
-      }
-    });
-    
     return result;
   };
 
@@ -222,7 +221,7 @@ const Warehouses: React.FC = () => {
                       warehouseItems={warehouseRemains}
                       paidStorageData={paidStorageData}
                       averageDailySalesRate={calculateAverageDailySales()}
-                      dailyStorageCost={calculateDailyStorageCosts()}
+                      dailyStorageCost={dailyStorageCosts}
                       selectedStore={selectedStore}
                     />
                   </div>

@@ -13,7 +13,8 @@ import {
   calculateDiscountSavings, 
   calculateOptimalDiscount, 
   determineRecommendedAction,
-  roundToTwoDecimals
+  roundToTwoDecimals,
+  calculateStorageCosts
 } from '@/utils/formatCurrency';
 import { WarehouseRemainItem, PaidStorageItem } from '@/types/supplies';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -102,10 +103,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     const initialLowStockThresholds: Record<number, number> = {};
 
     warehouseItems.forEach(item => {
-      // Get the storage cost from the dailyStorageCost prop, which now contains data from paid storage
       let itemStorageCost = dailyStorageCost[item.nmId] || 5; // Default to 5 rubles per day if no data
       
-      // If no daily storage cost is provided or it's zero, try to calculate from paidStorageData
       if ((!itemStorageCost || itemStorageCost === 5) && paidStorageData.length > 0) {
         const matchingStorageItems = paidStorageData.filter(psi => psi.nmId === item.nmId);
         if (matchingStorageItems.length > 0) {
@@ -187,7 +186,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
           });
         }
         
-        // Задержка для избежания ограничений API
         await new Promise(resolve => setTimeout(resolve, 100));
       }
       
@@ -249,9 +247,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       
       const data = await response.json();
       
-      // Группировка продаж по nmId и подсчет количества продаж
       const salesMap: Record<number, number> = {};
-      const salesDates: Record<number, Set<string>> = {}; // Для отслеживания уникальных дат продаж
+      const salesDates: Record<number, Set<string>> = {};
 
       data.forEach((item: any) => {
         if (item.doc_type_name === "Продажа") {
@@ -267,21 +264,16 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         }
       });
       
-      // Расчет среднедневных продаж
       const averageDailySales: Record<number, number> = {};
       
       warehouseItems.forEach(item => {
         const nmId = item.nmId;
         const totalSales = salesMap[nmId] || 0;
         
-        // Проверяем количество уникальных дней с продажами
         const uniqueSalesDays = salesDates[nmId] ? salesDates[nmId].size : 0;
         
-        // Если были продажи, используем среднее по дням с продажами
-        // Иначе делим на весь период (30 дней)
         const divisor = uniqueSalesDays > 0 ? uniqueSalesDays : 30;
         
-        // Рассчитываем среднее и округляем до 2 знаков
         const average = totalSales / divisor;
         averageDailySales[nmId] = Math.max(0.01, parseFloat(average.toFixed(2)));
       });
@@ -318,7 +310,11 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       
       const daysOfInventory = dailySales > 0 ? Math.round(currentStock / dailySales) : 999;
       
-      const totalStorageCost = storageCost * daysOfInventory;
+      const totalStorageCost = calculateStorageCosts(
+        currentStock,
+        storageCost,
+        dailySales
+      );
       
       const profitPerItem = sellingPrice - costPrice;
       const profitWithoutDiscount = profitPerItem * currentStock - totalStorageCost;
@@ -328,7 +324,12 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       
       const salesAccelerationFactor = 1.5;
       const discountedDaysOfInventory = Math.round(daysOfInventory / salesAccelerationFactor);
-      const discountedStorageCost = storageCost * discountedDaysOfInventory;
+      
+      const discountedStorageCost = calculateStorageCosts(
+        currentStock,
+        storageCost,
+        dailySales * salesAccelerationFactor
+      );
       
       const profitWithDiscount = profitWithDiscountPerItem * currentStock - discountedStorageCost;
       
@@ -368,7 +369,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         profitWithoutDiscount
       );
       
-      return {
+      const result: AnalysisResult = {
         remainItem: item,
         costPrice,
         sellingPrice,
@@ -386,6 +387,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         stockLevelPercentage,
         projectedStockoutDate
       };
+      
+      return result;
     });
   }, [warehouseItems, costPrices, sellingPrices, dailySalesRates, storageCostRates, discountLevels, lowStockThreshold]);
 
@@ -592,7 +595,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     });
   };
 
-  const calculateROIimprovement = (result: AnalysisResult) => {
+  const calculateROIimprovement = (result: AnalysisResult): number => {
     const investment = result.costPrice * (result.remainItem.quantityWarehousesFull || 0);
     if (investment <= 0) return 0;
     
