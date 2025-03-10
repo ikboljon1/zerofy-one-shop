@@ -29,16 +29,17 @@ export function DatePicker({ value, onValueChange }: DatePickerProps) {
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {value ? format(value, "PPP", { locale: ru }) : <span>Выберите дату</span>}
+          {value ? format(value, "dd.MM.yyyy", { locale: ru }) : <span>Выберите дату</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0">
+      <PopoverContent className="w-auto p-0" align="start">
         <Calendar
           mode="single"
           selected={value}
           onSelect={onValueChange}
           initialFocus
           locale={ru}
+          className="pointer-events-auto"
         />
       </PopoverContent>
     </Popover>
