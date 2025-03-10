@@ -1,9 +1,15 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { BrainCircuit, Calendar, Clock } from "lucide-react";
 
-const AIAnalysisSection = () => {
+interface AIAnalysisSectionProps {
+  storeId?: string;
+  analyticsData?: any;
+  dateFrom?: Date;
+  dateTo?: Date;
+}
+
+const AIAnalysisSection = ({ storeId, analyticsData, dateFrom, dateTo }: AIAnalysisSectionProps = {}) => {
   return (
     <div className="space-y-4">
       <Card>
