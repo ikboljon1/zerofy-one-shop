@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -17,9 +18,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 
 interface StorageProfitabilityAnalysisProps {
   warehouseItems: WarehouseRemainItem[];
-  paidStorageData?: PaidStorageItem[];
-  averageDailySalesRate?: Record<number, number>;
-  dailyStorageCost?: Record<number, number>;
+  paidStorageData?: PaidStorageItem[]; // Add paidStorageData prop
+  averageDailySalesRate?: Record<number, number>; // nmId -> average daily sales
+  dailyStorageCost?: Record<number, number>; // nmId -> daily storage cost
 }
 
 interface AnalysisResult {
@@ -57,13 +58,14 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
   const [discountLevels, setDiscountLevels] = useState<Record<number, number>>({});
   const [lowStockThreshold, setLowStockThreshold] = useState<Record<number, number>>({});
   const [targetDate, setTargetDate] = useState<Date | undefined>(
-    new Date(new Date().setDate(new Date().getDate() + 30))
+    new Date(new Date().setDate(new Date().getDate() + 30)) // Default to 30 days in the future
   );
   const [sortConfig, setSortConfig] = useState<{
     key: keyof AnalysisResult | '',
     direction: 'asc' | 'desc'
   }>({ key: '', direction: 'asc' });
 
+  // Initialize with stored values if available
   useEffect(() => {
     const storedCostPrices = localStorage.getItem('product_cost_prices');
     if (storedCostPrices) {
@@ -80,20 +82,29 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       setLowStockThreshold(JSON.parse(storedLowStockThresholds));
     }
 
+    // Initialize daily sales and storage costs
     const initialDailySales: Record<number, number> = {};
     const initialStorageCosts: Record<number, number> = {};
     const initialDiscountLevels: Record<number, number> = {};
     const initialLowStockThresholds: Record<number, number> = {};
 
     warehouseItems.forEach(item => {
-      const baseStorageCost = 5;
-      const currentStock = item.quantityWarehousesFull || 0;
-      const dailyStorageCost = baseStorageCost * currentStock;
+      // Try to get actual storage cost from paidStorageData if available
+      let itemStorageCost = dailyStorageCost[item.nmId] || 5; // Default to 5 rubles per day
       
-      initialDailySales[item.nmId] = averageDailySalesRate[item.nmId] || 0.1;
-      initialStorageCosts[item.nmId] = dailyStorageCost;
-      initialDiscountLevels[item.nmId] = 30;
+      // If we have paidStorageData, try to find actual cost for this item
+      const matchingStorageItems = paidStorageData.filter(psi => psi.nmId === item.nmId);
+      if (matchingStorageItems.length > 0) {
+        // Calculate average daily cost from all matching storage items
+        const totalCost = matchingStorageItems.reduce((sum, psi) => sum + psi.warehousePrice, 0);
+        itemStorageCost = totalCost / matchingStorageItems.length;
+      }
       
+      initialDailySales[item.nmId] = averageDailySalesRate[item.nmId] || 0.1; // Default to 0.1 items per day
+      initialStorageCosts[item.nmId] = itemStorageCost;
+      initialDiscountLevels[item.nmId] = 30; // Default to 30% discount
+      
+      // Calculate low stock threshold (default: 7 days of sales)
       const salesRate = averageDailySalesRate[item.nmId] || 0.1;
       initialLowStockThresholds[item.nmId] = Math.max(3, Math.ceil(salesRate * 7));
     });
@@ -104,41 +115,55 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     setLowStockThreshold(prevState => ({...prevState, ...initialLowStockThresholds}));
   }, [warehouseItems, averageDailySalesRate, dailyStorageCost, paidStorageData]);
 
+  // Calculate profitability analysis
   const analysisResults = useMemo(() => {
     return warehouseItems.map(item => {
       const nmId = item.nmId;
       const costPrice = costPrices[nmId] || 0;
       const sellingPrice = sellingPrices[nmId] || (item.price || 0);
       const dailySales = dailySalesRates[nmId] || 0.1;
-      
-      const baseStorageCost = 5;
-      const currentStock = item.quantityWarehousesFull || 0;
-      const dailyStorageCost = baseStorageCost * currentStock;
-      
+      const storageCost = storageCostRates[nmId] || 5;
       const discountPercentage = discountLevels[nmId] || 30;
-      const threshold = lowStockThreshold[nmId] || Math.ceil(dailySales * 7);
+      const threshold = lowStockThreshold[nmId] || Math.ceil(dailySales * 7); // Default 7 days worth of stock
       
+      // Calculate current stock level
+      const currentStock = item.quantityWarehousesFull || 0;
+      
+      // Calculate days of inventory based on current stock and sales rate
       const daysOfInventory = dailySales > 0 ? Math.round(currentStock / dailySales) : 999;
-      const totalStorageCost = dailyStorageCost * daysOfInventory;
       
+      // Calculate total storage cost for the entire inventory period
+      const totalStorageCost = storageCost * daysOfInventory;
+      
+      // Calculate profit without discount
       const profitPerItem = sellingPrice - costPrice;
       const profitWithoutDiscount = profitPerItem * currentStock - totalStorageCost;
       
+      // Calculate profit with recommended discount
       const discountedPrice = sellingPrice * (1 - discountPercentage / 100);
       const profitWithDiscountPerItem = discountedPrice - costPrice;
       
+      // Calculate storage cost savings with quicker sales (assuming 50% faster sales with discount)
       const discountedDaysOfInventory = Math.round(daysOfInventory * 0.5);
-      const discountedStorageCost = dailyStorageCost * discountedDaysOfInventory;
+      const discountedStorageCost = storageCost * discountedDaysOfInventory;
       
+      // Calculate total profit with discount (including reduced storage costs)
       const profitWithDiscount = profitWithDiscountPerItem * currentStock - discountedStorageCost;
+      
+      // Calculate storage cost savings
       const storageSavings = totalStorageCost - discountedStorageCost;
+      
+      // Calculate total benefit of discounting
       const savingsWithDiscount = profitWithDiscount - profitWithoutDiscount;
       
+      // Determine low stock status
       const lowStock = currentStock <= threshold;
       
+      // Calculate stock level percentage (for visualization)
       let stockLevelPercentage = Math.min(100, (currentStock / (threshold * 2)) * 100);
       stockLevelPercentage = Math.max(0, Math.round(stockLevelPercentage));
       
+      // Determine stock level category
       let stockLevel: 'low' | 'medium' | 'high';
       if (currentStock <= threshold) {
         stockLevel = 'low';
@@ -148,19 +173,26 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         stockLevel = 'high';
       }
       
+      // Calculate projected stockout date
       const projectedStockoutDate = dailySales > 0 
         ? new Date(Date.now() + (daysOfInventory * 24 * 60 * 60 * 1000))
         : undefined;
       
+      // Determine recommended action
       let action: 'sell' | 'discount' | 'keep';
       
       if (daysOfInventory > 60 && profitWithDiscountPerItem > 0) {
+        // If inventory will last more than 60 days and we're still profitable with a discount,
+        // recommend discounting to reduce storage costs
         action = 'discount';
       } else if (profitWithDiscountPerItem < 0 && profitPerItem < 0) {
+        // If even without discount we're losing money, sell as quickly as possible
         action = 'sell';
       } else if (savingsWithDiscount > 0) {
+        // If discounting provides a net benefit, recommend discount
         action = 'discount';
       } else {
+        // Otherwise, keep current pricing
         action = 'keep';
       }
       
@@ -169,7 +201,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         costPrice,
         sellingPrice,
         dailySales,
-        dailyStorageCost,
+        dailyStorageCost: storageCost,
         daysOfInventory,
         totalStorageCost,
         recommendedDiscount: discountPercentage,
@@ -185,9 +217,11 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     });
   }, [warehouseItems, costPrices, sellingPrices, dailySalesRates, storageCostRates, discountLevels, lowStockThreshold]);
 
+  // Filter and sort results
   const filteredResults = useMemo(() => {
     let results = [...analysisResults];
     
+    // Apply search filter
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       results = results.filter(result => 
@@ -198,6 +232,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       );
     }
     
+    // Apply tab filter
     if (selectedTab === 'discount') {
       results = results.filter(result => result.action === 'discount' || result.action === 'sell');
     } else if (selectedTab === 'keep') {
@@ -206,6 +241,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       results = results.filter(result => result.lowStock);
     }
     
+    // Apply sorting
     if (sortConfig.key) {
       results.sort((a, b) => {
         if (a[sortConfig.key] < b[sortConfig.key]) {
@@ -221,6 +257,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     return results;
   }, [analysisResults, searchTerm, selectedTab, sortConfig]);
 
+  // Get stats for summary cards
   const analysisSummary = useMemo(() => {
     const totalItems = analysisResults.length;
     const lowStockItems = analysisResults.filter(item => item.lowStock).length;
@@ -233,6 +270,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       return sum + (item.savingsWithDiscount > 0 ? item.savingsWithDiscount : 0);
     }, 0);
 
+    // Items that will stock out before the target date
     const itemsStockingOutBeforeTarget = targetDate ? 
       analysisResults.filter(item => 
         item.projectedStockoutDate && item.projectedStockoutDate <= targetDate
@@ -250,6 +288,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     };
   }, [analysisResults, targetDate]);
 
+  // Handle sorting
   const requestSort = (key: keyof AnalysisResult) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -258,12 +297,14 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     setSortConfig({ key, direction });
   };
 
+  // Save data updates to localStorage
   const savePriceData = () => {
     localStorage.setItem('product_cost_prices', JSON.stringify(costPrices));
     localStorage.setItem('product_selling_prices', JSON.stringify(sellingPrices));
     localStorage.setItem('product_low_stock_thresholds', JSON.stringify(lowStockThreshold));
   };
 
+  // Update cost price for a product
   const updateCostPrice = (nmId: number, value: number) => {
     setCostPrices(prev => ({
       ...prev,
@@ -271,6 +312,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
+  // Update selling price for a product
   const updateSellingPrice = (nmId: number, value: number) => {
     setSellingPrices(prev => ({
       ...prev,
@@ -278,6 +320,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
+  // Update daily sales rate for a product
   const updateDailySales = (nmId: number, value: number) => {
     setDailySalesRates(prev => ({
       ...prev,
@@ -285,6 +328,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
+  // Update storage cost for a product
   const updateStorageCost = (nmId: number, value: number) => {
     setStorageCostRates(prev => ({
       ...prev,
@@ -292,6 +336,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
+  // Update discount level for a product
   const updateDiscountLevel = (nmId: number, value: number[]) => {
     setDiscountLevels(prev => ({
       ...prev,
@@ -299,6 +344,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
+  // Update low stock threshold for a product
   const updateLowStockThreshold = (nmId: number, value: number) => {
     setLowStockThreshold(prev => ({
       ...prev,
@@ -306,6 +352,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
+  // Get badge color based on action
   const getActionBadge = (action: 'sell' | 'discount' | 'keep') => {
     switch (action) {
       case 'sell':
@@ -319,6 +366,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }
   };
 
+  // Get stock level indicator
   const getStockLevelIndicator = (result: AnalysisResult) => {
     switch (result.stockLevel) {
       case 'low':
@@ -356,6 +404,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }
   };
 
+  // Format a date for display
   const formatDate = (date?: Date) => {
     if (!date) return "Не определено";
     return new Date(date).toLocaleDateString('ru-RU', {
@@ -583,6 +632,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                             Артикул: {result.remainItem.vendorCode} | ID: {result.remainItem.nmId}
                           </div>
                           
+                          {/* Stock level indicator */}
                           <div className="mt-1">
                             {getStockLevelIndicator(result)}
                           </div>
@@ -608,24 +658,113 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                                 />
                               </div>
                             </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-xs">Продаж в день:</Label>
+                                <Input
+                                  type="number"
+                                  value={result.dailySales}
+                                  step="0.1"
+                                  onChange={(e) => updateDailySales(result.remainItem.nmId, Number(e.target.value))}
+                                  className="h-7 text-xs"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs">Порог низкого запаса (шт):</Label>
+                                <Input
+                                  type="number"
+                                  value={lowStockThreshold[result.remainItem.nmId] || Math.ceil(result.dailySales * 7)}
+                                  onChange={(e) => updateLowStockThreshold(result.remainItem.nmId, Number(e.target.value))}
+                                  className="h-7 text-xs"
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-xs">Стоимость хранения в день:</Label>
+                                <Input
+                                  type="number"
+                                  value={result.dailyStorageCost}
+                                  onChange={(e) => updateStorageCost(result.remainItem.nmId, Number(e.target.value))}
+                                  className="h-7 text-xs"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs">Рекомендуемая скидка: {result.recommendedDiscount}%</Label>
+                                <Slider
+                                  value={[result.recommendedDiscount]}
+                                  min={0}
+                                  max={90}
+                                  step={5}
+                                  onValueChange={(value) => updateDiscountLevel(result.remainItem.nmId, value)}
+                                  className="py-2"
+                                />
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="space-y-1">
-                          <div className="text-sm font-medium">{result.daysOfInventory} дней</div>
-                          {result.projectedStockoutDate && (
-                            <div className="text-xs text-muted-foreground">
-                              Закончится: {formatDate(result.projectedStockoutDate)}
-                            </div>
-                          )}
+                        <div className="font-medium flex items-center">
+                          {result.daysOfInventory} 
+                          {result.daysOfInventory < 7 && <AlertTriangle className="ml-1 h-4 w-4 text-red-500" />}
+                          {result.daysOfInventory > 60 && <AlertTriangle className="ml-1 h-4 w-4 text-amber-500" />}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          В наличии: {result.remainItem.quantityWarehousesFull} шт.
+                        </div>
+                        {result.projectedStockoutDate && (
+                          <div className="text-xs mt-1 flex items-center">
+                            <Clock className="h-3 w-3 mr-1 text-muted-foreground" />
+                            <Popover>
+                              <PopoverTrigger className="underline text-xs cursor-help">
+                                Закончится: {formatDate(result.projectedStockoutDate)}
+                              </PopoverTrigger>
+                              <PopoverContent className="w-60 p-2">
+                                <p className="text-xs">
+                                  При текущей скорости продаж ({result.dailySales} шт./день) запасы этого товара закончатся {formatDate(result.projectedStockoutDate)}.
+                                </p>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium">{formatCurrency(result.totalStorageCost)}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {formatCurrency(result.dailyStorageCost)} в день
+                        </div>
+                        {result.totalStorageCost > (result.remainItem.price || 0) * 0.1 * result.remainItem.quantityWarehousesFull && (
+                          <div className="text-xs text-amber-600 mt-1 flex items-center">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Высокие затраты
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className={`font-medium ${result.savingsWithDiscount > 0 ? 'text-green-600' : 'text-red-600'} flex items-center`}>
+                          {result.savingsWithDiscount > 0 
+                            ? <><ArrowUp className="h-3 w-3 mr-1" />{formatCurrency(result.savingsWithDiscount)}</>
+                            : <><ArrowDown className="h-3 w-3 mr-1" />{formatCurrency(Math.abs(result.savingsWithDiscount))}</>}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          При скидке {result.recommendedDiscount}%
                         </div>
                       </TableCell>
-                      <TableCell>{formatCurrency(result.totalStorageCost)}</TableCell>
-                      <TableCell className={result.savingsWithDiscount > 0 ? 'text-green-600' : 'text-muted-foreground'}>
-                        {formatCurrency(result.savingsWithDiscount)}
+                      <TableCell>
+                        {getActionBadge(result.action)}
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {result.action === 'sell' && 'Продать быстрее даже с убытком'}
+                          {result.action === 'discount' && `Скидка ${result.recommendedDiscount}% сэкономит на хранении`}
+                          {result.action === 'keep' && 'Скидка не принесет выгоды'}
+                        </div>
+                        {result.lowStock && (
+                          <div className="mt-1 text-xs text-rose-600 flex items-center">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Требуется пополнение
+                          </div>
+                        )}
                       </TableCell>
-                      <TableCell>{getActionBadge(result.action)}</TableCell>
                     </TableRow>
                   ))
                 )}
