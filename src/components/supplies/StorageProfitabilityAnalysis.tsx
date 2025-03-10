@@ -1,5 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -102,10 +109,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     const initialLowStockThresholds: Record<number, number> = {};
 
     warehouseItems.forEach(item => {
-      // Get the storage cost from the dailyStorageCost prop, which now contains data from paid storage
       let itemStorageCost = dailyStorageCost[item.nmId] || 5; // Default to 5 rubles per day if no data
       
-      // If no daily storage cost is provided or it's zero, try to calculate from paidStorageData
       if ((!itemStorageCost || itemStorageCost === 5) && paidStorageData.length > 0) {
         const matchingStorageItems = paidStorageData.filter(psi => psi.nmId === item.nmId);
         if (matchingStorageItems.length > 0) {
@@ -187,7 +192,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
           });
         }
         
-        // Задержка для избежания ограничений API
         await new Promise(resolve => setTimeout(resolve, 100));
       }
       
@@ -249,9 +253,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       
       const data = await response.json();
       
-      // Группировка продаж по nmId и подсчет количества продаж
       const salesMap: Record<number, number> = {};
-      const salesDates: Record<number, Set<string>> = {}; // Для отслеживания уникальных дат продаж
+      const salesDates: Record<number, Set<string>> = {};
 
       data.forEach((item: any) => {
         if (item.doc_type_name === "Продажа") {
@@ -267,21 +270,16 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         }
       });
       
-      // Расчет среднедневных продаж
       const averageDailySales: Record<number, number> = {};
       
       warehouseItems.forEach(item => {
         const nmId = item.nmId;
         const totalSales = salesMap[nmId] || 0;
         
-        // Проверяем количество уникальных дней с продажами
         const uniqueSalesDays = salesDates[nmId] ? salesDates[nmId].size : 0;
         
-        // Если были продажи, используем среднее по дням с продажами
-        // Иначе делим на весь период (30 дней)
         const divisor = uniqueSalesDays > 0 ? uniqueSalesDays : 30;
         
-        // Рассчитываем среднее и округляем до 2 знаков
         const average = totalSales / divisor;
         averageDailySales[nmId] = Math.max(0.01, parseFloat(average.toFixed(2)));
       });
@@ -647,7 +645,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
               </div>
               <div className="mt-4 pt-4 border-t border-amber-100 dark:border-amber-800/30">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs">Потенциальная экономия</span>
+                  <span className="text-xs">Потенциальная экономи��</span>
                   <span className="text-xs font-medium text-green-600">{formatCurrency(analysisSummary.potentialSavings)}</span>
                 </div>
               </div>
@@ -730,3 +728,14 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                   <Label htmlFor="targetDate" className="text-xs mb-1 block">Показать товары с запасом до</Label>
                   <DatePicker 
                     value={targetDate}
+                    onChange={date => setTargetDate(date)}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
