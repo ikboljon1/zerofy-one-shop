@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
-import { BrainCircuit, Settings, AlertTriangle, Loader2 } from "lucide-react";
+import { BrainCircuit, Settings, AlertTriangle, Loader2, Megaphone } from "lucide-react";
 import { 
   getAISettings, 
   analyzeData, 
@@ -337,57 +337,18 @@ const AIAnalysisSection = ({ storeId, analyticsData, dateFrom, dateTo }: AIAnaly
                 Открыть настройки
               </Button>
             </div>
-          ) : recommendations.length > 0 ? (
-            <div className="space-y-4">
-              <Tabs defaultValue={activeTab} value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="mb-4">
-                  <TabsTrigger value="all">Все</TabsTrigger>
-                  <TabsTrigger value="sales">Продажи</TabsTrigger>
-                  <TabsTrigger value="expenses">Расходы</TabsTrigger>
-                  <TabsTrigger value="products">Товары</TabsTrigger>
-                  <TabsTrigger value="advertising">Реклама</TabsTrigger>
-                  <TabsTrigger value="general">Общее</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value={activeTab} className="space-y-4 mt-0">
-                  {filteredRecommendations.length > 0 ? (
-                    filteredRecommendations.map(recommendation => (
-                      <AIRecommendationCard 
-                        key={recommendation.id} 
-                        recommendation={recommendation}
-                        onDismiss={dismissRecommendation}
-                      />
-                    ))
-                  ) : (
-                    <div className="text-center py-6 text-muted-foreground">
-                      Рекомендации в выбранной категории отсутствуют
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
-            </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <BrainCircuit className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Нет рекомендаций</h3>
-              <p className="text-muted-foreground max-w-md mb-4">
-                Нажмите кнопку "Анализировать", чтобы получить рекомендации по оптимизации работы магазина на основе ваших данных
-              </p>
-              <div className="flex gap-3">
-                <Button onClick={handleAnalyze} disabled={isAnalyzing}>
-                  {isAnalyzing ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Анализ...
-                    </>
-                  ) : (
-                    "Анализировать"
-                  )}
-                </Button>
+            <div className="space-y-4">
+              {/* Всегда показываем кнопку анализа рекламы вверху страницы */}
+              <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-3 mb-4 p-4 border rounded-lg bg-muted/30">
+                <div className="flex items-center gap-2">
+                  <Megaphone className="h-5 w-5 text-primary" />
+                  <span className="font-medium">Анализ рекламных данных</span>
+                </div>
                 <Button 
                   onClick={handleAnalyzeAdvertising} 
                   disabled={isAnalyzing || isLoadingAdvertisingData}
-                  variant="outline"
+                  className="w-full sm:w-auto"
                 >
                   {isLoadingAdvertisingData ? (
                     <>
@@ -395,10 +356,62 @@ const AIAnalysisSection = ({ storeId, analyticsData, dateFrom, dateTo }: AIAnaly
                       Загрузка данных рекламы...
                     </>
                   ) : (
-                    "Анализировать рекламу"
+                    <>
+                      <Megaphone className="h-4 w-4 mr-2" />
+                      Анализировать рекламу
+                    </>
                   )}
                 </Button>
               </div>
+              
+              {recommendations.length > 0 ? (
+                <Tabs defaultValue={activeTab} value={activeTab} onValueChange={setActiveTab}>
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="all">Все</TabsTrigger>
+                    <TabsTrigger value="sales">Продажи</TabsTrigger>
+                    <TabsTrigger value="expenses">Расходы</TabsTrigger>
+                    <TabsTrigger value="products">Товары</TabsTrigger>
+                    <TabsTrigger value="advertising">Реклама</TabsTrigger>
+                    <TabsTrigger value="general">Общее</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value={activeTab} className="space-y-4 mt-0">
+                    {filteredRecommendations.length > 0 ? (
+                      filteredRecommendations.map(recommendation => (
+                        <AIRecommendationCard 
+                          key={recommendation.id} 
+                          recommendation={recommendation}
+                          onDismiss={dismissRecommendation}
+                        />
+                      ))
+                    ) : (
+                      <div className="text-center py-6 text-muted-foreground">
+                        Рекомендации в выбранной категории отсутствуют
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <BrainCircuit className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Нет рекомендаций</h3>
+                  <p className="text-muted-foreground max-w-md mb-4">
+                    Нажмите кнопку "Анализировать", чтобы получить рекомендации по оптимизации работы магазина на основе ваших данных
+                  </p>
+                  <div className="flex gap-3">
+                    <Button onClick={handleAnalyze} disabled={isAnalyzing}>
+                      {isAnalyzing ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Анализ...
+                        </>
+                      ) : (
+                        "Анализировать"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
