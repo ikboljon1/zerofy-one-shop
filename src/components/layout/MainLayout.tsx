@@ -3,7 +3,6 @@ import {
   Home, 
   BarChart2, 
   Package, 
-  ShoppingBag, 
   User,
   Calculator,
   Sun,
@@ -106,34 +105,23 @@ const MainLayout = ({ children, activeTab, onTabChange }: MainLayoutProps) => {
                       variant="ghost" 
                       className="justify-start"
                       onClick={() => {
-                        onTabChange("products");
-                        setShowMobileMenu(false);
-                      }}
-                    >
-                      <Package className="mr-2 h-4 w-4" />
-                      Товары
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="justify-start"
-                      onClick={() => {
-                        onTabChange("stores");
-                        setShowMobileMenu(false);
-                      }}
-                    >
-                      <ShoppingBag className="mr-2 h-4 w-4" />
-                      Магазины
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="justify-start"
-                      onClick={() => {
                         onTabChange("warehouses");
                         setShowMobileMenu(false);
                       }}
                     >
                       <WarehouseIcon className="mr-2 h-4 w-4" />
                       Склады
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="justify-start"
+                      onClick={() => {
+                        onTabChange("products");
+                        setShowMobileMenu(false);
+                      }}
+                    >
+                      <Package className="mr-2 h-4 w-4" />
+                      Товары
                     </Button>
                     <Button 
                       variant="ghost" 
@@ -205,27 +193,19 @@ const MainLayout = ({ children, activeTab, onTabChange }: MainLayoutProps) => {
                 </Button>
                 <Button 
                   variant="ghost" 
-                  onClick={() => onTabChange("products")}
-                  className={activeTab === "products" ? "bg-accent" : ""}
-                >
-                  <Package className="mr-2 h-4 w-4" />
-                  Товары
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => onTabChange("stores")}
-                  className={activeTab === "stores" ? "bg-accent" : ""}
-                >
-                  <ShoppingBag className="mr-2 h-4 w-4" />
-                  Магазины
-                </Button>
-                <Button 
-                  variant="ghost" 
                   onClick={() => onTabChange("warehouses")}
                   className={activeTab === "warehouses" ? "bg-accent" : ""}
                 >
                   <WarehouseIcon className="mr-2 h-4 w-4" />
                   Склады
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => onTabChange("products")}
+                  className={activeTab === "products" ? "bg-accent" : ""}
+                >
+                  <Package className="mr-2 h-4 w-4" />
+                  Товары
                 </Button>
                 <Button 
                   variant="ghost" 
