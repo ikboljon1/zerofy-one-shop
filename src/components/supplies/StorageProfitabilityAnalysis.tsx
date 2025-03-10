@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Search, ArrowUpDown, Package, TrendingDown, Banknote, WarehouseIcon, AlertTriangle, Clock, ArrowDown, ArrowUp, Download, RefreshCw } from 'lucide-react';
+import { Search, ArrowUpDown, Package, TrendingDown, Banknote, AlertTriangle, Clock, ArrowDown, ArrowUp, Download, RefreshCw } from 'lucide-react';
 import { 
   formatCurrency, 
   calculateDiscountSavings, 
@@ -652,4 +652,104 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                   <p className="text-sm text-muted-foreground">Низкий запас</p>
                   <h3 className="text-2xl font-bold mt-1">{analysisSummary.lowStockItems}</h3>
                 </div>
-                <div className="bg-rose-100 dark:bg
+                <div className="bg-rose-100 dark:bg-rose-800/30 p-2 rounded-lg">
+                  <AlertTriangle className="h-5 w-5 text-rose-500 dark:text-rose-400" />
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-rose-100 dark:border-rose-800/30">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs">Требуется докупка</span>
+                  <span className="text-xs font-medium text-rose-600">{analysisSummary.lowStockItems} шт.</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/30 dark:to-purple-900/10 border border-purple-100 dark:border-purple-800/30 overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-sm text-muted-foreground">Рентабельность</p>
+                  <h3 className="text-2xl font-bold mt-1">
+                    {analysisSummary.optimizedROI.toFixed(2)}%
+                    {analysisSummary.roiImprovement > 0 && (
+                      <span className="text-sm text-green-600 ml-2">+{analysisSummary.roiImprovement.toFixed(2)}%</span>
+                    )}
+                  </h3>
+                </div>
+                <div className="bg-purple-100 dark:bg-purple-800/30 p-2 rounded-lg">
+                  <AlertTriangle className="h-5 w-5 text-purple-500 dark:text-purple-400" />
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-purple-100 dark:border-purple-800/30">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs">Текущая</span>
+                  <span className="text-xs font-medium">{analysisSummary.currentROI.toFixed(2)}%</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {analysisSummary.lowStockItems > 0 && (
+          <Alert variant="destructive" className="mt-6 bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800/50 text-rose-800 dark:text-rose-300">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Внимание! Низкий уровень запаса</AlertTitle>
+            <AlertDescription>
+              У вас {analysisSummary.lowStockItems} товаров с низким уровнем запаса. Рекомендуется пополнить запасы.
+            </AlertDescription>
+          </Alert>
+        )}
+      </CardHeader>
+
+      <CardContent className="p-6 space-y-6">
+        <div className="space-y-4">
+          <div className="flex flex-col md:flex-row gap-4 justify-between">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Поиск по бренду, артикулу или названию..."
+                  className="pl-8"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                />
+              </div>
+
+              <div className="flex w-full md:w-auto items-end">
+                <div className="w-full md:w-auto">
+                  <Label htmlFor="targetDate" className="text-xs mb-1 block">Показать товары с запасом до</Label>
+                  <DatePicker 
+                    value={targetDate}
+                    onValueChange={setTargetDate}
+                    placeholder="Выберите дату"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={fetchProductPrices}
+                disabled={isLoadingPrices || !selectedStore}
+                className="whitespace-nowrap"
+              >
+                {isLoadingPrices ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Загрузка...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Загрузить цены
+                  </>
+                )}
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={fetchAverageSales}
