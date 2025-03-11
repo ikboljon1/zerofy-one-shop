@@ -301,7 +301,7 @@ export const FeatureVisualization: React.FC<FeatureVisualizationProps> = ({
             <h4 className="text-sm font-medium">Низкорентабельные SKU</h4>
           </div>
           <div className="text-2xl font-bold mt-2">5 товаров</div>
-          <p className="text-xs text-muted-foreground mt-1">маржинальность < 10%</p>
+          <p className="text-xs text-muted-foreground mt-1">маржинальность &lt; 10%</p>
           <Badge variant="secondary" className="mt-auto w-fit">Требуют оптимизации</Badge>
         </Card>
       </div>
@@ -412,5 +412,9 @@ export const FeatureVisualization: React.FC<FeatureVisualizationProps> = ({
       return null;
   }
 };
+
+// Need to import RechartsPrimitive to use its components
+import * as RechartsPrimitive from "recharts";
+import { ChartLegendContent } from "@/components/ui/chart";
 
 export default FeatureVisualization;
