@@ -201,7 +201,7 @@ const SupplyForm: React.FC<SupplyFormProps> = ({
               <SelectTrigger id="warehouse" className="bg-background">
                 <SelectValue placeholder="Выберите склад" />
               </SelectTrigger>
-              <SelectContent className="bg-popover border border-border shadow-md z-50" searchable>
+              <SelectContent className="bg-popover border border-border shadow-md z-[999]" searchable>
                 {warehouses.map(warehouse => (
                   <SelectItem 
                     key={warehouse.ID} 
@@ -228,7 +228,7 @@ const SupplyForm: React.FC<SupplyFormProps> = ({
               <SelectTrigger id="boxType" className="bg-background">
                 <SelectValue placeholder="Выберите тип упаковки" />
               </SelectTrigger>
-              <SelectContent className="bg-popover border border-border shadow-md z-50">
+              <SelectContent className="bg-popover border border-border shadow-md z-[999]">
                 {Object.keys(BOX_TYPES).map((type) => (
                   <SelectItem key={type} value={type}>
                     {type}
