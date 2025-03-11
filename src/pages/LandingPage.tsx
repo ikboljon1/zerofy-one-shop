@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
@@ -10,30 +9,11 @@ import {
   ChevronRight, 
   Warehouse, 
   ShoppingCart, 
-  ChartPieIcon,
+  PieChart, 
   PlusCircle 
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import FeatureVisualization from '@/components/FeatureVisualization';
-
-// Создаем иконку ChartPieIcon, так как она не импортируется корректно
-const ChartPieIcon = (props: any) => (
-  <svg
-    {...props}
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
-    <path d="M22 12A10 10 0 0 0 12 2v10z" />
-  </svg>
-);
 
 const LandingPage = () => {
   return (
@@ -221,7 +201,7 @@ const LandingPage = () => {
           <Card className="bg-white dark:bg-gray-800 border-indigo-100 dark:border-indigo-900/40 transition-all duration-300 hover:shadow-lg">
             <CardHeader>
               <div className="h-12 w-12 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center mb-4">
-                <ChartPieIcon className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+                <PieChart className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
               </div>
               <CardTitle>Финансовая аналитика</CardTitle>
               <CardDescription>Детальный учет доходов и расходов</CardDescription>
