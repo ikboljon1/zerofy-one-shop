@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState } from 'react';
 import { WarehouseCoefficient, Warehouse } from '@/types/supplies';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +10,6 @@ import {
   PackageOpen, 
   DollarSign,
   CalendarIcon,
-  SearchIcon,
   Warehouse as WarehouseIcon
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -23,7 +21,7 @@ interface WarehouseCoefficientsDateCardProps {
   coefficients: WarehouseCoefficient[];
   selectedWarehouseId?: number;
   title?: string;
-  warehouses?: Warehouse[]; // Added warehouses prop
+  warehouses?: Warehouse[];
 }
 
 const WarehouseCoefficientsDateCard: React.FC<WarehouseCoefficientsDateCardProps> = ({ 
@@ -133,7 +131,7 @@ const WarehouseCoefficientsDateCard: React.FC<WarehouseCoefficientsDateCardProps
         <CardTitle className="text-lg">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="mb-4 space-y-2">
+        <div className="mb-4">
           <SearchInput
             placeholder="Поиск по складу или типу коробов..."
             value={searchTerm}
@@ -141,27 +139,6 @@ const WarehouseCoefficientsDateCard: React.FC<WarehouseCoefficientsDateCardProps
             className="w-full"
             icon={<WarehouseIcon className="h-4 w-4 text-gray-400" />}
           />
-          {!selectedWarehouseId && warehouses.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {filteredCoefficients
-                .map(c => c.warehouseID)
-                .filter((value, index, self) => self.indexOf(value) === index) // Get unique warehouse IDs
-                .map(warehouseId => {
-                  const name = getWarehouseName(warehouseId);
-                  return (
-                    <Badge 
-                      key={warehouseId} 
-                      variant="outline" 
-                      className="cursor-pointer hover:bg-primary/10"
-                      onClick={() => setSearchTerm(name)}
-                    >
-                      {name}
-                    </Badge>
-                  );
-                })
-              }
-            </div>
-          )}
         </div>
         <ScrollArea className="h-[400px] pr-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
