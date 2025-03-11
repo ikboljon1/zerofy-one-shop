@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -63,7 +62,6 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
     if (!selectedStore) return;
 
     try {
-      // Загрузка данных о продуктах
       const products = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
       if (products.length === 0) {
         console.log("No products found in localStorage");
@@ -77,7 +75,6 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
 
       console.log(`Loaded ${products.length} products from localStorage`);
       
-      // Загрузка аналитических данных
       const analyticsData = JSON.parse(localStorage.getItem(`marketplace_analytics_${selectedStore.id}`) || "{}");
       
       if (!analyticsData || !analyticsData.data || !analyticsData.data.productSales || analyticsData.data.productSales.length === 0) {
@@ -93,7 +90,6 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       const productSales: ProductSale[] = analyticsData.data.productSales;
       console.log(`Found ${productSales.length} product sales categories in analytics data`);
       
-      // Добавляем nmId к продуктам где возможно
       const enhancedProductSales = productSales.map(sale => {
         const matchingProducts = products.filter(p => 
           p.subject === sale.subject_name || 
@@ -102,7 +98,6 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
         );
         
         if (matchingProducts.length > 0) {
-          // Если есть продукты с таким же subject_name, берем nmId первого
           const nmId = matchingProducts[0].nmId || matchingProducts[0].nmID;
           if (nmId) {
             console.log(`Added nmId ${nmId} to category "${sale.subject_name}"`);
@@ -112,7 +107,6 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
         return sale;
       });
       
-      // Обновляем аналитические данные с дополненными продажами
       analyticsData.data.productSales = enhancedProductSales;
       localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
       console.log("Updated analytics data with enhanced product sales including nmId");
@@ -122,7 +116,6 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       let processedCategories = 0;
       let skippedCategories = 0;
       
-      // Обрабатываем каждую категорию товаров
       for (const sale of enhancedProductSales) {
         const subjectName = sale.subject_name;
         const quantity = sale.quantity || 0;
@@ -135,7 +128,6 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
         
         let costPrice = 0;
         
-        // Если есть nmId, пробуем получить себестоимость по нему
         if (nmId) {
           costPrice = await getCostPriceByNmId(nmId, selectedStore.id);
           if (costPrice > 0) {
@@ -143,7 +135,6 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
           }
         }
         
-        // Если не нашли по nmId, пробуем найти среднюю себестоимость для этой категории
         if (costPrice === 0) {
           costPrice = calculateAverageCostPriceBySubject(products, subjectName);
           if (costPrice > 0) {
@@ -151,7 +142,6 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
           }
         }
         
-        // Если все еще не нашли, пробуем запросить из API по названию категории
         if (costPrice === 0) {
           costPrice = await getCostPriceBySubjectName(subjectName, selectedStore.id);
           if (costPrice > 0) {
@@ -175,13 +165,11 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       console.log(`Processed ${processedCategories} categories, skipped ${skippedCategories} categories`);
       console.log(`Total cost: ${totalCost}, Total items: ${totalItems}`);
       
-      // Сохраняем результаты
       setTotalCostPrice(totalCost);
       setTotalSoldItems(totalItems);
       setAvgCostPrice(totalItems > 0 ? totalCost / totalItems : 0);
       setLastUpdateDate(new Date().toISOString());
       
-      // Сохраняем себестоимость в аналитические данные
       if (analyticsData && analyticsData.data && analyticsData.data.currentPeriod && analyticsData.data.currentPeriod.expenses) {
         analyticsData.data.currentPeriod.expenses.costPrice = totalCost;
         localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
