@@ -540,7 +540,11 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
           <div className="flex items-center justify-between">
             <CardTitle>Товары на складах</CardTitle>
             <div className="flex items-center gap-2">
-              <DatePicker date={targetDate} setDate={setTargetDate} />
+              <DatePicker 
+                value={targetDate || undefined} 
+                onValueChange={(date) => setTargetDate(date || null)} 
+                placeholder="Выберите дату"
+              />
               <div className="text-sm text-muted-foreground">
                 Товаров с риском окончания запаса до {targetDate?.toLocaleDateString()}: 
                 <span className="font-medium text-rose-500 ml-1">{analysisSummary.itemsStockingOutBeforeTarget}</span>
