@@ -222,6 +222,40 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     }
   };
 
+  const updateProductData = (productId: number, field: keyof Product, value: any) => {
+    setProducts(prevProducts => 
+      prevProducts.map(product => 
+        product.nmID === productId 
+          ? { ...product, [field]: value } 
+          : product
+      )
+    );
+    
+    const storedProducts = JSON.parse(localStorage.getItem(`products_${selectedStore?.id}`) || '[]');
+    const updatedStoredProducts = storedProducts.map((product: Product) => 
+      product.nmID === productId 
+        ? { ...product, [field]: value }
+        : product
+    );
+    localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedStoredProducts));
+  };
+
+  const updateCostPrice = (productId: number, costPrice: number) => {
+    updateProductData(productId, 'costPrice', costPrice);
+  };
+
+  const updateSellingPrice = (productId: number, price: number) => {
+    updateProductData(productId, 'price', price);
+  };
+
+  const updateSalesPerDay = (productId: number, salesPerDay: number) => {
+    updateProductData(productId, 'salesPerDay', salesPerDay);
+  };
+
+  const updateStoragePerDay = (productId: number, storagePerDay: number) => {
+    updateProductData(productId, 'storagePerDay', storagePerDay);
+  };
+
   const syncProducts = async () => {
     if (!selectedStore) {
       toast({
@@ -260,12 +294,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       console.log("Products data:", data);
       
       const storedProducts = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
-      const costPrices = storedProducts.reduce((acc: Record<number, number>, product: Product) => {
-        if (product.costPrice) {
-          acc[product.nmID] = product.costPrice;
-        }
-        return acc;
-      }, {});
 
       const nmIds = data.cards.map((product: Product) => product.nmID);
       const prices = await fetchProductPrices(nmIds);
@@ -359,27 +387,21 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           ppvz_for_pay: 0,
           retail_price: 0
         };
-        
-        console.log(`Processing product ${product.nmID}:`, {
-          price: currentPrice,
-          costPrice: costPrices[product.nmID],
-          quantity: quantity,
-          expenses: productExpenses,
-          salesAmount: salesMap.get(product.nmID) || 0
-        });
 
         const storedProduct = storedProducts.find((p: Product) => p.nmID === product.nmID);
         
         return {
           ...product,
           costPrice: storedProduct?.costPrice || 0,
+          price: storedProduct?.price || currentPrice || 0,
+          salesPerDay: storedProduct?.salesPerDay || 0,
+          storagePerDay: storedProduct?.storagePerDay || 0,
           discountedPrice: currentPrice || 0,
           quantity: quantity,
           expenses: productExpenses
         };
       });
 
-      console.log("Updated products:", updatedProducts);
       setProducts(updatedProducts);
       localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(updatedProducts));
 
@@ -399,32 +421,11 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     }
   };
 
-  const updateCostPrice = (productId: number, costPrice: number) => {
-    setProducts(prevProducts => 
-      prevProducts.map(product => 
-        product.nmID === productId ? { ...product, costPrice } : product
-      )
-    );
-    
-    // Update localStorage with individual product data
-    const storedProducts = JSON.parse(localStorage.getItem(`products_${selectedStore?.id}`) || '[]');
-    const updatedStoredProducts = storedProducts.map((product: Product) => 
-      product.nmID === productId ? { ...product, costPrice } : product
-    );
-    localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedStoredProducts));
-  };
-
   React.useEffect(() => {
     if (selectedStore) {
       const storedProducts = localStorage.getItem(`products_${selectedStore.id}`);
       if (storedProducts) {
-        const parsedProducts = JSON.parse(storedProducts);
-        const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore.id}`) || '{}');
-        const productsWithCostPrices = parsedProducts.map((product: Product) => ({
-          ...product,
-          costPrice: costPrices[product.nmID] || product.costPrice || 0
-        }));
-        setProducts(productsWithCostPrices);
+        setProducts(JSON.parse(storedProducts));
       } else {
         setProducts([]);
       }
@@ -517,10 +518,50 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       <Input
                         id={`costPrice-${product.nmID}`}
                         type="number"
-                        value={product.costPrice || ""}
-                        onChange={(e) => updateCostPrice(product.nmID, Number(e.target.value))}
-                        className="h-8 text-sm"
+                        value={product.costPrice || 0}
+                        onChange={(e) => updateCostPrice(product.nmID, parseFloat(e.target.value))}
+                        className="h-8 w-24 text-right"
                         placeholder="Введите себестоимость"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor={`sellingPrice-${product.nmID}`} className="text-xs text-muted-foreground">
+                        Цена продажи:
+                      </label>
+                      <Input
+                        id={`sellingPrice-${product.nmID}`}
+                        type="number"
+                        value={product.price || 0}
+                        onChange={(e) => updateSellingPrice(product.nmID, parseFloat(e.target.value))}
+                        className="h-8 w-24 text-right"
+                        placeholder="Введите цену продажи"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor={`salesPerDay-${product.nmID}`} className="text-xs text-muted-foreground">
+                        Продажи за 30 дней:
+                      </label>
+                      <Input
+                        id={`salesPerDay-${product.nmID}`}
+                        type="number"
+                        value={product.salesPerDay || 0}
+                        onChange={(e) => updateSalesPerDay(product.nmID, parseFloat(e.target.value))}
+                        className="h-8 w-24 text-right"
+                        step="0.1"
+                        placeholder="Введите продажи за 30 дней"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor={`storagePerDay-${product.nmID}`} className="text-xs text-muted-foreground">
+                        Хранение за 30 дней:
+                      </label>
+                      <Input
+                        id={`storagePerDay-${product.nmID}`}
+                        type="number"
+                        value={product.storagePerDay || 0}
+                        onChange={(e) => updateStoragePerDay(product.nmID, parseFloat(e.target.value))}
+                        className="h-8 w-24 text-right"
+                        placeholder="Введите хранение за 30 дней"
                       />
                     </div>
                     <div className="space-y-1.5 border-t pt-2">
@@ -577,3 +618,4 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 };
 
 export default ProductsList;
+
