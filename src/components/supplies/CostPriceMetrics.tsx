@@ -108,14 +108,18 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
         
         let costPrice = 0;
         
+        // First try to get cost price by nm_id if available
         if (nmId) {
           console.log(`Attempting to get cost price by nmId ${nmId} for category "${subjectName}"`);
           costPrice = await getCostPriceByNmId(nmId, selectedStore.id);
           if (costPrice > 0) {
             console.log(`Using cost price by nmId ${nmId} for category "${subjectName}": ${costPrice}`);
+          } else {
+            console.log(`No cost price found by nmId ${nmId}, trying by subject name`);
           }
         }
         
+        // If nmId lookup failed or not available, try by subject name
         if (costPrice === 0) {
           costPrice = calculateAverageCostPriceBySubject(products, subjectName);
           if (costPrice > 0) {
@@ -123,6 +127,7 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
           }
         }
         
+        // As a last resort, try to get cost price from API
         if (costPrice === 0) {
           costPrice = await getCostPriceBySubjectName(subjectName, selectedStore.id);
           if (costPrice > 0) {
