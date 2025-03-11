@@ -5,7 +5,6 @@ import SupplyOptionsResults from './SupplyOptionsResults';
 import WarehouseRemains from './WarehouseRemains';
 import StorageProfitabilityAnalysis from './StorageProfitabilityAnalysis';
 import PaidStorageCostReport from './PaidStorageCostReport';
-import WarehouseSelector from './WarehouseSelector';
 import WarehouseCoefficientsCard from './WarehouseCoefficientsCard';
 
 export {
@@ -15,6 +14,5 @@ export {
   WarehouseRemains,
   StorageProfitabilityAnalysis,
   PaidStorageCostReport,
-  WarehouseSelector,
   WarehouseCoefficientsCard
 };
