@@ -1,7 +1,8 @@
-
 import { Card } from "@/components/ui/card";
 import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, Coins, ShoppingCart } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { getCostPriceByNmId } from "@/services/api";
+import { useEffect, useState } from "react";
 
 interface ExpenseBreakdownProps {
   data: {
@@ -11,10 +12,10 @@ interface ExpenseBreakdownProps {
         logistics: number;
         storage: number;
         penalties: number;
-        advertising: number;
         acceptance: number;
+        advertising: number;
         deductions?: number;
-        costPrice?: number; // Поле для себестоимости
+        costPrice?: number;
       };
     };
   };
@@ -24,29 +25,51 @@ interface ExpenseBreakdownProps {
 }
 
 const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps) => {
-  // Логирование для отладки
-  console.log('ExpenseBreakdown data:', data);
-  console.log('ExpenseBreakdown expenses:', data?.currentPeriod?.expenses);
-  console.log('ExpenseBreakdown total expenses:', data?.currentPeriod?.expenses?.total);
-  
-  // Проверяем, есть ли в данных информация о себестоимости
-  if (data?.currentPeriod?.expenses?.costPrice !== undefined) {
-    console.log('Found costPrice:', data.currentPeriod.expenses.costPrice);
-  } else {
-    console.log('costPrice not found in expenses data');
-  }
-  
-  // Используем общую сумму расходов на рекламу без разбивки
-  const advertisingAmount = data.currentPeriod.expenses.advertising || 0;
-  const acceptanceAmount = data.currentPeriod.expenses.acceptance || 0;
-  const deductionsAmount = data.currentPeriod.expenses.deductions || 0;
-  const costPriceAmount = data.currentPeriod.expenses.costPrice || 0;
-  
-  // Общая сумма расходов для расчета процентов
-  const totalExpenses = data.currentPeriod.expenses.total;
+  const [totalCostPrice, setTotalCostPrice] = useState(0);
 
-  // Рассчитываем штрафы и удержания для отображения
-  const penaltiesAmount = data.currentPeriod.expenses.penalties;
+  useEffect(() => {
+    const loadCostPrices = async () => {
+      try {
+        // Получаем данные о продажах из localStorage
+        const storeId = localStorage.getItem('selectedStoreId');
+        if (!storeId) {
+          console.log('No selected store ID found');
+          return;
+        }
+
+        const analyticsData = JSON.parse(localStorage.getItem(`marketplace_analytics_${storeId}`) || "{}");
+        if (!analyticsData?.data?.dailySales) {
+          console.log('No daily sales data found');
+          return;
+        }
+
+        let total = 0;
+        for (const day of analyticsData.data.dailySales) {
+          if (day.sales) {
+            for (const sale of day.sales) {
+              const nmId = sale.nmId || sale.nm_id;
+              if (nmId) {
+                const costPrice = await getCostPriceByNmId(nmId, storeId);
+                const quantity = Math.abs(sale.quantity || 1);
+                total += costPrice * quantity;
+                console.log(`Added cost for product ${nmId}: ${costPrice} * ${quantity} = ${costPrice * quantity}`);
+              }
+            }
+          }
+        }
+
+        console.log('Total cost price calculated:', total);
+        setTotalCostPrice(total);
+      } catch (error) {
+        console.error('Error loading cost prices:', error);
+      }
+    };
+
+    loadCostPrices();
+  }, []);
+
+  // Используем общую сумму расходов для расчета процентов
+  const totalExpenses = data.currentPeriod.expenses.total;
 
   return (
     <Card className="p-4">
@@ -85,9 +108,9 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
               <AlertCircle className="h-3 w-3 text-red-600 dark:text-red-400" />
             </div>
           </div>
-          <p className="text-lg font-bold">{formatCurrency(penaltiesAmount)}</p>
+          <p className="text-lg font-bold">{formatCurrency(data.currentPeriod.expenses.penalties)}</p>
           <span className="text-xs text-muted-foreground mt-0.5">
-            {totalExpenses > 0 ? ((penaltiesAmount / totalExpenses) * 100).toFixed(1) : '0'}%
+            {totalExpenses > 0 ? ((data.currentPeriod.expenses.penalties / totalExpenses) * 100).toFixed(1) : '0'}%
           </span>
         </div>
 
@@ -98,9 +121,9 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
               <Target className="h-3 w-3 text-amber-600 dark:text-amber-400" />
             </div>
           </div>
-          <p className="text-lg font-bold">{formatCurrency(advertisingAmount)}</p>
+          <p className="text-lg font-bold">{formatCurrency(data.currentPeriod.expenses.advertising)}</p>
           <span className="text-xs text-muted-foreground mt-0.5">
-            {totalExpenses > 0 ? ((advertisingAmount / totalExpenses) * 100).toFixed(1) : '0'}%
+            {totalExpenses > 0 ? ((data.currentPeriod.expenses.advertising / totalExpenses) * 100).toFixed(1) : '0'}%
           </span>
         </div>
 
@@ -111,9 +134,9 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
               <Coins className="h-3 w-3 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
-          <p className="text-lg font-bold">{formatCurrency(deductionsAmount)}</p>
+          <p className="text-lg font-bold">{formatCurrency(data.currentPeriod.expenses.deductions)}</p>
           <span className="text-xs text-muted-foreground mt-0.5">
-            {totalExpenses > 0 ? ((deductionsAmount / totalExpenses) * 100).toFixed(1) : '0'}%
+            {totalExpenses > 0 ? ((data.currentPeriod.expenses.deductions / totalExpenses) * 100).toFixed(1) : '0'}%
           </span>
         </div>
         
@@ -124,9 +147,9 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
               <ShoppingCart className="h-3 w-3 text-green-600 dark:text-green-400" />
             </div>
           </div>
-          <p className="text-lg font-bold">{formatCurrency(costPriceAmount)}</p>
+          <p className="text-lg font-bold">{formatCurrency(totalCostPrice)}</p>
           <span className="text-xs text-muted-foreground mt-0.5">
-            {totalExpenses > 0 ? ((costPriceAmount / totalExpenses) * 100).toFixed(1) : '0'}%
+            {totalExpenses > 0 ? ((totalCostPrice / totalExpenses) * 100).toFixed(1) : '0'}%
           </span>
         </div>
       </div>
