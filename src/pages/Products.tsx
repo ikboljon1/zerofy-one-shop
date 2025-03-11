@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Store } from "@/types/store";
 import ProductsComponent from "@/components/Products";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { CostPriceMetrics } from "@/components/supplies";
 import axios from "axios";
 
 interface ProductsProps {
@@ -176,6 +177,9 @@ const Products = ({ selectedStore }: ProductsProps) => {
         </Card>
       ) : (
         <>
+          {/* Добавляем компонент для отображения статистики себестоимости */}
+          <CostPriceMetrics selectedStore={selectedStore} />
+          
           {/* Render improved Products component with profitable/unprofitable products */}
           <ProductsComponent 
             topProfitableProducts={profitableProducts} 

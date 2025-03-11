@@ -7,6 +7,7 @@ import StorageProfitabilityAnalysis from './StorageProfitabilityAnalysis';
 import PaidStorageCostReport from './PaidStorageCostReport';
 import WarehouseCoefficientsCard from './WarehouseCoefficientsCard';
 import WarehouseCoefficientsDateCard from './WarehouseCoefficientsDateCard';
+import CostPriceMetrics from './CostPriceMetrics';
 
 export {
   SupplyForm,
@@ -16,5 +17,6 @@ export {
   StorageProfitabilityAnalysis,
   PaidStorageCostReport,
   WarehouseCoefficientsCard,
-  WarehouseCoefficientsDateCard
+  WarehouseCoefficientsDateCard,
+  CostPriceMetrics
 };
