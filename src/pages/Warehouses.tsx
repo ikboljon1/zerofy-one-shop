@@ -12,7 +12,6 @@ import {
 import { 
   fetchAcceptanceCoefficients, 
   fetchWarehouses, 
-  fetchAcceptanceOptions,
   fetchFullPaidStorageReport,
   getPreferredWarehouses,
   togglePreferredWarehouse
@@ -23,16 +22,15 @@ import {
 import { 
   SupplyForm, 
   WarehouseCoefficientsTable, 
-  SupplyOptionsResults,
   WarehouseRemains,
   StorageProfitabilityAnalysis,
-  PaidStorageCostReport
+  PaidStorageCostReport,
+  WarehouseSelector,
+  WarehouseCoefficientsCard
 } from '@/components/supplies';
 import { 
-  SupplyFormData, 
   WarehouseCoefficient, 
   Warehouse as WBWarehouse,
-  SupplyOptionsResponse,
   WarehouseRemainItem,
   PaidStorageItem
 } from '@/types/supplies';
@@ -41,13 +39,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { ensureStoreSelectionPersistence } from '@/utils/storeUtils';
 import { Store as StoreType } from '@/types/store';
-import WarehouseSelector from '@/components/supplies/WarehouseSelector';
 
 const Warehouses: React.FC = () => {
   const [activeTab, setActiveTab] = useState('inventory');
   const [wbWarehouses, setWbWarehouses] = useState<WBWarehouse[]>([]);
   const [coefficients, setCoefficients] = useState<WarehouseCoefficient[]>([]);
-  const [supplyResults, setSupplyResults] = useState<SupplyOptionsResponse | null>(null);
   const [warehouseRemains, setWarehouseRemains] = useState<WarehouseRemainItem[]>([]);
   const [paidStorageData, setPaidStorageData] = useState<PaidStorageItem[]>([]);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | undefined>(undefined);
@@ -194,43 +190,6 @@ const Warehouses: React.FC = () => {
     }
   };
 
-  const handleSupplySubmit = async (data: SupplyFormData) => {
-    if (!selectedStore) {
-      toast.error('Выберите магазин для проверки доступности товаров');
-      return;
-    }
-    
-    try {
-      setLoading(prev => ({ ...prev, options: true }));
-      
-      if (!data.selectedWarehouse) {
-        toast.error('Выберите склад назначения');
-        return;
-      }
-      
-      const optionsResponse = await fetchAcceptanceOptions(
-        selectedStore.apiKey,
-        data.items,
-        data.selectedWarehouse
-      );
-      
-      setSupplyResults(optionsResponse);
-      
-      const hasErrors = optionsResponse.result.some(item => item.isError);
-      
-      if (hasErrors) {
-        toast.warning('Обнаружены проблемы с некоторыми товарами');
-      } else {
-        toast.success('Все товары доступны для поставки');
-      }
-    } catch (error) {
-      console.error('Ошибка при проверке доступности:', error);
-      toast.error('Не удалось проверить доступность товаров');
-    } finally {
-      setLoading(prev => ({ ...prev, options: false }));
-    }
-  };
-
   const handleRefreshData = () => {
     if (!selectedStore) {
       toast.warning('Необходимо выбрать магазин для получения данных');
@@ -264,6 +223,31 @@ const Warehouses: React.FC = () => {
     return result;
   };
 
+  const renderNoStoreSelected = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center">
+          <Store className="mr-2 h-5 w-5" />
+          Выберите магазин
+        </CardTitle>
+        <CardDescription>
+          Для просмотра и управления складами необходимо выбрать магазин в разделе "Магазины"
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+        <Store className="h-12 w-12 text-muted-foreground mb-4" />
+        <p className="text-muted-foreground">Для работы с отчетами о складах необходимо выбрать магазин</p>
+        <Button 
+          className="mt-4"
+          variant="outline"
+          onClick={() => window.location.href = '/dashboard'}
+        >
+          Перейти к выбору магазина
+        </Button>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="container px-4 py-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -287,30 +271,7 @@ const Warehouses: React.FC = () => {
         </TabsList>
 
         <TabsContent value="inventory" className="space-y-4">
-          {!selectedStore ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                  <Store className="mr-2 h-5 w-5" />
-                  Выберите магазин
-                </CardTitle>
-                <CardDescription>
-                  Для просмотра и управления складами необходимо выбрать магазин в разделе "Магазины"
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <Store className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Для работы с отчетами о складах необходимо выбрать магазин</p>
-                <Button 
-                  className="mt-4"
-                  variant="outline"
-                  onClick={() => window.location.href = '/dashboard'}
-                >
-                  Перейти к выбору магазина
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
+          {!selectedStore ? renderNoStoreSelected() : (
             <>
               <div className="flex justify-between items-center mb-4">
                 <div>
@@ -360,39 +321,16 @@ const Warehouses: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="supplies" className="space-y-4">
-          {!selectedStore ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                  <Store className="mr-2 h-5 w-5" />
-                  Выберите магазин
-                </CardTitle>
-                <CardDescription>
-                  Для просмотра и управления поставками необходимо выбрать магазин в разделе "Магазины"
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <Store className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Для работы с поставками необходимо выбрать магазин</p>
-                <Button 
-                  className="mt-4"
-                  variant="outline"
-                  onClick={() => window.location.href = '/dashboard'}
-                >
-                  Перейти к выбору магазина
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
+          {!selectedStore ? renderNoStoreSelected() : (
             <>
               <div className="flex justify-between items-center mb-4">
                 <div>
                   <h2 className="text-lg font-semibold flex items-center gap-2">
                     <Building2 className="h-5 w-5 text-primary" />
-                    Информация о складах
+                    Управление поставками
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    Выберите склад и просмотрите коэффициенты приемки
+                    Анализ коэффициентов приемки и выбор оптимального склада
                   </p>
                 </div>
                 <Button 
@@ -414,7 +352,7 @@ const Warehouses: React.FC = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="space-y-6">
                   {loading.warehouses ? (
-                    <Skeleton className="h-[300px] w-full" />
+                    <Skeleton className="h-[350px] w-full" />
                   ) : (
                     <WarehouseSelector 
                       warehouses={wbWarehouses}
@@ -426,50 +364,18 @@ const Warehouses: React.FC = () => {
                     />
                   )}
 
-                  {!supplyResults && (
-                    <SupplyForm 
-                      warehouses={wbWarehouses} 
-                      onSupplySubmit={handleSupplySubmit}
-                      isLoading={loading.options}
-                      coefficients={coefficients}
-                      onWarehouseSelect={handleWarehouseSelect}
-                    />
-                  )}
+                  <SupplyForm />
                 </div>
                 
                 <div className="lg:col-span-2">
-                  {supplyResults ? (
-                    <SupplyOptionsResults 
-                      results={supplyResults} 
-                      warehouses={wbWarehouses} 
-                    />
+                  {loading.coefficients ? (
+                    <Skeleton className="h-[600px] w-full" />
                   ) : (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center">
-                          <PackageOpen className="h-5 w-5 mr-2" />
-                          Коэффициенты приемки
-                        </CardTitle>
-                        <CardDescription>
-                          Информация о доступности приемки товаров на складах WB
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        {loading.coefficients ? (
-                          <div className="space-y-2">
-                            <Skeleton className="h-10 w-full" />
-                            <Skeleton className="h-10 w-full" />
-                            <Skeleton className="h-10 w-full" />
-                          </div>
-                        ) : (
-                          <WarehouseCoefficientsTable 
-                            coefficients={coefficients} 
-                            selectedWarehouseId={selectedWarehouseId}
-                            title="Информация о приемке товаров"
-                          />
-                        )}
-                      </CardContent>
-                    </Card>
+                    <WarehouseCoefficientsCard 
+                      coefficients={coefficients} 
+                      warehouses={wbWarehouses}
+                      selectedWarehouseId={selectedWarehouseId}
+                    />
                   )}
                 </div>
               </div>
@@ -478,30 +384,7 @@ const Warehouses: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="storage" className="space-y-4">
-          {!selectedStore ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                  <Store className="mr-2 h-5 w-5" />
-                  Выберите магазин
-                </CardTitle>
-                <CardDescription>
-                  Для просмотра данных о платном хранении необходимо выбрать магазин в разделе "Магазины"
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <Store className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Для работы с отчетами о платном хранении необходимо выбрать магазин</p>
-                <Button 
-                  className="mt-4"
-                  variant="outline"
-                  onClick={() => window.location.href = '/dashboard'}
-                >
-                  Перейти к выбору магазина
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
+          {!selectedStore ? renderNoStoreSelected() : (
             <>
               <div className="flex justify-between items-center mb-4">
                 <div>
