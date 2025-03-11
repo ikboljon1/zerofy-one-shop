@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   SupplyFormData, 
@@ -200,7 +201,7 @@ const SupplyForm: React.FC<SupplyFormProps> = ({
               <SelectTrigger id="warehouse" className="bg-background">
                 <SelectValue placeholder="Выберите склад" />
               </SelectTrigger>
-              <SelectContent className="bg-background z-50">
+              <SelectContent className="bg-background z-50" searchable>
                 {warehouses.map(warehouse => (
                   <SelectItem 
                     key={warehouse.ID} 

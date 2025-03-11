@@ -5,7 +5,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, parseISO, addDays } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { CheckCircle, XCircle, AlertCircle, Info } from 'lucide-react';
+import { 
+  CheckCircle, 
+  XCircle, 
+  AlertCircle, 
+  Info, 
+  TruckIcon, 
+  PackageOpen, 
+  DollarSign
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface WarehouseCoefficientsTableProps {
   coefficients: WarehouseCoefficient[];
@@ -16,6 +26,8 @@ const WarehouseCoefficientsTable: React.FC<WarehouseCoefficientsTableProps> = ({
   coefficients, 
   selectedWarehouseId 
 }) => {
+  const [showLogistics, setShowLogistics] = useState(false);
+  
   // Filter coefficients by selected warehouse if provided
   const filteredCoefficients = useMemo(() => {
     if (!selectedWarehouseId) return coefficients;
@@ -52,6 +64,11 @@ const WarehouseCoefficientsTable: React.FC<WarehouseCoefficientsTableProps> = ({
     available: boolean;
     coefficient: number;
     tooltip: string;
+    deliveryCoef?: string | null;
+    deliveryBaseLiter?: string | null;
+    deliveryAdditionalLiter?: string | null;
+    storageBaseLiter?: string | null;
+    storageAdditionalLiter?: string | null;
   } => {
     const warehouseCoefs = groupedByWarehouse.get(warehouseId) || [];
     const dateStr = format(date, 'yyyy-MM-dd');
@@ -86,8 +103,46 @@ const WarehouseCoefficientsTable: React.FC<WarehouseCoefficientsTableProps> = ({
     return {
       available,
       coefficient: coef.coefficient,
-      tooltip
+      tooltip,
+      deliveryCoef: coef.deliveryCoef,
+      deliveryBaseLiter: coef.deliveryBaseLiter,
+      deliveryAdditionalLiter: coef.deliveryAdditionalLiter,
+      storageBaseLiter: coef.storageBaseLiter,
+      storageAdditionalLiter: coef.storageAdditionalLiter
     };
+  };
+  
+  const renderLogisticsDetails = (status: ReturnType<typeof getStatusForDate>) => {
+    if (!showLogistics) return null;
+    
+    return (
+      <div className="text-xs space-y-1 mt-1">
+        {status.deliveryCoef && (
+          <div className="flex items-center gap-1">
+            <TruckIcon className="h-3 w-3 text-blue-500" />
+            <span>Коэф. логистики: {status.deliveryCoef}</span>
+          </div>
+        )}
+        {status.deliveryBaseLiter && (
+          <div className="flex items-center gap-1">
+            <PackageOpen className="h-3 w-3 text-orange-500" />
+            <span>Первый литр: {status.deliveryBaseLiter} ₽</span>
+          </div>
+        )}
+        {status.deliveryAdditionalLiter && (
+          <div className="flex items-center gap-1">
+            <PackageOpen className="h-3 w-3 text-green-500" />
+            <span>За литр: {status.deliveryAdditionalLiter} ₽</span>
+          </div>
+        )}
+        {status.storageBaseLiter && (
+          <div className="flex items-center gap-1">
+            <DollarSign className="h-3 w-3 text-purple-500" />
+            <span>Хранение: {status.storageBaseLiter} ₽</span>
+          </div>
+        )}
+      </div>
+    );
   };
   
   if (filteredCoefficients.length === 0) {
@@ -96,7 +151,7 @@ const WarehouseCoefficientsTable: React.FC<WarehouseCoefficientsTableProps> = ({
         {selectedWarehouseId ? (
           <p>Нет данных о коэффициентах приемки для выбранного склада на ближайшие 14 дней</p>
         ) : (
-          <p>Выберите склад для просмотра коэффициентов приемки</p>
+          <p>Выберите склад для просмотра коэффициентов приёмки</p>
         )}
       </div>
     );
@@ -116,14 +171,24 @@ const WarehouseCoefficientsTable: React.FC<WarehouseCoefficientsTableProps> = ({
   
   return (
     <div className="overflow-x-auto">
-      <h3 className="text-lg font-medium mb-2">
-        Коэффициенты приемки на ближайшие 14 дней
-        {selectedWarehouseId && uniqueWarehouses.length > 0 && (
-          <span className="ml-2 font-normal text-base">
-            ({uniqueWarehouses[0].name})
-          </span>
-        )}
-      </h3>
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-lg font-medium">
+          Коэффициенты приемки на ближайшие 14 дней
+          {selectedWarehouseId && uniqueWarehouses.length > 0 && (
+            <span className="ml-2 font-normal text-base">
+              ({uniqueWarehouses[0].name})
+            </span>
+          )}
+        </h3>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => setShowLogistics(!showLogistics)}
+          className="text-xs h-8"
+        >
+          {showLogistics ? 'Скрыть детали' : 'Показать логистику'}
+        </Button>
+      </div>
       
       <div className="rounded border">
         <Table>
@@ -172,10 +237,57 @@ const WarehouseCoefficientsTable: React.FC<WarehouseCoefficientsTableProps> = ({
                             </div>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>{status.tooltip}</p>
+                            <div className="space-y-2 max-w-[280px]">
+                              <p className="font-semibold">{status.tooltip}</p>
+                              
+                              {/* Additional logistics info in tooltip */}
+                              {status.deliveryCoef && (
+                                <div className="text-xs">
+                                  <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                                    <div className="flex items-center">
+                                      <TruckIcon className="h-3 w-3 mr-1 text-blue-500" />
+                                      <span>Коэф. логистики:</span>
+                                    </div>
+                                    <div>{status.deliveryCoef}</div>
+                                    
+                                    {status.deliveryBaseLiter && (
+                                      <>
+                                        <div className="flex items-center">
+                                          <PackageOpen className="h-3 w-3 mr-1 text-orange-500" />
+                                          <span>Первый литр:</span>
+                                        </div>
+                                        <div>{status.deliveryBaseLiter} ₽</div>
+                                      </>
+                                    )}
+                                    
+                                    {status.deliveryAdditionalLiter && (
+                                      <>
+                                        <div className="flex items-center">
+                                          <PackageOpen className="h-3 w-3 mr-1 text-green-500" />
+                                          <span>За доп. литр:</span>
+                                        </div>
+                                        <div>{status.deliveryAdditionalLiter} ₽</div>
+                                      </>
+                                    )}
+                                    
+                                    {status.storageBaseLiter && (
+                                      <>
+                                        <div className="flex items-center">
+                                          <DollarSign className="h-3 w-3 mr-1 text-purple-500" />
+                                          <span>Хранение:</span>
+                                        </div>
+                                        <div>{status.storageBaseLiter} ₽</div>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
+                      
+                      {renderLogisticsDetails(status)}
                     </TableCell>
                   );
                 })}
@@ -186,7 +298,7 @@ const WarehouseCoefficientsTable: React.FC<WarehouseCoefficientsTableProps> = ({
       </div>
       
       <div className="mt-4 text-sm text-muted-foreground">
-        <div className="flex items-center gap-6 mt-2">
+        <div className="flex items-center gap-6 mt-2 flex-wrap">
           <div className="flex items-center">
             <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
             <span>Бесплатная приемка</span>
@@ -200,6 +312,30 @@ const WarehouseCoefficientsTable: React.FC<WarehouseCoefficientsTableProps> = ({
             <span>Приемка недоступна</span>
           </div>
         </div>
+        
+        {showLogistics && (
+          <div className="mt-3 border-t pt-2">
+            <p className="font-medium mb-1">Пояснения к данным о логистике:</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+              <div className="flex items-center">
+                <TruckIcon className="h-4 w-4 text-blue-500 mr-1" />
+                <span>Коэффициент логистики - множитель стоимости доставки</span>
+              </div>
+              <div className="flex items-center">
+                <PackageOpen className="h-4 w-4 text-orange-500 mr-1" />
+                <span>Стоимость логистики первого литра</span>
+              </div>
+              <div className="flex items-center">
+                <PackageOpen className="h-4 w-4 text-green-500 mr-1" />
+                <span>Стоимость каждого следующего литра</span>
+              </div>
+              <div className="flex items-center">
+                <DollarSign className="h-4 w-4 text-purple-500 mr-1" />
+                <span>Стоимость хранения (за литр или паллету)</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
