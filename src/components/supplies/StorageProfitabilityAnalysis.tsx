@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -191,9 +192,9 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       
       const newSalesRate = dailySales * salesAccelerationFactor;
       
-      const discountedDaysOfInventory = Math.round(daysOfInventory / salesAccelerationFactor);
+      const newDaysOfInventory = Math.round(daysOfInventory / salesAccelerationFactor);
       
-      const discountedStorageCost = averageStock * discountedDaysOfInventory * storageCost;
+      const discountedStorageCost = averageStock * newDaysOfInventory * storageCost;
       
       const profitWithoutDiscount = grossProfit - totalStorageCost;
       const profitWithDiscount = (profitWithDiscountPerItem * currentStock) - discountedStorageCost;
@@ -1029,4 +1030,3 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
 };
 
 export default StorageProfitabilityAnalysis;
-
