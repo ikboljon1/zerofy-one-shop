@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { WarehouseCoefficient } from '@/types/supplies';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,28 +37,32 @@ const WarehouseCoefficientsDateCard: React.FC<WarehouseCoefficientsDateCardProps
     return filtered;
   }, [coefficients, selectedWarehouseId]);
   
-  // Get the next 14 days from today
-  const next14Days = useMemo(() => {
+  // Get the next 7 days from today instead of 14
+  const next7Days = useMemo(() => {
     const days = [];
     const today = new Date();
     
-    for (let i = 0; i < 14; i++) {
+    for (let i = 0; i < 7; i++) {
       days.push(addDays(today, i));
     }
     
     return days;
   }, []);
 
-  // Group coefficients by date
+  // Group coefficients by date and only keep the most recent data
   const groupedCoefficients = useMemo(() => {
-    const grouped = new Map<string, WarehouseCoefficient[]>();
+    const grouped = new Map<string, Map<number, WarehouseCoefficient>>();
     
+    // First group by date
     filteredCoefficients.forEach(coef => {
       const date = coef.date.split('T')[0];
       if (!grouped.has(date)) {
-        grouped.set(date, []);
+        grouped.set(date, new Map<number, WarehouseCoefficient>());
       }
-      grouped.get(date)?.push(coef);
+      
+      // Then for each date, keep only one coefficient per box type (the most recent one)
+      const dateMap = grouped.get(date)!;
+      dateMap.set(coef.boxTypeID, coef);
     });
     
     return grouped;
@@ -95,13 +98,13 @@ const WarehouseCoefficientsDateCard: React.FC<WarehouseCoefficientsDateCardProps
         <CardTitle className="text-lg">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[500px] pr-4">
+        <ScrollArea className="h-[400px] pr-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {next14Days.map((date) => {
+            {next7Days.map((date) => {
               const dateStr = format(date, 'yyyy-MM-dd');
-              const dayCoefficients = groupedCoefficients.get(dateStr) || [];
+              const dayCoefficients = groupedCoefficients.get(dateStr);
 
-              if (dayCoefficients.length === 0) return null;
+              if (!dayCoefficients || dayCoefficients.size === 0) return null;
 
               return (
                 <Card key={dateStr} className="shadow-sm">
@@ -112,7 +115,7 @@ const WarehouseCoefficientsDateCard: React.FC<WarehouseCoefficientsDateCardProps
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="px-4 py-2 space-y-2">
-                    {dayCoefficients.map((coef, idx) => (
+                    {Array.from(dayCoefficients.values()).map((coef, idx) => (
                       <div key={idx} className="border-b last:border-0 pb-2 last:pb-0">
                         <div className="flex justify-between items-center mb-1">
                           <Badge variant="outline" className="mr-2">
