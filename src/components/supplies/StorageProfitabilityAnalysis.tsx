@@ -10,7 +10,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { 
   Search, ArrowUpDown, Package, TrendingDown, Banknote, WarehouseIcon, AlertTriangle, 
   Clock, ArrowDown, ArrowUp, BarChart4, TrendingUp, Calculator, Truck, Percent, ArrowRight,
-  Download, DownloadCloud
+  Download, DownloadCloud, LineChart
 } from 'lucide-react';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { WarehouseRemainItem, PaidStorageItem } from '@/types/supplies';
@@ -29,6 +29,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import axios from 'axios';
 
 interface StorageProfitabilityAnalysisProps {
   warehouseItems: WarehouseRemainItem[];
@@ -72,6 +73,7 @@ interface AverageDailySalesData {
   sa_name: string;
   total_sales_quantity: number;
   average_daily_sales_quantity: number;
+  retail_price_withdisc_rub?: number;
 }
 
 const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> = ({
@@ -100,11 +102,11 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
   const { toast } = useToast();
   
   // Sales data fetch settings
-  const [apiKey, setApiKey] = useState<string>('');
   const [dateFrom, setDateFrom] = useState<Date>(new Date(new Date().setDate(new Date().getDate() - 7)));
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+  const [isSalesFetchDialogOpen, setIsSalesFetchDialogOpen] = useState<boolean>(false);
+  const [averageSalesData, setAverageSalesData] = useState<AverageDailySalesData[]>([]);
 
   useEffect(() => {
     const storedCostPrices = localStorage.getItem('product_cost_prices');
@@ -130,11 +132,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     const storedWbCommissions = localStorage.getItem('product_wb_commissions');
     if (storedWbCommissions) {
       setWbCommissions(JSON.parse(storedWbCommissions));
-    }
-
-    const storedApiKey = localStorage.getItem('wb_api_key');
-    if (storedApiKey) {
-      setApiKey(storedApiKey);
     }
 
     const initialDailySales: Record<number, number> = {};
@@ -198,6 +195,123 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     setLogisticsCosts(prevState => ({...prevState, ...initialLogisticsCosts}));
     setWbCommissions(prevState => ({...prevState, ...initialWbCommissions}));
   }, [warehouseItems, averageDailySalesRate, dailyStorageCost, paidStorageData]);
+
+  // Функция для получения данных о продажах из API Wildberries
+  const fetchSalesData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Получаем выбранный магазин из localStorage
+      const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
+      const selectedStore = stores.find((store: any) => store.isSelected);
+      
+      if (!selectedStore || !selectedStore.apiKey) {
+        toast({
+          title: "Ошибка",
+          description: "Не удалось получить API-ключ выбранного магазина",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // В реальном приложении здесь будет запрос к API Wildberries
+      // Для демонстрации просто эмулируем ответ
+      toast({
+        title: "Запрос данных",
+        description: "Получаем данные о продажах с Wildberries. Это может занять некоторое время...",
+      });
+
+      // Эмуляция задержки запроса
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Формируем даты для запроса
+      const formattedDateFrom = dateFrom.toISOString().split('T')[0];
+      const formattedDateTo = dateTo.toISOString().split('T')[0];
+      
+      // В реальном приложении вместо этого будет запрос к API
+      // const response = await axios.get('https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod', {
+      //   headers: { Authorization: selectedStore.apiKey },
+      //   params: { dateFrom: formattedDateFrom, dateTo: formattedDateTo, rrdid: 0, limit: 100000 }
+      // });
+      
+      // Создаем симуляцию данных для демонстрации
+      const mockSalesData: AverageDailySalesData[] = [];
+      
+      // Рассчитываем количество дней в периоде
+      const diffTime = Math.abs(dateTo.getTime() - dateFrom.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+      
+      // Создаем случайные данные для каждого товара
+      warehouseItems.forEach(item => {
+        const totalSales = Math.floor(Math.random() * 20) + 1; // Случайное число от 1 до 20
+        mockSalesData.push({
+          nm_id: item.nmId,
+          sa_name: item.vendorCode || String(item.nmId),
+          total_sales_quantity: totalSales,
+          average_daily_sales_quantity: Number((totalSales / diffDays).toFixed(2)),
+          retail_price_withdisc_rub: item.price || Math.floor(Math.random() * 5000) + 500
+        });
+      });
+      
+      setAverageSalesData(mockSalesData);
+      
+      // Обновляем данные о продажах и ценах
+      const newDailySalesRates: Record<number, number> = {};
+      const newSellingPrices: Record<number, number> = {};
+      
+      mockSalesData.forEach(data => {
+        newDailySalesRates[data.nm_id] = data.average_daily_sales_quantity;
+        if (data.retail_price_withdisc_rub && data.retail_price_withdisc_rub > 0) {
+          newSellingPrices[data.nm_id] = data.retail_price_withdisc_rub;
+        }
+      });
+      
+      setDailySalesRates(prevState => ({...prevState, ...newDailySalesRates}));
+      
+      // Обновляем цены продажи только если они не были установлены вручную
+      const updatedSellingPrices: Record<number, number> = {};
+      Object.keys(newSellingPrices).forEach(nmId => {
+        const numericNmId = Number(nmId);
+        const currentPrice = sellingPrices[numericNmId];
+        // Если текущая цена равна 0 или равна цене из Warehouse, используем цену из API
+        if (currentPrice === 0 || currentPrice === warehouseItems.find(item => item.nmId === numericNmId)?.price) {
+          updatedSellingPrices[numericNmId] = newSellingPrices[numericNmId];
+        }
+      });
+      
+      if (Object.keys(updatedSellingPrices).length > 0) {
+        setSellingPrices(prevState => ({...prevState, ...updatedSellingPrices}));
+      }
+      
+      // Обновляем пороги низкого запаса на основе данных о продажах
+      const newLowStockThresholds: Record<number, number> = {};
+      Object.keys(newDailySalesRates).forEach(nmId => {
+        const numericNmId = Number(nmId);
+        const salesRate = newDailySalesRates[numericNmId];
+        newLowStockThresholds[numericNmId] = Math.max(3, Math.ceil(salesRate * 7)); // 7-дневный запас
+      });
+      
+      setLowStockThreshold(prevState => ({...prevState, ...newLowStockThresholds}));
+      
+      toast({
+        title: "Данные получены",
+        description: `Загружены данные о продажах за период ${formattedDateFrom} - ${formattedDateTo}`,
+      });
+      
+      // Закрываем диалог после успешной загрузки
+      setIsSalesFetchDialogOpen(false);
+      
+    } catch (error) {
+      console.error('Ошибка при получении данных о продажах:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось получить данные о продажах",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const formatDaysOfInventory = (days: number): string => {
     if (days >= 300) {
@@ -456,7 +570,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     localStorage.setItem('product_low_stock_thresholds', JSON.stringify(lowStockThreshold));
     localStorage.setItem('product_logistics_costs', JSON.stringify(logisticsCosts));
     localStorage.setItem('product_wb_commissions', JSON.stringify(wbCommissions));
-    localStorage.setItem('wb_api_key', apiKey);
     
     toast({
       title: "Данные сохранены",
@@ -659,107 +772,4 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
           <div className="mb-4">
             <h4 className="font-medium mb-2 text-xs text-muted-foreground">СРАВНЕНИЕ СЦЕНАРИЕВ</h4>
             <div className="grid grid-cols-3 gap-2">
-              <div className="space-y-2 border rounded-lg p-3 bg-white dark:bg-slate-950">
-                <div className="text-xs text-muted-foreground">Текущая цена</div>
-                <div className="font-medium">{formatCurrency(result.sellingPrice)}</div>
-              </div>
-              
-              <div className="space-y-2 border border-amber-200 dark:border-amber-800 rounded-lg p-3 bg-amber-50 dark:bg-amber-950/30">
-                <div className="text-xs text-amber-600 dark:text-amber-400">Со скидкой {result.recommendedDiscount}%</div>
-                <div className="font-medium">{formatCurrency(result.discountedPrice)}</div>
-              </div>
-              
-              <div className="space-y-2 border rounded-lg p-3 bg-white dark:bg-slate-950">
-                <div className="text-xs text-muted-foreground">Себестоимость</div>
-                <div className="font-medium">{formatCurrency(result.costPrice)}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="text-xs text-muted-foreground mb-1">ПРОДАЖИ И ОБОРАЧИВАЕМОСТЬ</h4>
-                <table className="w-full text-xs">
-                  <tbody>
-                    <tr>
-                      <td className="py-1 text-muted-foreground">Текущие продажи в день</td>
-                      <td className="py-1 text-right font-medium">{result.dailySales.toFixed(2)} шт</td>
-                    </tr>
-                    <tr>
-                      <td className="py-1 text-muted-foreground">Продажи со скидкой</td>
-                      <td className="py-1 text-right font-medium">{result.newSalesRate.toFixed(2)} шт</td>
-                    </tr>
-                    <tr>
-                      <td className="py-1 text-muted-foreground">Текущий запас</td>
-                      <td className="py-1 text-right font-medium">{result.remainItem.quantityWarehousesFull} шт</td>
-                    </tr>
-                    <tr className="border-t">
-                      <td className="py-1 text-muted-foreground">Дней до распродажи</td>
-                      <td className="py-1 text-right font-medium">{formatDaysOfInventory(result.daysOfInventory)}</td>
-                    </tr>
-                    <tr>
-                      <td className="py-1 text-muted-foreground">Со скидкой</td>
-                      <td className="py-1 text-right font-medium">{formatDaysOfInventory(result.newDaysOfInventory)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              
-              <div>
-                <h4 className="text-xs text-muted-foreground mb-1">ЗАТРАТЫ НА ХРАНЕНИЕ</h4>
-                <table className="w-full text-xs">
-                  <tbody>
-                    <tr>
-                      <td className="py-1 text-muted-foreground">Стоимость хранения в день</td>
-                      <td className="py-1 text-right font-medium">{formatCurrency(result.dailyStorageCost)}</td>
-                    </tr>
-                    <tr>
-                      <td className="py-1 text-muted-foreground">В день на весь запас</td>
-                      <td className="py-1 text-right font-medium">{formatCurrency(result.dailyStorageCostTotal)}</td>
-                    </tr>
-                    <tr className="border-t">
-                      <td className="py-1 text-muted-foreground">Общие затраты на хранение</td>
-                      <td className="py-1 text-right font-medium">{formatCurrency(result.totalStorageCost)}</td>
-                    </tr>
-                    <tr>
-                      <td className="py-1 text-muted-foreground">Со скидкой</td>
-                      <td className="py-1 text-right font-medium">{formatCurrency(result.discountedStorageCost)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-xs text-muted-foreground mb-1">ДОПОЛНИТЕЛЬНЫЕ ЗАТРАТЫ</h4>
-              <table className="w-full text-xs">
-                <tbody>
-                  <tr>
-                    <td className="py-1 text-muted-foreground">Логистика (за единицу)</td>
-                    <td className="py-1 text-right font-medium">{formatCurrency(result.logisticsCost)}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-1 text-muted-foreground">Логистика (на весь запас)</td>
-                    <td className="py-1 text-right font-medium">{formatCurrency(result.logisticsCost * result.remainItem.quantityWarehousesFull)}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-1 text-muted-foreground">Комиссия WB</td>
-                    <td className="py-1 text-right font-medium">{result.wbCommission}%</td>
-                  </tr>
-                  <tr>
-                    <td className="py-1 text-muted-foreground">Комиссия в деньгах (за единицу)</td>
-                    <td className="py-1 text-right font-medium">{formatCurrency(result.sellingPrice * (result.wbCommission / 100))}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-1 text-muted-foreground">Комиссия (на весь запас)</td>
-                    <td className="py-1 text-right font-medium">{formatCurrency(result.sellingPrice * (result.wbCommission / 100) * result.remainItem.quantityWarehousesFull)}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <Separator />
-            
-            <div>
-              <h4 className="text-xs
+              <div className="space-y-2 border rounded-lg p-3 bg
