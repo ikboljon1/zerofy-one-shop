@@ -1,11 +1,11 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Package, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import React from "react";
 
 interface Product {
   nmID: number;
@@ -223,36 +223,41 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   };
 
   const updateProductData = (productId: number, field: keyof Product, value: any) => {
-    setProducts(prevProducts => 
-      prevProducts.map(product => 
+    // Обновляем продукт в состоянии React
+    setProducts(prevProducts => {
+      const updatedProducts = prevProducts.map(product => 
         product.nmID === productId 
           ? { ...product, [field]: value } 
           : product
-      )
-    );
-    
-    const storedProducts = JSON.parse(localStorage.getItem(`products_${selectedStore?.id}`) || '[]');
-    const updatedStoredProducts = storedProducts.map((product: Product) => 
-      product.nmID === productId 
-        ? { ...product, [field]: value }
-        : product
-    );
-    localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedStoredProducts));
+      );
+      
+      // Сохраняем обновленные данные в localStorage
+      if (selectedStore) {
+        const storageKey = `products_${selectedStore.id}`;
+        localStorage.setItem(storageKey, JSON.stringify(updatedProducts));
+      }
+      
+      return updatedProducts;
+    });
   };
 
   const updateCostPrice = (productId: number, costPrice: number) => {
+    console.log(`Updating cost price for product ${productId} to ${costPrice}`);
     updateProductData(productId, 'costPrice', costPrice);
   };
 
   const updateSellingPrice = (productId: number, price: number) => {
+    console.log(`Updating selling price for product ${productId} to ${price}`);
     updateProductData(productId, 'price', price);
   };
 
   const updateSalesPerDay = (productId: number, salesPerDay: number) => {
+    console.log(`Updating sales per day for product ${productId} to ${salesPerDay}`);
     updateProductData(productId, 'salesPerDay', salesPerDay);
   };
 
   const updateStoragePerDay = (productId: number, storagePerDay: number) => {
+    console.log(`Updating storage per day for product ${productId} to ${storagePerDay}`);
     updateProductData(productId, 'storagePerDay', storagePerDay);
   };
 
@@ -293,7 +298,16 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       const data = await response.json();
       console.log("Products data:", data);
       
-      const storedProducts = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
+      // Загружаем существующие данные из localStorage, чтобы сохранить пользовательские значения
+      const storedProducts: Product[] = selectedStore.id 
+        ? JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]") 
+        : [];
+      
+      // Создаем Map для быстрого доступа к сохраненным данным по ID
+      const storedProductsMap = new Map();
+      storedProducts.forEach(product => {
+        storedProductsMap.set(product.nmID, product);
+      });
 
       const nmIds = data.cards.map((product: Product) => product.nmID);
       const prices = await fetchProductPrices(nmIds);
@@ -319,8 +333,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       }
 
       const storageData = await storageResponse.json();
-      console.log("Storage data:", storageData);
-
+      
       const expensesMap = new Map();
       const salesMap = new Map();
       
@@ -328,13 +341,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       
       storageData.forEach((item: any) => {
         const nmId = item.nm_id;
-        console.log('Processing item:', {
-          nmId,
-          doc_type_name: item.doc_type_name,
-          retail_price: item.retail_price,
-          quantity: item.quantity
-        });
-
+        
         if (!expensesMap.has(nmId)) {
           expensesMap.set(nmId, {
             logistics: 0,
@@ -357,11 +364,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
         if (item.doc_type_name === "Продажа") {
           expenses.retail_price += item.retail_price || 0;
-          console.log('Adding sale:', {
-            nmId,
-            retail_price: item.retail_price,
-            current_total: expenses.retail_price
-          });
           
           if (!salesMap.has(nmId)) {
             salesMap.set(nmId, 0);
@@ -370,11 +372,9 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         }
       });
 
-      console.log('Final expenses map:', Object.fromEntries(expensesMap));
-      console.log('Final sales map:', Object.fromEntries(salesMap));
-
       const quantities = await fetchProductQuantities(selectedStore.apiKey, startDate, endDate);
 
+      // Обновляем данные с сохранением пользовательских настроек
       const updatedProducts = data.cards.map((product: Product) => {
         const currentPrice = prices[product.nmID];
         const quantity = quantities[product.nmID] || 0;
@@ -388,14 +388,16 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           retail_price: 0
         };
 
-        const storedProduct = storedProducts.find((p: Product) => p.nmID === product.nmID);
+        // Получаем сохраненные данные для этого продукта
+        const storedProduct = storedProductsMap.get(product.nmID);
         
+        // Возвращаем обновленный продукт с сохранением пользовательских настроек
         return {
           ...product,
-          costPrice: storedProduct?.costPrice || 0,
-          price: storedProduct?.price || currentPrice || 0,
-          salesPerDay: storedProduct?.salesPerDay || 0,
-          storagePerDay: storedProduct?.storagePerDay || 0,
+          costPrice: storedProduct?.costPrice ?? 0, // Используем nullish coalescing для сохранения нулевых значений
+          price: storedProduct?.price ?? currentPrice ?? 0,
+          salesPerDay: storedProduct?.salesPerDay ?? 0,
+          storagePerDay: storedProduct?.storagePerDay ?? 0,
           discountedPrice: currentPrice || 0,
           quantity: quantity,
           expenses: productExpenses
@@ -403,7 +405,11 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       });
 
       setProducts(updatedProducts);
-      localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(updatedProducts));
+      
+      // Сохраняем полностью обновленный список в localStorage
+      if (selectedStore.id) {
+        localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(updatedProducts));
+      }
 
       toast({
         title: "Успешно",
@@ -421,11 +427,19 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     }
   };
 
-  React.useEffect(() => {
+  // Загружаем данные из localStorage при выборе магазина
+  useEffect(() => {
     if (selectedStore) {
-      const storedProducts = localStorage.getItem(`products_${selectedStore.id}`);
-      if (storedProducts) {
-        setProducts(JSON.parse(storedProducts));
+      const storedProductsData = localStorage.getItem(`products_${selectedStore.id}`);
+      if (storedProductsData) {
+        try {
+          const parsedProducts = JSON.parse(storedProductsData);
+          setProducts(parsedProducts);
+          console.log(`Loaded ${parsedProducts.length} products from localStorage for store ${selectedStore.id}`);
+        } catch (error) {
+          console.error("Error parsing products from localStorage:", error);
+          setProducts([]);
+        }
       } else {
         setProducts([]);
       }
@@ -464,7 +478,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           </CardContent>
         </Card>
       ) : (
-        <div className={`grid gap-4 ${isMobile ? 'grid-cols-2' : 'md:grid-cols-3'}`}>
+        <div className={`grid gap-4 ${isMobile ? 'grid-cols-1 sm:grid-cols-2' : 'md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'}`}>
           {products.map((product) => {
             const profitDetails = calculateNetProfit(product);
             
@@ -520,7 +534,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                         type="number"
                         value={product.costPrice || 0}
                         onChange={(e) => updateCostPrice(product.nmID, parseFloat(e.target.value))}
-                        className="h-8 w-24 text-right"
+                        className="h-8 text-right"
                         placeholder="Введите себестоимость"
                       />
                     </div>
@@ -533,7 +547,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                         type="number"
                         value={product.price || 0}
                         onChange={(e) => updateSellingPrice(product.nmID, parseFloat(e.target.value))}
-                        className="h-8 w-24 text-right"
+                        className="h-8 text-right"
                         placeholder="Введите цену продажи"
                       />
                     </div>
@@ -546,7 +560,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                         type="number"
                         value={product.salesPerDay || 0}
                         onChange={(e) => updateSalesPerDay(product.nmID, parseFloat(e.target.value))}
-                        className="h-8 w-24 text-right"
+                        className="h-8 text-right"
                         step="0.1"
                         placeholder="Введите продажи за 30 дней"
                       />
@@ -560,7 +574,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                         type="number"
                         value={product.storagePerDay || 0}
                         onChange={(e) => updateStoragePerDay(product.nmID, parseFloat(e.target.value))}
-                        className="h-8 w-24 text-right"
+                        className="h-8 text-right"
                         placeholder="Введите хранение за 30 дней"
                       />
                     </div>
@@ -571,23 +585,23 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Общая логистика:</span>
-                        <span>{product.expenses.logistics.toFixed(2)} ₽</span>
+                        <span>{product.expenses?.logistics.toFixed(2) || "0.00"} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Общее хранение:</span>
-                        <span>{product.expenses.storage.toFixed(2)} ₽</span>
+                        <span>{product.expenses?.storage.toFixed(2) || "0.00"} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Общие штрафы:</span>
-                        <span>{product.expenses.penalties.toFixed(2)} ₽</span>
+                        <span>{product.expenses?.penalties.toFixed(2) || "0.00"} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Общая приемка:</span>
-                        <span>{product.expenses.acceptance.toFixed(2)} ₽</span>
+                        <span>{product.expenses?.acceptance.toFixed(2) || "0.00"} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Прочие удержания:</span>
-                        <span>{(product.expenses.deductions || 0).toFixed(2)} ₽</span>
+                        <span>{(product.expenses?.deductions || 0).toFixed(2)} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs font-medium border-t pt-2">
                         <span className="text-muted-foreground">Общие расходы:</span>
@@ -618,4 +632,3 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 };
 
 export default ProductsList;
-
