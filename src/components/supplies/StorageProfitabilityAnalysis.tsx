@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -513,82 +512,69 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     });
   };
 
-  const updateCostPrice = (nmId: number, value: number) => {
+  const updateCostPrice = (nmId: number, value: string) => {
     setCostPrices(prev => ({
       ...prev,
-      [nmId]: value
+      [nmId]: value === "" ? null : Number(value)
     }));
   };
 
-  const updateSellingPrice = (nmId: number, value: number) => {
+  const updateSellingPrice = (nmId: number, value: string) => {
     setSellingPrices(prev => ({
       ...prev,
-      [nmId]: value
+      [nmId]: value === "" ? null : Number(value)
     }));
   };
 
-  const updateDailySales = (nmId: number, value: number) => {
+  const updateDailySales = (nmId: number, value: string) => {
     setDailySalesRates(prev => ({
       ...prev,
-      [nmId]: value
+      [nmId]: value === "" ? null : Number(value)
     }));
   };
 
-  const updateStorageCost = (nmId: number, value: number) => {
+  const updateStorageCost = (nmId: number, value: string) => {
     setStorageCostRates(prev => ({
       ...prev,
-      [nmId]: value
+      [nmId]: value === "" ? null : Number(value)
     }));
   };
 
-  const updateLogisticsCost = (nmId: number, value: number) => {
+  const updateLogisticsCost = (nmId: number, value: string) => {
     setLogisticsCosts(prev => ({
       ...prev,
-      [nmId]: value
+      [nmId]: value === "" ? null : Number(value)
     }));
   };
 
-  const updateWbCommission = (nmId: number, value: number) => {
+  const updateWbCommission = (nmId: number, value: string) => {
     setWbCommissions(prev => ({
       ...prev,
-      [nmId]: value
+      [nmId]: value === "" ? null : Number(value)
     }));
   };
 
-  // Имитация получения данных о продажах и хранении с API Wildberries
   const fetchSalesAndStorageData = async (startDate: Date, endDate: Date) => {
     try {
       setIsLoading(true);
       
-      // В реальном приложении здесь будет API запрос к Wildberries с использованием API ключа
-      // выбранного магазина. Для демонстрации создадим имитацию данных.
-      
-      // Имитация задержки как при реальном API запросе
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Имитация данных о продажах
       const mockSalesData: Record<number, number> = {};
       const mockSellingPrices: Record<number, number> = {};
       const mockStorageCosts: Record<number, number> = {};
       
       warehouseItems.forEach(item => {
-        // Среднее количество продаж в день (случайное значение для демонстрации)
         mockSalesData[item.nmId] = Math.max(0.1, Number((Math.random() * 5).toFixed(2)));
-        
-        // Цена продажи (если цена уже задана, используем её с небольшой корректировкой)
         const existingPrice = sellingPrices[item.nmId] || item.price || 0;
         mockSellingPrices[item.nmId] = Math.max(100, existingPrice * (0.9 + Math.random() * 0.2));
-        
-        // Стоимость хранения
         mockStorageCosts[item.nmId] = Math.max(1, Math.random() * 10);
       });
       
-      // Обновление данных в состоянии
       setDailySalesRates(mockSalesData);
       setSellingPrices(mockSellingPrices);
       setStorageCostRates(mockStorageCosts);
       
-      // Закрытие диалога и сохранение данных
       setSalesDataDialogOpen(false);
       
       toast({
@@ -1126,8 +1112,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                         <div className="space-y-2">
                           <Input
                             type="number" 
-                            value={sellingPrices[result.remainItem.nmId] || 0}
-                            onChange={(e) => updateSellingPrice(result.remainItem.nmId, parseFloat(e.target.value))}
+                            value={sellingPrices[result.remainItem.nmId]?.toString() || ""}
+                            onChange={(e) => updateSellingPrice(result.remainItem.nmId, e.target.value)}
                             className="h-8 w-24 text-right"
                           />
                           {result.action !== 'keep' && (
@@ -1141,16 +1127,16 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                       <TableCell className="text-right">
                         <Input
                           type="number" 
-                          value={costPrices[result.remainItem.nmId] || 0}
-                          onChange={(e) => updateCostPrice(result.remainItem.nmId, parseFloat(e.target.value))}
+                          value={costPrices[result.remainItem.nmId]?.toString() || ""}
+                          onChange={(e) => updateCostPrice(result.remainItem.nmId, e.target.value)}
                           className="h-8 w-24 text-right"
                         />
                       </TableCell>
                       <TableCell className="text-right">
                         <Input
                           type="number" 
-                          value={wbCommissions[result.remainItem.nmId] || 0}
-                          onChange={(e) => updateWbCommission(result.remainItem.nmId, parseFloat(e.target.value))}
+                          value={wbCommissions[result.remainItem.nmId]?.toString() || ""}
+                          onChange={(e) => updateWbCommission(result.remainItem.nmId, e.target.value)}
                           className="h-8 w-20 text-right"
                         />
                         <div className="text-xs flex justify-end items-center mt-1">
@@ -1160,8 +1146,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                       <TableCell className="text-right">
                         <Input
                           type="number" 
-                          value={dailySalesRates[result.remainItem.nmId] || 0}
-                          onChange={(e) => updateDailySales(result.remainItem.nmId, parseFloat(e.target.value))}
+                          value={dailySalesRates[result.remainItem.nmId]?.toString() || ""}
+                          onChange={(e) => updateDailySales(result.remainItem.nmId, e.target.value)}
                           className="h-8 w-24 text-right"
                           step="0.1"
                         />
@@ -1169,8 +1155,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                       <TableCell className="text-right">
                         <Input
                           type="number" 
-                          value={storageCostRates[result.remainItem.nmId] || 0}
-                          onChange={(e) => updateStorageCost(result.remainItem.nmId, parseFloat(e.target.value))}
+                          value={storageCostRates[result.remainItem.nmId]?.toString() || ""}
+                          onChange={(e) => updateStorageCost(result.remainItem.nmId, e.target.value)}
                           className="h-8 w-24 text-right"
                         />
                       </TableCell>
