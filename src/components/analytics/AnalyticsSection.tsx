@@ -193,8 +193,14 @@ const AnalyticsSection = () => {
     console.log('Cost price map:', costPriceMap);
     console.log('Product sales to calculate cost price:', productSales);
     
+    // Log all available fields in the first product sale to identify what fields we can use for matching
+    if (productSales.length > 0) {
+      console.log('Available fields in product sales:', Object.keys(productSales[0]));
+    }
+    
     let hasMappedAnyProduct = false;
     
+    // First try to match by nmId if available
     productSales.forEach(sale => {
       if (sale.nmId && costPriceMap[sale.nmId.toString()]) {
         const quantity = sale.quantity || 1;
@@ -211,29 +217,53 @@ const AnalyticsSection = () => {
     if (!hasMappedAnyProduct && productSales.length > 0) {
       console.log('Trying to match products by name...');
       
-      const topProducts = [...(statsData.topProfitableProducts || []), ...(statsData.topUnprofitableProducts || [])];
-      console.log('Available top products with nmId:', topProducts);
-      
-      if (topProducts?.length > 0) {
-        const nameToNmIdMap: Record<string, string> = {};
-        topProducts.forEach(product => {
-          if (product.name && product.nmId) {
-            nameToNmIdMap[product.name.toLowerCase()] = product.nmId.toString();
-          }
-        });
-        
-        console.log('Name to NmId map:', nameToNmIdMap);
-        
+      // Try matching by supplierArticle if available
+      const matchBySupplierArticle = productSales.some(sale => sale.supplierArticle);
+      if (matchBySupplierArticle) {
+        console.log('Attempting to match by supplierArticle');
         productSales.forEach(sale => {
-          const name = sale.subject_name?.toLowerCase() || '';
-          for (const [productName, productNmId] of Object.entries(nameToNmIdMap)) {
-            if ((name && productName.includes(name)) || (name && name.includes(productName))) {
-              if (costPriceMap[productNmId]) {
+          if (sale.supplierArticle) {
+            for (const [nmId, costPrice] of Object.entries(costPriceMap)) {
+              // Some products have nmId in the supplierArticle field
+              if (sale.supplierArticle.includes(nmId)) {
                 const quantity = sale.quantity || 1;
-                const costPrice = costPriceMap[productNmId] || 0;
                 const itemCost = quantity * costPrice;
                 totalCostPrice += itemCost;
-                console.log(`Matched product ${sale.subject_name} with ${productName} (${productNmId}): quantity=${quantity}, costPrice=${costPrice}, itemCost=${itemCost}`);
+                console.log(`Matched product by supplierArticle ${sale.supplierArticle} with nmId ${nmId}: quantity=${quantity}, costPrice=${costPrice}, itemCost=${itemCost}`);
+                hasMappedAnyProduct = true;
+                break;
+              }
+            }
+          }
+        });
+      }
+      
+      // If still no matches, try matching by subject_name or name
+      if (!hasMappedAnyProduct) {
+        console.log('Attempting to match by subject_name or name');
+        
+        // Try to find any other identifying fields in the product sales
+        const allFields = new Set<string>();
+        productSales.forEach(sale => {
+          Object.keys(sale).forEach(key => allFields.add(key));
+        });
+        console.log('All available fields across all product sales:', Array.from(allFields));
+        
+        // Try to match by subject_name
+        productSales.forEach(sale => {
+          const name = sale.subject_name?.toLowerCase() || sale.name?.toLowerCase() || '';
+          if (name) {
+            // Extract potential product identifiers from the name
+            const parts = name.split(/[-\s]/); // Split by dash or space
+            
+            for (const [nmId, costPrice] of Object.entries(costPriceMap)) {
+              // Check if any part of the name contains the nmId
+              if (parts.some(part => part === nmId) || name.includes(nmId)) {
+                const quantity = sale.quantity || 1;
+                const itemCost = quantity * costPrice;
+                totalCostPrice += itemCost;
+                console.log(`Matched product by name parts ${name} with nmId ${nmId}: quantity=${quantity}, costPrice=${costPrice}, itemCost=${itemCost}`);
+                hasMappedAnyProduct = true;
                 break;
               }
             }
@@ -247,6 +277,7 @@ const AnalyticsSection = () => {
   };
 
   const fetchData = async () => {
+    
     try {
       setIsLoading(true);
       const selectedStore = getSelectedStore();

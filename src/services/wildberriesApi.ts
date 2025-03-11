@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import { WildberriesOrder, WildberriesSale } from "@/types/store";
 
@@ -27,6 +26,8 @@ export interface WildberriesResponse {
   productSales: Array<{
     subject_name: string;
     quantity: number;
+    nmId?: number | string;
+    supplierArticle?: string;
   }>;
   productReturns: Array<{
     name: string;
@@ -54,6 +55,7 @@ export interface WildberriesResponse {
     margin?: number;
     returnCount?: number;
     category?: string;
+    nmId?: string | number;
   }>;
   topUnprofitableProducts?: Array<{
     name: string;
@@ -64,6 +66,7 @@ export interface WildberriesResponse {
     margin?: number;
     returnCount?: number;
     category?: string;
+    nmId?: string | number;
   }>;
   orders?: WildberriesOrder[];
   sales?: WildberriesSale[];
@@ -395,7 +398,8 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     quantitySold: item.count || 0,
     margin: Math.round((item.profit / item.sales) * 100) || 0,
     returnCount: item.returnCount || 0,
-    category: "Одежда"
+    category: "Одежда",
+    nmId: item.nmId
   }));
 
   const sortedByLoss = [...productProfitabilityArray].sort((a, b) => a.profit - b.profit);
@@ -407,7 +411,8 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     quantitySold: item.count || 0,
     margin: Math.round((item.profit / item.sales) * 100) || 0,
     returnCount: item.returnCount || 0,
-    category: "Одежда"
+    category: "Одежда",
+    nmId: item.nmId
   }));
 
   console.log(`Calculated metrics: Total sales: ${totalSales}, Total for pay: ${totalForPay}, Logistics: ${totalDeliveryRub}, Storage: ${totalStorageFee}, Returns: ${totalReturns}, Total to pay: ${totalToPay}`);
@@ -516,7 +521,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       return getDemoData();
     }
     
-    // 5. Рассчитываем метрики на основе полученных данных (в соответствии с Python-скриптом)
+    // 5. Рассчитываем метрики на основе получ��нных данных (в соответствии с Python-скриптом)
     console.log("Calculating metrics from report data...");
     const result = calculateMetrics(reportData, paidAcceptanceData);
     
@@ -608,17 +613,17 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
     const response: WildberriesResponse = {
       currentPeriod: {
         sales: metrics.total_sales,
-        transferred: metrics.total_for_pay, // По логике Python-скрипта используем total_for_pay как transferred
+        transferred: metrics.total_for_pay,
         expenses: {
           total: metrics.total_delivery_rub + metrics.total_storage_fee + metrics.total_penalty + metrics.total_acceptance,
           logistics: metrics.total_delivery_rub,
           storage: metrics.total_storage_fee,
           penalties: metrics.total_penalty,
           acceptance: metrics.total_acceptance,
-          advertising: 0,  // Рекламные расходы в скрипте не учитываются
+          advertising: 0,
           deductions: metrics.total_deduction
         },
-        netProfit: metrics.total_to_pay, // По логике Python-скрипта используем total_to_pay как netProfit
+        netProfit: metrics.total_to_pay,
         acceptance: metrics.total_acceptance
       },
       dailySales,
@@ -692,11 +697,11 @@ const getDemoData = (): WildberriesResponse => {
       }
     ],
     productSales: [
-      { subject_name: "Костюмы", quantity: 48 },
-      { subject_name: "Платья", quantity: 6 },
-      { subject_name: "Свитшоты", quantity: 4 },
-      { subject_name: "Лонгсливы", quantity: 3 },
-      { subject_name: "Костюмы спортивные", quantity: 1 }
+      { subject_name: "Костюмы", quantity: 48, nmId: "12345", supplierArticle: "костюм-12345" },
+      { subject_name: "Платья", quantity: 6, nmId: "67890", supplierArticle: "платье-67890" },
+      { subject_name: "Свитшоты", quantity: 4, nmId: "11121", supplierArticle: "свитшот-11121" },
+      { subject_name: "Лонгсливы", quantity: 3, nmId: "31415", supplierArticle: "лонгслив-31415" },
+      { subject_name: "Костюмы спортивные", quantity: 1, nmId: "16180", supplierArticle: "костюм-спорт-16180" }
     ],
     productReturns: [
       { name: "Костюм женский спортивный", value: 12000, count: 3 },
@@ -727,7 +732,8 @@ const getDemoData = (): WildberriesResponse => {
         quantitySold: 65,
         margin: 42,
         returnCount: 3,
-        category: "Женская одежда"
+        category: "Женская одежда",
+        nmId: "25251346"
       },
       { 
         name: "Платье летнее", 
@@ -737,7 +743,8 @@ const getDemoData = (): WildberriesResponse => {
         quantitySold: 58,
         margin: 45,
         returnCount: 2,
-        category: "Женская одежда" 
+        category: "Женская одежда",
+        nmId: "22271973"
       },
       { 
         name: "Джинсы классические", 
@@ -747,7 +754,8 @@ const getDemoData = (): WildberriesResponse => {
         quantitySold: 42,
         margin: 35,
         returnCount: 1,
-        category: "Мужская одежда" 
+        category: "Мужская одежда",
+        nmId: "13733711"
       }
     ],
     topUnprofitableProducts: [
@@ -759,7 +767,8 @@ const getDemoData = (): WildberriesResponse => {
         quantitySold: 4,
         margin: 8,
         returnCount: 12,
-        category: "Аксессуары" 
+        category: "Аксессуары",
+        nmId: "11081822"
       },
       { 
         name: "Рубашка офисная", 
@@ -769,7 +778,8 @@ const getDemoData = (): WildberriesResponse => {
         quantitySold: 3,
         margin: 5,
         returnCount: 8,
-        category: "Мужская одежда" 
+        category: "Мужская одежда",
+        nmId: "9080277"
       },
       { 
         name: "Перчатки кожаные", 
@@ -779,7 +789,8 @@ const getDemoData = (): WildberriesResponse => {
         quantitySold: 2,
         margin: 12,
         returnCount: 10,
-        category: "Аксессуары" 
+        category: "Аксессуары",
+        nmId: "10328291"
       }
     ],
     orders: [],
