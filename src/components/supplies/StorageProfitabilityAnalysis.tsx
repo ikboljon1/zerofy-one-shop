@@ -751,4 +751,3 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
             </div>
           </div>
         </div>
-      </div>
