@@ -1,62 +1,84 @@
 import axios from 'axios';
+import api, { setApiKey } from './api';
 import { SupplyItem, SupplyOptionsResponse, Warehouse, WarehouseCoefficient, PaidStorageItem } from '@/types/supplies';
 
-const API_BASE_URL = 'https://seller-analytics-api.wildberries.ru/api/v1';
+const API_BASE_URL = 'https://supplies-api.wildberries.ru/api/v1';
 
+/**
+ * Fetch all warehouses from Wildberries API
+ */
 export const fetchWarehouses = async (apiKey: string): Promise<Warehouse[]> => {
   try {
-    const response = await axios.get<Warehouse[]>(`${API_BASE_URL}/warehouses`, {
-      headers: {
-        Authorization: apiKey,
-      },
-    });
+    setApiKey(apiKey);
+    const response = await api.get<Warehouse[]>(`${API_BASE_URL}/warehouses`);
     return response.data;
-  } catch (error) {
-    console.error('Ошибка при запросе к API:', error);
-    throw error;
+  } catch (error: any) {
+    console.error('Ошибка при запросе складов:', error);
+    throw new Error(error.detail || 'Не удалось получить список складов');
   }
 };
 
-export const fetchAcceptanceCoefficients = async (apiKey: string): Promise<WarehouseCoefficient[]> => {
+/**
+ * Fetch acceptance coefficients for warehouses
+ * @param apiKey API key for authorization
+ * @param warehouseIDs Optional array of warehouse IDs to filter by
+ */
+export const fetchAcceptanceCoefficients = async (
+  apiKey: string, 
+  warehouseIDs?: number[]
+): Promise<WarehouseCoefficient[]> => {
   try {
-    const response = await axios.get<WarehouseCoefficient[]>(`${API_BASE_URL}/acceptance_coefficients`, {
-      headers: {
-        Authorization: apiKey,
-      },
+    // Prepare query parameters
+    const params: Record<string, string> = {};
+    if (warehouseIDs && warehouseIDs.length > 0) {
+      params.warehouseIDs = warehouseIDs.join(',');
+    }
+    
+    setApiKey(apiKey);
+    const response = await api.get<WarehouseCoefficient[]>(`${API_BASE_URL}/acceptance/coefficients`, {
+      params
     });
+    
     return response.data;
-  } catch (error) {
-    console.error('Ошибка при запросе к API:', error);
-    throw error;
+  } catch (error: any) {
+    console.error('Ошибка при запросе коэффициентов приёмки:', error);
+    throw new Error(error.detail || 'Не удалось получить коэффициенты приёмки');
   }
 };
 
+/**
+ * Fetch acceptance options for specific items
+ * @param apiKey API key for authorization
+ * @param items Array of items with barcodes and quantities
+ * @param warehouseID Optional warehouse ID to filter by
+ */
 export const fetchAcceptanceOptions = async (
   apiKey: string,
   items: SupplyItem[],
-  warehouseID: number
+  warehouseID?: number
 ): Promise<SupplyOptionsResponse> => {
   try {
-    const response = await axios.post<SupplyOptionsResponse>(
-      `${API_BASE_URL}/acceptance_options`,
-      {
-        items,
-        warehouseID,
-      },
-      {
-        headers: {
-          Authorization: apiKey,
-        },
-      }
+    // Prepare query parameters
+    const params: Record<string, string> = {};
+    if (warehouseID) {
+      params.warehouseID = warehouseID.toString();
+    }
+    
+    setApiKey(apiKey);
+    const response = await api.post<SupplyOptionsResponse>(
+      `${API_BASE_URL}/acceptance/options`,
+      items,
+      { params }
     );
+    
     return response.data;
-  } catch (error) {
-    console.error('Ошибка при запросе к API:', error);
-    throw error;
+  } catch (error: any) {
+    console.error('Ошибка при запросе вариантов приёмки:', error);
+    throw new Error(error.detail || 'Не удалось получить варианты приёмки для товаров');
   }
 };
 
-// New functions for paid storage API
+// Paid storage report API functions
 
 /**
  * Creates a paid storage report task
@@ -69,20 +91,15 @@ export const createPaidStorageReportTask = async (
   try {
     const url = `${API_BASE_URL}/paid_storage`;
     
-    const response = await axios.get(url, {
-      headers: {
-        Authorization: apiKey
-      },
-      params: {
-        dateFrom,
-        dateTo
-      }
+    setApiKey(apiKey);
+    const response = await api.get(url, {
+      params: { dateFrom, dateTo }
     });
     
     return response.data.data.taskId;
   } catch (error: any) {
     console.error('Ошибка при создании отчета о платном хранении:', error);
-    throw new Error(`Ошибка при создании отчета: ${error.response?.status || 'Неизвестная ошибка'}`);
+    throw new Error(error.detail || 'Не удалось создать отчет о платном хранении');
   }
 };
 
@@ -96,16 +113,13 @@ export const checkPaidStorageReportStatus = async (
   try {
     const url = `${API_BASE_URL}/paid_storage/tasks/${taskId}/status`;
     
-    const response = await axios.get(url, {
-      headers: {
-        Authorization: apiKey
-      }
-    });
+    setApiKey(apiKey);
+    const response = await api.get(url);
     
     return response.data.data.status;
   } catch (error: any) {
     console.error('Ошибка при проверке статуса отчета:', error);
-    throw new Error(`Ошибка при проверке статуса: ${error.response?.status || 'Неизвестная ошибка'}`);
+    throw new Error(error.detail || 'Не удалось проверить статус отчета');
   }
 };
 
@@ -119,16 +133,13 @@ export const downloadPaidStorageReport = async (
   try {
     const url = `${API_BASE_URL}/paid_storage/tasks/${taskId}/download`;
     
-    const response = await axios.get(url, {
-      headers: {
-        Authorization: apiKey
-      }
-    });
+    setApiKey(apiKey);
+    const response = await api.get(url);
     
     return response.data;
   } catch (error: any) {
     console.error('Ошибка при скачивании отчета:', error);
-    throw new Error(`Ошибка при скачивании отчета: ${error.response?.status || 'Неизвестная ошибка'}`);
+    throw new Error(error.detail || 'Не удалось скачать отчет о платном хранении');
   }
 };
 
