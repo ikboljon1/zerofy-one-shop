@@ -39,6 +39,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { ensureStoreSelectionPersistence } from '@/utils/storeUtils';
 import { Store as StoreType } from '@/types/store';
+import { WarehouseSearchSelect } from '@/components/supplies';
 
 const Warehouses: React.FC = () => {
   const [activeTab, setActiveTab] = useState('inventory');
@@ -290,7 +291,7 @@ const Warehouses: React.FC = () => {
                   ) : (
                     <RefreshCw className="h-4 w-4" />
                   )}
-                  Обновить данные
+                  Обн��вить данные
                 </Button>
               </div>
 
@@ -352,6 +353,13 @@ const Warehouses: React.FC = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="space-y-6">
                   <SupplyForm />
+                  {wbWarehouses.length > 0 && (
+                    <WarehouseSearchSelect
+                      warehouses={wbWarehouses}
+                      selectedWarehouseId={selectedWarehouseId}
+                      onWarehouseSelect={handleWarehouseSelect}
+                    />
+                  )}
                 </div>
                 
                 <div className="lg:col-span-2">
@@ -362,6 +370,7 @@ const Warehouses: React.FC = () => {
                       coefficients={coefficients} 
                       selectedWarehouseId={selectedWarehouseId}
                       title="Коэффициенты приемки по дням"
+                      warehouses={wbWarehouses}
                     />
                   )}
                 </div>
