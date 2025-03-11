@@ -109,7 +109,7 @@ export const getCostPriceByNmId = async (nmId: number, storeId: string): Promise
   try {
     // Пробуем получить из локального хранилища
     const products = JSON.parse(localStorage.getItem(`products_${storeId}`) || "[]");
-    const product = products.find((p: any) => p.nmId === nmId);
+    const product = products.find((p: any) => p.nmId === nmId || p.nmID === nmId);
     
     if (product && product.costPrice) {
       console.log(`Found cost price for nmId ${nmId}: ${product.costPrice}`);
@@ -136,7 +136,7 @@ export const getCostPriceByNmId = async (nmId: number, storeId: string): Promise
   }
 };
 
-// Добавим новую функцию для расчета общей себестоимости проданных товаров
+// Функция для расчета общей себестоимости проданных товаров
 export const calculateTotalCostPrice = async (sales: any[], storeId: string): Promise<number> => {
   if (!sales || !Array.isArray(sales) || sales.length === 0) {
     console.log('No sales data to calculate cost price');
@@ -144,15 +144,17 @@ export const calculateTotalCostPrice = async (sales: any[], storeId: string): Pr
   }
   
   console.log(`Calculating total cost price for ${sales.length} sales items`);
+  console.log('Sales data sample:', sales.slice(0, 2));
   
   let totalCostPrice = 0;
   let processedItems = 0;
   let missingNmIdItems = 0;
   
   for (const sale of sales) {
-    const nmId = sale.nmId || sale.nm_id;
+    const nmId = sale.nmId || sale.nm_id || sale.product?.nmId || sale.product?.nm_id;
     if (!nmId) {
       missingNmIdItems++;
+      console.warn('Missing nmId in sale item:', sale);
       continue;
     }
     
@@ -164,6 +166,8 @@ export const calculateTotalCostPrice = async (sales: any[], storeId: string): Pr
       totalCostPrice += itemCostPrice;
       processedItems++;
       console.log(`Added cost for nmId ${nmId}: ${costPrice} x ${quantity} = ${itemCostPrice}`);
+    } else {
+      console.warn(`Zero cost price for nmId ${nmId}`);
     }
   }
   
