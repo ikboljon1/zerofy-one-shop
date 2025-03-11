@@ -300,153 +300,84 @@ export const getProductProfitabilityData = (storeId: string) => {
   };
 };
 
-export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
-  if (forceRefresh) {
-    console.log('Forced refresh requested, returning default structure');
-    return {
-      data: null,
-      penalties: [],
-      returns: [],
-      deductions: [],
-      deductionsTimeline: Array.from({ length: 7 }, (_, i) => ({
-        date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        logistic: 0,
-        storage: 0, 
-        penalties: 0,
-        acceptance: 0,
-        advertising: 0,
-        deductions: 0
-      })),
-      productAdvertisingData: [],
-      advertisingBreakdown: { search: 0 },
-      timestamp: Date.now()
-    };
-  }
-  
+export const getAnalyticsData = (storeId: string): any => {
   try {
-    try {
-      const key = `marketplace_analytics_${storeId}`;
-      const storedData = localStorage.getItem(key);
-      
-      if (storedData) {
-        let parsedData = JSON.parse(storedData);
-        
-        if (!parsedData.timestamp) {
-          parsedData.timestamp = Date.now();
-        }
-        
-        if (!parsedData.deductionsTimeline || !Array.isArray(parsedData.deductionsTimeline) || parsedData.deductionsTimeline.length === 0) {
-          console.log("Creating default deductionsTimeline data");
-          parsedData.deductionsTimeline = Array.from({ length: 7 }, (_, i) => ({
-            date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            logistic: 0,
-            storage: 0, 
-            penalties: 0,
-            acceptance: 0,
-            advertising: 0,
-            deductions: 0
-          }));
-        } else {
-          parsedData.deductionsTimeline = parsedData.deductionsTimeline.map((item: any) => ({
-            date: item.date || new Date().toISOString().split('T')[0],
-            logistic: item.logistic || 0,
-            storage: item.storage || 0,
-            penalties: item.penalties || 0,
-            acceptance: item.acceptance || 0,
-            advertising: item.advertising || 0,
-            deductions: item.deductions || 0
-          }));
-        }
-        
-        if (!parsedData.penalties || !Array.isArray(parsedData.penalties)) {
-          parsedData.penalties = [];
-        }
-        
-        if (!parsedData.returns || !Array.isArray(parsedData.returns)) {
-          parsedData.returns = [];
-        }
-        
-        if (!parsedData.deductions || !Array.isArray(parsedData.deductions)) {
-          parsedData.deductions = [];
-        }
-        
-        if (!parsedData.productAdvertisingData || !Array.isArray(parsedData.productAdvertisingData)) {
-          parsedData.productAdvertisingData = [];
-        }
-        
-        if (!parsedData.advertisingBreakdown) {
-          parsedData.advertisingBreakdown = { search: 0 };
-        }
-        
-        if (parsedData.data && parsedData.data.currentPeriod && parsedData.data.currentPeriod.expenses) {
-          parsedData.data.currentPeriod.expenses.advertising = parsedData.data.currentPeriod.expenses.advertising || 0;
-          parsedData.data.currentPeriod.expenses.acceptance = parsedData.data.currentPeriod.expenses.acceptance || 0;
-          parsedData.data.currentPeriod.expenses.deductions = parsedData.data.currentPeriod.expenses.deductions || 0;
-        }
-        
-        return parsedData;
-      }
-    } catch (localError) {
-      console.error('Error parsing localStorage analytics data:', localError);
+    const storedData = localStorage.getItem(`marketplace_analytics_${storeId}`);
+    
+    if (storedData) {
+      return JSON.parse(storedData);
     }
     
-    axios.get(`http://localhost:3001/api/analytics/${storeId}`)
-      .then(response => {
-        if (response.data) {
-          const parsedData = {
-            data: response.data.data,
-            penalties: response.data.penalties || [],
-            returns: response.data.returns || [],
-            deductions: response.data.deductions || [],
-            deductionsTimeline: response.data.deductions_timeline || [],
-            productAdvertisingData: response.data.product_advertising_data || [],
-            advertisingBreakdown: response.data.advertising_breakdown || { search: 0 },
-            timestamp: response.data.timestamp
-          };
-          
-          if (!parsedData.deductionsTimeline || !Array.isArray(parsedData.deductionsTimeline) || parsedData.deductionsTimeline.length === 0) {
-            parsedData.deductionsTimeline = Array.from({ length: 7 }, (_, i) => ({
-              date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-              logistic: 0,
-              storage: 0, 
-              penalties: 0,
-              acceptance: 0,
-              advertising: 0,
-              deductions: 0
-            }));
-          }
-          
-          localStorage.setItem(`marketplace_analytics_${storeId}`, JSON.stringify(parsedData));
-          return parsedData;
-        }
-        return null;
-      })
-      .catch(error => {
-        console.error('Error fetching analytics data from DB:', error);
-        return null;
-      });
+    return null;
   } catch (error) {
-    console.error('Error in getAnalyticsData:', error);
+    console.error('Error loading analytics data:', error);
+    return null;
+  }
+};
+
+export const getProductsCostPrice = (storeId: string): Array<{nmId: string | number; costPrice: number}> => {
+  try {
+    const storedData = localStorage.getItem(`products_cost_price_${storeId}`);
+    return storedData ? JSON.parse(storedData) : [];
+  } catch (error) {
+    console.error('Error loading products cost price:', error);
+    return [];
+  }
+};
+
+export const saveProductCostPrice = (
+  storeId: string, 
+  nmId: string | number, 
+  costPrice: number
+): void => {
+  try {
+    let productsCostPrice = getProductsCostPrice(storeId);
+    
+    // Проверяем, есть ли уже запись для этого товара
+    const existingIndex = productsCostPrice.findIndex(item => item.nmId.toString() === nmId.toString());
+    
+    if (existingIndex >= 0) {
+      // Обновляем существующую запись
+      productsCostPrice[existingIndex].costPrice = costPrice;
+    } else {
+      // Добавляем новую запись
+      productsCostPrice.push({ nmId, costPrice });
+    }
+    
+    // Сохраняем обновленный список в localStorage
+    localStorage.setItem(`products_cost_price_${storeId}`, JSON.stringify(productsCostPrice));
+  } catch (error) {
+    console.error('Error saving product cost price:', error);
+  }
+};
+
+export const calculateTotalCostPrice = (
+  productSales: Array<{nmId?: string | number; quantity?: number}>, 
+  productsCostPrice: Array<{nmId: string | number; costPrice: number}>
+): number => {
+  let totalCostPrice = 0;
+  
+  if (!productSales?.length || !productsCostPrice?.length) {
+    return 0;
   }
   
-  return {
-    data: null,
-    penalties: [],
-    returns: [],
-    deductions: [],
-    deductionsTimeline: Array.from({ length: 7 }, (_, i) => ({
-      date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      logistic: 0,
-      storage: 0, 
-      penalties: 0,
-      acceptance: 0,
-      advertising: 0,
-      deductions: 0
-    })),
-    productAdvertisingData: [],
-    advertisingBreakdown: { search: 0 },
-    timestamp: Date.now()
-  };
+  // Преобразуем массив себестоимости в объект для быстрого доступа
+  const costPriceMap: Record<string, number> = {};
+  productsCostPrice.forEach(item => {
+    costPriceMap[item.nmId.toString()] = item.costPrice;
+  });
+  
+  // Считаем себестоимость по каждому проданному товару
+  productSales.forEach(sale => {
+    if (sale.nmId && costPriceMap[sale.nmId.toString()]) {
+      const quantity = sale.quantity || 1;
+      const costPrice = costPriceMap[sale.nmId.toString()] || 0;
+      totalCostPrice += quantity * costPrice;
+    }
+  });
+  
+  // Округляем до двух знаков после запятой
+  return Math.round(totalCostPrice * 100) / 100;
 };
 
 export const getStoresLastUpdateTime = (): number => {

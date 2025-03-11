@@ -27,6 +27,7 @@ import {
 } from "./data/demoData";
 
 const ANALYTICS_STORAGE_KEY = 'marketplace_analytics';
+const PRODUCTS_COST_PRICE_KEY = 'products_cost_price';
 
 interface AnalyticsData {
   currentPeriod: {
@@ -40,6 +41,7 @@ interface AnalyticsData {
       advertising: number;
       acceptance: number;
       deductions?: number;
+      costPrice?: number;
     };
     netProfit: number;
     acceptance: number;
@@ -52,6 +54,7 @@ interface AnalyticsData {
   productSales: Array<{
     subject_name: string;
     quantity: number;
+    nmId?: string | number;
   }>;
   productReturns: Array<{
     name: string;
@@ -116,6 +119,11 @@ interface DeductionsTimelineItem {
   deductions?: number;
 }
 
+interface ProductCostPrice {
+  nmId: string | number;
+  costPrice: number;
+}
+
 const AnalyticsSection = () => {
   const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
@@ -146,6 +154,39 @@ const AnalyticsSection = () => {
     }
     
     return store;
+  };
+
+  const getProductsCostPrice = (storeId: string): ProductCostPrice[] => {
+    try {
+      const storedData = localStorage.getItem(`${PRODUCTS_COST_PRICE_KEY}_${storeId}`);
+      return storedData ? JSON.parse(storedData) : [];
+    } catch (error) {
+      console.error('Error loading products cost price:', error);
+      return [];
+    }
+  };
+
+  const calculateTotalCostPrice = (productSales: Array<any>, productsCostPrice: ProductCostPrice[]): number => {
+    let totalCostPrice = 0;
+    
+    if (!productSales || !productSales.length || !productsCostPrice || !productsCostPrice.length) {
+      return 0;
+    }
+    
+    const costPriceMap: Record<string, number> = {};
+    productsCostPrice.forEach(item => {
+      costPriceMap[item.nmId.toString()] = item.costPrice;
+    });
+    
+    productSales.forEach(sale => {
+      if (sale.nmId && costPriceMap[sale.nmId.toString()]) {
+        const quantity = sale.quantity || 1;
+        const costPrice = costPriceMap[sale.nmId.toString()] || 0;
+        totalCostPrice += quantity * costPrice;
+      }
+    });
+    
+    return roundToTwoDecimals(totalCostPrice);
   };
 
   const fetchData = async () => {
@@ -219,6 +260,10 @@ const AnalyticsSection = () => {
       }
       
       if (statsData) {
+        const productsCostPrice = getProductsCostPrice(selectedStore.id);
+        
+        const totalCostPrice = calculateTotalCostPrice(statsData.productSales || [], productsCostPrice);
+        
         const sales = roundToTwoDecimals(statsData.currentPeriod.sales);
         const logistics = roundToTwoDecimals(statsData.currentPeriod.expenses.logistics);
         const storage = roundToTwoDecimals(statsData.currentPeriod.expenses.storage);
@@ -230,7 +275,7 @@ const AnalyticsSection = () => {
         
         const forPay = roundToTwoDecimals(statsData.currentPeriod.transferred || 0);
         const netProfit = roundToTwoDecimals(
-          forPay - logistics - storage - penalties - totalAdvertisingCost - acceptance - deductionsValue - returns
+          forPay - logistics - storage - penalties - totalAdvertisingCost - acceptance - deductionsValue - returns - totalCostPrice
         );
         
         const modifiedData: AnalyticsData = {
@@ -246,7 +291,8 @@ const AnalyticsSection = () => {
               penalties: penalties,
               advertising: totalAdvertisingCost,
               acceptance: acceptance,
-              deductions: deductionsValue
+              deductions: deductionsValue,
+              costPrice: totalCostPrice
             }
           },
           dailySales: statsData.dailySales,
@@ -257,7 +303,7 @@ const AnalyticsSection = () => {
         };
         
         modifiedData.currentPeriod.expenses.total = roundToTwoDecimals(
-          logistics + storage + penalties + totalAdvertisingCost + acceptance + deductionsValue
+          logistics + storage + penalties + totalAdvertisingCost + acceptance + deductionsValue + totalCostPrice
         );
         
         setData(modifiedData);
@@ -587,4 +633,3 @@ const AnalyticsSection = () => {
 };
 
 export default AnalyticsSection;
-

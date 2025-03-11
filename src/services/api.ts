@@ -66,4 +66,48 @@ export const setApiKey = (apiKey: string) => {
   api.defaults.headers.common['Authorization'] = apiKey;
 };
 
+// Функция для сохранения себестоимости товара
+export const saveProductCostPrice = async (
+  storeId: string,
+  nmId: string | number,
+  costPrice: number
+): Promise<boolean> => {
+  try {
+    // Сначала пробуем сохранить через API
+    await api.post('/api/products/cost-price', {
+      storeId,
+      nmId,
+      costPrice
+    });
+    return true;
+  } catch (error) {
+    console.error('Error saving product cost price via API:', error);
+    
+    // Если API недоступен, сохраняем в localStorage
+    try {
+      let productsCostPrice = [];
+      const storedData = localStorage.getItem(`products_cost_price_${storeId}`);
+      if (storedData) {
+        productsCostPrice = JSON.parse(storedData);
+      }
+      
+      const existingIndex = productsCostPrice.findIndex(
+        (item: any) => item.nmId.toString() === nmId.toString()
+      );
+      
+      if (existingIndex >= 0) {
+        productsCostPrice[existingIndex].costPrice = costPrice;
+      } else {
+        productsCostPrice.push({ nmId, costPrice });
+      }
+      
+      localStorage.setItem(`products_cost_price_${storeId}`, JSON.stringify(productsCostPrice));
+      return true;
+    } catch (localError) {
+      console.error('Error saving to localStorage:', localError);
+      return false;
+    }
+  }
+};
+
 export default api;
