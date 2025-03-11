@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,13 +7,17 @@ import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Search, ArrowUpDown, Package, TrendingDown, Banknote, WarehouseIcon, AlertTriangle, Clock, ArrowDown, ArrowUp } from 'lucide-react';
+import { 
+  Search, ArrowUpDown, Package, TrendingDown, Banknote, WarehouseIcon, AlertTriangle, 
+  Clock, ArrowDown, ArrowUp, BarChart4, TrendingUp, Calculator
+} from 'lucide-react';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { WarehouseRemainItem, PaidStorageItem } from '@/types/supplies';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 
 interface StorageProfitabilityAnalysisProps {
   warehouseItems: WarehouseRemainItem[];
@@ -42,6 +45,12 @@ interface AnalysisResult {
   stockLevelPercentage: number;
   lastReplanishmentDate?: Date;
   projectedStockoutDate?: Date;
+  profitMarginPercentage: number;
+  newSalesRate: number;
+  newDaysOfInventory: number;
+  discountedStorageCost: number;
+  discountedPrice: number;
+  storageCostToRevenueRatio: number;
 }
 
 const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> = ({
@@ -130,117 +139,84 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       const currentStock = item.quantityWarehousesFull || 0;
       const threshold = lowStockThreshold[nmId] || Math.ceil(dailySales * 7);
       
-      // Ежедневные затраты на хранение полного запаса
       const dailyStorageCostTotal = storageCost * currentStock;
       
-      // Время полной распродажи запаса (дни)
       const daysOfInventory = dailySales > 0 ? Math.round(currentStock / dailySales) : 999;
       
-      // Уточненный расчет общих затрат на хранение
-      // Используем формулу: среднее количество × дни × стоимость единицы
       const averageStock = currentStock / 2;
       const totalStorageCost = averageStock * daysOfInventory * storageCost;
       
-      // Расчет прибыли на единицу товара
       const profitPerItem = sellingPrice - costPrice;
       const profitMarginPercentage = sellingPrice > 0 ? (profitPerItem / sellingPrice) * 100 : 0;
       
-      // Общая прибыль без учета затрат на хранение
       const grossProfit = profitPerItem * currentStock;
       
-      // Чистая прибыль с учетом затрат на хранение
       const netProfit = grossProfit - totalStorageCost;
       
-      // Коэффициент оборачиваемости запасов (дней)
       const stockTurnoverDays = daysOfInventory;
       
-      // Рентабельность хранения (отношение чистой прибыли к затратам на хранение)
       const storageROI = totalStorageCost > 0 ? netProfit / totalStorageCost : 0;
       
-      // Доля затрат на хранение в выручке
       const storageCostToRevenueRatio = (sellingPrice * currentStock) > 0 ? 
         totalStorageCost / (sellingPrice * currentStock) : 0;
       
-      // НОВАЯ ЛОГИКА РЕКОМЕНДАЦИЙ
-      
-      // 1. Определяем необходимость скидки на основе комплексного анализа
       let recommendedDiscount = 0;
       let action: 'sell' | 'discount' | 'keep' = 'keep';
       
-      // Если маржа низкая и высокие затраты на хранение относительно выручки
       const isLowMargin = profitMarginPercentage < 15;
-      const isHighStorageCost = storageCostToRevenueRatio > 0.1; // >10% от выручки
-      const isSlowMoving = stockTurnoverDays > 60; // Более 60 дней на распродажу
+      const isHighStorageCost = storageCostToRevenueRatio > 0.1;
+      const isSlowMoving = stockTurnoverDays > 60;
       
-      // Если запасы долго не продаются, затраты на хранение высокие относительно выручки
       if (isSlowMoving && isHighStorageCost) {
-        // Серьезная проблема - нужна значительная скидка или распродажа
-        recommendedDiscount = 40; // Высокая скидка для ускорения продаж
+        recommendedDiscount = 40;
         action = 'sell';
       } 
-      // Если маржа низкая и затраты на хранение относительно высокие
       else if (isLowMargin && isHighStorageCost) {
-        // Проблема рентабельности - нужна умеренная скидка
         recommendedDiscount = discountLevels[nmId] || 25;
         action = 'discount';
       }
-      // Если товар продается медленно, но маржа нормальная
       else if (isSlowMoving && !isLowMargin) {
-        // Небольшая скидка для ускорения продаж
         recommendedDiscount = discountLevels[nmId] || 15;
         action = 'discount';
       }
-      // Если маржа достаточная и затраты на хранение приемлемые
       else {
-        // Сохраняем текущую цену
         recommendedDiscount = 0;
         action = 'keep';
       }
       
-      // 2. Рассчитываем экономические показатели при применении скидки
       const discountedPrice = sellingPrice * (1 - recommendedDiscount / 100);
       const profitWithDiscountPerItem = discountedPrice - costPrice;
       
-      // Коэффициент ускорения продаж в зависимости от размера скидки
-      // Чем больше скидка, тем быстрее будет распродажа
       const salesAccelerationFactor = 1 + (recommendedDiscount / 100);
       
-      // Скорректированное время распродажи с учетом скидки
+      const newSalesRate = dailySales * salesAccelerationFactor;
+      
       const discountedDaysOfInventory = Math.round(daysOfInventory / salesAccelerationFactor);
       
-      // Пересчитываем затраты на хранение при ускоренных продажах
       const discountedStorageCost = averageStock * discountedDaysOfInventory * storageCost;
       
-      // Итоговые финансовые результаты
       const profitWithoutDiscount = grossProfit - totalStorageCost;
       const profitWithDiscount = (profitWithDiscountPerItem * currentStock) - discountedStorageCost;
       const savingsWithDiscount = profitWithDiscount - profitWithoutDiscount;
       
-      // 3. Финальная корректировка рекомендации
-      
-      // Если даже с рекомендованной скидкой прибыль отрицательная
       if (profitWithDiscount < 0 && recommendedDiscount > 0) {
-        // Если стоимость хранения выше оставшейся маржи - распродажа
         if (Math.abs(profitWithDiscount) > profitWithDiscountPerItem * currentStock * 0.5) {
           action = 'sell';
-          recommendedDiscount = Math.min(50, discountLevels[nmId] || 50); // Максимум 50% скидки для распродажи
+          recommendedDiscount = Math.min(50, discountLevels[nmId] || 50);
         }
       }
       
-      // Если чистая прибыль со скидкой выше, чем без скидки, рекомендуем скидку
       if (savingsWithDiscount > 0 && action === 'keep') {
         action = 'discount';
         recommendedDiscount = discountLevels[nmId] || 15;
       }
       
-      // Если низкий запас - не рекомендуем скидки (кроме случаев с очень медленными продажами)
       const lowStock = currentStock <= threshold;
       if (lowStock && stockTurnoverDays < 90) {
         action = 'keep';
         recommendedDiscount = 0;
       }
       
-      // Определение уровня запаса
       const stockLevelPercentage = Math.min(100, Math.max(0, Math.round((currentStock / (threshold * 2)) * 100)));
       
       let stockLevel: 'low' | 'medium' | 'high';
@@ -273,7 +249,13 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         lowStock,
         stockLevel,
         stockLevelPercentage,
-        projectedStockoutDate
+        projectedStockoutDate,
+        profitMarginPercentage,
+        newSalesRate,
+        newDaysOfInventory,
+        discountedStorageCost,
+        discountedPrice,
+        storageCostToRevenueRatio
       };
     });
   }, [warehouseItems, costPrices, sellingPrices, dailySalesRates, storageCostRates, discountLevels, lowStockThreshold]);
@@ -458,6 +440,224 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     });
   };
 
+  const getAnalysisStatusIndicator = (result: AnalysisResult) => {
+    const factors = [];
+    
+    if (result.profitMarginPercentage < 15) {
+      factors.push({
+        label: "Низкая маржа",
+        description: "Маржинальность товара ниже 15%",
+        value: `${result.profitMarginPercentage.toFixed(1)}%`,
+        status: "warning",
+        icon: <TrendingDown className="h-3.5 w-3.5 text-amber-500" />
+      });
+    } else {
+      factors.push({
+        label: "Высокая маржа",
+        description: "Маржинальность товара выше 15%",
+        value: `${result.profitMarginPercentage.toFixed(1)}%`,
+        status: "positive",
+        icon: <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+      });
+    }
+    
+    if (result.storageCostToRevenueRatio > 0.1) {
+      factors.push({
+        label: "Высокие затраты на хранение",
+        description: "Затраты на хранение >10% от выручки",
+        value: `${(result.storageCostToRevenueRatio * 100).toFixed(1)}%`,
+        status: "warning",
+        icon: <WarehouseIcon className="h-3.5 w-3.5 text-amber-500" />
+      });
+    } else {
+      factors.push({
+        label: "Оптимальные затраты на хранение",
+        description: "Затраты на хранение <10% от выручки",
+        value: `${(result.storageCostToRevenueRatio * 100).toFixed(1)}%`,
+        status: "positive",
+        icon: <WarehouseIcon className="h-3.5 w-3.5 text-emerald-500" />
+      });
+    }
+    
+    if (result.daysOfInventory > 60) {
+      factors.push({
+        label: "Медленные продажи",
+        description: "Более 60 дней на распродажу запаса",
+        value: formatDaysOfInventory(result.daysOfInventory),
+        status: "warning",
+        icon: <Clock className="h-3.5 w-3.5 text-amber-500" />
+      });
+    } else {
+      factors.push({
+        label: "Быстрые продажи",
+        description: "Менее 60 дней на распродажу запаса",
+        value: formatDaysOfInventory(result.daysOfInventory),
+        status: "positive",
+        icon: <Clock className="h-3.5 w-3.5 text-emerald-500" />
+      });
+    }
+    
+    return (
+      <div className="space-y-2">
+        {factors.map((factor, index) => (
+          <div key={index} className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-1.5">
+              {factor.icon}
+              <span className={`font-medium ${factor.status === 'warning' ? 'text-amber-600' : 'text-emerald-600'}`}>
+                {factor.label}
+              </span>
+            </div>
+            <span className={`${factor.status === 'warning' ? 'text-amber-600' : 'text-emerald-600'} font-medium`}>
+              {factor.value}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const DetailedAnalysis = ({ result }: { result: AnalysisResult }) => {
+    return (
+      <div className="p-5 max-w-md space-y-6 text-sm">
+        <div>
+          <h3 className="font-semibold text-base mb-2 flex items-center gap-2">
+            <Calculator className="h-4 w-4 text-primary" />
+            Расчет рентабельности хранения
+          </h3>
+
+          <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 mb-4">
+            {getAnalysisStatusIndicator(result)}
+          </div>
+
+          <div className="mb-4">
+            <h4 className="font-medium mb-2 text-xs text-muted-foreground">СРАВНЕНИЕ СЦЕНАРИЕВ</h4>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-2 border rounded-lg p-3 bg-white dark:bg-slate-950">
+                <div className="text-xs text-muted-foreground">Текущая цена</div>
+                <div className="font-medium">{formatCurrency(result.sellingPrice)}</div>
+              </div>
+              
+              <div className="space-y-2 border border-amber-200 dark:border-amber-800 rounded-lg p-3 bg-amber-50 dark:bg-amber-950/30">
+                <div className="text-xs text-amber-600 dark:text-amber-400">Со скидкой {result.recommendedDiscount}%</div>
+                <div className="font-medium">{formatCurrency(result.discountedPrice)}</div>
+              </div>
+              
+              <div className="space-y-2 border rounded-lg p-3 bg-white dark:bg-slate-950">
+                <div className="text-xs text-muted-foreground">Себестоимость</div>
+                <div className="font-medium">{formatCurrency(result.costPrice)}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h4 className="text-xs text-muted-foreground mb-1">ПРОДАЖИ И ОБОРАЧИВАЕМОСТЬ</h4>
+                <table className="w-full text-xs">
+                  <tbody>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">Текущие продажи в день</td>
+                      <td className="py-1 text-right font-medium">{result.dailySales.toFixed(2)} шт</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">Продажи со скидкой</td>
+                      <td className="py-1 text-right font-medium">{result.newSalesRate.toFixed(2)} шт</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">Текущий запас</td>
+                      <td className="py-1 text-right font-medium">{result.remainItem.quantityWarehousesFull} шт</td>
+                    </tr>
+                    <tr className="border-t">
+                      <td className="py-1 text-muted-foreground">Дней до распродажи</td>
+                      <td className="py-1 text-right font-medium">{formatDaysOfInventory(result.daysOfInventory)}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">Со скидкой</td>
+                      <td className="py-1 text-right font-medium">{formatDaysOfInventory(result.newDaysOfInventory)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <div>
+                <h4 className="text-xs text-muted-foreground mb-1">ЗАТРАТЫ НА ХРАНЕНИЕ</h4>
+                <table className="w-full text-xs">
+                  <tbody>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">Стоимость хранения в день</td>
+                      <td className="py-1 text-right font-medium">{formatCurrency(result.dailyStorageCost)}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">В день на весь запас</td>
+                      <td className="py-1 text-right font-medium">{formatCurrency(result.dailyStorageCostTotal)}</td>
+                    </tr>
+                    <tr className="border-t">
+                      <td className="py-1 text-muted-foreground">Общие затраты на хранение</td>
+                      <td className="py-1 text-right font-medium">{formatCurrency(result.totalStorageCost)}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">Со скидкой</td>
+                      <td className="py-1 text-right font-medium">{formatCurrency(result.discountedStorageCost)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <Separator />
+            
+            <div>
+              <h4 className="text-xs text-muted-foreground mb-1">ИТОГОВЫЕ ФИНАНСОВЫЕ РЕЗУЛЬТАТЫ</h4>
+              <table className="w-full text-xs">
+                <tbody>
+                  <tr>
+                    <td className="py-1 text-muted-foreground">Прибыль без скидки</td>
+                    <td className="py-1 text-right font-medium">{formatCurrency(result.profitWithoutDiscount)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1 text-muted-foreground">Прибыль со скидкой</td>
+                    <td className="py-1 text-right font-medium">{formatCurrency(result.profitWithDiscount)}</td>
+                  </tr>
+                  <tr className="border-t">
+                    <td className="py-1 font-medium">Разница</td>
+                    <td className={`py-1 text-right font-medium ${result.savingsWithDiscount > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {result.savingsWithDiscount > 0 ? '+' : ''}{formatCurrency(result.savingsWithDiscount)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        
+        <div className="pt-2 border-t">
+          <h4 className="font-medium mb-2">Рекомендация</h4>
+          <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5">
+                {result.action === 'sell' && <TrendingDown className="h-5 w-5 text-rose-500" />}
+                {result.action === 'discount' && <TrendingDown className="h-5 w-5 text-amber-500" />}
+                {result.action === 'keep' && <BarChart4 className="h-5 w-5 text-blue-500" />}
+              </div>
+              <div>
+                <p className="font-medium">
+                  {result.action === 'sell' && 'Распродать товар со значительной скидкой'}
+                  {result.action === 'discount' && `Снизить цену на ${result.recommendedDiscount}%`}
+                  {result.action === 'keep' && 'Сохранить текущую цену'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {result.action === 'sell' && 'Товар имеет крайне низкую оборачиваемость, что приводит к высоким затратам на хранение. Рекомендуется быстро распродать запас.'}
+                  {result.action === 'discount' && 'Снижение цены ускорит оборачиваемость товара и снизит затраты на хранение, что увеличит общую прибыль.'}
+                  {result.action === 'keep' && 'Товар имеет хорошую маржинальность и приемлемые затраты на хранение. Снижение цены не требуется.'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Card className="overflow-hidden bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
       <CardHeader className="bg-white/50 dark:bg-background/50 backdrop-blur-sm border-b pb-8">
@@ -556,7 +756,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Внимание! Низкий уровень запаса</AlertTitle>
             <AlertDescription>
-              У вас {analysisSummary.lowStockItems} товаров с низким уровнем запаса. Рекомендуется пополнить запасы.
+              У вас {analysisSummary.lowStockItems} товаров �� низким уровнем запаса. Рекомендуется пополнить запасы.
             </AlertDescription>
           </Alert>
         )}
@@ -798,6 +998,18 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                             {result.action === 'sell' && 'Распродать быстрее'}
                             {result.action === 'keep' && 'Сохранить цену'}
                           </div>
+                          
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" size="sm" className="w-full mt-1 h-7 text-xs">
+                                <Calculator className="h-3.5 w-3.5 mr-1.5" />
+                                Детальный анализ
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[400px] p-0" align="end">
+                              <DetailedAnalysis result={result} />
+                            </PopoverContent>
+                          </Popover>
                         </div>
                       </TableCell>
                       
@@ -817,3 +1029,4 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
 };
 
 export default StorageProfitabilityAnalysis;
+
