@@ -1,3 +1,4 @@
+
 export interface WarehouseCoefficient {
   date: string;
   coefficient: number;
@@ -127,6 +128,7 @@ export interface WarehouseRemainItem {
   volume?: number;
   quantityWarehousesFull?: number;
   quantityWarehouses?: number;
+  photoLink?: string; // Added this property as optional
   // Adding the missing warehouses property as an array of warehouse data
   warehouses: {
     warehouseName: string;

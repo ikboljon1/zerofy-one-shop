@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -933,7 +932,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                         className="w-14 h-14 rounded overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800"
                         style={{ minWidth: '3.5rem' }}
                       >
-                        {result.remainItem.photoLink && (
+                        {result.remainItem.photoLink ? (
                           <img
                             src={result.remainItem.photoLink}
                             alt={result.remainItem.subjectName || "Фото товара"}
@@ -943,6 +942,10 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                               target.src = 'https://via.placeholder.com/56?text=WB';
                             }}
                           />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            <Package className="h-6 w-6" />
+                          </div>
                         )}
                       </div>
                       <div className="space-y-1">
@@ -1093,3 +1096,4 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
 };
 
 export default StorageProfitabilityAnalysis;
+
