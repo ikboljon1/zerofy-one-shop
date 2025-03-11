@@ -25,7 +25,8 @@ import {
   WarehouseRemains,
   StorageProfitabilityAnalysis,
   PaidStorageCostReport,
-  WarehouseCoefficientsCard
+  WarehouseCoefficientsCard,
+  WarehouseCoefficientsDateCard
 } from '@/components/supplies';
 import { 
   WarehouseCoefficient, 
@@ -357,10 +358,10 @@ const Warehouses: React.FC = () => {
                   {loading.coefficients ? (
                     <Skeleton className="h-[600px] w-full" />
                   ) : (
-                    <WarehouseCoefficientsCard 
+                    <WarehouseCoefficientsDateCard
                       coefficients={coefficients} 
-                      warehouses={wbWarehouses}
                       selectedWarehouseId={selectedWarehouseId}
+                      title="Коэффициенты приемки по дням"
                     />
                   )}
                 </div>
@@ -412,4 +413,3 @@ const Warehouses: React.FC = () => {
 };
 
 export default Warehouses;
-

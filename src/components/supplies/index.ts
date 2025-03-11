@@ -6,6 +6,7 @@ import WarehouseRemains from './WarehouseRemains';
 import StorageProfitabilityAnalysis from './StorageProfitabilityAnalysis';
 import PaidStorageCostReport from './PaidStorageCostReport';
 import WarehouseCoefficientsCard from './WarehouseCoefficientsCard';
+import WarehouseCoefficientsDateCard from './WarehouseCoefficientsDateCard';
 
 export {
   SupplyForm,
@@ -14,5 +15,6 @@ export {
   WarehouseRemains,
   StorageProfitabilityAnalysis,
   PaidStorageCostReport,
-  WarehouseCoefficientsCard
+  WarehouseCoefficientsCard,
+  WarehouseCoefficientsDateCard
 };
