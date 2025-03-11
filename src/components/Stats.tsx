@@ -24,6 +24,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getAnalyticsData } from "@/utils/storeUtils";
 import Chart from "@/components/Chart";
+import { getCostPriceByNmId } from "@/services/api";
 
 const calculatePercentageChange = (current: number, previous: number): string => {
   if (previous === 0) return '0%';
@@ -123,7 +124,14 @@ const Stats = () => {
             
             console.log(`Calculated total cost price: ${totalCostPrice} for ${processedItems} items`);
             
-            analyticsData.data.currentPeriod.expenses.costPrice = totalCostPrice;
+            if (!analyticsData.data.currentPeriod.expenses.hasOwnProperty('costPrice')) {
+              analyticsData.data.currentPeriod.expenses = {
+                ...analyticsData.data.currentPeriod.expenses,
+                costPrice: totalCostPrice
+              };
+            } else {
+              analyticsData.data.currentPeriod.expenses.costPrice = totalCostPrice;
+            }
             
             localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
           }
@@ -185,7 +193,14 @@ const Stats = () => {
           
           console.log(`Calculated total cost price: ${totalCostPrice} for ${processedItems} items`);
           
-          data.currentPeriod.expenses.costPrice = totalCostPrice;
+          if (!data.currentPeriod.expenses.hasOwnProperty('costPrice')) {
+            data.currentPeriod.expenses = {
+              ...data.currentPeriod.expenses,
+              costPrice: totalCostPrice
+            };
+          } else {
+            data.currentPeriod.expenses.costPrice = totalCostPrice;
+          }
         }
         
         const analyticsData = {
