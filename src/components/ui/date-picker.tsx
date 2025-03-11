@@ -16,9 +16,10 @@ interface DatePickerProps {
   value?: Date;
   onValueChange?: (date?: Date) => void;
   placeholder?: string;
+  className?: string;  // Add className prop to the interface
 }
 
-export function DatePicker({ value, onValueChange, placeholder = "Выберите дату" }: DatePickerProps) {
+export function DatePicker({ value, onValueChange, placeholder = "Выберите дату", className }: DatePickerProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -26,7 +27,8 @@ export function DatePicker({ value, onValueChange, placeholder = "Выберит
           variant={"outline"}
           className={cn(
             "w-full justify-start text-left font-normal",
-            !value && "text-muted-foreground"
+            !value && "text-muted-foreground",
+            className  // Apply the className prop here
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />

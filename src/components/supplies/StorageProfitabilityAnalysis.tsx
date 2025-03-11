@@ -793,8 +793,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                 <p className="text-xs text-muted-foreground">Прогноз окончания запасов</p>
                 <DatePicker 
                   value={targetDate}
-                  onValueChange={setTargetDate} 
-                  className="w-24" 
+                  onValueChange={setTargetDate}
                 />
               </div>
               <p className="text-2xl font-semibold text-amber-500">{analysisSummary.itemsStockingOutBeforeTarget}</p>
@@ -908,7 +907,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                   </TableHead>
                   <TableHead className="text-right cursor-pointer" onClick={() => requestSort('daysOfInventory')}>
                     <div className="flex items-center justify-end">
-                      Дней до продажи
+                      Дней до распродажи
                       <ArrowUpDown className="ml-1 h-3 w-3" />
                     </div>
                   </TableHead>
