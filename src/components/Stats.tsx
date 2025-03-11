@@ -24,7 +24,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getAnalyticsData } from "@/utils/storeUtils";
 import Chart from "@/components/Chart";
-import { getCostPriceByNmId } from "@/services/api";
+import { getCostPriceByNmId, calculateTotalCostPrice } from "@/services/api";
 
 const calculatePercentageChange = (current: number, previous: number): string => {
   if (previous === 0) return '0%';
@@ -80,7 +80,7 @@ const Stats = () => {
   const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState(false);
-  const [statsData, setStatsData] = useState<any>(null);
+  const [statsData, setStatsData] = useState<StatsData | null>(null);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
 
   const getSelectedStore = (): Store | null => {
@@ -135,7 +135,10 @@ const Stats = () => {
             
             for (const sale of allSales) {
               const nmId = sale.nmId || sale.nm_id;
-              if (!nmId) continue;
+              if (!nmId) {
+                console.log(`Sale item missing nmId:`, sale);
+                continue;
+              }
               
               const quantity = Math.abs(sale.quantity || 1);
               const product = products.find((p: any) => (p.nmId === nmId || p.nmID === nmId));
@@ -143,14 +146,17 @@ const Stats = () => {
               let costPrice = 0;
               if (product && product.costPrice) {
                 costPrice = product.costPrice;
+                console.log(`Using cost price from product for nmId ${nmId}: ${costPrice}`);
               } else {
                 costPrice = await getCostPriceByNmId(nmId, selectedStore.id);
+                console.log(`Retrieved cost price for nmId ${nmId}: ${costPrice}`);
               }
               
               if (costPrice > 0) {
                 const itemCostPrice = costPrice * quantity;
                 totalCostPrice += itemCostPrice;
                 processedItems++;
+                console.log(`Added cost for nmId ${nmId}: ${costPrice} x ${quantity} = ${itemCostPrice}`);
               }
             }
             
@@ -165,6 +171,8 @@ const Stats = () => {
             
             localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
           }
+        } else {
+          console.log(`Found existing cost price: ${analyticsData.data.currentPeriod.expenses.costPrice}`);
         }
         
         setStatsData(analyticsData.data);
@@ -184,6 +192,7 @@ const Stats = () => {
       
       if (data) {
         const products = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
+        console.log(`Retrieved ${products.length} products from localStorage`);
         
         const allSales: any[] = [];
         if (data.dailySales) {
@@ -202,7 +211,10 @@ const Stats = () => {
           
           for (const sale of allSales) {
             const nmId = sale.nmId || sale.nm_id;
-            if (!nmId) continue;
+            if (!nmId) {
+              console.log(`Sale item missing nmId:`, sale);
+              continue;
+            }
             
             const quantity = Math.abs(sale.quantity || 1);
             const product = products.find((p: any) => (p.nmId === nmId || p.nmID === nmId));
@@ -210,14 +222,17 @@ const Stats = () => {
             let costPrice = 0;
             if (product && product.costPrice) {
               costPrice = product.costPrice;
+              console.log(`Using cost price from product for nmId ${nmId}: ${costPrice}`);
             } else {
               costPrice = await getCostPriceByNmId(nmId, selectedStore.id);
+              console.log(`Retrieved cost price for nmId ${nmId}: ${costPrice}`);
             }
             
             if (costPrice > 0) {
               const itemCostPrice = costPrice * quantity;
               totalCostPrice += itemCostPrice;
               processedItems++;
+              console.log(`Added cost for nmId ${nmId}: ${costPrice} x ${quantity} = ${itemCostPrice}`);
             }
           }
           
@@ -261,6 +276,7 @@ const Stats = () => {
         };
         
         localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
+        console.log("Saved analytics data to localStorage:", analyticsData);
       }
       
       setStatsData(data);
