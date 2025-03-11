@@ -193,17 +193,54 @@ const AnalyticsSection = () => {
     console.log('Cost price map:', costPriceMap);
     console.log('Product sales to calculate cost price:', productSales);
     
+    let hasMappedAnyProduct = false;
+    
     productSales.forEach(sale => {
       if (sale.nmId && costPriceMap[sale.nmId.toString()]) {
         const quantity = sale.quantity || 1;
         const costPrice = costPriceMap[sale.nmId.toString()] || 0;
         const itemCost = quantity * costPrice;
         totalCostPrice += itemCost;
+        hasMappedAnyProduct = true;
         console.log(`Product ${sale.nmId}: quantity=${quantity}, costPrice=${costPrice}, itemCost=${itemCost}`);
       } else if (sale.nmId) {
         console.log(`No cost price found for product ${sale.nmId}`);
       }
     });
+    
+    if (!hasMappedAnyProduct && productSales.length > 0) {
+      console.log('Trying to match products by name...');
+      
+      const topProducts = [...(statsData.topProfitableProducts || []), ...(statsData.topUnprofitableProducts || [])];
+      console.log('Available top products with nmId:', topProducts);
+      
+      if (topProducts?.length > 0) {
+        const nameToNmIdMap: Record<string, string> = {};
+        topProducts.forEach(product => {
+          if (product.name && product.nmId) {
+            nameToNmIdMap[product.name.toLowerCase()] = product.nmId.toString();
+          }
+        });
+        
+        console.log('Name to NmId map:', nameToNmIdMap);
+        
+        productSales.forEach(sale => {
+          const name = sale.subject_name?.toLowerCase() || '';
+          for (const [productName, productNmId] of Object.entries(nameToNmIdMap)) {
+            if ((name && productName.includes(name)) || (name && name.includes(productName))) {
+              if (costPriceMap[productNmId]) {
+                const quantity = sale.quantity || 1;
+                const costPrice = costPriceMap[productNmId] || 0;
+                const itemCost = quantity * costPrice;
+                totalCostPrice += itemCost;
+                console.log(`Matched product ${sale.subject_name} with ${productName} (${productNmId}): quantity=${quantity}, costPrice=${costPrice}, itemCost=${itemCost}`);
+                break;
+              }
+            }
+          }
+        });
+      }
+    }
     
     console.log(`Total calculated cost price: ${totalCostPrice}`);
     return roundToTwoDecimals(totalCostPrice);
@@ -644,7 +681,7 @@ const AnalyticsSection = () => {
             isProfitable={true}
           />
           <ProductList 
-            title="Сам��е убыточные товары"
+            title="Самые убыточные товары"
             products={data.topUnprofitableProducts}
             isProfitable={false}
           />

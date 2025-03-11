@@ -79,6 +79,7 @@ export const saveProductCostPrice = async (
       nmId,
       costPrice
     });
+    console.log(`API: Saved cost price for nmId ${nmId}: ${costPrice}`);
     return true;
   } catch (error) {
     console.error('Error saving product cost price via API:', error);
