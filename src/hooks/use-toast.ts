@@ -1,4 +1,3 @@
-// Original code is kept, but now we're making sure to export this correctly
 import * as React from "react"
 
 import type {
@@ -7,7 +6,7 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 5
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_REMOVE_DELAY = 1000
 
 type ToasterToast = ToastProps & {
   id: string
@@ -91,8 +90,6 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {
@@ -143,8 +140,6 @@ interface Toast extends Omit<ToasterToast, "id"> {}
 function toast({ ...props }: Toast) {
   const id = genId()
 
-  // Ensure strings are properly encoded before displaying
-  // Safely handle non-string ReactNode types
   if (typeof props.title === 'string') {
     props.title = props.title.replace(/�/g, '');
   }
@@ -171,6 +166,8 @@ function toast({ ...props }: Toast) {
       },
     },
   })
+
+  setTimeout(dismiss, TOAST_REMOVE_DELAY)
 
   return {
     id: id,
