@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import { ArrowUp, ArrowDown, TrendingUp, TrendingDown, DollarSign, FileText, Info, Image } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
