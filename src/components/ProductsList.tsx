@@ -230,22 +230,22 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
   const updateCostPrice = (productId: number, costPrice: number) => {
     console.log(`Updating cost price for product ${productId} to ${costPrice}`);
-    updateProductData(productId, 'costPrice', costPrice);
+    updateProductData(productId, 'costPrice', costPrice === 0 ? 0 : costPrice || null);
   };
 
   const updateSellingPrice = (productId: number, price: number) => {
     console.log(`Updating selling price for product ${productId} to ${price}`);
-    updateProductData(productId, 'price', price);
+    updateProductData(productId, 'price', price === 0 ? 0 : price || null);
   };
 
   const updateSalesPerDay = (productId: number, salesPerDay: number) => {
     console.log(`Updating sales per day for product ${productId} to ${salesPerDay}`);
-    updateProductData(productId, 'salesPerDay', salesPerDay);
+    updateProductData(productId, 'salesPerDay', salesPerDay === 0 ? 0 : salesPerDay || null);
   };
 
   const updateStoragePerDay = (productId: number, storagePerDay: number) => {
     console.log(`Updating storage per day for product ${productId} to ${storagePerDay}`);
-    updateProductData(productId, 'storagePerDay', storagePerDay);
+    updateProductData(productId, 'storagePerDay', storagePerDay === 0 ? 0 : storagePerDay || null);
   };
 
   const syncProducts = async () => {
@@ -519,8 +519,11 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       <Input
                         id={`costPrice-${product.nmID}`}
                         type="number"
-                        value={product.costPrice ?? 0}
-                        onChange={(e) => updateCostPrice(product.nmID, parseFloat(e.target.value))}
+                        value={product.costPrice === undefined || product.costPrice === null ? "" : product.costPrice}
+                        onChange={(e) => {
+                          const value = e.target.value === "" ? 0 : parseFloat(e.target.value);
+                          updateCostPrice(product.nmID, value);
+                        }}
                         className="h-8 text-right"
                         placeholder="Введите себестоимость"
                       />
@@ -532,8 +535,11 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       <Input
                         id={`sellingPrice-${product.nmID}`}
                         type="number"
-                        value={product.price ?? 0}
-                        onChange={(e) => updateSellingPrice(product.nmID, parseFloat(e.target.value))}
+                        value={product.price === undefined || product.price === null ? "" : product.price}
+                        onChange={(e) => {
+                          const value = e.target.value === "" ? 0 : parseFloat(e.target.value);
+                          updateSellingPrice(product.nmID, value);
+                        }}
                         className="h-8 text-right"
                         placeholder="Введите цену продажи"
                       />
@@ -545,8 +551,11 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       <Input
                         id={`salesPerDay-${product.nmID}`}
                         type="number"
-                        value={product.salesPerDay ?? 0}
-                        onChange={(e) => updateSalesPerDay(product.nmID, parseFloat(e.target.value))}
+                        value={product.salesPerDay === undefined || product.salesPerDay === null ? "" : product.salesPerDay}
+                        onChange={(e) => {
+                          const value = e.target.value === "" ? 0 : parseFloat(e.target.value);
+                          updateSalesPerDay(product.nmID, value);
+                        }}
                         className="h-8 text-right"
                         step="0.1"
                         placeholder="Введите продажи за 30 дней"
@@ -559,8 +568,11 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       <Input
                         id={`storagePerDay-${product.nmID}`}
                         type="number"
-                        value={product.storagePerDay ?? 0}
-                        onChange={(e) => updateStoragePerDay(product.nmID, parseFloat(e.target.value))}
+                        value={product.storagePerDay === undefined || product.storagePerDay === null ? "" : product.storagePerDay}
+                        onChange={(e) => {
+                          const value = e.target.value === "" ? 0 : parseFloat(e.target.value);
+                          updateStoragePerDay(product.nmID, value);
+                        }}
                         className="h-8 text-right"
                         placeholder="Введите хранение за 30 дней"
                       />

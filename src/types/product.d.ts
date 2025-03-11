@@ -8,8 +8,8 @@ interface Product {
     big: string;
     c246x328: string;
   }>;
-  costPrice?: number;
-  price?: number;
+  costPrice?: number | null;
+  price?: number | null;
   discountedPrice?: number;
   clubPrice?: number;
   quantity?: number;
@@ -22,8 +22,8 @@ interface Product {
     ppvz_for_pay?: number;
     retail_price?: number;
   };
-  salesPerDay?: number;
-  storagePerDay?: number;
+  salesPerDay?: number | null;
+  storagePerDay?: number | null;
 }
 
 export type { Product };
