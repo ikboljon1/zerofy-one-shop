@@ -5,14 +5,11 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import AuthModal from "@/components/auth/AuthModal";
 import { motion } from "framer-motion";
-import FeatureVisualization from "@/components/landing/FeatureVisualization";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const LandingPage = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [activeScreenshot, setActiveScreenshot] = useState(0);
-  const [activeFeatureTab, setActiveFeatureTab] = useState("storage-analysis");
   const navigate = useNavigate();
 
   const handleAuthClick = (mode: 'login' | 'register') => {
@@ -93,12 +90,12 @@ const LandingPage = () => {
     {
       icon: <TrendingDown className="h-6 w-6 text-primary" />,
       title: "Анализ платного хранения",
-      description: "Интеллектуальная система анализирует все аспекты хранения товаров: объемы, сроки и стоимость. Алгоритм выявляет товары с избыточными запасами, рассчитывает дополнительные затраты и формирует рекомендации по оптимизации. Снижайте расходы на хранение до 40% благодаря точным прогнозам и оптимальному распределению товаров между складами и маркетплейсов."
+      description: "Оптимизируйте свои расходы на хранение товаров на маркетплейсах. Наш уникальный инструмент анализирует стоимость хранения, сопоставляет с продажами и предлагает оптимальные решения по распределению запасов."
     },
     {
       icon: <ArrowUpRight className="h-6 w-6 text-primary" />,
       title: "Мониторинг эффективности рекламы",
-      description: "Анализируйте эффективность каждой рекламной кампании с детализацией до ключевого слова. Система автоматически отслеживает ключевые метрики (CTR, CPC, конверсию), рассчитывает ROI по каждому товару и формирует рекомендации по оптимизации бюджета. Благодаря интеллектуальным алгоритмам вы получаете максимальную отдачу от каждого рубля, вложенного в рекламу."
+      description: "Получайте максимальную отдачу от рекламных бюджетов. Анализируйте эффективность каждой копейки, вложенной в рекламу, с детальной статистикой по кликам, конверсиям и возврату инвестиций."
     }
   ];
 
@@ -340,7 +337,7 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* Features with Interactive Visualizations */}
+        {/* Features */}
         <section className="py-20 px-4 bg-muted/50">
           <div className="container mx-auto max-w-6xl">
             <motion.div
@@ -356,39 +353,6 @@ const LandingPage = () => {
                 От глубинной аналитики до интеллектуального управления поставками — весь ваш бизнес на одной платформе.
               </p>
             </motion.div>
-            
-            <div className="mb-16 rounded-lg border overflow-hidden shadow-lg bg-card">
-              <Tabs value={activeFeatureTab} onValueChange={setActiveFeatureTab} className="w-full">
-                <div className="p-4 bg-muted/30">
-                  <TabsList className="grid w-full grid-cols-1 md:grid-cols-3">
-                    <TabsTrigger value="storage-analysis" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                      <TrendingDown className="h-4 w-4 mr-2" />
-                      Анализ платного хранения
-                    </TabsTrigger>
-                    <TabsTrigger value="profitability" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                      <Calculator className="h-4 w-4 mr-2" />
-                      Расчет рентабельности
-                    </TabsTrigger>
-                    <TabsTrigger value="ad-effectiveness" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                      <ArrowUpRight className="h-4 w-4 mr-2" />
-                      Эффективность рекламы
-                    </TabsTrigger>
-                  </TabsList>
-                </div>
-                
-                <div className="p-6">
-                  <TabsContent value="storage-analysis" className="mt-0">
-                    <FeatureVisualization type="storage-analysis" />
-                  </TabsContent>
-                  <TabsContent value="profitability" className="mt-0">
-                    <FeatureVisualization type="profitability" />
-                  </TabsContent>
-                  <TabsContent value="ad-effectiveness" className="mt-0">
-                    <FeatureVisualization type="ad-effectiveness" />
-                  </TabsContent>
-                </div>
-              </Tabs>
-            </div>
             
             <motion.div 
               variants={containerVariants}
