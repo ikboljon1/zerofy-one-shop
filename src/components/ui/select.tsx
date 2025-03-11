@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { Check, ChevronDown, ChevronUp, Search } from "lucide-react"
@@ -66,9 +65,25 @@ const SelectScrollDownButton = React.forwardRef<
 SelectScrollDownButton.displayName =
   SelectPrimitive.ScrollDownButton.displayName
 
-// Updated SelectContent to accept a searchable prop and implement search functionality
 interface ExtendedSelectContentProps extends React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content> {
   searchable?: boolean;
+}
+
+interface ReactElementWithStringChildren {
+  props: {
+    children: string | React.ReactElement<{ children: string }>;
+  };
+}
+
+function hasStringChildren(child: React.ReactNode): child is React.ReactElement<{ children: string }> {
+  return React.isValidElement(child) && 
+    typeof child.props.children === 'string';
+}
+
+function hasReactElementWithStringChildren(child: React.ReactNode): child is React.ReactElement<{ children: React.ReactElement<{ children: string }> }> {
+  return React.isValidElement(child) && 
+    React.isValidElement(child.props.children) &&
+    typeof child.props.children.props?.children === 'string';
 }
 
 const SelectContent = React.forwardRef<
@@ -77,16 +92,13 @@ const SelectContent = React.forwardRef<
 >(({ className, children, position = "popper", searchable = false, ...props }, ref) => {
   const [searchQuery, setSearchQuery] = React.useState("");
   
-  // Filter children based on search query
   const filteredChildren = React.useMemo(() => {
     if (!searchable || !searchQuery) return children;
     
     return React.Children.map(children, (child) => {
-      // Handle SelectGroup
       if (React.isValidElement(child) && child.type === SelectGroup) {
         const filteredGroupChildren = React.Children.toArray(child.props.children).filter((groupChild) => {
-          if (React.isValidElement(groupChild) && 
-              typeof groupChild.props.children === 'string' && 
+          if (hasStringChildren(groupChild) && 
               groupChild.props.children.toLowerCase().includes(searchQuery.toLowerCase())) {
             return true;
           }
@@ -101,19 +113,12 @@ const SelectContent = React.forwardRef<
         });
       }
       
-      // Handle SelectItem
-      if (React.isValidElement(child) && 
-          child.props.children && 
-          typeof child.props.children === 'string' && 
+      if (hasStringChildren(child) && 
           child.props.children.toLowerCase().includes(searchQuery.toLowerCase())) {
         return child;
       }
       
-      if (React.isValidElement(child) && 
-          child.props.children &&
-          React.isValidElement(child.props.children) &&
-          child.props.children.props?.children &&
-          typeof child.props.children.props.children === 'string' &&
+      if (hasReactElementWithStringChildren(child) &&
           child.props.children.props.children.toLowerCase().includes(searchQuery.toLowerCase())) {
         return child;
       }
@@ -228,3 +233,4 @@ export {
   SelectScrollUpButton,
   SelectScrollDownButton,
 }
+
