@@ -191,7 +191,7 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
           </h3>
         </div>
         
-        <div className="h-[400px] w-full relative flex items-center justify-center">
+        <div className="h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <defs>
@@ -272,18 +272,6 @@ const Chart = ({ salesTrend, productSales }: ChartProps) => {
               />
             </PieChart>
           </ResponsiveContainer>
-          
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-36 h-36 rounded-full flex flex-col items-center justify-center bg-white/90 dark:bg-gray-800/90 border-2 border-indigo-300/60 dark:border-indigo-600/40 shadow-lg">
-              <ShoppingCart className="text-indigo-500 h-8 w-8 mb-2" />
-              <div className="text-2xl font-bold text-gray-800 dark:text-gray-200">
-                {totalSales.toLocaleString()}
-              </div>
-              <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                товаров
-              </div>
-            </div>
-          </div>
         </div>
       </Card>
     </div>
