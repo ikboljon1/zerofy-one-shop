@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -329,7 +328,7 @@ const Warehouses: React.FC = () => {
                 <div>
                   <h2 className="text-lg font-semibold flex items-center gap-2">
                     <Building2 className="h-5 w-5 text-primary" />
-                    Управление поставками
+                    <span>Управление поставками</span>
                   </h2>
                   <p className="text-sm text-muted-foreground">
                     Анализ коэффициентов приемки и выбор оптимального склада
@@ -347,7 +346,7 @@ const Warehouses: React.FC = () => {
                   ) : (
                     <RefreshCw className="h-4 w-4" />
                   )}
-                  Обновить данные
+                  <span>Обновить данные</span>
                 </Button>
               </div>
 
@@ -357,11 +356,11 @@ const Warehouses: React.FC = () => {
                   
                   <WarehouseSelector
                     warehouses={wbWarehouses}
-                    onSelect={handleWarehouseSelect}
-                    selectedId={selectedWarehouseId}
-                    preferredIds={preferredWarehouses}
-                    onTogglePreferred={handleSavePreferredWarehouse}
-                    isLoading={loading.warehouses}
+                    coefficients={coefficients}
+                    onWarehouseSelect={handleWarehouseSelect}
+                    selectedWarehouseId={selectedWarehouseId}
+                    onSavePreferred={handleSavePreferredWarehouse}
+                    preferredWarehouses={preferredWarehouses}
                   />
                 </div>
                 

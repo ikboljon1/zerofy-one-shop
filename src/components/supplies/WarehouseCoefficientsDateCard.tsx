@@ -93,7 +93,7 @@ const WarehouseCoefficientsDateCard: React.FC<WarehouseCoefficientsDateCardProps
 
   // Get warehouse name by ID
   const getWarehouseName = (warehouseId: number) => {
-    const warehouse = warehouses.find(w => w.id === warehouseId);
+    const warehouse = warehouses.find(w => w.ID === warehouseId);
     return warehouse ? warehouse.name : `Склад ${warehouseId}`;
   };
 
