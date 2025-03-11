@@ -14,7 +14,7 @@ interface ExpenseBreakdownProps {
         advertising: number;
         acceptance: number;
         deductions?: number;
-        costPrice?: number; // Добавлено поле для себестоимости
+        costPrice?: number; // Поле для себестоимости
       };
     };
   };
@@ -51,7 +51,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
   return (
     <Card className="p-4">
       <h3 className="text-lg font-semibold mb-4">Структура расходов</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-6 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         <div className="flex flex-col bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background border border-purple-200 dark:border-purple-800 rounded-xl p-3">
           <div className="flex justify-between items-center mb-1">
             <h4 className="text-sm font-medium">Логистика</h4>
@@ -165,7 +165,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           </div>
         </div>
         
-        {/* Новая карточка для себестоимости товаров */}
+        {/* Карточка для себестоимости товаров */}
         <div className="flex flex-col bg-gradient-to-br from-green-50 to-white dark:from-green-950/20 dark:to-background border border-green-200 dark:border-green-800 rounded-xl p-3">
           <div className="flex justify-between items-center mb-1">
             <h4 className="text-sm font-medium">Себестоимость</h4>

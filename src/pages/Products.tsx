@@ -26,7 +26,7 @@ interface ProductData {
   margin?: number;
   returnCount?: number;
   category?: string;
-  nmId?: number; // Добавлено поле nmId
+  nmId?: number; // Поле nmId для идентификации товара
 }
 
 const Products = ({ selectedStore }: ProductsProps) => {
@@ -56,6 +56,8 @@ const Products = ({ selectedStore }: ProductsProps) => {
       const profitabilityData = getProductProfitabilityData(selectedStore.id);
       
       if (profitabilityData) {
+        console.log("Loaded profitability data:", profitabilityData);
+        
         // Ensure we're only taking the top profitable and unprofitable products
         setProfitableProducts(profitabilityData.profitableProducts?.slice(0, 3) || []);
         setUnprofitableProducts(profitabilityData.unprofitableProducts?.slice(0, 3) || []);
@@ -107,24 +109,42 @@ const Products = ({ selectedStore }: ProductsProps) => {
 
       const data = await response.json();
       
-      // Логируем информацию о nmId в полученных продуктах
+      // Логируем подробную информацию о полученных продуктах
       console.log('Received products data:');
       if (data.cards && data.cards.length > 0) {
-        console.log('First product sample:', {
-          nmId: data.cards[0].nmID || data.cards[0].nmId,
-          vendorCode: data.cards[0].vendorCode,
-          sizes: data.cards[0].sizes
-        });
+        console.log('Products count:', data.cards.length);
+        console.log('First product full sample:', data.cards[0]);
+        console.log('NmId values in first 5 products:',
+          data.cards.slice(0, 5).map((card: any) => ({
+            nmID: card.nmID,
+            nmId: card.nmId,
+            vendorCode: card.vendorCode
+          }))
+        );
       } else {
         console.log('No products received');
       }
+      
+      // Нормализуем данные, чтобы все продукты имели поле nmId (а не nmID)
+      const normalizedProducts = data.cards.map((product: any) => {
+        // Убедимся, что nmId существует (используем nmID если nmId не существует)
+        if (!product.nmId && product.nmID) {
+          product.nmId = product.nmID;
+        }
+        return product;
+      });
       
       // Сохраняем полученные товары в БД
       try {
         await axios.post('http://localhost:3001/api/products', {
           storeId: selectedStore.id,
-          products: data.cards
+          products: normalizedProducts
         });
+        
+        // Также сохраняем локально для кэширования
+        localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(normalizedProducts));
+        
+        console.log(`Saved ${normalizedProducts.length} products to database`);
         
         toast({
           title: "Успешно",
@@ -134,7 +154,9 @@ const Products = ({ selectedStore }: ProductsProps) => {
         console.error("Error saving products to DB:", dbError);
         
         // Если не удалось сохранить в БД, используем localStorage
-        localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(data.cards));
+        localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(normalizedProducts));
+        
+        console.log(`Saved ${normalizedProducts.length} products to localStorage`);
         
         toast({
           title: "Частично успешно",
@@ -190,16 +212,16 @@ const Products = ({ selectedStore }: ProductsProps) => {
         </Card>
       ) : (
         <>
-          {/* Добавляем компонент для отображения статистики себестоимости */}
+          {/* Компонент для отображения статистики себестоимости */}
           <CostPriceMetrics selectedStore={selectedStore} />
           
-          {/* Render improved Products component with profitable/unprofitable products */}
+          {/* Компонент с прибыльными/убыточными товарами */}
           <ProductsComponent 
             topProfitableProducts={profitableProducts} 
             topUnprofitableProducts={unprofitableProducts} 
           />
           
-          {/* Original product list below */}
+          {/* Список всех товаров */}
           <ProductsList selectedStore={selectedStore} />
         </>
       )}

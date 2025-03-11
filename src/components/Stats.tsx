@@ -79,6 +79,56 @@ const Stats = () => {
       const analyticsData = getAnalyticsData(selectedStore.id);
       if (analyticsData && analyticsData.data) {
         console.log("Using data from analytics storage", analyticsData);
+        
+        if (!analyticsData.data.currentPeriod.expenses.costPrice) {
+          console.log("No cost price found in analytics data, calculating...");
+          
+          const products = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
+          
+          const allSales: any[] = [];
+          if (analyticsData.data.dailySales) {
+            analyticsData.data.dailySales.forEach((day: any) => {
+              if (day && day.sales && Array.isArray(day.sales)) {
+                allSales.push(...day.sales);
+              }
+            });
+          }
+          
+          if (allSales.length > 0) {
+            console.log(`Found ${allSales.length} sales. Calculating cost price...`);
+            
+            let totalCostPrice = 0;
+            let processedItems = 0;
+            
+            for (const sale of allSales) {
+              const nmId = sale.nmId || sale.nm_id;
+              if (!nmId) continue;
+              
+              const quantity = Math.abs(sale.quantity || 1);
+              const product = products.find((p: any) => (p.nmId === nmId || p.nmID === nmId));
+              
+              let costPrice = 0;
+              if (product && product.costPrice) {
+                costPrice = product.costPrice;
+              } else {
+                costPrice = await getCostPriceByNmId(nmId, selectedStore.id);
+              }
+              
+              if (costPrice > 0) {
+                const itemCostPrice = costPrice * quantity;
+                totalCostPrice += itemCostPrice;
+                processedItems++;
+              }
+            }
+            
+            console.log(`Calculated total cost price: ${totalCostPrice} for ${processedItems} items`);
+            
+            analyticsData.data.currentPeriod.expenses.costPrice = totalCostPrice;
+            
+            localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
+          }
+        }
+        
         setStatsData(analyticsData.data);
         
         const fromDate = analyticsData.dateFrom ? new Date(analyticsData.dateFrom) : dateFrom;
@@ -95,6 +145,49 @@ const Stats = () => {
       const data = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
       
       if (data) {
+        const products = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
+        
+        const allSales: any[] = [];
+        if (data.dailySales) {
+          data.dailySales.forEach((day: any) => {
+            if (day && day.sales && Array.isArray(day.sales)) {
+              allSales.push(...day.sales);
+            }
+          });
+        }
+        
+        if (allSales.length > 0) {
+          console.log(`Found ${allSales.length} sales. Calculating cost price...`);
+          
+          let totalCostPrice = 0;
+          let processedItems = 0;
+          
+          for (const sale of allSales) {
+            const nmId = sale.nmId || sale.nm_id;
+            if (!nmId) continue;
+            
+            const quantity = Math.abs(sale.quantity || 1);
+            const product = products.find((p: any) => (p.nmId === nmId || p.nmID === nmId));
+            
+            let costPrice = 0;
+            if (product && product.costPrice) {
+              costPrice = product.costPrice;
+            } else {
+              costPrice = await getCostPriceByNmId(nmId, selectedStore.id);
+            }
+            
+            if (costPrice > 0) {
+              const itemCostPrice = costPrice * quantity;
+              totalCostPrice += itemCostPrice;
+              processedItems++;
+            }
+          }
+          
+          console.log(`Calculated total cost price: ${totalCostPrice} for ${processedItems} items`);
+          
+          data.currentPeriod.expenses.costPrice = totalCostPrice;
+        }
+        
         const analyticsData = {
           storeId: selectedStore.id,
           dateFrom: dateFrom.toISOString(),

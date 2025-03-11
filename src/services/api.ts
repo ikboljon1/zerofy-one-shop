@@ -27,13 +27,40 @@ api.interceptors.request.use((config) => {
 // Add response interceptor for error handling
 api.interceptors.response.use(
   (response) => {
-    // Логирование для проверки наличия nm_id в ответе
-    if (response.data && Array.isArray(response.data)) {
-      const hasNmId = response.data.some(item => 'nmId' in item || 'nm_id' in item);
-      if (hasNmId) {
-        console.log('API response contains nmId:', 
-          response.data.slice(0, 2).map(item => ({nmId: item.nmId || item.nm_id}))
-        );
+    // Улучшенное логирование для проверки наличия nm_id и других данных в ответе
+    if (response.data) {
+      console.log('API Response Structure:', Object.keys(response.data));
+      
+      // Проверка на наличие nm_id в ответе API
+      if (Array.isArray(response.data)) {
+        const hasNmId = response.data.some(item => 'nmId' in item || 'nm_id' in item);
+        if (hasNmId) {
+          console.log('API response contains nmId:', 
+            response.data.slice(0, 2).map(item => ({
+              nmId: item.nmId || item.nm_id,
+              price: item.priceWithDisc || item.price,
+              title: item.subject || item.title || 'N/A'
+            }))
+          );
+        } else {
+          console.log('API response does NOT contain nmId in items. First item keys:', 
+            Array.isArray(response.data) && response.data.length > 0 
+              ? Object.keys(response.data[0]) 
+              : 'Empty array'
+          );
+        }
+      }
+      
+      // Проверка для аналитических данных
+      if (response.data.dailySales && Array.isArray(response.data.dailySales)) {
+        const saleItem = response.data.dailySales[0]?.sales?.[0];
+        if (saleItem) {
+          console.log('Sales item structure:', Object.keys(saleItem));
+          console.log('Sales item nmId present:', 'nmId' in saleItem || 'nm_id' in saleItem);
+          if ('nmId' in saleItem || 'nm_id' in saleItem) {
+            console.log('Example sale nmId:', saleItem.nmId || saleItem.nm_id);
+          }
+        }
       }
     }
     return response;
@@ -89,10 +116,13 @@ export const getCostPriceByNmId = async (nmId: number, storeId: string): Promise
       return product.costPrice;
     }
     
+    console.log(`No cost price found for nmId ${nmId} in localStorage`);
+    
     // Если нет в локальном хранилище, пробуем получить с сервера
     try {
       const response = await api.get(`http://localhost:3001/api/products/cost-price/${nmId}?storeId=${storeId}`);
       if (response.data && response.data.costPrice) {
+        console.log(`Received cost price from server for nmId ${nmId}: ${response.data.costPrice}`);
         return response.data.costPrice;
       }
     } catch (error) {
@@ -104,6 +134,47 @@ export const getCostPriceByNmId = async (nmId: number, storeId: string): Promise
     console.error(`Error in getCostPriceByNmId for nmId ${nmId}:`, error);
     return 0;
   }
+};
+
+// Добавим новую функцию для расчета общей себестоимости проданных товаров
+export const calculateTotalCostPrice = async (sales: any[], storeId: string): Promise<number> => {
+  if (!sales || !Array.isArray(sales) || sales.length === 0) {
+    console.log('No sales data to calculate cost price');
+    return 0;
+  }
+  
+  console.log(`Calculating total cost price for ${sales.length} sales items`);
+  
+  let totalCostPrice = 0;
+  let processedItems = 0;
+  let missingNmIdItems = 0;
+  
+  for (const sale of sales) {
+    const nmId = sale.nmId || sale.nm_id;
+    if (!nmId) {
+      missingNmIdItems++;
+      continue;
+    }
+    
+    const quantity = Math.abs(sale.quantity || 1); // Используем абсолютное значение количества
+    const costPrice = await getCostPriceByNmId(nmId, storeId);
+    
+    if (costPrice > 0) {
+      const itemCostPrice = costPrice * quantity;
+      totalCostPrice += itemCostPrice;
+      processedItems++;
+      console.log(`Added cost for nmId ${nmId}: ${costPrice} x ${quantity} = ${itemCostPrice}`);
+    }
+  }
+  
+  console.log(`Total cost price calculation results:
+    - Total cost: ${totalCostPrice}
+    - Processed items: ${processedItems}
+    - Items missing nmId: ${missingNmIdItems}
+    - Total items: ${sales.length}
+  `);
+  
+  return totalCostPrice;
 };
 
 export default api;
