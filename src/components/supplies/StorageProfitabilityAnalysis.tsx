@@ -196,45 +196,47 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     const initialWbCommissions: Record<number, number | null> = {};
 
     warehouseItems.forEach(item => {
-      if (!costPrices[item.nmId]) {
-        initialCostPrices[item.nmId] = 0;
+      const nmId = item.nmId;
+      
+      if (!costPrices[nmId]) {
+        initialCostPrices[nmId] = 0;
       }
       
-      if (!sellingPrices[item.nmId]) {
-        initialSellingPrices[item.nmId] = item.price || 0;
+      if (!sellingPrices[nmId]) {
+        initialSellingPrices[nmId] = item.price || 0;
       }
       
-      let itemStorageCost = dailyStorageCost[item.nmId] || 5;
+      let itemStorageCost = dailyStorageCost[nmId] || 5;
       
-      const matchingStorageItems = paidStorageData.filter(psi => psi.nmId === item.nmId);
+      const matchingStorageItems = paidStorageData.filter(psi => psi.nmId === nmId);
       if (matchingStorageItems.length > 0) {
         const totalCost = matchingStorageItems.reduce((sum, psi) => sum + psi.warehousePrice, 0);
         itemStorageCost = totalCost / matchingStorageItems.length;
       }
       
-      if (!dailySalesRates[item.nmId]) {
-        initialDailySales[item.nmId] = averageDailySalesRate[item.nmId] || 0.1;
+      if (!dailySalesRates[nmId]) {
+        initialDailySales[nmId] = averageDailySalesRate[nmId] || 0.1;
       }
       
-      if (!storageCostRates[item.nmId]) {
-        initialStorageCosts[item.nmId] = itemStorageCost;
+      if (!storageCostRates[nmId]) {
+        initialStorageCosts[nmId] = itemStorageCost;
       }
       
-      if (!discountLevels[item.nmId]) {
-        initialDiscountLevels[item.nmId] = 30;
+      if (!discountLevels[nmId]) {
+        initialDiscountLevels[nmId] = 30;
       }
       
-      if (!logisticsCosts[item.nmId]) {
-        initialLogisticsCosts[item.nmId] = 150;
+      if (!logisticsCosts[nmId]) {
+        initialLogisticsCosts[nmId] = 150;
       }
       
-      if (!wbCommissions[item.nmId]) {
-        initialWbCommissions[item.nmId] = 15;
+      if (!wbCommissions[nmId]) {
+        initialWbCommissions[nmId] = 15;
       }
       
-      const salesRate = averageDailySalesRate[item.nmId] || 0.1;
-      if (!lowStockThreshold[item.nmId]) {
-        initialLowStockThresholds[item.nmId] = Math.max(3, Math.ceil(salesRate * 7));
+      const salesRate = averageDailySalesRate[nmId] || 0.1;
+      if (!lowStockThreshold[nmId]) {
+        initialLowStockThresholds[nmId] = Math.max(3, Math.ceil(salesRate * 7));
       }
     });
 
@@ -592,7 +594,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       console.error("Ошибка при получении данных:", error);
       toast({
         title: "Ошибка получения данных",
-        description: "Не удалось получить данные о продажах. Пожалуйста, попробуйте позже.",
+        description: "Не удалось получить данные о продажах. Пожалуйста, попробуйте поз��е.",
         variant: "destructive"
       });
     } finally {
@@ -1236,4 +1238,3 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
 };
 
 export default StorageProfitabilityAnalysis;
-
