@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+
+import React, { useMemo, useState } from 'react';
 import { WarehouseCoefficient } from '@/types/supplies';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format, addDays } from 'date-fns';
@@ -9,11 +10,13 @@ import {
   TruckIcon, 
   PackageOpen, 
   DollarSign,
-  CalendarIcon
+  CalendarIcon,
+  SearchIcon
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { SearchInput } from '@/components/ui/search-input';
 
 interface WarehouseCoefficientsDateCardProps {
   coefficients: WarehouseCoefficient[];
@@ -26,7 +29,9 @@ const WarehouseCoefficientsDateCard: React.FC<WarehouseCoefficientsDateCardProps
   selectedWarehouseId,
   title = "Коэффициенты приемки"
 }) => {
-  // Filter coefficients by selected warehouse if provided
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Filter coefficients by selected warehouse if provided and by search term
   const filteredCoefficients = useMemo(() => {
     let filtered = coefficients;
     
@@ -34,8 +39,19 @@ const WarehouseCoefficientsDateCard: React.FC<WarehouseCoefficientsDateCardProps
       filtered = filtered.filter(c => c.warehouseID === selectedWarehouseId);
     }
     
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(c => 
+        (c.boxTypeName?.toLowerCase().includes(searchLower)) ||
+        String(c.boxTypeID).includes(searchLower) ||
+        String(c.warehouseID).includes(searchLower) ||
+        (c.deliveryCoef?.toString().toLowerCase().includes(searchLower)) ||
+        (c.storageCoef?.toString().toLowerCase().includes(searchLower))
+      );
+    }
+    
     return filtered;
-  }, [coefficients, selectedWarehouseId]);
+  }, [coefficients, selectedWarehouseId, searchTerm]);
   
   // Get the next 7 days from today instead of 14
   const next7Days = useMemo(() => {
@@ -83,9 +99,11 @@ const WarehouseCoefficientsDateCard: React.FC<WarehouseCoefficientsDateCardProps
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
-            {selectedWarehouseId 
-              ? "Нет данных о коэффициентах приемки для выбранного склада"
-              : "Выберите склад для просмотра коэффициентов приёмки"}
+            {searchTerm
+              ? "Нет данных соответствующих поисковому запросу"
+              : selectedWarehouseId 
+                ? "Нет данных о коэффициентах приемки для выбранного склада"
+                : "Выберите склад для просмотра коэффициентов приёмки"}
           </p>
         </CardContent>
       </Card>
@@ -98,6 +116,14 @@ const WarehouseCoefficientsDateCard: React.FC<WarehouseCoefficientsDateCardProps
         <CardTitle className="text-lg">{title}</CardTitle>
       </CardHeader>
       <CardContent>
+        <div className="mb-4">
+          <SearchInput
+            placeholder="Поиск по типу коробов..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full"
+          />
+        </div>
         <ScrollArea className="h-[400px] pr-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {next7Days.map((date) => {
