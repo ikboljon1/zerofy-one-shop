@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +10,10 @@ interface CostPriceMetricsProps {
 }
 
 interface ProductData {
-  nmID: number;
+  nmID?: number;
+  nm_id?: number | string;
+  sa_name?: string;
+  supplierArticle?: string;
   quantity?: number;
   costPrice?: number;
 }
@@ -41,15 +43,29 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
     if (!selectedStore) return;
 
     try {
+      console.log(`Loading cost price data for store: ${selectedStore.id}`);
       const products = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
-      if (products.length === 0) return;
+      if (products.length === 0) {
+        console.log("No products found in localStorage");
+        return;
+      }
 
+      console.log(`Found ${products.length} products in localStorage`);
       let totalCost = 0;
       let itemsSold = 0;
 
       products.forEach((product: ProductData) => {
         const quantity = product.quantity || 0;
         const costPrice = product.costPrice || 0;
+        
+        console.log(`Product: ${JSON.stringify({
+          nmID: product.nmID,
+          nm_id: product.nm_id,
+          sa_name: product.sa_name,
+          supplierArticle: product.supplierArticle,
+          quantity,
+          costPrice
+        })}`);
         
         if (quantity > 0 && costPrice > 0) {
           totalCost += quantity * costPrice;
@@ -61,8 +77,8 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       setTotalSoldItems(itemsSold);
       setAvgCostPrice(itemsSold > 0 ? totalCost / itemsSold : 0);
       
-      // Устанавливаем дату последнего обновления
       setLastUpdateDate(new Date().toISOString());
+      console.log(`Calculated total cost price: ${totalCost}, items sold: ${itemsSold}, avg cost price: ${avgCostPrice}`);
     } catch (error) {
       console.error("Error loading cost price data:", error);
     }

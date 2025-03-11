@@ -28,12 +28,17 @@ export interface WildberriesResponse {
     quantity: number;
     nmId?: number | string;
     supplierArticle?: string;
+    nm_id?: number | string;
+    sa_name?: string;
   }>;
   productReturns: Array<{
     name: string;
     value: number;
     count?: number;
     isNegative?: boolean;
+    nmId?: number | string;
+    nm_id?: number | string;
+    sa_name?: string;
   }>;
   penaltiesData?: Array<{
     name: string;
@@ -56,6 +61,8 @@ export interface WildberriesResponse {
     returnCount?: number;
     category?: string;
     nmId?: string | number;
+    nm_id?: string | number;
+    sa_name?: string;
   }>;
   topUnprofitableProducts?: Array<{
     name: string;
@@ -67,6 +74,8 @@ export interface WildberriesResponse {
     returnCount?: number;
     category?: string;
     nmId?: string | number;
+    nm_id?: string | number;
+    sa_name?: string;
   }>;
   orders?: WildberriesOrder[];
   sales?: WildberriesSale[];
@@ -236,6 +245,9 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     image: string;
     count: number;
     returnCount: number;
+    nmId?: string | number;
+    nm_id?: string | number;
+    sa_name?: string;
   }> = {};
 
   console.log(`Processing ${data.length} records for metrics calculation...`);
@@ -258,7 +270,10 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
             profit: 0,
             image: record.pic_url || '',
             count: 0,
-            returnCount: 0
+            returnCount: 0,
+            nmId: record.nm_id || '',
+            nm_id: record.nm_id || '',
+            sa_name: record.sa_name || ''
           };
         }
         
@@ -272,6 +287,15 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
           productProfitability[productName].image = record.pic_url;
         }
         productProfitability[productName].count += 1;
+        
+        // Сохраняем nm_id и sa_name
+        if (record.nm_id && !productProfitability[productName].nm_id) {
+          productProfitability[productName].nm_id = record.nm_id;
+          productProfitability[productName].nmId = record.nm_id;
+        }
+        if (record.sa_name && !productProfitability[productName].sa_name) {
+          productProfitability[productName].sa_name = record.sa_name;
+        }
       }
     } 
     // Обработка возвратов в соответствии с Python-скриптом
@@ -399,7 +423,9 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     margin: Math.round((item.profit / item.sales) * 100) || 0,
     returnCount: item.returnCount || 0,
     category: "Одежда",
-    nmId: item.nmId
+    nmId: item.nmId || item.nm_id,
+    nm_id: item.nm_id,
+    sa_name: item.sa_name
   }));
 
   const sortedByLoss = [...productProfitabilityArray].sort((a, b) => a.profit - b.profit);
@@ -412,7 +438,9 @@ const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
     margin: Math.round((item.profit / item.sales) * 100) || 0,
     returnCount: item.returnCount || 0,
     category: "Одежда",
-    nmId: item.nmId
+    nmId: item.nmId || item.nm_id,
+    nm_id: item.nm_id,
+    sa_name: item.sa_name
   }));
 
   console.log(`Calculated metrics: Total sales: ${totalSales}, Total for pay: ${totalForPay}, Logistics: ${totalDeliveryRub}, Storage: ${totalStorageFee}, Returns: ${totalReturns}, Total to pay: ${totalToPay}`);
@@ -541,18 +569,31 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
     } = result;
     
     // 6. Группируем продажи по категориям
-    const salesByCategory: Record<string, number> = {};
+    const salesByCategory: Record<string, { quantity: number, nmId?: string | number, supplierArticle?: string, nm_id?: string | number, sa_name?: string }> = {};
     for (const record of reportData) {
       if (record.doc_type_name === 'Продажа' && record.subject_name) {
         if (!salesByCategory[record.subject_name]) {
-          salesByCategory[record.subject_name] = 0;
+          salesByCategory[record.subject_name] = { 
+            quantity: 0,
+            nmId: record.nm_id,
+            supplierArticle: record.sa_name,
+            nm_id: record.nm_id,
+            sa_name: record.sa_name
+          };
         }
-        salesByCategory[record.subject_name]++;
+        salesByCategory[record.subject_name].quantity++;
       }
     }
     
     const productSales = Object.entries(salesByCategory)
-      .map(([subject_name, quantity]) => ({ subject_name, quantity }))
+      .map(([subject_name, data]) => ({ 
+        subject_name, 
+        quantity: data.quantity,
+        nmId: data.nmId,
+        supplierArticle: data.supplierArticle,
+        nm_id: data.nm_id,
+        sa_name: data.sa_name
+      }))
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 10);
     
@@ -697,11 +738,11 @@ const getDemoData = (): WildberriesResponse => {
       }
     ],
     productSales: [
-      { subject_name: "Костюмы", quantity: 48, nmId: "12345", supplierArticle: "костюм-12345" },
-      { subject_name: "Платья", quantity: 6, nmId: "67890", supplierArticle: "платье-67890" },
-      { subject_name: "Свитшоты", quantity: 4, nmId: "11121", supplierArticle: "свитшот-11121" },
-      { subject_name: "Лонгсливы", quantity: 3, nmId: "31415", supplierArticle: "лонгслив-31415" },
-      { subject_name: "Костюмы спортивные", quantity: 1, nmId: "16180", supplierArticle: "костюм-спорт-16180" }
+      { subject_name: "Костюмы", quantity: 48, nmId: "12345", supplierArticle: "костюм-12345", nm_id: "12345", sa_name: "костюм-12345" },
+      { subject_name: "Платья", quantity: 6, nmId: "67890", supplierArticle: "платье-67890", nm_id: "67890", sa_name: "платье-67890" },
+      { subject_name: "Свитшоты", quantity: 4, nmId: "11121", supplierArticle: "свитшот-11121", nm_id: "11121", sa_name: "свитшот-11121" },
+      { subject_name: "Лонгсливы", quantity: 3, nmId: "31415", supplierArticle: "лонгслив-31415", nm_id: "31415", sa_name: "лонгслив-31415" },
+      { subject_name: "Костюмы спортивные", quantity: 1, nmId: "16180", supplierArticle: "костюм-спорт-16180", nm_id: "16180", sa_name: "костюм-спорт-16180" }
     ],
     productReturns: [
       { name: "Костюм женский спортивный", value: 12000, count: 3 },
@@ -733,7 +774,9 @@ const getDemoData = (): WildberriesResponse => {
         margin: 42,
         returnCount: 3,
         category: "Женская одежда",
-        nmId: "25251346"
+        nmId: "25251346",
+        nm_id: "25251346",
+        sa_name: "костюм-12345"
       },
       { 
         name: "Платье летнее", 
@@ -744,7 +787,9 @@ const getDemoData = (): WildberriesResponse => {
         margin: 45,
         returnCount: 2,
         category: "Женская одежда",
-        nmId: "22271973"
+        nmId: "22271973",
+        nm_id: "22271973",
+        sa_name: "платье-67890"
       },
       { 
         name: "Джинсы классические", 
@@ -755,7 +800,9 @@ const getDemoData = (): WildberriesResponse => {
         margin: 35,
         returnCount: 1,
         category: "Мужская одежда",
-        nmId: "13733711"
+        nmId: "13733711",
+        nm_id: "13733711",
+        sa_name: "джинсы-13733711"
       }
     ],
     topUnprofitableProducts: [
@@ -768,7 +815,9 @@ const getDemoData = (): WildberriesResponse => {
         margin: 8,
         returnCount: 12,
         category: "Аксессуары",
-        nmId: "11081822"
+        nmId: "11081822",
+        nm_id: "11081822",
+        sa_name: "шарф-11081822"
       },
       { 
         name: "Рубашка офисная", 
@@ -779,7 +828,9 @@ const getDemoData = (): WildberriesResponse => {
         margin: 5,
         returnCount: 8,
         category: "Мужская одежда",
-        nmId: "9080277"
+        nmId: "9080277",
+        nm_id: "9080277",
+        sa_name: "рубашка-9080277"
       },
       { 
         name: "Перчатки кожаные", 
@@ -790,7 +841,9 @@ const getDemoData = (): WildberriesResponse => {
         margin: 12,
         returnCount: 10,
         category: "Аксессуары",
-        nmId: "10328291"
+        nmId: "10328291",
+        nm_id: "10328291",
+        sa_name: "перчатки-10328291"
       }
     ],
     orders: [],
