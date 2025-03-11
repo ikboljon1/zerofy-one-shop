@@ -104,9 +104,54 @@ export const setApiKey = (apiKey: string) => {
   api.defaults.headers.common['Authorization'] = apiKey;
 };
 
+// Функция для получения отчета о продажах по реализации
+export const fetchSalesReport = async (apiKey: string, dateFrom: Date, dateTo: Date, limit = 100000, rrdid = 0) => {
+  try {
+    // Форматирование дат в нужный формат
+    const fromDate = dateFrom.toISOString().split('T')[0];
+    const toDate = dateTo.toISOString().split('T')[0];
+    
+    console.log(`Fetching sales report from ${fromDate} to ${toDate} with rrdid=${rrdid}`);
+    
+    const response = await axios.get('https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod', {
+      headers: {
+        'Authorization': apiKey
+      },
+      params: {
+        dateFrom: fromDate,
+        dateTo: toDate,
+        limit,
+        rrdid
+      }
+    });
+    
+    console.log(`Received ${response.data?.length || 0} sales report items`);
+    
+    // Проверяем наличие nm_id в ответе
+    if (Array.isArray(response.data) && response.data.length > 0) {
+      const hasNmId = response.data.some(item => 'nm_id' in item);
+      console.log('Sales report contains nm_id:', hasNmId);
+      if (hasNmId) {
+        const examples = response.data.slice(0, 3).map(item => ({
+          nm_id: item.nm_id,
+          quantity: item.quantity,
+          subject: item.subject_name
+        }));
+        console.log('Examples of sales with nm_id:', examples);
+      }
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching sales report:', error);
+    throw error;
+  }
+};
+
 // Функция для получения себестоимости товара по nm_id
 export const getCostPriceByNmId = async (nmId: number, storeId: string): Promise<number> => {
   try {
+    console.log(`Getting cost price for nmId ${nmId} from store ${storeId}`);
     // Пробуем получить из локального хранилища
     const products = JSON.parse(localStorage.getItem(`products_${storeId}`) || "[]");
     const product = products.find((p: any) => p.nmId === nmId || p.nmID === nmId);
@@ -151,7 +196,7 @@ export const calculateTotalCostPrice = async (sales: any[], storeId: string): Pr
   let missingNmIdItems = 0;
   
   for (const sale of sales) {
-    const nmId = sale.nmId || sale.nm_id || sale.product?.nmId || sale.product?.nm_id;
+    const nmId = sale.nmId || sale.nm_id || sale.product?.nmId || sale.product?.nm_id || sale.nm_id;
     if (!nmId) {
       missingNmIdItems++;
       console.warn('Missing nmId in sale item:', sale);
@@ -179,6 +224,55 @@ export const calculateTotalCostPrice = async (sales: any[], storeId: string): Pr
   `);
   
   return totalCostPrice;
+};
+
+// Функция для получения и обработки данных отчета о продажах
+export const processSalesReport = async (apiKey: string, dateFrom: Date, dateTo: Date, storeId: string): Promise<{
+  sales: any[],
+  totalCostPrice: number
+}> => {
+  try {
+    let allSales: any[] = [];
+    let rrdid = 0;
+    let hasMoreData = true;
+    
+    // Получаем все данные отчета (возможно несколько страниц)
+    while (hasMoreData) {
+      const salesData = await fetchSalesReport(apiKey, dateFrom, dateTo, 100000, rrdid);
+      
+      if (!salesData || !Array.isArray(salesData) || salesData.length === 0) {
+        hasMoreData = false;
+        continue;
+      }
+      
+      allSales = [...allSales, ...salesData];
+      console.log(`Fetched ${salesData.length} sales records, total: ${allSales.length}`);
+      
+      // Проверяем, нужно ли загружать следующую страницу
+      if (salesData.length > 0) {
+        const lastItem = salesData[salesData.length - 1];
+        rrdid = lastItem.rrd_id || 0;
+      } else {
+        hasMoreData = false;
+      }
+    }
+    
+    console.log(`Total sales records fetched: ${allSales.length}`);
+    
+    // Рассчитываем общую себестоимость
+    const totalCostPrice = await calculateTotalCostPrice(allSales, storeId);
+    
+    return {
+      sales: allSales,
+      totalCostPrice
+    };
+  } catch (error) {
+    console.error('Error processing sales report:', error);
+    return {
+      sales: [],
+      totalCostPrice: 0
+    };
+  }
 };
 
 export default api;
