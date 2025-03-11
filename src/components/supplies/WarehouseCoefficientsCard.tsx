@@ -25,6 +25,12 @@ const WarehouseCoefficientsCard: React.FC<WarehouseCoefficientsCardProps> = ({
   const [sortBy, setSortBy] = useState<'coefficient' | 'date'>('coefficient');
   const [view, setView] = useState<'grid' | 'compact'>('grid');
   
+  // Define the getWarehouseName helper function BEFORE using it in useMemo
+  const getWarehouseName = (warehouseId: number): string => {
+    const warehouse = warehouses.find(w => w.ID === warehouseId);
+    return warehouse?.name || `Склад ${warehouseId}`;
+  };
+  
   // Filter coefficients if selectedWarehouseId is provided
   const filteredCoefficients = useMemo(() => {
     let filtered = selectedWarehouseId 
@@ -49,17 +55,12 @@ const WarehouseCoefficientsCard: React.FC<WarehouseCoefficientsCardProps> = ({
         return new Date(b.date).getTime() - new Date(a.date).getTime();
       }
     });
-  }, [coefficients, selectedWarehouseId, searchTerm, sortBy]);
+  }, [coefficients, selectedWarehouseId, searchTerm, sortBy, warehouses]);
 
   // Limit display to top items if no warehouse is selected
   const displayCoefficients = useMemo(() => {
     return selectedWarehouseId ? filteredCoefficients : filteredCoefficients.slice(0, view === 'compact' ? 6 : 12);
   }, [filteredCoefficients, selectedWarehouseId, view]);
-
-  const getWarehouseName = (warehouseId: number): string => {
-    const warehouse = warehouses.find(w => w.ID === warehouseId);
-    return warehouse?.name || `Склад ${warehouseId}`;
-  };
 
   // Group coefficients by warehouse for a more organized display
   const groupedByWarehouse = useMemo(() => {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Warehouse, WarehouseCoefficient } from '@/types/supplies';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -30,20 +29,17 @@ const WarehouseSelector: React.FC<WarehouseSelectorProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'coefficient'>('name');
   
-  // Use useMemo for filtered warehouses to improve performance
   const filteredWarehouses = useMemo(() => {
     let filtered = [...warehouses];
     
-    // Apply search filter
-    if (searchTerm) {
-      const lowerSearch = searchTerm.toLowerCase();
+    if (searchTerm && searchTerm.length > 0) {
+      const lowerSearch = searchTerm.toLowerCase().trim();
       filtered = filtered.filter(warehouse => 
         warehouse.name.toLowerCase().includes(lowerSearch) ||
         warehouse.address.toLowerCase().includes(lowerSearch)
       );
     }
     
-    // Apply sorting
     filtered = filtered.sort((a, b) => {
       if (sortBy === 'name') {
         return a.name.localeCompare(b.name);
@@ -54,7 +50,6 @@ const WarehouseSelector: React.FC<WarehouseSelectorProps> = ({
       }
     });
     
-    // Move preferred warehouses to the top
     if (preferredWarehouses.length > 0) {
       const preferred = filtered.filter(w => preferredWarehouses.includes(w.ID));
       const others = filtered.filter(w => !preferredWarehouses.includes(w.ID));
@@ -80,6 +75,10 @@ const WarehouseSelector: React.FC<WarehouseSelectorProps> = ({
 
   const selectedWarehouse = warehouses.find(w => w.ID === selectedWarehouseId);
   const selectedCoefficient = coefficients.find(c => c.warehouseID === selectedWarehouseId);
+
+  const handleSearchClear = () => {
+    setSearchTerm('');
+  };
 
   return (
     <Card className="shadow-md overflow-hidden border-primary/10 bg-gradient-to-b from-background to-background/80">
@@ -174,7 +173,7 @@ const WarehouseSelector: React.FC<WarehouseSelectorProps> = ({
                       variant="ghost" 
                       size="sm" 
                       className="h-6 text-xs px-2"
-                      onClick={() => setSearchTerm('')}
+                      onClick={handleSearchClear}
                     >
                       Сбросить
                     </Button>
