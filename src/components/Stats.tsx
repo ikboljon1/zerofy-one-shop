@@ -40,6 +40,38 @@ interface Store {
   isSelected?: boolean;
 }
 
+interface Expenses {
+  total: number;
+  logistics: number;
+  storage: number;
+  penalties: number;
+  acceptance: number;
+  advertising: number;
+  deductions?: number;
+  costPrice?: number;
+}
+
+interface StatsData {
+  currentPeriod: {
+    sales: number;
+    transferred: number;
+    netProfit: number;
+    acceptance: number;
+    expenses: Expenses;
+    // other properties as needed
+  };
+  previousPeriod?: {
+    sales: number;
+    transferred: number;
+    netProfit: number;
+    acceptance: number;
+    expenses: Expenses;
+    // other properties as needed
+  };
+  dailySales?: any[];
+  productSales?: any[];
+}
+
 const STORES_STORAGE_KEY = 'marketplace_stores';
 
 const Stats = () => {
@@ -124,14 +156,12 @@ const Stats = () => {
             
             console.log(`Calculated total cost price: ${totalCostPrice} for ${processedItems} items`);
             
-            if (!analyticsData.data.currentPeriod.expenses.hasOwnProperty('costPrice')) {
-              analyticsData.data.currentPeriod.expenses = {
-                ...analyticsData.data.currentPeriod.expenses,
-                costPrice: totalCostPrice
-              };
-            } else {
-              analyticsData.data.currentPeriod.expenses.costPrice = totalCostPrice;
-            }
+            const updatedExpenses: Expenses = {
+              ...analyticsData.data.currentPeriod.expenses,
+              costPrice: totalCostPrice
+            };
+            
+            analyticsData.data.currentPeriod.expenses = updatedExpenses;
             
             localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
           }
@@ -193,14 +223,12 @@ const Stats = () => {
           
           console.log(`Calculated total cost price: ${totalCostPrice} for ${processedItems} items`);
           
-          if (!data.currentPeriod.expenses.hasOwnProperty('costPrice')) {
-            data.currentPeriod.expenses = {
-              ...data.currentPeriod.expenses,
-              costPrice: totalCostPrice
-            };
-          } else {
-            data.currentPeriod.expenses.costPrice = totalCostPrice;
-          }
+          const updatedExpenses: Expenses = {
+            ...data.currentPeriod.expenses,
+            costPrice: totalCostPrice
+          };
+          
+          data.currentPeriod.expenses = updatedExpenses;
         }
         
         const analyticsData = {
