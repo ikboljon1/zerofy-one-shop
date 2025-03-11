@@ -26,9 +26,6 @@ import {
   advertisingData
 } from "./data/demoData";
 
-const ANALYTICS_STORAGE_KEY = 'marketplace_analytics';
-const PRODUCTS_COST_PRICE_KEY = 'products_cost_price';
-
 interface AnalyticsData {
   currentPeriod: {
     sales: number;
@@ -190,15 +187,27 @@ const AnalyticsSection = () => {
       costPriceMap[item.nmId.toString()] = item.costPrice;
     });
     
-    console.log('Cost price map:', costPriceMap);
-    console.log('Product sales to calculate cost price:', productSales);
+    console.log('Cost price map (первые 5 элементов):', Object.entries(costPriceMap).slice(0, 5));
+    console.log('Количество записей в productSales для расчета себестоимости:', productSales.length);
     
     // Log all available fields in the first product sale to identify what fields we can use for matching
     if (productSales.length > 0) {
       console.log('Available fields in product sales:', Object.keys(productSales[0]));
+      
+      // Выводим первые 3 записи, чтобы увидеть их содержимое
+      console.log('Примеры данных о продажах (первые 3 записи):', 
+        productSales.slice(0, 3).map(sale => ({
+          nmId: sale.nmId || sale.nm_id,
+          name: sale.name || sale.subject_name,
+          sa_name: sale.sa_name,
+          supplierArticle: sale.supplierArticle,
+          quantity: sale.quantity
+        }))
+      );
     }
     
     let hasMappedAnyProduct = false;
+    let matchedCount = 0;
     
     // First try to match by nmId if available
     productSales.forEach(sale => {
@@ -208,19 +217,40 @@ const AnalyticsSection = () => {
         const itemCost = quantity * costPrice;
         totalCostPrice += itemCost;
         hasMappedAnyProduct = true;
-        console.log(`Product ${sale.nmId}: quantity=${quantity}, costPrice=${costPrice}, itemCost=${itemCost}`);
-      } else if (sale.nmId) {
-        console.log(`No cost price found for product ${sale.nmId}`);
+        matchedCount++;
+        
+        if (matchedCount <= 3) {
+          console.log(`УСПЕШНОЕ СОПОСТАВЛЕНИЕ: Product ${sale.nmId}: quantity=${quantity}, costPrice=${costPrice}, itemCost=${itemCost}`);
+        }
+      } else if (sale.nm_id && costPriceMap[sale.nm_id.toString()]) {
+        const quantity = sale.quantity || 1;
+        const costPrice = costPriceMap[sale.nm_id.toString()] || 0;
+        const itemCost = quantity * costPrice;
+        totalCostPrice += itemCost;
+        hasMappedAnyProduct = true;
+        matchedCount++;
+        
+        if (matchedCount <= 3) {
+          console.log(`УСПЕШНОЕ СОПОСТАВЛЕНИЕ: Product ${sale.nm_id}: quantity=${quantity}, costPrice=${costPrice}, itemCost=${itemCost}`);
+        }
+      } else if ((sale.nmId || sale.nm_id)) {
+        if (matchedCount <= 3) {
+          console.log(`НЕ НАЙДЕНО СОВПАДЕНИЕ для товара: ${sale.nmId || sale.nm_id}, name: ${sale.name || sale.subject_name}`);
+        }
       }
     });
     
+    console.log(`Сопоставлено ${matchedCount} из ${productSales.length} товаров по полю nmId`);
+    
     if (!hasMappedAnyProduct && productSales.length > 0) {
-      console.log('Trying to match products by name...');
+      console.log('Trying to match products by other fields...');
       
       // Try matching by supplierArticle if available
       const matchBySupplierArticle = productSales.some(sale => sale.supplierArticle);
       if (matchBySupplierArticle) {
         console.log('Attempting to match by supplierArticle');
+        let supplierArticleMatchCount = 0;
+        
         productSales.forEach(sale => {
           if (sale.supplierArticle) {
             for (const [nmId, costPrice] of Object.entries(costPriceMap)) {
@@ -229,25 +259,25 @@ const AnalyticsSection = () => {
                 const quantity = sale.quantity || 1;
                 const itemCost = quantity * costPrice;
                 totalCostPrice += itemCost;
-                console.log(`Matched product by supplierArticle ${sale.supplierArticle} with nmId ${nmId}: quantity=${quantity}, costPrice=${costPrice}, itemCost=${itemCost}`);
+                supplierArticleMatchCount++;
+                
+                if (supplierArticleMatchCount <= 3) {
+                  console.log(`Matched product by supplierArticle ${sale.supplierArticle} with nmId ${nmId}: quantity=${quantity}, costPrice=${costPrice}, itemCost=${itemCost}`);
+                }
                 hasMappedAnyProduct = true;
                 break;
               }
             }
           }
         });
+        
+        console.log(`Сопоставлено ${supplierArticleMatchCount} товаров по supplierArticle`);
       }
       
       // If still no matches, try matching by subject_name or name
       if (!hasMappedAnyProduct) {
         console.log('Attempting to match by subject_name or name');
-        
-        // Try to find any other identifying fields in the product sales
-        const allFields = new Set<string>();
-        productSales.forEach(sale => {
-          Object.keys(sale).forEach(key => allFields.add(key));
-        });
-        console.log('All available fields across all product sales:', Array.from(allFields));
+        let nameMatchCount = 0;
         
         // Try to match by subject_name
         productSales.forEach(sale => {
@@ -262,13 +292,19 @@ const AnalyticsSection = () => {
                 const quantity = sale.quantity || 1;
                 const itemCost = quantity * costPrice;
                 totalCostPrice += itemCost;
-                console.log(`Matched product by name parts ${name} with nmId ${nmId}: quantity=${quantity}, costPrice=${costPrice}, itemCost=${itemCost}`);
+                nameMatchCount++;
+                
+                if (nameMatchCount <= 3) {
+                  console.log(`Matched product by name parts ${name} with nmId ${nmId}: quantity=${quantity}, costPrice=${costPrice}, itemCost=${itemCost}`);
+                }
                 hasMappedAnyProduct = true;
                 break;
               }
             }
           }
         });
+        
+        console.log(`Сопоставлено ${nameMatchCount} товаров по имени`);
       }
     }
     
@@ -293,6 +329,49 @@ const AnalyticsSection = () => {
       }
 
       const statsData = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
+      
+      // Добавляем подробное логирование о структуре полученных данных
+      console.log("----- ДАННЫЕ АНАЛИТИКИ -----");
+      console.log("Полные данные статистики:", statsData);
+      
+      // Проверяем наличие массива productSales
+      if (statsData && statsData.productSales && statsData.productSales.length > 0) {
+        console.log(`Найдено ${statsData.productSales.length} записей о продажах товаров`);
+        
+        // Логируем первый элемент, чтобы увидеть его структуру
+        console.log("Структура первого элемента в productSales:", statsData.productSales[0]);
+        
+        // Проверяем наличие полей nm_id и sa_name
+        const hasNmId = statsData.productSales.some(product => product.nmId || product.nm_id);
+        const hasSaName = statsData.productSales.some(product => product.sa_name);
+        
+        console.log(`Поле nm_id присутствует в данных: ${hasNmId ? 'ДА' : 'НЕТ'}`);
+        console.log(`Поле sa_name присутствует в данных: ${hasSaName ? 'ДА' : 'НЕТ'}`);
+        
+        // Показываем все доступные поля в первом элементе
+        if (statsData.productSales[0]) {
+          console.log("Доступные поля в данных о продажах:", Object.keys(statsData.productSales[0]));
+        }
+        
+        // Подсчитываем количество товаров с nm_id и sa_name
+        const productsWithNmId = statsData.productSales.filter(p => p.nmId || p.nm_id).length;
+        const productsWithSaName = statsData.productSales.filter(p => p.sa_name).length;
+        
+        console.log(`Количество товаров с полем nm_id: ${productsWithNmId} из ${statsData.productSales.length}`);
+        console.log(`Количество товаров с полем sa_name: ${productsWithSaName} из ${statsData.productSales.length}`);
+      } else {
+        console.log("Массив productSales отсутствует или пуст");
+      }
+      
+      // Проверка продуктов с себестоимостью
+      const productsCostPrice = getProductsCostPrice(selectedStore.id);
+      console.log(`Найдено ${productsCostPrice.length} продуктов с установленной себестоимостью`);
+      
+      if (productsCostPrice.length > 0) {
+        console.log("Пример данных о себестоимости:", productsCostPrice.slice(0, 3));
+      }
+      
+      console.log("----- КОНЕЦ ДАННЫХ АНАЛИТИКИ -----");
       
       let totalAdvertisingCost = 0;
       try {

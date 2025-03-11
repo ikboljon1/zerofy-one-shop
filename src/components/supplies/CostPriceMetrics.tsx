@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +26,7 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
 
   useEffect(() => {
     if (selectedStore) {
+      console.log(`CostPriceMetrics: Инициализация для магазина ${selectedStore.id}`);
       loadCostPriceData();
     } else {
       resetData();
@@ -44,10 +44,20 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
     if (!selectedStore) return;
 
     try {
-      console.log(`Loading cost price data for store: ${selectedStore.id}`);
+      console.log(`--------- ЗАГРУЗКА ДАННЫХ О СЕБЕСТОИМОСТИ ---------`);
+      console.log(`Загрузка данных о себестоимости для магазина: ${selectedStore.id}`);
       
       // Try to load from both possible keys
       let products = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
+      console.log(`Продукты из хранилища products_: ${products.length} элементов`);
+      
+      if (products.length > 0) {
+        console.log("Пример первых 3 продуктов из хранилища products_:", products.slice(0, 3));
+        console.log("Поля в первом продукте:", Object.keys(products[0]));
+        // Проверяем наличие себестоимости
+        const withCostPrice = products.filter((p: any) => p.costPrice !== undefined && p.costPrice > 0);
+        console.log(`Из них с себестоимостью: ${withCostPrice.length} элементов`);
+      }
       
       if (products.length === 0) {
         // Try alternative storage key (costPrices)
@@ -60,7 +70,10 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
         
         if (costPricesList.length > 0) {
           products = costPricesList;
-          console.log(`Found ${products.length} products in costPrices storage`);
+          console.log(`Найдено ${products.length} продуктов в хранилище costPrices_`);
+          if (products.length > 0) {
+            console.log("Пример данных о себестоимости из costPrices_:", products.slice(0, 3));
+          }
         } else {
           // Try another alternative storage key (products_cost_price)
           const altProducts = JSON.parse(localStorage.getItem(`products_cost_price_${selectedStore.id}`) || "[]");
@@ -70,19 +83,36 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
               nm_id: item.nmId,
               costPrice: item.costPrice
             }));
-            console.log(`Found ${products.length} products in products_cost_price storage`);
+            console.log(`Найдено ${products.length} продуктов в хранилище products_cost_price_`);
+            if (products.length > 0) {
+              console.log("Пример данных о себестоимости из products_cost_price_:", products.slice(0, 3));
+            }
           } else {
-            console.log("No products found in any localStorage key");
+            console.log("Не найдено продуктов ни в одном из хранилищ");
             return;
           }
         }
-      } else {
-        console.log(`Found ${products.length} products in products_ localStorage`);
       }
 
       // Get sales data to match with cost prices
       const salesData = getSalesData(selectedStore.id);
-      console.log(`Retrieved sales data: ${salesData.length} items`);
+      console.log(`Получено данных о продажах: ${salesData.length} элементов`);
+      
+      if (salesData.length > 0) {
+        console.log("Пример первых 3 записей о продажах:", salesData.slice(0, 3));
+        console.log("Поля в первой записи о продаже:", Object.keys(salesData[0]));
+        
+        // Проверяем наличие ключевых полей
+        const withNmId = salesData.filter((s: any) => s.nmId !== undefined || s.nm_id !== undefined);
+        const withSaName = salesData.filter((s: any) => s.sa_name !== undefined);
+        const withSupplierArticle = salesData.filter((s: any) => s.supplierArticle !== undefined);
+        const withQuantity = salesData.filter((s: any) => s.quantity !== undefined && s.quantity > 0);
+        
+        console.log(`Продажи с nmId/nm_id: ${withNmId.length} из ${salesData.length}`);
+        console.log(`Продажи с sa_name: ${withSaName.length} из ${salesData.length}`);
+        console.log(`Продажи с supplierArticle: ${withSupplierArticle.length} из ${salesData.length}`);
+        console.log(`Продажи с quantity > 0: ${withQuantity.length} из ${salesData.length}`);
+      }
       
       let totalCost = 0;
       let itemsSold = 0;
@@ -109,7 +139,7 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
         }
       });
       
-      console.log("Products indexed by identifiers:", {
+      console.log("Продукты проиндексированы по идентификаторам:", {
         byNmId: Object.keys(productByNmId).length,
         bySupplierArticle: Object.keys(productBySupplierArticle).length,
         bySaName: Object.keys(productBySaName).length
@@ -146,20 +176,22 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
         
         if (matched) {
           matchedCount++;
-          console.log(`Matched sale item ${matchMethod}: ${JSON.stringify({
-            nmId: sale.nmId || sale.nm_id,
-            sa_name: sale.sa_name,
-            supplierArticle: sale.supplierArticle,
-            quantity,
-            costPrice
-          })}`);
+          if (matchedCount <= 5) {
+            console.log(`УСПЕШНОЕ СОПОСТАВЛЕНИЕ (${matchMethod}): ${JSON.stringify({
+              nmId: sale.nmId || sale.nm_id,
+              sa_name: sale.sa_name,
+              supplierArticle: sale.supplierArticle,
+              quantity,
+              costPrice
+            })}`);
+          }
           
           if (quantity > 0 && costPrice > 0) {
             totalCost += quantity * costPrice;
             itemsSold += quantity;
           }
-        } else {
-          console.log(`No match found for: ${JSON.stringify({
+        } else if (matchedCount <= 5) {
+          console.log(`НЕ НАЙДЕНО СОВПАДЕНИЕ для: ${JSON.stringify({
             nmId: sale.nmId || sale.nm_id,
             sa_name: sale.sa_name,
             supplierArticle: sale.supplierArticle,
@@ -168,16 +200,17 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
         }
       });
 
-      console.log(`Matched ${matchedCount} of ${salesData.length} sale items`);
+      console.log(`Сопоставлено ${matchedCount} из ${salesData.length} записей о продажах`);
+      console.log(`Итоговая себестоимость: ${totalCost}, продано товаров: ${itemsSold}, средняя себестоимость: ${totalCost / (itemsSold || 1)}`);
       
       setTotalCostPrice(totalCost);
       setTotalSoldItems(itemsSold);
       setAvgCostPrice(itemsSold > 0 ? totalCost / itemsSold : 0);
       
       setLastUpdateDate(new Date().toISOString());
-      console.log(`Calculated total cost price: ${totalCost}, items sold: ${itemsSold}, avg cost price: ${totalCost / (itemsSold || 1)}`);
+      console.log(`--------- КОНЕЦ ЗАГРУЗКИ ДАННЫХ О СЕБЕСТОИМОСТИ ---------`);
     } catch (error) {
-      console.error("Error loading cost price data:", error);
+      console.error("Ошибка при загрузке данных о себестоимости:", error);
     }
   };
 
