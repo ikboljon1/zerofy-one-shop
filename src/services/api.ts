@@ -190,6 +190,59 @@ export const getCostPriceByNmId = async (nmId: number, storeId: string): Promise
   }
 };
 
+// Function to find nmId for a subject name
+export const findNmIdBySubjectName = (subjectName: string, storeId: string): number | undefined => {
+  try {
+    const products = JSON.parse(localStorage.getItem(`products_${storeId}`) || "[]");
+    const matchingProduct = products.find((p: any) => 
+      p.subject === subjectName || 
+      p.subject_name === subjectName || 
+      p.subjectName === subjectName
+    );
+    
+    if (matchingProduct) {
+      const nmId = matchingProduct.nmId || matchingProduct.nmID;
+      console.log(`Found nmId ${nmId} for subject "${subjectName}"`);
+      return nmId;
+    }
+    
+    console.log(`No nmId found for subject "${subjectName}"`);
+    return undefined;
+  } catch (error) {
+    console.error(`Error finding nmId for subject "${subjectName}":`, error);
+    return undefined;
+  }
+};
+
+// Function to match product sales data with product nmIds
+export const enhanceProductSalesWithNmId = (productSales: any[], storeId: string): any[] => {
+  try {
+    const products = JSON.parse(localStorage.getItem(`products_${storeId}`) || "[]");
+    
+    return productSales.map(sale => {
+      if (sale.subject_name) {
+        const matchingProducts = products.filter((p: any) => 
+          p.subject === sale.subject_name || 
+          p.subject_name === sale.subject_name ||
+          p.subjectName === sale.subject_name
+        );
+        
+        if (matchingProducts.length > 0) {
+          const nmId = matchingProducts[0].nmId || matchingProducts[0].nmID;
+          if (nmId) {
+            console.log(`Enhanced product sale: added nmId ${nmId} to "${sale.subject_name}"`);
+            return { ...sale, nmId };
+          }
+        }
+      }
+      return sale;
+    });
+  } catch (error) {
+    console.error('Error enhancing product sales with nmId:', error);
+    return productSales;
+  }
+};
+
 // Function to calculate total cost price
 export const calculateTotalCostPrice = async (sales: any[], storeId: string): Promise<number> => {
   if (!sales || !Array.isArray(sales) || sales.length === 0) {

@@ -93,36 +93,79 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       const productSales: ProductSale[] = analyticsData.data.productSales;
       console.log(`Found ${productSales.length} product sales categories in analytics data`);
       
+      // Добавляем nmId к продуктам где возможно
+      const enhancedProductSales = productSales.map(sale => {
+        const matchingProducts = products.filter(p => 
+          p.subject === sale.subject_name || 
+          p.subject_name === sale.subject_name ||
+          p.subjectName === sale.subject_name
+        );
+        
+        if (matchingProducts.length > 0) {
+          // Если есть продукты с таким же subject_name, берем nmId первого
+          const nmId = matchingProducts[0].nmId || matchingProducts[0].nmID;
+          if (nmId) {
+            console.log(`Added nmId ${nmId} to category "${sale.subject_name}"`);
+            return { ...sale, nmId };
+          }
+        }
+        return sale;
+      });
+      
+      // Обновляем аналитические данные с дополненными продажами
+      analyticsData.data.productSales = enhancedProductSales;
+      localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
+      console.log("Updated analytics data with enhanced product sales including nmId");
+      
       let totalCost = 0;
       let totalItems = 0;
       let processedCategories = 0;
       let skippedCategories = 0;
       
       // Обрабатываем каждую категорию товаров
-      for (const sale of productSales) {
+      for (const sale of enhancedProductSales) {
         const subjectName = sale.subject_name;
         const quantity = sale.quantity || 0;
+        const nmId = sale.nmId;
         
         if (quantity <= 0) {
           console.log(`Skipping category "${subjectName}" with zero quantity`);
           continue;
         }
         
-        // Найдем среднюю себестоимость для этой категории
-        let avgCostPrice = calculateAverageCostPriceBySubject(products, subjectName);
+        let costPrice = 0;
         
-        // Если не нашли в продуктах, попробуем запросить из API
-        if (avgCostPrice === 0) {
-          avgCostPrice = await getCostPriceBySubjectName(subjectName, selectedStore.id);
+        // Если есть nmId, пробуем получить себестоимость по нему
+        if (nmId) {
+          costPrice = await getCostPriceByNmId(nmId, selectedStore.id);
+          if (costPrice > 0) {
+            console.log(`Using cost price by nmId ${nmId} for category "${subjectName}": ${costPrice}`);
+          }
         }
         
-        if (avgCostPrice > 0) {
-          const categoryCost = avgCostPrice * quantity;
+        // Если не нашли по nmId, пробуем найти среднюю себестоимость для этой категории
+        if (costPrice === 0) {
+          costPrice = calculateAverageCostPriceBySubject(products, subjectName);
+          if (costPrice > 0) {
+            console.log(`Using average cost price for category "${subjectName}": ${costPrice}`);
+          }
+        }
+        
+        // Если все еще не нашли, пробуем запросить из API по названию категории
+        if (costPrice === 0) {
+          costPrice = await getCostPriceBySubjectName(subjectName, selectedStore.id);
+          if (costPrice > 0) {
+            console.log(`Using cost price from API for category "${subjectName}": ${costPrice}`);
+          }
+        }
+        
+        if (costPrice > 0) {
+          const categoryCost = costPrice * quantity;
           totalCost += categoryCost;
           totalItems += quantity;
           processedCategories++;
           
-          console.log(`Category: ${subjectName}, Quantity: ${quantity}, Avg Cost Price: ${avgCostPrice}, Total: ${categoryCost}`);
+          console.log(`Category: ${subjectName}, Quantity: ${quantity}, Cost Price: ${costPrice}, Total: ${categoryCost}`);
         } else {
           console.log(`Could not determine cost price for category "${subjectName}"`);
           skippedCategories++;
