@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { ArrowUp, ArrowDown, TrendingUp, TrendingDown, DollarSign, FileText, Info, Image } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -43,20 +42,10 @@ const ProductList = ({ title, products = [], isProfitable }: ProductListProps) =
   };
 
   const safeText = (text: string) => {
-    if (!text) return "";
-    
     try {
-      // Сначала проверим, нет ли в тексте кракозябр (символов замены)
-      if (text.includes('�')) {
-        // Если есть, попробуем восстановить - обычно это происходит из-за неправильного декодирования UTF-8
-        return text.replace(/�/g, "?");
-      }
-      // Делаем двойное кодирование/декодирование для нормализации текста
       return decodeURIComponent(encodeURIComponent(text));
     } catch (e) {
-      // В случае ошибки, например, если текст уже был декодирован
-      console.log("Ошибка при обработке текста:", e);
-      return text.replace(/�/g, "?");
+      return text;
     }
   };
 
