@@ -260,10 +260,34 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       
       const savingsWithDiscount = profitWithDiscount - profitWithoutDiscount;
       
+      if (profitWithDiscount < 0 && profitWithoutDiscount < 0 && profitWithDiscount < profitWithoutDiscount) {
+        action = 'keep';
+        recommendedDiscount = 0;
+      }
+      
+      if (savingsWithDiscount < 0) {
+        if (isSlowMoving && daysOfInventory > 180) {
+          action = 'discount';
+          recommendedDiscount = Math.min(15, discountLevels[nmId] || 15);
+        } else {
+          action = 'keep';
+          recommendedDiscount = 0;
+        }
+      }
+      
+      if (profitWithoutDiscount < 0 && profitWithDiscount > 0) {
+        action = 'discount';
+      }
+      
       if (profitWithDiscount < 0 && recommendedDiscount > 0) {
         if (Math.abs(profitWithDiscount) > profitWithDiscountPerItem * currentStock * 0.5) {
-          action = 'sell';
-          recommendedDiscount = Math.min(50, discountLevels[nmId] || 50);
+          if (profitWithDiscount > profitWithoutDiscount) {
+            action = 'sell';
+            recommendedDiscount = Math.min(50, discountLevels[nmId] || 50);
+          } else {
+            action = 'keep';
+            recommendedDiscount = 0;
+          }
         }
       }
       
@@ -742,6 +766,9 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
               </div>
               <div className="text-xs text-amber-700 dark:text-amber-400">
                 Снижение цены с {formatCurrency(result.sellingPrice)} до {formatCurrency(result.discountedPrice)} позволит ускорить продажи и сократить затраты на хранение.
+                {result.savingsWithDiscount > 0 && (
+                  <span className="block mt-1">Ожидаемая дополнительная прибыль: +{formatCurrency(result.savingsWithDiscount)}</span>
+                )}
               </div>
             </div>
           )}
@@ -754,6 +781,9 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
               </div>
               <div className="text-xs text-rose-700 dark:text-rose-400">
                 Рекомендуется быстрая распродажа товара со скидкой до {result.recommendedDiscount}%, так как затраты на хранение превышают потенциальную прибыль.
+                {result.savingsWithDiscount > 0 && (
+                  <span className="block mt-1">Это уменьшит убытки на {formatCurrency(result.savingsWithDiscount)}</span>
+                )}
               </div>
             </div>
           )}
