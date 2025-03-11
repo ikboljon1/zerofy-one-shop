@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 
 // Create an axios instance with default config
@@ -104,51 +103,61 @@ export const setApiKey = (apiKey: string) => {
   api.defaults.headers.common['Authorization'] = apiKey;
 };
 
-// Функция для получения отчета о продажах по реализации
-export const fetchSalesReport = async (apiKey: string, dateFrom: Date, dateTo: Date, limit = 100000, rrdid = 0) => {
+// Function to get cost price by subject name
+export const getCostPriceBySubjectName = async (subjectName: string, storeId: string): Promise<number> => {
   try {
-    // Форматирование дат в нужный формат
-    const fromDate = dateFrom.toISOString().split('T')[0];
-    const toDate = dateTo.toISOString().split('T')[0];
+    console.log(`Getting cost price for subject name "${subjectName}" from store ${storeId}`);
     
-    console.log(`Fetching sales report from ${fromDate} to ${toDate} with rrdid=${rrdid}`);
+    // Get products from local storage
+    const products = JSON.parse(localStorage.getItem(`products_${storeId}`) || "[]");
     
-    const response = await axios.get('https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod', {
-      headers: {
-        'Authorization': apiKey
-      },
-      params: {
-        dateFrom: fromDate,
-        dateTo: toDate,
-        limit,
-        rrdid
+    // Find all products matching the subject name
+    const matchingProducts = products.filter((p: any) => 
+      p.subject === subjectName || 
+      p.subject_name === subjectName || 
+      p.subjectName === subjectName
+    );
+    
+    console.log(`Found ${matchingProducts.length} products matching subject "${subjectName}"`);
+    
+    if (matchingProducts.length > 0) {
+      // Calculate average cost price from all matching products
+      let totalCostPrice = 0;
+      let productsWithCostPrice = 0;
+      
+      for (const product of matchingProducts) {
+        if (product.costPrice && product.costPrice > 0) {
+          totalCostPrice += product.costPrice;
+          productsWithCostPrice++;
+        }
       }
-    });
-    
-    console.log(`Received ${response.data?.length || 0} sales report items`);
-    
-    // Проверяем наличие nm_id в ответе
-    if (Array.isArray(response.data) && response.data.length > 0) {
-      const hasNmId = response.data.some(item => 'nm_id' in item);
-      console.log('Sales report contains nm_id:', hasNmId);
-      if (hasNmId) {
-        const examples = response.data.slice(0, 3).map(item => ({
-          nm_id: item.nm_id,
-          quantity: item.quantity,
-          subject: item.subject_name
-        }));
-        console.log('Examples of sales with nm_id:', examples);
+      
+      if (productsWithCostPrice > 0) {
+        const avgCostPrice = totalCostPrice / productsWithCostPrice;
+        console.log(`Average cost price for "${subjectName}": ${avgCostPrice} from ${productsWithCostPrice} products`);
+        return avgCostPrice;
+      }
+      
+      // If no cost price found in products, try to get from server
+      try {
+        const response = await api.get(`http://localhost:3001/api/products/cost-price-by-subject/${encodeURIComponent(subjectName)}?storeId=${storeId}`);
+        if (response.data && response.data.costPrice) {
+          console.log(`Received cost price from server for subject "${subjectName}": ${response.data.costPrice}`);
+          return response.data.costPrice;
+        }
+      } catch (error) {
+        console.error(`Error fetching cost price for subject "${subjectName}":`, error);
       }
     }
     
-    return response.data;
+    return 0; // No cost price found
   } catch (error) {
-    console.error('Error fetching sales report:', error);
-    throw error;
+    console.error(`Error in getCostPriceBySubjectName for "${subjectName}":`, error);
+    return 0;
   }
 };
 
-// Функция для получения себестоимости товара по nm_id
+// Function to get cost price by nm_id
 export const getCostPriceByNmId = async (nmId: number, storeId: string): Promise<number> => {
   try {
     console.log(`Getting cost price for nmId ${nmId} from store ${storeId}`);
@@ -181,7 +190,7 @@ export const getCostPriceByNmId = async (nmId: number, storeId: string): Promise
   }
 };
 
-// Функция для расчета общей себестоимости проданных товаров
+// Function to calculate total cost price
 export const calculateTotalCostPrice = async (sales: any[], storeId: string): Promise<number> => {
   if (!sales || !Array.isArray(sales) || sales.length === 0) {
     console.log('No sales data to calculate cost price');
@@ -194,39 +203,101 @@ export const calculateTotalCostPrice = async (sales: any[], storeId: string): Pr
   let totalCostPrice = 0;
   let processedItems = 0;
   let missingNmIdItems = 0;
+  let itemsProcessedBySubject = 0;
   
   for (const sale of sales) {
-    const nmId = sale.nmId || sale.nm_id || sale.product?.nmId || sale.product?.nm_id || sale.nm_id;
-    if (!nmId) {
+    const nmId = sale.nmId || sale.nm_id || sale.product?.nmId || sale.product?.nm_id;
+    const quantity = Math.abs(sale.quantity || 1); // Use absolute value of quantity
+    
+    if (nmId) {
+      // If nmId is available, use it to get cost price
+      const costPrice = await getCostPriceByNmId(nmId, storeId);
+      
+      if (costPrice > 0) {
+        const itemCostPrice = costPrice * quantity;
+        totalCostPrice += itemCostPrice;
+        processedItems++;
+        console.log(`Added cost for nmId ${nmId}: ${costPrice} x ${quantity} = ${itemCostPrice}`);
+      } else {
+        console.warn(`Zero cost price for nmId ${nmId}`);
+      }
+    } else if (sale.subject_name) {
+      // If nmId is not available but subject_name is, use subject_name to get cost price
       missingNmIdItems++;
-      console.warn('Missing nmId in sale item:', sale);
-      continue;
-    }
-    
-    const quantity = Math.abs(sale.quantity || 1); // Используем абсолютное значение количества
-    const costPrice = await getCostPriceByNmId(nmId, storeId);
-    
-    if (costPrice > 0) {
-      const itemCostPrice = costPrice * quantity;
-      totalCostPrice += itemCostPrice;
-      processedItems++;
-      console.log(`Added cost for nmId ${nmId}: ${costPrice} x ${quantity} = ${itemCostPrice}`);
+      const subjectName = sale.subject_name;
+      const costPrice = await getCostPriceBySubjectName(subjectName, storeId);
+      
+      if (costPrice > 0) {
+        const itemCostPrice = costPrice * quantity;
+        totalCostPrice += itemCostPrice;
+        itemsProcessedBySubject++;
+        console.log(`Added cost for subject "${subjectName}": ${costPrice} x ${quantity} = ${itemCostPrice}`);
+      } else {
+        console.warn(`Zero cost price for subject "${subjectName}"`);
+      }
     } else {
-      console.warn(`Zero cost price for nmId ${nmId}`);
+      missingNmIdItems++;
+      console.warn('Missing both nmId and subject_name in sale item:', sale);
     }
   }
   
   console.log(`Total cost price calculation results:
     - Total cost: ${totalCostPrice}
-    - Processed items: ${processedItems}
+    - Processed items by nmId: ${processedItems}
+    - Processed items by subject: ${itemsProcessedBySubject}
     - Items missing nmId: ${missingNmIdItems}
+    - Items processed total: ${processedItems + itemsProcessedBySubject}
     - Total items: ${sales.length}
   `);
   
   return totalCostPrice;
 };
 
-// Функция для получения и обработки данных отчета о продажах
+// Function to fetch sales report
+export const fetchSalesReport = async (apiKey: string, dateFrom: Date, dateTo: Date, limit = 100000, rrdid = 0) => {
+  try {
+    // Format dates in the required format
+    const fromDate = dateFrom.toISOString().split('T')[0];
+    const toDate = dateTo.toISOString().split('T')[0];
+    
+    console.log(`Fetching sales report from ${fromDate} to ${toDate} with rrdid=${rrdid}`);
+    
+    const response = await axios.get('https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod', {
+      headers: {
+        'Authorization': apiKey
+      },
+      params: {
+        dateFrom: fromDate,
+        dateTo: toDate,
+        limit,
+        rrdid
+      }
+    });
+    
+    console.log(`Received ${response.data?.length || 0} sales report items`);
+    
+    // Check for nm_id in the response
+    if (Array.isArray(response.data) && response.data.length > 0) {
+      const hasNmId = response.data.some(item => 'nm_id' in item);
+      console.log('Sales report contains nm_id:', hasNmId);
+      if (hasNmId) {
+        const examples = response.data.slice(0, 3).map(item => ({
+          nm_id: item.nm_id,
+          quantity: item.quantity,
+          subject: item.subject_name
+        }));
+        console.log('Examples of sales with nm_id:', examples);
+      }
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching sales report:', error);
+    throw error;
+  }
+};
+
+// Function to process sales report
 export const processSalesReport = async (apiKey: string, dateFrom: Date, dateTo: Date, storeId: string): Promise<{
   sales: any[],
   totalCostPrice: number
@@ -236,7 +307,7 @@ export const processSalesReport = async (apiKey: string, dateFrom: Date, dateTo:
     let rrdid = 0;
     let hasMoreData = true;
     
-    // Получаем все данные отчета (возможно несколько страниц)
+    // Get all report data (possibly multiple pages)
     while (hasMoreData) {
       const salesData = await fetchSalesReport(apiKey, dateFrom, dateTo, 100000, rrdid);
       
@@ -248,7 +319,7 @@ export const processSalesReport = async (apiKey: string, dateFrom: Date, dateTo:
       allSales = [...allSales, ...salesData];
       console.log(`Fetched ${salesData.length} sales records, total: ${allSales.length}`);
       
-      // Проверяем, нужно ли загружать следующую страницу
+      // Check if another page needs to be loaded
       if (salesData.length > 0) {
         const lastItem = salesData[salesData.length - 1];
         rrdid = lastItem.rrd_id || 0;
@@ -259,7 +330,7 @@ export const processSalesReport = async (apiKey: string, dateFrom: Date, dateTo:
     
     console.log(`Total sales records fetched: ${allSales.length}`);
     
-    // Рассчитываем общую себестоимость
+    // Calculate total cost price
     const totalCostPrice = await calculateTotalCostPrice(allSales, storeId);
     
     return {

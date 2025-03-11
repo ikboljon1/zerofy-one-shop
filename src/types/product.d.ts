@@ -1,3 +1,4 @@
+
 interface Product {
   nmID: number;
   vendorCode: string;
@@ -12,6 +13,8 @@ interface Product {
   discountedPrice?: number;
   clubPrice?: number;
   quantity?: number;
+  subject?: string;
+  subject_name?: string;
   expenses?: {
     logistics: number;
     storage: number;

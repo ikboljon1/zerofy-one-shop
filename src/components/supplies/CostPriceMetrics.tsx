@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { Store } from "@/types/store";
 import { ArrowUpRight, ArrowDownRight, DollarSign, ShoppingCart, Wallet } from "lucide-react";
-import { getCostPriceByNmId } from "@/services/api";
+import { getCostPriceByNmId, getCostPriceBySubjectName } from "@/services/api";
 
 interface CostPriceMetricsProps {
   selectedStore?: Store | null;
@@ -42,27 +41,24 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
     if (!selectedStore) return;
 
     try {
-      // Получаем список продуктов из localStorage
       const products = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
       if (products.length === 0) {
         console.log("No products found in localStorage");
         return;
       }
 
-      // Логируем первые несколько продуктов для отладки
       console.log("Loaded products sample:", products.slice(0, 3).map((p: any) => ({
         nmId: p.nmId || p.nmID,
+        subject: p.subject || p.subject_name,
         costPrice: p.costPrice,
         quantity: p.quantity
       })));
 
-      // Получаем данные о продажах из хранилища аналитики
       const analyticsData = JSON.parse(localStorage.getItem(`marketplace_analytics_${selectedStore.id}`) || "{}");
       
       if (!analyticsData || !analyticsData.data || !analyticsData.data.dailySales) {
         console.log("No analytics data found in localStorage");
         
-        // Если данных аналитики нет, просто используем данные о количестве товаров
         let totalCost = 0;
         let itemsSold = 0;
         
@@ -70,15 +66,21 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
           const quantity = product.quantity || 0;
           let costPrice = product.costPrice || 0;
           
-          // Если себестоимость не указана, пробуем получить по nmId
           if (costPrice === 0 && product.nmId) {
             costPrice = await getCostPriceByNmId(product.nmId, selectedStore.id);
+          }
+          
+          if (costPrice === 0 && (product.subject || product.subject_name)) {
+            costPrice = await getCostPriceBySubjectName(
+              product.subject || product.subject_name, 
+              selectedStore.id
+            );
           }
           
           if (quantity > 0 && costPrice > 0) {
             totalCost += quantity * costPrice;
             itemsSold += quantity;
-            console.log(`Product nmId=${product.nmId}, quantity=${quantity}, costPrice=${costPrice}`);
+            console.log(`Product nmId=${product.nmId}, subject=${product.subject || product.subject_name}, quantity=${quantity}, costPrice=${costPrice}`);
           }
         }
         
@@ -90,10 +92,8 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
         return;
       }
       
-      // Используем данные о продажах из аналитики
       console.log("Using analytics data for cost price calculation");
       
-      // Собираем все продажи из ежедневных данных
       const allSales: any[] = [];
       analyticsData.data.dailySales.forEach((day: any) => {
         if (day && day.sales && Array.isArray(day.sales)) {
@@ -103,39 +103,42 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       
       console.log(`Found ${allSales.length} sales in analytics data`);
       
-      // Проверяем наличие nmId в данных о продажах
       const hasNmId = allSales.some((sale: any) => 'nmId' in sale || 'nm_id' in sale);
-      console.log(`Sales data contains nmId: ${hasNmId}`);
+      const hasSubjectName = allSales.some((sale: any) => 'subject_name' in sale);
+      console.log(`Sales data contains nmId: ${hasNmId}, subject_name: ${hasSubjectName}`);
       
-      if (!hasNmId) {
-        console.log("No nmId found in sales data, cannot calculate cost price");
+      if (!hasNmId && !hasSubjectName) {
+        console.log("No nmId or subject_name found in sales data, cannot calculate cost price");
         return;
       }
       
       let totalCost = 0;
       let itemsSold = 0;
       
-      // Для каждой продажи получаем себестоимость по nmId
       for (const sale of allSales) {
         const nmId = sale.nmId || sale.nm_id;
-        if (!nmId) continue;
-        
-        const quantity = Math.abs(sale.quantity || 1); // Используем абсолютное значение количества
-        const product = products.find((p: any) => (p.nmId === nmId || p.nmID === nmId));
+        const subjectName = sale.subject_name;
+        const quantity = Math.abs(sale.quantity || 1);
         
         let costPrice = 0;
-        if (product && product.costPrice) {
-          costPrice = product.costPrice;
-        } else {
-          // Если товар не найден в локальном хранилище, пробуем получить себестоимость через API
-          costPrice = await getCostPriceByNmId(nmId, selectedStore.id);
+        
+        if (nmId) {
+          const product = products.find((p: any) => (p.nmId === nmId || p.nmID === nmId));
+          
+          if (product && product.costPrice) {
+            costPrice = product.costPrice;
+          } else {
+            costPrice = await getCostPriceByNmId(nmId, selectedStore.id);
+          }
+        } else if (subjectName) {
+          costPrice = await getCostPriceBySubjectName(subjectName, selectedStore.id);
         }
         
         if (costPrice > 0) {
           const itemCostPrice = costPrice * quantity;
           totalCost += itemCostPrice;
           itemsSold += quantity;
-          console.log(`Sale nmId=${nmId}, quantity=${quantity}, costPrice=${costPrice}, total=${itemCostPrice}`);
+          console.log(`Sale ${nmId ? `nmId=${nmId}` : `subject=${subjectName}`}, quantity=${quantity}, costPrice=${costPrice}, total=${itemCostPrice}`);
         }
       }
 
@@ -144,7 +147,6 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       setTotalSoldItems(itemsSold);
       setAvgCostPrice(itemsSold > 0 ? totalCost / itemsSold : 0);
       
-      // Устанавливаем дату последнего обновления
       setLastUpdateDate(new Date().toISOString());
     } catch (error) {
       console.error("Error loading cost price data:", error);

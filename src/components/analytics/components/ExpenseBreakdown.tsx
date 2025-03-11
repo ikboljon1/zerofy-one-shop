@@ -2,7 +2,7 @@
 import { Card } from "@/components/ui/card";
 import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, Coins, ShoppingCart } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
-import { getCostPriceByNmId, calculateTotalCostPrice, processSalesReport } from "@/services/api";
+import { getCostPriceByNmId, getCostPriceBySubjectName, calculateTotalCostPrice, processSalesReport } from "@/services/api";
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -37,7 +37,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
         setIsLoading(true);
         console.log('Starting cost price calculation...');
         
-        // Получаем данные о магазине из localStorage
+        // Get store data from localStorage
         const storeId = localStorage.getItem('selectedStoreId');
         if (!storeId) {
           console.log('No selected store ID found');
@@ -56,7 +56,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
         
         console.log('Selected store:', selectedStore.name, 'ID:', storeId);
         
-        // Пробуем сначала использовать существующие данные о себестоимости
+        // Use existing cost price data if available
         if (data.currentPeriod.expenses.costPrice && data.currentPeriod.expenses.costPrice > 0) {
           console.log('Using existing cost price from data:', data.currentPeriod.expenses.costPrice);
           setTotalCostPrice(data.currentPeriod.expenses.costPrice);
@@ -64,11 +64,11 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           return;
         }
         
-        // Получаем данные о продажах из localStorage
+        // Load analytics data from localStorage
         const analyticsData = JSON.parse(localStorage.getItem(`marketplace_analytics_${storeId}`) || "{}");
         console.log('Analytics data from localStorage:', !!analyticsData);
         
-        // Проверяем есть ли данные о датах периода
+        // Check if date range is available
         if (!analyticsData.dateFrom || !analyticsData.dateTo) {
           console.log('No date range found in analytics data');
           setIsLoading(false);
@@ -80,14 +80,14 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
         
         console.log(`Date range: ${dateFrom.toISOString()} - ${dateTo.toISOString()}`);
         
-        // Получаем данные отчета о продажах по реализации
+        // Get detailed sales report
         const result = await processSalesReport(selectedStore.apiKey, dateFrom, dateTo, storeId);
         
         if (result.totalCostPrice > 0) {
           console.log('Calculated total cost price from sales report:', result.totalCostPrice);
           setTotalCostPrice(result.totalCostPrice);
           
-          // Сохраняем результат в localStorage
+          // Save result to localStorage
           if (analyticsData.data && analyticsData.data.currentPeriod && analyticsData.data.currentPeriod.expenses) {
             analyticsData.data.currentPeriod.expenses.costPrice = result.totalCostPrice;
             localStorage.setItem(`marketplace_analytics_${storeId}`, JSON.stringify(analyticsData));
@@ -101,7 +101,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
         } else {
           console.log('Could not calculate cost price from sales report, trying alternative method...');
           
-          // Используем альтернативный метод с имеющимися данными о продажах
+          // Try alternative method with existing sales data
           if (analyticsData?.data?.dailySales) {
             let allSales: any[] = [];
             for (const day of analyticsData.data.dailySales) {
@@ -114,23 +114,30 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
             console.log(`Total sales items collected: ${allSales.length}`);
             
             if (allSales.length > 0) {
-              // Проверяем наличие nm_id в продажах
+              // Check if sales have nmId or subject_name
               const hasNmId = allSales.some(item => 'nmId' in item || 'nm_id' in item);
+              const hasSubjectName = allSales.some(item => 'subject_name' in item);
               console.log('Sales items have nmId property:', hasNmId);
+              console.log('Sales items have subject_name property:', hasSubjectName);
               
-              if (hasNmId) {
+              if (hasNmId || hasSubjectName) {
                 const cost = await calculateTotalCostPrice(allSales, storeId);
                 console.log('Calculated total cost price from existing sales data:', cost);
                 
                 if (cost > 0) {
                   setTotalCostPrice(cost);
                   
-                  // Сохраняем результат в localStorage
+                  // Save result to localStorage
                   if (analyticsData.data && analyticsData.data.currentPeriod && analyticsData.data.currentPeriod.expenses) {
                     analyticsData.data.currentPeriod.expenses.costPrice = cost;
                     localStorage.setItem(`marketplace_analytics_${storeId}`, JSON.stringify(analyticsData));
                     console.log('Updated analytics data with cost price in localStorage');
                   }
+                  
+                  toast({
+                    title: "Себестоимость рассчитана",
+                    description: `Общая себестоимость проданных товаров: ${formatCurrency(cost)}`,
+                  });
                 }
               }
             }
