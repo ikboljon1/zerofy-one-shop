@@ -141,14 +141,14 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState<'all' | 'discount' | 'keep' | 'low-stock'>('all');
-  const [costPrices, setCostPrices] = useState<Record<number, number>>({});
-  const [sellingPrices, setSellingPrices] = useState<Record<number, number>>({});
-  const [dailySalesRates, setDailySalesRates] = useState<Record<number, number>>({});
-  const [storageCostRates, setStorageCostRates] = useState<Record<number, number>>({});
+  const [costPrices, setCostPrices] = useState<Record<number, number | null>>({});
+  const [sellingPrices, setSellingPrices] = useState<Record<number, number | null>>({});
+  const [dailySalesRates, setDailySalesRates] = useState<Record<number, number | null>>({});
+  const [storageCostRates, setStorageCostRates] = useState<Record<number, number | null>>({});
   const [discountLevels, setDiscountLevels] = useState<Record<number, number>>({});
   const [lowStockThreshold, setLowStockThreshold] = useState<Record<number, number>>({});
-  const [logisticsCosts, setLogisticsCosts] = useState<Record<number, number>>({});
-  const [wbCommissions, setWbCommissions] = useState<Record<number, number>>({});
+  const [logisticsCosts, setLogisticsCosts] = useState<Record<number, number | null>>({});
+  const [wbCommissions, setWbCommissions] = useState<Record<number, number | null>>({});
   const [targetDate, setTargetDate] = useState<Date | undefined>(
     new Date(new Date().setDate(new Date().getDate() + 30))
   );
@@ -186,14 +186,14 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       setWbCommissions(JSON.parse(storedWbCommissions));
     }
 
-    const initialDailySales: Record<number, number> = {};
-    const initialStorageCosts: Record<number, number> = {};
+    const initialDailySales: Record<number, number | null> = {};
+    const initialStorageCosts: Record<number, number | null> = {};
     const initialDiscountLevels: Record<number, number> = {};
     const initialLowStockThresholds: Record<number, number> = {};
-    const initialCostPrices: Record<number, number> = {};
-    const initialSellingPrices: Record<number, number> = {};
-    const initialLogisticsCosts: Record<number, number> = {};
-    const initialWbCommissions: Record<number, number> = {};
+    const initialCostPrices: Record<number, number | null> = {};
+    const initialSellingPrices: Record<number, number | null> = {};
+    const initialLogisticsCosts: Record<number, number | null> = {};
+    const initialWbCommissions: Record<number, number | null> = {};
 
     warehouseItems.forEach(item => {
       if (!costPrices[item.nmId]) {
@@ -261,7 +261,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
   const analysisResults = useMemo(() => {
     return warehouseItems.map(item => {
       const nmId = item.nmId;
-      const costPrice = costPrices[nmId] ||.0;
+      const costPrice = costPrices[nmId] || 0;
       const sellingPrice = sellingPrices[nmId] || (item.price || 0);
       const dailySales = dailySalesRates[nmId] || 0.1;
       const storageCost = storageCostRates[nmId] || 5;
@@ -1112,7 +1112,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                         <div className="space-y-2">
                           <Input
                             type="number" 
-                            value={sellingPrices[result.remainItem.nmId]?.toString() || ""}
+                            value={sellingPrices[result.remainItem.nmId] === null ? "" : sellingPrices[result.remainItem.nmId]?.toString() || ""}
                             onChange={(e) => updateSellingPrice(result.remainItem.nmId, e.target.value)}
                             className="h-8 w-24 text-right"
                           />
@@ -1127,7 +1127,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                       <TableCell className="text-right">
                         <Input
                           type="number" 
-                          value={costPrices[result.remainItem.nmId]?.toString() || ""}
+                          value={costPrices[result.remainItem.nmId] === null ? "" : costPrices[result.remainItem.nmId]?.toString() || ""}
                           onChange={(e) => updateCostPrice(result.remainItem.nmId, e.target.value)}
                           className="h-8 w-24 text-right"
                         />
@@ -1135,7 +1135,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                       <TableCell className="text-right">
                         <Input
                           type="number" 
-                          value={wbCommissions[result.remainItem.nmId]?.toString() || ""}
+                          value={wbCommissions[result.remainItem.nmId] === null ? "" : wbCommissions[result.remainItem.nmId]?.toString() || ""}
                           onChange={(e) => updateWbCommission(result.remainItem.nmId, e.target.value)}
                           className="h-8 w-20 text-right"
                         />
@@ -1146,7 +1146,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                       <TableCell className="text-right">
                         <Input
                           type="number" 
-                          value={dailySalesRates[result.remainItem.nmId]?.toString() || ""}
+                          value={dailySalesRates[result.remainItem.nmId] === null ? "" : dailySalesRates[result.remainItem.nmId]?.toString() || ""}
                           onChange={(e) => updateDailySales(result.remainItem.nmId, e.target.value)}
                           className="h-8 w-24 text-right"
                           step="0.1"
@@ -1155,7 +1155,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                       <TableCell className="text-right">
                         <Input
                           type="number" 
-                          value={storageCostRates[result.remainItem.nmId]?.toString() || ""}
+                          value={storageCostRates[result.remainItem.nmId] === null ? "" : storageCostRates[result.remainItem.nmId]?.toString() || ""}
                           onChange={(e) => updateStorageCost(result.remainItem.nmId, e.target.value)}
                           className="h-8 w-24 text-right"
                         />
@@ -1225,3 +1225,4 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
 };
 
 export default StorageProfitabilityAnalysis;
+
