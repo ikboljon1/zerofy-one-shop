@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, Coins, Package } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -34,8 +35,6 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
     totalExpenses: data.currentPeriod.expenses.total,
     costPrice: costPriceAmount,
     structure: {
-      hasNmId: Boolean(data.currentPeriod.expenses.nmId),
-      nmIdValue: data.currentPeriod.expenses.nmId,
       hasCostPrice: Boolean(data.currentPeriod.expenses.costPrice),
       costPriceValue: data.currentPeriod.expenses.costPrice
     }
