@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState } from 'react';
 import { WarehouseCoefficient, Warehouse } from '@/types/supplies';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +11,7 @@ import {
   DollarSign,
   CalendarIcon,
   Warehouse as WarehouseIcon,
+  MapPin,
   AlertCircle
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -82,20 +82,26 @@ const WarehouseCoefficientsDateCard: React.FC<WarehouseCoefficientsDateCardProps
     return days;
   }, []);
 
-  // Group coefficients by date and only keep the most recent data
+  // Group coefficients by date and warehouse, keeping the most recent data for each box type
   const groupedCoefficients = useMemo(() => {
-    const grouped = new Map<string, Map<number, WarehouseCoefficient>>();
+    const grouped = new Map<string, Map<number, Map<number, WarehouseCoefficient>>>();
     
     // First group by date
     filteredCoefficients.forEach(coef => {
       const date = coef.date.split('T')[0];
       if (!grouped.has(date)) {
-        grouped.set(date, new Map<number, WarehouseCoefficient>());
+        grouped.set(date, new Map<number, Map<number, WarehouseCoefficient>>());
       }
       
-      // Then for each date, keep only one coefficient per box type (the most recent one)
+      // Then by warehouse ID
       const dateMap = grouped.get(date)!;
-      dateMap.set(coef.boxTypeID, coef);
+      if (!dateMap.has(coef.warehouseID)) {
+        dateMap.set(coef.warehouseID, new Map<number, WarehouseCoefficient>());
+      }
+      
+      // Then keep only one coefficient per box type per warehouse (the most recent one)
+      const warehouseMap = dateMap.get(coef.warehouseID)!;
+      warehouseMap.set(coef.boxTypeID, coef);
     });
     
     return grouped;
@@ -163,116 +169,125 @@ const WarehouseCoefficientsDateCard: React.FC<WarehouseCoefficientsDateCardProps
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {next7Days.map((date) => {
                 const dateStr = format(date, 'yyyy-MM-dd');
-                const dayCoefficients = groupedCoefficients.get(dateStr);
+                const dayWarehouses = groupedCoefficients.get(dateStr);
 
-                if (!dayCoefficients || dayCoefficients.size === 0) return null;
+                if (!dayWarehouses || dayWarehouses.size === 0) return null;
 
                 return (
-                  <Card key={dateStr} className="shadow-sm">
-                    <CardHeader className="py-3 px-4">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <CalendarIcon className="h-4 w-4" />
-                        {format(date, 'd MMMM', { locale: ru })}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="px-4 py-2 space-y-2">
-                      {Array.from(dayCoefficients.values()).map((coef, idx) => (
-                        <div key={idx} className="border-b last:border-0 pb-2 last:pb-0">
-                          <div className="flex justify-between items-center mb-1">
-                            <div className="flex flex-col">
-                              <Badge variant="outline" className="mr-2">
-                                {boxTypeNames[coef.boxTypeID as keyof typeof boxTypeNames] || coef.boxTypeName}
-                              </Badge>
-                              {!selectedWarehouseId && warehouses.length > 0 && (
-                                <span className="text-xs text-muted-foreground mt-1">
-                                  {getWarehouseName(coef.warehouseID)}
-                                </span>
-                              )}
+                  <div key={dateStr} className="space-y-4">
+                    <div className="flex items-center gap-2 px-2">
+                      <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{format(date, 'd MMMM', { locale: ru })}</span>
+                    </div>
+                    
+                    {/* Maps through each warehouse for this date */}
+                    {Array.from(dayWarehouses.entries()).map(([warehouseId, boxCoefficients]) => (
+                      <Card key={`${dateStr}-${warehouseId}`} className="shadow-sm">
+                        <CardHeader className="py-3 px-4">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <WarehouseIcon className="h-4 w-4 text-primary" />
+                            {getWarehouseName(warehouseId)}
+                          </CardTitle>
+                          {warehouses.find(w => w.ID === warehouseId)?.address && (
+                            <p className="text-xs text-muted-foreground flex items-center mt-1">
+                              <MapPin className="h-3 w-3 mr-1" />
+                              {warehouses.find(w => w.ID === warehouseId)?.address}
+                            </p>
+                          )}
+                        </CardHeader>
+                        <CardContent className="px-4 py-2 space-y-2">
+                          {Array.from(boxCoefficients.values()).map((coef, idx) => (
+                            <div key={idx} className="border-b last:border-0 pb-2 last:pb-0">
+                              <div className="flex justify-between items-center mb-1">
+                                <Badge variant="outline" className="mr-2">
+                                  {boxTypeNames[coef.boxTypeID as keyof typeof boxTypeNames] || coef.boxTypeName}
+                                </Badge>
+                                <div className="flex items-center">
+                                  {coef.coefficient >= 0 && coef.allowUnload ? (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <div className="flex items-center">
+                                            {coef.coefficient === 0 ? (
+                                              <CheckCircle className="h-4 w-4 text-green-500" />
+                                            ) : (
+                                              <span className="text-amber-500 font-medium">{coef.coefficient}x</span>
+                                            )}
+                                          </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>
+                                            {coef.coefficient === 0 
+                                              ? "Бесплатная приемка" 
+                                              : `Платная приемка (коэффициент ${coef.coefficient})`}
+                                          </p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  ) : (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <div className="flex items-center">
+                                            <XCircle className="h-4 w-4 text-red-500" />
+                                          </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Приемка недоступна</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
+                                {coef.deliveryCoef && (
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-muted-foreground flex items-center gap-1">
+                                      <TruckIcon className="h-3 w-3" />
+                                      Логистика:
+                                    </span>
+                                    <span>{coef.deliveryCoef}</span>
+                                  </div>
+                                )}
+                                
+                                {coef.storageCoef && (
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-muted-foreground flex items-center gap-1">
+                                      <DollarSign className="h-3 w-3" />
+                                      Хранение:
+                                    </span>
+                                    <span>{coef.storageCoef}</span>
+                                  </div>
+                                )}
+                                
+                                {coef.deliveryBaseLiter && (
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-muted-foreground flex items-center gap-1">
+                                      <PackageOpen className="h-3 w-3" />
+                                      Первый л:
+                                    </span>
+                                    <span>{coef.deliveryBaseLiter} ₽</span>
+                                  </div>
+                                )}
+                                
+                                {coef.deliveryAdditionalLiter && (
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-muted-foreground flex items-center gap-1">
+                                      <PackageOpen className="h-3 w-3" />
+                                      Доп. л:
+                                    </span>
+                                    <span>{coef.deliveryAdditionalLiter} ₽</span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex items-center">
-                              {coef.coefficient >= 0 && coef.allowUnload ? (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <div className="flex items-center">
-                                        {coef.coefficient === 0 ? (
-                                          <CheckCircle className="h-4 w-4 text-green-500" />
-                                        ) : (
-                                          <span className="text-amber-500 font-medium">{coef.coefficient}x</span>
-                                        )}
-                                      </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>
-                                        {coef.coefficient === 0 
-                                          ? "Бесплатная приемка" 
-                                          : `Платная приемка (коэффициент ${coef.coefficient})`}
-                                      </p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              ) : (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <div className="flex items-center">
-                                        <XCircle className="h-4 w-4 text-red-500" />
-                                      </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Приемка недоступна</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              )}
-                            </div>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
-                            {coef.deliveryCoef && (
-                              <div className="flex justify-between items-center">
-                                <span className="text-muted-foreground flex items-center gap-1">
-                                  <TruckIcon className="h-3 w-3" />
-                                  Логистика:
-                                </span>
-                                <span>{coef.deliveryCoef}</span>
-                              </div>
-                            )}
-                            
-                            {coef.storageCoef && (
-                              <div className="flex justify-between items-center">
-                                <span className="text-muted-foreground flex items-center gap-1">
-                                  <DollarSign className="h-3 w-3" />
-                                  Хранение:
-                                </span>
-                                <span>{coef.storageCoef}</span>
-                              </div>
-                            )}
-                            
-                            {coef.deliveryBaseLiter && (
-                              <div className="flex justify-between items-center">
-                                <span className="text-muted-foreground flex items-center gap-1">
-                                  <PackageOpen className="h-3 w-3" />
-                                  Первый л:
-                                </span>
-                                <span>{coef.deliveryBaseLiter} ₽</span>
-                              </div>
-                            )}
-                            
-                            {coef.deliveryAdditionalLiter && (
-                              <div className="flex justify-between items-center">
-                                <span className="text-muted-foreground flex items-center gap-1">
-                                  <PackageOpen className="h-3 w-3" />
-                                  Доп. л:
-                                </span>
-                                <span>{coef.deliveryAdditionalLiter} ₽</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 );
               })}
             </div>
