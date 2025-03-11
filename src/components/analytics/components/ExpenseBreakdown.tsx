@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, Coins, Package } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -14,7 +13,7 @@ interface ExpenseBreakdownProps {
         advertising: number;
         acceptance: number;
         deductions?: number;
-        costPrice?: number; // Поле для себестоимости
+        costPrice?: number;
       };
     };
   };
@@ -24,28 +23,26 @@ interface ExpenseBreakdownProps {
 }
 
 const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps) => {
-  // Используем общую сумму расходов на рекламу без разбивки
   const advertisingAmount = data.currentPeriod.expenses.advertising || 0;
   const acceptanceAmount = data.currentPeriod.expenses.acceptance || 0;
   const deductionsAmount = data.currentPeriod.expenses.deductions || 0;
   const costPriceAmount = data.currentPeriod.expenses.costPrice || 0;
   
-  console.log("ExpenseBreakdown: получены данные о расходах:", {
+  console.log("ExpenseBreakdown: проверка входящих данных:", {
+    rawData: data,
+    expenses: data.currentPeriod.expenses,
     totalExpenses: data.currentPeriod.expenses.total,
-    logistics: data.currentPeriod.expenses.logistics,
-    storage: data.currentPeriod.expenses.storage,
-    penalties: data.currentPeriod.expenses.penalties,
-    advertising: advertisingAmount,
-    acceptance: acceptanceAmount,
-    deductions: deductionsAmount,
     costPrice: costPriceAmount,
-    rawData: data // Добавляем логирование всех данных
+    structure: {
+      hasNmId: Boolean(data.currentPeriod.expenses.nmId),
+      nmIdValue: data.currentPeriod.expenses.nmId,
+      hasCostPrice: Boolean(data.currentPeriod.expenses.costPrice),
+      costPriceValue: data.currentPeriod.expenses.costPrice
+    }
   });
-  
-  // Общая сумма расходов для расчета процентов
+
   const totalExpenses = data.currentPeriod.expenses.total;
 
-  // Рассчитываем штрафы и удержания для отображения
   const penaltiesAmount = data.currentPeriod.expenses.penalties;
 
   return (
