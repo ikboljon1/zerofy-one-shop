@@ -232,7 +232,7 @@ export const getMockPaidStorageData = (): PaidStorageItem[] => {
     chrtId: 200000 + index,
     size: ['S', 'M', 'L', 'XL', 'XXL'][index % 5],
     barcode: `2000000${index}`,
-    subject: ['Футболка', 'Джинсы', 'Куртка', 'Обувь', 'Аксессуары'][index % 5],
+    subject: ['Футболка', 'Джинсы', 'Куртка', 'Обувь', 'Аксессу��ры'][index % 5],
     brand: ['Nike', 'Adidas', 'Puma', 'Reebok', 'New Balance'][index % 5],
     vendorCode: `A${1000 + index}`,
     nmId: 300000 + index,
@@ -275,5 +275,45 @@ export const createFbwSupply = async (
   } catch (error: any) {
     console.error('Ошибка при создании поставки FBW:', error);
     throw new Error(error.detail || 'Не удалось создать поставку FBW');
+  }
+};
+
+// Functions for managing preferred warehouses
+export const savePreferredWarehouses = (userId: string, warehouseIds: number[]) => {
+  try {
+    localStorage.setItem(`preferred_warehouses_${userId}`, JSON.stringify(warehouseIds));
+    return true;
+  } catch (error) {
+    console.error('Ошибка при сохранении предпочтительных складов:', error);
+    return false;
+  }
+};
+
+export const getPreferredWarehouses = (userId: string): number[] => {
+  try {
+    const saved = localStorage.getItem(`preferred_warehouses_${userId}`);
+    return saved ? JSON.parse(saved) : [];
+  } catch (error) {
+    console.error('Ошибка при получении предпочтительных складов:', error);
+    return [];
+  }
+};
+
+export const togglePreferredWarehouse = (userId: string, warehouseId: number): number[] => {
+  try {
+    const currentPreferred = getPreferredWarehouses(userId);
+    let newPreferred: number[];
+    
+    if (currentPreferred.includes(warehouseId)) {
+      newPreferred = currentPreferred.filter(id => id !== warehouseId);
+    } else {
+      newPreferred = [...currentPreferred, warehouseId];
+    }
+    
+    savePreferredWarehouses(userId, newPreferred);
+    return newPreferred;
+  } catch (error) {
+    console.error('Ошибка при обновлении предпочтительных складов:', error);
+    return getPreferredWarehouses(userId);
   }
 };

@@ -3,13 +3,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ClipboardListIcon, 
-  PackageOpen, RefreshCw, Store, DollarSign
+  PackageOpen, 
+  RefreshCw, 
+  Store, 
+  DollarSign,
+  Building2
 } from 'lucide-react';
 import { 
   fetchAcceptanceCoefficients, 
   fetchWarehouses, 
   fetchAcceptanceOptions,
-  fetchFullPaidStorageReport
+  fetchFullPaidStorageReport,
+  getPreferredWarehouses,
+  togglePreferredWarehouse
 } from '@/services/suppliesApi';
 import {
   fetchWarehouseRemains
@@ -35,6 +41,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { ensureStoreSelectionPersistence } from '@/utils/storeUtils';
 import { Store as StoreType } from '@/types/store';
+import WarehouseSelector from '@/components/supplies/WarehouseSelector';
 
 const Warehouses: React.FC = () => {
   const [activeTab, setActiveTab] = useState('inventory');
@@ -52,6 +59,7 @@ const Warehouses: React.FC = () => {
     paidStorage: false
   });
   const [selectedStore, setSelectedStore] = useState<StoreType | null>(null);
+  const [preferredWarehouses, setPreferredWarehouses] = useState<number[]>([]);
 
   useEffect(() => {
     const stores = ensureStoreSelectionPersistence();
@@ -62,6 +70,8 @@ const Warehouses: React.FC = () => {
       if (activeTab === 'supplies') {
         loadWarehouses(selected.apiKey);
         loadCoefficients(selected.apiKey);
+        const preferred = getPreferredWarehouses(selected.id);
+        setPreferredWarehouses(preferred);
       } else if (activeTab === 'inventory') {
         loadWarehouseRemains(selected.apiKey);
       } else if (activeTab === 'storage') {
@@ -77,6 +87,8 @@ const Warehouses: React.FC = () => {
       if (activeTab === 'supplies') {
         loadWarehouses(selectedStore.apiKey);
         loadCoefficients(selectedStore.apiKey);
+        const preferred = getPreferredWarehouses(selectedStore.id);
+        setPreferredWarehouses(preferred);
       } else if (activeTab === 'inventory') {
         loadWarehouseRemains(selectedStore.apiKey);
       } else if (activeTab === 'storage') {
@@ -120,6 +132,13 @@ const Warehouses: React.FC = () => {
     if (selectedStore) {
       loadCoefficients(selectedStore.apiKey, warehouseId);
     }
+  };
+
+  const handleSavePreferredWarehouse = (warehouseId: number) => {
+    if (!selectedStore) return;
+    
+    const newPreferred = togglePreferredWarehouse(selectedStore.id, warehouseId);
+    setPreferredWarehouses(newPreferred);
   };
 
   const loadWarehouseRemains = async (apiKey: string) => {
@@ -281,7 +300,7 @@ const Warehouses: React.FC = () => {
               </CardHeader>
               <CardContent className="flex flex-col items-center justify-center py-8 text-center">
                 <Store className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Для работы с отчетами о с��ладах необходимо выбрать магазин</p>
+                <p className="text-muted-foreground">Для работы с отчетами о складах необходимо выбрать магазин</p>
                 <Button 
                   className="mt-4"
                   variant="outline"
@@ -365,65 +384,96 @@ const Warehouses: React.FC = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="lg:col-span-1">
-                {loading.warehouses ? (
-                  <Card>
-                    <CardHeader>
-                      <Skeleton className="h-8 w-3/4" />
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-10 w-full" />
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <SupplyForm 
-                    warehouses={wbWarehouses} 
-                    onSupplySubmit={handleSupplySubmit}
-                    isLoading={loading.options}
-                    coefficients={coefficients}
-                    onWarehouseSelect={handleWarehouseSelect}
-                  />
-                )}
+            <>
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-primary" />
+                    Информация о складах
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Выберите склад и просмотрите коэффициенты приемки
+                  </p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleRefreshData}
+                  disabled={loading.warehouses || loading.coefficients}
+                  className="flex items-center gap-2"
+                >
+                  {(loading.warehouses || loading.coefficients) ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  Обновить данные
+                </Button>
               </div>
-              
-              <div className="lg:col-span-2">
-                {supplyResults ? (
-                  <SupplyOptionsResults 
-                    results={supplyResults} 
-                    warehouses={wbWarehouses} 
-                  />
-                ) : (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center">
-                        <PackageOpen className="h-5 w-5 mr-2" />
-                        Коэффициенты приемки
-                      </CardTitle>
-                      <CardDescription>
-                        Информация о доступности приемки товаров на складах WB
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {loading.coefficients ? (
-                        <div className="space-y-2">
-                          <Skeleton className="h-10 w-full" />
-                          <Skeleton className="h-10 w-full" />
-                          <Skeleton className="h-10 w-full" />
-                        </div>
-                      ) : (
-                        <WarehouseCoefficientsTable 
-                          coefficients={coefficients} 
-                          selectedWarehouseId={selectedWarehouseId}
-                        />
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="space-y-6">
+                  {loading.warehouses ? (
+                    <Skeleton className="h-[300px] w-full" />
+                  ) : (
+                    <WarehouseSelector 
+                      warehouses={wbWarehouses}
+                      coefficients={coefficients}
+                      onWarehouseSelect={handleWarehouseSelect}
+                      selectedWarehouseId={selectedWarehouseId}
+                      onSavePreferred={handleSavePreferredWarehouse}
+                      preferredWarehouses={preferredWarehouses}
+                    />
+                  )}
+
+                  {!supplyResults && (
+                    <SupplyForm 
+                      warehouses={wbWarehouses} 
+                      onSupplySubmit={handleSupplySubmit}
+                      isLoading={loading.options}
+                      coefficients={coefficients}
+                      onWarehouseSelect={handleWarehouseSelect}
+                    />
+                  )}
+                </div>
+                
+                <div className="lg:col-span-2">
+                  {supplyResults ? (
+                    <SupplyOptionsResults 
+                      results={supplyResults} 
+                      warehouses={wbWarehouses} 
+                    />
+                  ) : (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center">
+                          <PackageOpen className="h-5 w-5 mr-2" />
+                          Коэффициенты приемки
+                        </CardTitle>
+                        <CardDescription>
+                          Информация о доступности приемки товаров на складах WB
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {loading.coefficients ? (
+                          <div className="space-y-2">
+                            <Skeleton className="h-10 w-full" />
+                            <Skeleton className="h-10 w-full" />
+                            <Skeleton className="h-10 w-full" />
+                          </div>
+                        ) : (
+                          <WarehouseCoefficientsTable 
+                            coefficients={coefficients} 
+                            selectedWarehouseId={selectedWarehouseId}
+                            title="Информация о приемке товаров"
+                          />
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               </div>
-            </div>
+            </>
           )}
         </TabsContent>
 

@@ -1,8 +1,18 @@
 
-// Export all supply-related components
-export { default as SupplyForm } from './SupplyForm';
-export { default as SupplyOptionsResults } from './SupplyOptionsResults';
-export { default as WarehouseCoefficientsTable } from './WarehouseCoefficientsTable';
-export { default as WarehouseRemains } from './WarehouseRemains';
-export { default as StorageProfitabilityAnalysis } from './StorageProfitabilityAnalysis';
-export { default as PaidStorageCostReport } from './PaidStorageCostReport';
+import SupplyForm from './SupplyForm';
+import WarehouseCoefficientsTable from './WarehouseCoefficientsTable';
+import SupplyOptionsResults from './SupplyOptionsResults';
+import WarehouseRemains from './WarehouseRemains';
+import StorageProfitabilityAnalysis from './StorageProfitabilityAnalysis';
+import PaidStorageCostReport from './PaidStorageCostReport';
+import WarehouseSelector from './WarehouseSelector';
+
+export {
+  SupplyForm,
+  WarehouseCoefficientsTable,
+  SupplyOptionsResults,
+  WarehouseRemains,
+  StorageProfitabilityAnalysis,
+  PaidStorageCostReport,
+  WarehouseSelector
+};

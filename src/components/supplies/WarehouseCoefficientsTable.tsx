@@ -11,30 +11,43 @@ import {
   PackageOpen, 
   DollarSign,
   CalendarIcon,
-  InfoIcon
+  InfoIcon,
+  FilterIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface WarehouseCoefficientsTableProps {
   coefficients: WarehouseCoefficient[];
   selectedWarehouseId?: number;
+  title?: string;
 }
 
 const WarehouseCoefficientsTable: React.FC<WarehouseCoefficientsTableProps> = ({ 
   coefficients, 
-  selectedWarehouseId 
+  selectedWarehouseId,
+  title = "Коэффициенты приемки"
 }) => {
   const [showLogistics, setShowLogistics] = useState(true);
+  const [boxTypeFilter, setBoxTypeFilter] = useState<string | null>(null);
   
   // Filter coefficients by selected warehouse if provided
   const filteredCoefficients = useMemo(() => {
-    if (!selectedWarehouseId) return coefficients;
-    return coefficients.filter(c => c.warehouseID === selectedWarehouseId);
-  }, [coefficients, selectedWarehouseId]);
+    let filtered = coefficients;
+    
+    if (selectedWarehouseId) {
+      filtered = filtered.filter(c => c.warehouseID === selectedWarehouseId);
+    }
+    
+    if (boxTypeFilter) {
+      filtered = filtered.filter(c => c.boxTypeName === boxTypeFilter);
+    }
+    
+    return filtered;
+  }, [coefficients, selectedWarehouseId, boxTypeFilter]);
   
   // Get the next 14 days from today
   const next14Days = useMemo(() => {
@@ -63,11 +76,22 @@ const WarehouseCoefficientsTable: React.FC<WarehouseCoefficientsTableProps> = ({
     return grouped;
   }, [filteredCoefficients]);
 
+  // Get unique box types
+  const boxTypes = useMemo(() => {
+    const types = new Set<string>();
+    coefficients.forEach(coef => {
+      if (coef.boxTypeName) {
+        types.add(coef.boxTypeName);
+      }
+    });
+    return Array.from(types);
+  }, [coefficients]);
+
   if (filteredCoefficients.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Нет данных о коэффициентах</CardTitle>
+          <CardTitle>{title}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
@@ -82,15 +106,36 @@ const WarehouseCoefficientsTable: React.FC<WarehouseCoefficientsTableProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium">Коэффициенты приемки</h3>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => setShowLogistics(!showLogistics)}
-        >
-          {showLogistics ? 'Скрыть логистику' : 'Показать логистику'}
-        </Button>
+      <div className="flex justify-between items-center flex-wrap gap-2">
+        <h3 className="text-lg font-medium">{title}</h3>
+        <div className="flex items-center gap-3">
+          {boxTypes.length > 0 && (
+            <div className="flex items-center gap-2">
+              <FilterIcon className="h-4 w-4 text-muted-foreground" />
+              <Select 
+                value={boxTypeFilter || "all"} 
+                onValueChange={(value) => setBoxTypeFilter(value === "all" ? null : value)}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Все типы коробов" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все типы коробов</SelectItem>
+                  {boxTypes.map(type => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowLogistics(!showLogistics)}
+          >
+            {showLogistics ? 'Скрыть логистику' : 'Показать логистику'}
+          </Button>
+        </div>
       </div>
 
       <ScrollArea className="h-[600px] pr-4">
