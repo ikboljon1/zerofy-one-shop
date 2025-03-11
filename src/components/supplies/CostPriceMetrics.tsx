@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,22 +5,15 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import { Store } from "@/types/store";
 import { ArrowUpRight, ArrowDownRight, DollarSign, ShoppingCart, Wallet } from "lucide-react";
 import { getCostPriceByNmId, getCostPriceBySubjectName } from "@/services/api";
-import { useToast } from "@/components/ui/use-toast";
 
 interface CostPriceMetricsProps {
   selectedStore?: Store | null;
 }
 
 interface ProductData {
-  nmId?: number;
-  subject?: string;
-  subject_name?: string;
+  nmId: number;
   quantity?: number;
   costPrice?: number;
-}
-
-interface SalesByCategory {
-  [key: string]: number;
 }
 
 const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) => {
@@ -29,7 +21,6 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
   const [totalSoldItems, setTotalSoldItems] = useState<number>(0);
   const [avgCostPrice, setAvgCostPrice] = useState<number>(0);
   const [lastUpdateDate, setLastUpdateDate] = useState<string | null>(null);
-  const { toast } = useToast();
 
   useEffect(() => {
     if (selectedStore) {
@@ -50,26 +41,23 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
     if (!selectedStore) return;
 
     try {
-      // Загружаем данные о товарах
-      const products: ProductData[] = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
+      const products = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
       if (products.length === 0) {
-        console.log("Товары не найдены в localStorage");
+        console.log("No products found in localStorage");
         return;
       }
 
-      console.log("Пример загруженных товаров:", products.slice(0, 3).map((p: ProductData) => ({
-        nmId: p.nmId,
+      console.log("Loaded products sample:", products.slice(0, 3).map((p: any) => ({
+        nmId: p.nmId || p.nmID,
         subject: p.subject || p.subject_name,
         costPrice: p.costPrice,
         quantity: p.quantity
       })));
 
-      // Загружаем аналитические данные
       const analyticsData = JSON.parse(localStorage.getItem(`marketplace_analytics_${selectedStore.id}`) || "{}");
       
-      // Если аналитических данных нет, используем только данные о товарах
-      if (!analyticsData || !analyticsData.data || !analyticsData.data.productSales) {
-        console.log("Аналитические данные не найдены в localStorage");
+      if (!analyticsData || !analyticsData.data || !analyticsData.data.dailySales) {
+        console.log("No analytics data found in localStorage");
         
         let totalCost = 0;
         let itemsSold = 0;
@@ -84,7 +72,7 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
           
           if (costPrice === 0 && (product.subject || product.subject_name)) {
             costPrice = await getCostPriceBySubjectName(
-              product.subject || product.subject_name || "", 
+              product.subject || product.subject_name, 
               selectedStore.id
             );
           }
@@ -92,11 +80,11 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
           if (quantity > 0 && costPrice > 0) {
             totalCost += quantity * costPrice;
             itemsSold += quantity;
-            console.log(`Товар nmId=${product.nmId}, категория=${product.subject || product.subject_name}, количество=${quantity}, себестоимость=${costPrice}`);
+            console.log(`Product nmId=${product.nmId}, subject=${product.subject || product.subject_name}, quantity=${quantity}, costPrice=${costPrice}`);
           }
         }
         
-        console.log(`Используем только данные о товарах. Общая себестоимость: ${totalCost}, Всего товаров: ${itemsSold}`);
+        console.log(`Using product data only. Total cost: ${totalCost}, Total items: ${itemsSold}`);
         setTotalCostPrice(totalCost);
         setTotalSoldItems(itemsSold);
         setAvgCostPrice(itemsSold > 0 ? totalCost / itemsSold : 0);
@@ -104,125 +92,64 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
         return;
       }
       
-      console.log("Используем аналитические данные для расчета себестоимости");
+      console.log("Using analytics data for cost price calculation");
       
-      // Получаем данные о продажах по категориям (subject_name)
-      const productSales = analyticsData.data.productSales || [];
-      console.log(`Найдено ${productSales.length} категорий товаров в аналитике`);
+      const allSales: any[] = [];
+      analyticsData.data.dailySales.forEach((day: any) => {
+        if (day && day.sales && Array.isArray(day.sales)) {
+          allSales.push(...day.sales);
+        }
+      });
       
-      if (productSales.length === 0) {
-        console.log("Нет данных о продажах товаров в аналитике");
+      console.log(`Found ${allSales.length} sales in analytics data`);
+      
+      const hasNmId = allSales.some((sale: any) => 'nmId' in sale || 'nm_id' in sale);
+      const hasSubjectName = allSales.some((sale: any) => 'subject_name' in sale);
+      console.log(`Sales data contains nmId: ${hasNmId}, subject_name: ${hasSubjectName}`);
+      
+      if (!hasNmId && !hasSubjectName) {
+        console.log("No nmId or subject_name found in sales data, cannot calculate cost price");
         return;
       }
       
-      // Создаем карту соответствия категорий и товаров
-      const categoryToProductsMap: Record<string, ProductData[]> = {};
-      
-      // Группируем товары по категориям
-      for (const product of products) {
-        const category = product.subject || product.subject_name;
-        if (category) {
-          if (!categoryToProductsMap[category]) {
-            categoryToProductsMap[category] = [];
-          }
-          categoryToProductsMap[category].push(product);
-        }
-      }
-      
-      console.log("Карта соответствия категорий и товаров:", Object.keys(categoryToProductsMap));
-      
       let totalCost = 0;
-      let totalItems = 0;
+      let itemsSold = 0;
       
-      // Обрабатываем продажи по категориям
-      for (const categorySale of productSales) {
-        const category = categorySale.subject_name;
-        const quantitySold = categorySale.quantity || 0;
+      for (const sale of allSales) {
+        const nmId = sale.nmId || sale.nm_id;
+        const subjectName = sale.subject_name;
+        const quantity = Math.abs(sale.quantity || 1);
         
-        if (!category || quantitySold <= 0) {
-          console.log(`Пропускаем категорию без названия или с нулевым количеством: ${JSON.stringify(categorySale)}`);
-          continue;
-        }
+        let costPrice = 0;
         
-        console.log(`Обрабатываем категорию: ${category}, продано: ${quantitySold} шт.`);
-        
-        // Ищем товары данной категории
-        const categoryProducts = categoryToProductsMap[category] || [];
-        console.log(`Найдено ${categoryProducts.length} товаров в категории ${category}`);
-        
-        if (categoryProducts.length === 0) {
-          // Если товаров категории не найдено, пробуем получить себестоимость по имени категории
-          const categoryCostPrice = await getCostPriceBySubjectName(category, selectedStore.id);
+        if (nmId) {
+          const product = products.find((p: any) => (p.nmId === nmId || p.nmID === nmId));
           
-          if (categoryCostPrice > 0) {
-            const categoryTotalCost = categoryCostPrice * quantitySold;
-            totalCost += categoryTotalCost;
-            totalItems += quantitySold;
-            console.log(`Используем себестоимость по категории ${category}: ${categoryCostPrice} * ${quantitySold} = ${categoryTotalCost}`);
+          if (product && product.costPrice) {
+            costPrice = product.costPrice;
           } else {
-            console.log(`Не удалось определить себестоимость для категории ${category}`);
-            
-            // Показываем уведомление о невозможности рассчитать себестоимость для категории
-            toast({
-              title: "Внимание",
-              description: `Не удалось определить себестоимость для категории "${category}". Добавьте эту категорию товарам в разделе "Товары".`,
-              variant: "default" // Изменено с "warning" на "default"
-            });
+            costPrice = await getCostPriceByNmId(nmId, selectedStore.id);
           }
-          continue;
+        } else if (subjectName) {
+          costPrice = await getCostPriceBySubjectName(subjectName, selectedStore.id);
         }
         
-        // Рассчитываем среднюю себестоимость товаров в категории
-        let categoryTotalCostPrice = 0;
-        let categoryProductsWithCost = 0;
-        
-        for (const product of categoryProducts) {
-          let costPrice = product.costPrice || 0;
-          
-          if (costPrice === 0 && product.nmId) {
-            costPrice = await getCostPriceByNmId(product.nmId, selectedStore.id);
-          }
-          
-          if (costPrice > 0) {
-            categoryTotalCostPrice += costPrice;
-            categoryProductsWithCost++;
-          }
-        }
-        
-        const averageCategoryPrice = categoryProductsWithCost > 0 
-          ? categoryTotalCostPrice / categoryProductsWithCost 
-          : 0;
-        
-        if (averageCategoryPrice > 0) {
-          const categoryTotalCost = averageCategoryPrice * quantitySold;
-          totalCost += categoryTotalCost;
-          totalItems += quantitySold;
-          console.log(`Средняя себестоимость для категории ${category}: ${averageCategoryPrice} * ${quantitySold} = ${categoryTotalCost}`);
-        } else {
-          console.log(`Не удалось рассчитать среднюю себестоимость для категории ${category}`);
+        if (costPrice > 0) {
+          const itemCostPrice = costPrice * quantity;
+          totalCost += itemCostPrice;
+          itemsSold += quantity;
+          console.log(`Sale ${nmId ? `nmId=${nmId}` : `subject=${subjectName}`}, quantity=${quantity}, costPrice=${costPrice}, total=${itemCostPrice}`);
         }
       }
-      
-      console.log(`Общая себестоимость: ${totalCost}, Всего проданных товаров: ${totalItems}`);
+
+      console.log(`Total cost: ${totalCost}, Total items sold: ${itemsSold}`);
       setTotalCostPrice(totalCost);
-      setTotalSoldItems(totalItems);
-      setAvgCostPrice(totalItems > 0 ? totalCost / totalItems : 0);
+      setTotalSoldItems(itemsSold);
+      setAvgCostPrice(itemsSold > 0 ? totalCost / itemsSold : 0);
       
       setLastUpdateDate(new Date().toISOString());
-      
-      // Сохраняем рассчитанную себестоимость в localStorage
-      if (analyticsData.data && analyticsData.data.currentPeriod && analyticsData.data.currentPeriod.expenses) {
-        analyticsData.data.currentPeriod.expenses.costPrice = totalCost;
-        localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
-        console.log("Обновлены данные о себестоимости в localStorage");
-      }
     } catch (error) {
-      console.error("Ошибка при загрузке данных о себестоимости:", error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось рассчитать данные о себестоимости товаров",
-        variant: "destructive"
-      });
+      console.error("Error loading cost price data:", error);
     }
   };
 
