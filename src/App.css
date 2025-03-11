@@ -45,6 +45,10 @@
 /* Fix for layout shift when modal or dropdown opens */
 [data-radix-popper-content-wrapper] {
   position: fixed !important;
+  top: var(--radix-popper-content-top) !important;
+  left: var(--radix-popper-content-left) !important;
+  transform: var(--radix-popper-content-transform) !important;
+  min-width: var(--radix-popper-trigger-width) !important;
   z-index: 999 !important;
 }
 
@@ -63,6 +67,8 @@ body.dialog-open {
   max-height: 300px !important;
   overflow-y: auto !important;
   border-radius: 0.5rem !important;
+  transform-origin: var(--radix-popper-transform-origin) !important;
+  animation: none !important;
 }
 
 /* Override any potential transparency */
@@ -76,4 +82,29 @@ body.dialog-open {
 [data-radix-select-item]:hover {
   background-color: hsl(var(--accent)) !important;
   color: hsl(var(--accent-foreground)) !important;
+}
+
+/* Fix for select search input */
+.select-search-input {
+  width: 100% !important;
+  background-color: hsl(var(--background)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Prevent layout shift */
+.fixed-layout {
+  position: relative !important;
+  overflow: visible !important;
+}
+
+/* Improved dropdown positioning */
+.select-dropdown {
+  position: absolute !important;
+  z-index: 999 !important;
+  background: hsl(var(--background)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+  border-radius: 0.5rem !important;
+  overflow: hidden !important;
 }

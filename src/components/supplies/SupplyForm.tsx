@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   SupplyFormData, 
   SupplyItem, 
@@ -8,14 +7,13 @@ import {
   BOX_TYPES,
   WarehouseCoefficient
 } from '@/types/supplies';
-import { Plus, Trash2, ArrowRight, FileBarChart2, Package, Search, Box } from 'lucide-react';
+import { Plus, Trash2, ArrowRight, FileBarChart2, Package, Box } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 
 interface SupplyFormProps {
@@ -178,22 +176,11 @@ const SupplyForm: React.FC<SupplyFormProps> = ({
     setCsvContent('');
   };
 
-  // Get warehouses that accept QR codes
-  const getQrAcceptingWarehouses = () => {
-    return warehouses.filter(w => w.acceptsQR);
-  };
-
-  // Find warehouse coefficient for selected warehouse
-  const getSelectedWarehouseCoefficient = () => {
-    if (!formData.selectedWarehouse) return null;
-    return coefficients.find(c => c.warehouseID === formData.selectedWarehouse);
-  };
-
-  const selectedCoefficient = getSelectedWarehouseCoefficient();
+  const selectedCoefficient = coefficients.find(c => c.warehouseID === formData.selectedWarehouse);
 
   return (
-    <Card className="shadow-md">
-      <CardHeader className="pb-4 border-b">
+    <Card className="shadow-md relative">
+      <CardHeader className="pb-4">
         <div className="flex items-center space-x-2">
           <Package className="h-5 w-5 text-primary" />
           <CardTitle>Создание поставки FBW</CardTitle>
@@ -202,209 +189,205 @@ const SupplyForm: React.FC<SupplyFormProps> = ({
           Проверьте доступность приёмки товаров на складах Wildberries
         </CardDescription>
       </CardHeader>
-      <CardContent className="pt-6">
-        <div className="space-y-6">
-          {/* Warehouse Selection with Coefficient Info */}
-          <div className="space-y-2">
-            <label htmlFor="warehouse" className="text-sm font-medium">Склад назначения</label>
+
+      <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <label htmlFor="warehouse" className="text-sm font-medium">Склад назначения</label>
+          <div className="relative">
             <Select 
               value={formData.selectedWarehouse?.toString() || ''} 
               onValueChange={handleWarehouseChange}
               disabled={isLoading}
             >
-              <SelectTrigger id="warehouse" className="bg-background">
+              <SelectTrigger id="warehouse" className="w-full bg-background">
                 <SelectValue placeholder="Выберите склад" />
               </SelectTrigger>
-              <SelectContent className="bg-background border border-border shadow-md z-[999]" searchable>
+              <SelectContent 
+                className="bg-background border border-border shadow-lg z-[999]" 
+                position="popper"
+                sideOffset={4}
+                searchable
+              >
                 {warehouses.map(warehouse => (
                   <SelectItem 
                     key={warehouse.ID} 
                     value={warehouse.ID.toString()}
                     className="flex items-center justify-between"
                   >
-                    <div className="flex items-center">
-                      <span className="mr-2">{warehouse.name}</span>
-                      {warehouse.acceptsQR && 
+                    <div className="flex items-center gap-2">
+                      <span>{warehouse.name}</span>
+                      {warehouse.acceptsQR && (
                         <Badge variant="outline" className="text-xs bg-green-100 text-green-800">QR</Badge>
-                      }
+                      )}
                     </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            
-            {/* Show coefficient info if warehouse selected */}
-            {selectedCoefficient && (
-              <div className="mt-2 p-3 bg-accent/30 rounded-md text-sm">
-                <div className="flex justify-between mb-1">
-                  <span className="text-muted-foreground">Коэффициент приёмки:</span>
-                  <span className="font-semibold">{selectedCoefficient.coefficient}</span>
-                </div>
-                <div className="flex justify-between mb-1">
-                  <span className="text-muted-foreground">Статус приёмки:</span>
-                  <Badge variant={selectedCoefficient.allowUnload ? "success" : "destructive"} className="text-xs">
-                    {selectedCoefficient.allowUnload ? "Доступен" : "Закрыт"}
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Дата актуальности:</span>
-                  <span>{new Date(selectedCoefficient.date).toLocaleDateString()}</span>
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* Box Type Selection */}
-          <div className="space-y-2">
-            <label htmlFor="boxType" className="text-sm font-medium">Тип упаковки</label>
-            <Select 
-              value={formData.selectedBoxType} 
-              onValueChange={handleBoxTypeChange}
-              disabled={isLoading}
+          {selectedCoefficient && (
+            <div className="mt-2 p-3 bg-accent/30 rounded-md text-sm">
+              <div className="flex justify-between mb-1">
+                <span className="text-muted-foreground">Коэффициент приёмки:</span>
+                <span className="font-semibold">{selectedCoefficient.coefficient}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Статус приёмки:</span>
+                <Badge variant={selectedCoefficient.allowUnload ? "success" : "destructive"} className="text-xs">
+                  {selectedCoefficient.allowUnload ? "Доступен" : "Закрыт"}
+                </Badge>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="boxType" className="text-sm font-medium">Тип упаковки</label>
+          <Select 
+            value={formData.selectedBoxType} 
+            onValueChange={(type) => setFormData(prev => ({ ...prev, selectedBoxType: type as BoxType }))}
+            disabled={isLoading}
+          >
+            <SelectTrigger id="boxType" className="w-full bg-background">
+              <SelectValue placeholder="Выберите тип упаковки" />
+            </SelectTrigger>
+            <SelectContent 
+              className="bg-background border border-border shadow-lg" 
+              position="popper"
+              sideOffset={4}
             >
-              <SelectTrigger id="boxType" className="bg-background">
-                <SelectValue placeholder="Выберите тип упаковки" />
-              </SelectTrigger>
-              <SelectContent className="bg-background border border-border shadow-md z-[999]">
-                {Object.keys(BOX_TYPES).map((type) => (
-                  <SelectItem key={type} value={type} className="flex items-center">
-                    <Box className="h-4 w-4 mr-2 opacity-70" />
-                    <span>{type}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              {Object.keys(BOX_TYPES).map((type) => (
+                <SelectItem key={type} value={type} className="flex items-center">
+                  <Box className="h-4 w-4 mr-2 opacity-70" />
+                  <span>{type}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-          {/* Input Methods Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="manual" disabled={isLoading} className="flex items-center">
-                <Plus className="h-4 w-4 mr-1.5" />
-                <span>Ручной ввод</span>
-              </TabsTrigger>
-              <TabsTrigger value="csv" disabled={isLoading} className="flex items-center">
-                <FileBarChart2 className="h-4 w-4 mr-1.5" />
-                <span>Импорт CSV</span>
-              </TabsTrigger>
-            </TabsList>
-            
-            {/* Manual Entry Tab */}
-            <TabsContent value="manual" className="pt-4">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <Badge variant="outline" className="mr-2">{formData.items.length}</Badge>
-                    <label className="text-sm font-medium">Товары</label>
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={clearForm}
-                      className="h-8"
-                      disabled={isLoading || (formData.items.length === 1 && !formData.items[0].barcode)}
-                    >
-                      Очистить
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={addItem}
-                      className="h-8"
-                      disabled={isLoading}
-                    >
-                      <Plus className="h-4 w-4 mr-1" /> Добавить товар
-                    </Button>
-                  </div>
-                </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="manual" disabled={isLoading} className="flex items-center">
+              <Plus className="h-4 w-4 mr-1.5" />
+              <span>Ручной ввод</span>
+            </TabsTrigger>
+            <TabsTrigger value="csv" disabled={isLoading} className="flex items-center">
+              <FileBarChart2 className="h-4 w-4 mr-1.5" />
+              <span>Импорт CSV</span>
+            </TabsTrigger>
+          </TabsList>
 
-                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 border rounded-md p-3">
-                  {formData.items.map((item, index) => (
-                    <div key={index} className="flex items-center gap-2 border-b pb-2 last:border-0 last:pb-0">
-                      <div className="w-8 h-8 rounded-full bg-accent/50 flex items-center justify-center text-xs font-medium">
-                        {index + 1}
-                      </div>
-                      <Input
-                        placeholder="Баркод"
-                        value={item.barcode}
-                        onChange={(e) => handleBarcodeChange(index, e.target.value)}
-                        className="flex-grow"
-                        disabled={isLoading}
-                      />
-                      <Input
-                        type="number"
-                        placeholder="Кол-во"
-                        value={item.quantity}
-                        min={1}
-                        max={999999}
-                        onChange={(e) => handleQuantityChange(index, e.target.value)}
-                        className="w-24"
-                        disabled={isLoading}
-                      />
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => removeItem(index)}
-                        className="h-10 w-10 hover:bg-destructive/10 hover:text-destructive"
-                        disabled={isLoading || formData.items.length <= 1}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
+          <TabsContent value="manual" className="space-y-4 mt-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Badge variant="outline" className="mr-2">{formData.items.length}</Badge>
+                <span className="text-sm font-medium">Товары</span>
               </div>
-            </TabsContent>
-            
-            {/* CSV Import Tab */}
-            <TabsContent value="csv" className="pt-4">
-              <div className="space-y-4">
-                <div>
-                  <div className="text-sm font-medium mb-2 flex items-center">
-                    <FileBarChart2 className="h-4 w-4 mr-1.5" />
-                    <span>Импорт из CSV</span>
+              <div className="flex space-x-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={clearForm}
+                  disabled={isLoading || (formData.items.length === 1 && !formData.items[0].barcode)}
+                >
+                  Очистить
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={addItem}
+                  disabled={isLoading}
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Добавить товар
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+              {formData.items.map((item, index) => (
+                <div key={index} className="flex items-center gap-2 p-3 border rounded-md bg-background">
+                  <div className="w-8 h-8 rounded-full bg-accent/50 flex items-center justify-center text-xs font-medium">
+                    {index + 1}
                   </div>
-                  <div className="text-sm text-muted-foreground mb-4 p-3 bg-muted/50 rounded-md">
-                    <p className="mb-2">Введите данные в формате: <code className="bg-muted px-1 py-0.5 rounded">баркод,количество</code> (по одной паре на строку)</p>
-                    <div className="p-2 bg-muted rounded text-xs font-mono">
-                      2000000000000,5<br />
-                      2000000000001,10<br />
-                      2000000000002,3
-                    </div>
-                  </div>
-                  <textarea
-                    value={csvContent}
-                    onChange={handleCsvContentChange}
-                    placeholder="Введите данные в формате CSV..."
-                    className="w-full h-40 p-2 border rounded-md focus:ring-1 focus:ring-ring"
+                  <Input
+                    placeholder="Баркод"
+                    value={item.barcode}
+                    onChange={(e) => handleBarcodeChange(index, e.target.value)}
+                    className="flex-grow"
                     disabled={isLoading}
                   />
-                </div>
-                <div className="flex justify-end">
+                  <Input
+                    type="number"
+                    placeholder="Кол-во"
+                    value={item.quantity}
+                    min={1}
+                    max={999999}
+                    onChange={(e) => handleQuantityChange(index, e.target.value)}
+                    className="w-24"
+                    disabled={isLoading}
+                  />
                   <Button 
                     type="button" 
-                    onClick={processCsvContent}
-                    variant="secondary"
-                    disabled={isLoading || !csvContent.trim()}
-                    className="flex items-center"
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => removeItem(index)}
+                    className="hover:bg-destructive/10 hover:text-destructive"
+                    disabled={isLoading || formData.items.length <= 1}
                   >
-                    <FileBarChart2 className="h-4 w-4 mr-2" /> Импортировать
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="csv" className="space-y-4 mt-4">
+            <div>
+              <div className="text-sm font-medium mb-2 flex items-center">
+                <FileBarChart2 className="h-4 w-4 mr-1.5" />
+                <span>Импорт из CSV</span>
               </div>
-            </TabsContent>
-          </Tabs>
-        </div>
+              <div className="text-sm text-muted-foreground mb-4 p-3 bg-muted/50 rounded-md">
+                <p className="mb-2">Введите данные в формате: <code className="bg-muted px-1 py-0.5 rounded">баркод,количество</code></p>
+                <div className="p-2 bg-muted rounded text-xs font-mono">
+                  2000000000000,5<br />
+                  2000000000001,10<br />
+                  2000000000002,3
+                </div>
+              </div>
+              <textarea
+                value={csvContent}
+                onChange={(e) => setCsvContent(e.target.value)}
+                placeholder="Введите данные в формате CSV..."
+                className="w-full h-40 p-2 border rounded-md focus:ring-1 focus:ring-ring resize-none"
+                disabled={isLoading}
+              />
+            </div>
+            <div className="flex justify-end">
+              <Button 
+                type="button"
+                onClick={processCsvContent}
+                variant="secondary"
+                disabled={isLoading || !csvContent.trim()}
+                className="flex items-center"
+              >
+                <FileBarChart2 className="h-4 w-4 mr-2" /> 
+                Импортировать
+              </Button>
+            </div>
+          </TabsContent>
+        </Tabs>
       </CardContent>
-      <CardFooter className="bg-accent/10 pt-4 pb-4 mt-4">
+
+      <CardFooter className="bg-accent/10 pt-4">
         <Button 
-          type="submit" 
-          onClick={handleSubmit} 
-          className="w-full flex items-center gap-2"
+          type="submit"
+          onClick={handleSubmit}
+          className="w-full flex items-center justify-center gap-2"
           disabled={isLoading}
         >
           <span>Проверить доступность</span>
