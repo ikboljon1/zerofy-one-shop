@@ -30,6 +30,8 @@ interface Product {
     ppvz_for_pay?: number;
     retail_price?: number;
   };
+  salesPerDay?: number;
+  storagePerDay?: number;
 }
 
 interface ProductsListProps {
@@ -365,10 +367,12 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           expenses: productExpenses,
           salesAmount: salesMap.get(product.nmID) || 0
         });
+
+        const storedProduct = storedProducts.find((p: Product) => p.nmID === product.nmID);
         
         return {
           ...product,
-          costPrice: costPrices[product.nmID] || 0,
+          costPrice: storedProduct?.costPrice || 0,
           discountedPrice: currentPrice || 0,
           quantity: quantity,
           expenses: productExpenses
@@ -396,20 +400,18 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   };
 
   const updateCostPrice = (productId: number, costPrice: number) => {
-    const updatedProducts = products.map(product => {
-      if (product.nmID === productId) {
-        const updatedProduct = { ...product, costPrice };
-        return updatedProduct;
-      }
-      return product;
-    });
+    setProducts(prevProducts => 
+      prevProducts.map(product => 
+        product.nmID === productId ? { ...product, costPrice } : product
+      )
+    );
     
-    setProducts(updatedProducts);
-    localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedProducts));
-    
-    const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore?.id}`) || '{}');
-    costPrices[productId] = costPrice;
-    localStorage.setItem(`costPrices_${selectedStore?.id}`, JSON.stringify(costPrices));
+    // Update localStorage with individual product data
+    const storedProducts = JSON.parse(localStorage.getItem(`products_${selectedStore?.id}`) || '[]');
+    const updatedStoredProducts = storedProducts.map((product: Product) => 
+      product.nmID === productId ? { ...product, costPrice } : product
+    );
+    localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedStoredProducts));
   };
 
   React.useEffect(() => {

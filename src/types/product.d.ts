@@ -1,3 +1,4 @@
+
 interface Product {
   nmID: number;
   vendorCode: string;
@@ -19,5 +20,8 @@ interface Product {
     acceptance: number;
     deductions?: number;
     ppvz_for_pay?: number;
+    retail_price?: number;
   };
+  salesPerDay?: number;
+  storagePerDay?: number;
 }
