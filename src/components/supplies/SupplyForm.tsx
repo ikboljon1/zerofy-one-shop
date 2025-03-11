@@ -8,13 +8,14 @@ import {
   BOX_TYPES,
   WarehouseCoefficient
 } from '@/types/supplies';
-import { Plus, Trash2, ArrowRight, FileBarChart2 } from 'lucide-react';
+import { Plus, Trash2, ArrowRight, FileBarChart2, Package, Search, Box } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
 interface SupplyFormProps {
@@ -177,20 +178,33 @@ const SupplyForm: React.FC<SupplyFormProps> = ({
     setCsvContent('');
   };
 
+  // Get warehouses that accept QR codes
   const getQrAcceptingWarehouses = () => {
     return warehouses.filter(w => w.acceptsQR);
   };
 
+  // Find warehouse coefficient for selected warehouse
+  const getSelectedWarehouseCoefficient = () => {
+    if (!formData.selectedWarehouse) return null;
+    return coefficients.find(c => c.warehouseID === formData.selectedWarehouse);
+  };
+
+  const selectedCoefficient = getSelectedWarehouseCoefficient();
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Создание поставки FBW</CardTitle>
+    <Card className="shadow-md">
+      <CardHeader className="pb-4 border-b">
+        <div className="flex items-center space-x-2">
+          <Package className="h-5 w-5 text-primary" />
+          <CardTitle>Создание поставки FBW</CardTitle>
+        </div>
         <CardDescription>
           Проверьте доступность приёмки товаров на складах Wildberries
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
+      <CardContent className="pt-6">
+        <div className="space-y-6">
+          {/* Warehouse Selection with Coefficient Info */}
           <div className="space-y-2">
             <label htmlFor="warehouse" className="text-sm font-medium">Склад назначения</label>
             <Select 
@@ -201,23 +215,46 @@ const SupplyForm: React.FC<SupplyFormProps> = ({
               <SelectTrigger id="warehouse" className="bg-background">
                 <SelectValue placeholder="Выберите склад" />
               </SelectTrigger>
-              <SelectContent className="bg-popover border border-border shadow-md z-[999]" searchable>
+              <SelectContent className="bg-background border border-border shadow-md z-[999]" searchable>
                 {warehouses.map(warehouse => (
                   <SelectItem 
                     key={warehouse.ID} 
                     value={warehouse.ID.toString()}
-                    className="flex items-center"
+                    className="flex items-center justify-between"
                   >
-                    <span>
-                      {warehouse.name}
-                      {warehouse.acceptsQR && <span className="ml-2 text-xs bg-green-100 text-green-800 py-0.5 px-1.5 rounded">QR</span>}
-                    </span>
+                    <div className="flex items-center">
+                      <span className="mr-2">{warehouse.name}</span>
+                      {warehouse.acceptsQR && 
+                        <Badge variant="outline" className="text-xs bg-green-100 text-green-800">QR</Badge>
+                      }
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            
+            {/* Show coefficient info if warehouse selected */}
+            {selectedCoefficient && (
+              <div className="mt-2 p-3 bg-accent/30 rounded-md text-sm">
+                <div className="flex justify-between mb-1">
+                  <span className="text-muted-foreground">Коэффициент приёмки:</span>
+                  <span className="font-semibold">{selectedCoefficient.coefficient}</span>
+                </div>
+                <div className="flex justify-between mb-1">
+                  <span className="text-muted-foreground">Статус приёмки:</span>
+                  <Badge variant={selectedCoefficient.allowUnload ? "success" : "destructive"} className="text-xs">
+                    {selectedCoefficient.allowUnload ? "Доступен" : "Закрыт"}
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Дата актуальности:</span>
+                  <span>{new Date(selectedCoefficient.date).toLocaleDateString()}</span>
+                </div>
+              </div>
+            )}
           </div>
 
+          {/* Box Type Selection */}
           <div className="space-y-2">
             <label htmlFor="boxType" className="text-sm font-medium">Тип упаковки</label>
             <Select 
@@ -228,26 +265,38 @@ const SupplyForm: React.FC<SupplyFormProps> = ({
               <SelectTrigger id="boxType" className="bg-background">
                 <SelectValue placeholder="Выберите тип упаковки" />
               </SelectTrigger>
-              <SelectContent className="bg-popover border border-border shadow-md z-[999]">
+              <SelectContent className="bg-background border border-border shadow-md z-[999]">
                 {Object.keys(BOX_TYPES).map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
+                  <SelectItem key={type} value={type} className="flex items-center">
+                    <Box className="h-4 w-4 mr-2 opacity-70" />
+                    <span>{type}</span>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
+          {/* Input Methods Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="manual" disabled={isLoading}>Ручной ввод</TabsTrigger>
-              <TabsTrigger value="csv" disabled={isLoading}>Импорт CSV</TabsTrigger>
+              <TabsTrigger value="manual" disabled={isLoading} className="flex items-center">
+                <Plus className="h-4 w-4 mr-1.5" />
+                <span>Ручной ввод</span>
+              </TabsTrigger>
+              <TabsTrigger value="csv" disabled={isLoading} className="flex items-center">
+                <FileBarChart2 className="h-4 w-4 mr-1.5" />
+                <span>Импорт CSV</span>
+              </TabsTrigger>
             </TabsList>
             
+            {/* Manual Entry Tab */}
             <TabsContent value="manual" className="pt-4">
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">Товары ({formData.items.length})</label>
+                  <div className="flex items-center">
+                    <Badge variant="outline" className="mr-2">{formData.items.length}</Badge>
+                    <label className="text-sm font-medium">Товары</label>
+                  </div>
                   <div className="flex space-x-2">
                     <Button 
                       type="button" 
@@ -272,9 +321,12 @@ const SupplyForm: React.FC<SupplyFormProps> = ({
                   </div>
                 </div>
 
-                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 border rounded-md p-3">
                   {formData.items.map((item, index) => (
-                    <div key={index} className="flex items-center gap-2">
+                    <div key={index} className="flex items-center gap-2 border-b pb-2 last:border-0 last:pb-0">
+                      <div className="w-8 h-8 rounded-full bg-accent/50 flex items-center justify-center text-xs font-medium">
+                        {index + 1}
+                      </div>
                       <Input
                         placeholder="Баркод"
                         value={item.barcode}
@@ -297,7 +349,7 @@ const SupplyForm: React.FC<SupplyFormProps> = ({
                         variant="ghost" 
                         size="icon" 
                         onClick={() => removeItem(index)}
-                        className="h-10 w-10"
+                        className="h-10 w-10 hover:bg-destructive/10 hover:text-destructive"
                         disabled={isLoading || formData.items.length <= 1}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -308,25 +360,27 @@ const SupplyForm: React.FC<SupplyFormProps> = ({
               </div>
             </TabsContent>
             
+            {/* CSV Import Tab */}
             <TabsContent value="csv" className="pt-4">
               <div className="space-y-4">
                 <div>
-                  <div className="text-sm font-medium mb-2">Импорт из CSV</div>
-                  <div className="text-sm text-muted-foreground mb-4">
-                    Введите данные в формате: баркод,количество (по одной паре на строку)
-                    <br />
-                    Пример:<br />
-                    <code className="text-xs bg-muted p-1 rounded">
+                  <div className="text-sm font-medium mb-2 flex items-center">
+                    <FileBarChart2 className="h-4 w-4 mr-1.5" />
+                    <span>Импорт из CSV</span>
+                  </div>
+                  <div className="text-sm text-muted-foreground mb-4 p-3 bg-muted/50 rounded-md">
+                    <p className="mb-2">Введите данные в формате: <code className="bg-muted px-1 py-0.5 rounded">баркод,количество</code> (по одной паре на строку)</p>
+                    <div className="p-2 bg-muted rounded text-xs font-mono">
                       2000000000000,5<br />
                       2000000000001,10<br />
                       2000000000002,3
-                    </code>
+                    </div>
                   </div>
                   <textarea
                     value={csvContent}
                     onChange={handleCsvContentChange}
                     placeholder="Введите данные в формате CSV..."
-                    className="w-full h-40 p-2 border rounded-md"
+                    className="w-full h-40 p-2 border rounded-md focus:ring-1 focus:ring-ring"
                     disabled={isLoading}
                   />
                 </div>
@@ -336,6 +390,7 @@ const SupplyForm: React.FC<SupplyFormProps> = ({
                     onClick={processCsvContent}
                     variant="secondary"
                     disabled={isLoading || !csvContent.trim()}
+                    className="flex items-center"
                   >
                     <FileBarChart2 className="h-4 w-4 mr-2" /> Импортировать
                   </Button>
@@ -345,14 +400,15 @@ const SupplyForm: React.FC<SupplyFormProps> = ({
           </Tabs>
         </div>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="bg-accent/10 pt-4 pb-4 mt-4">
         <Button 
           type="submit" 
           onClick={handleSubmit} 
-          className="w-full"
+          className="w-full flex items-center gap-2"
           disabled={isLoading}
         >
-          Проверить доступность <ArrowRight className="ml-2 h-4 w-4" />
+          <span>Проверить доступность</span>
+          <ArrowRight className="h-4 w-4" />
         </Button>
       </CardFooter>
     </Card>

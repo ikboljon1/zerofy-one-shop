@@ -45,9 +45,6 @@
 /* Fix for layout shift when modal or dropdown opens */
 [data-radix-popper-content-wrapper] {
   position: fixed !important;
-  top: auto !important;
-  left: auto !important;
-  transform: none !important;
   z-index: 999 !important;
 }
 
@@ -59,17 +56,24 @@ body.dialog-open {
 
 /* Fixed dropdown styles */
 [data-radix-select-content] {
-  backdrop-filter: none !important;
-  background-color: hsl(var(--popover)) !important;
+  background-color: hsl(var(--background)) !important;
   border: 1px solid hsl(var(--border)) !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
   z-index: 999 !important;
   max-height: 300px !important;
   overflow-y: auto !important;
+  border-radius: 0.5rem !important;
 }
 
 /* Override any potential transparency */
 .SelectContent {
   background-color: hsl(var(--background)) !important;
   border: 1px solid hsl(var(--border)) !important;
+  backdrop-filter: none !important;
+}
+
+/* Improve dropdown item hover state */
+[data-radix-select-item]:hover {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
 }

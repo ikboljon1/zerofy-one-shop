@@ -11,6 +11,7 @@ export const fetchWarehouses = async (apiKey: string): Promise<Warehouse[]> => {
   try {
     setApiKey(apiKey);
     const response = await api.get<Warehouse[]>(`${API_BASE_URL}/warehouses`);
+    console.log('Fetched warehouses:', response.data);
     return response.data;
   } catch (error: any) {
     console.error('Ошибка при запросе складов:', error);
@@ -39,6 +40,7 @@ export const fetchAcceptanceCoefficients = async (
       params
     });
     
+    console.log('Fetched acceptance coefficients:', response.data);
     return response.data;
   } catch (error: any) {
     console.error('Ошибка при запросе коэффициентов приёмки:', error);
@@ -64,6 +66,8 @@ export const fetchAcceptanceOptions = async (
       params.warehouseID = warehouseID.toString();
     }
     
+    console.log('Fetching acceptance options with params:', { items, warehouseID });
+    
     setApiKey(apiKey);
     const response = await api.post<SupplyOptionsResponse>(
       `${API_BASE_URL}/acceptance/options`,
@@ -71,6 +75,7 @@ export const fetchAcceptanceOptions = async (
       { params }
     );
     
+    console.log('Fetched acceptance options:', response.data);
     return response.data;
   } catch (error: any) {
     console.error('Ошибка при запросе вариантов приёмки:', error);
@@ -242,4 +247,33 @@ export const getMockPaidStorageData = (): PaidStorageItem[] => {
     tariffFixDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     tariffLowerDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   }));
+};
+
+// Adding a method to create an actual FBW supply
+export const createFbwSupply = async (
+  apiKey: string,
+  warehouseId: number,
+  items: SupplyItem[],
+  boxType: string
+): Promise<{ supplyId: string }> => {
+  try {
+    setApiKey(apiKey);
+    
+    const payload = {
+      warehouseId,
+      items,
+      boxType
+    };
+    
+    console.log('Creating FBW supply with payload:', payload);
+    
+    // This is a mock implementation - replace with actual API endpoint when available
+    // const response = await api.post(`${API_BASE_URL}/supplies/create`, payload);
+    
+    // For demo purposes, return a mock response
+    return { supplyId: `FBW-${Date.now()}` };
+  } catch (error: any) {
+    console.error('Ошибка при создании поставки FBW:', error);
+    throw new Error(error.detail || 'Не удалось создать поставку FBW');
+  }
 };
