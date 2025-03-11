@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Package, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,33 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-
-interface Product {
-  nmID: number;
-  vendorCode: string;
-  brand: string;
-  title: string;
-  photos: Array<{
-    big: string;
-    c246x328: string;
-  }>;
-  costPrice?: number;
-  price?: number;
-  discountedPrice?: number;
-  clubPrice?: number;
-  quantity?: number;
-  expenses?: {
-    logistics: number;
-    storage: number;
-    penalties: number;
-    acceptance: number;
-    deductions?: number;
-    ppvz_for_pay?: number;
-    retail_price?: number;
-  };
-  salesPerDay?: number;
-  storagePerDay?: number;
-}
+import type { Product } from "@/types/product";
 
 interface ProductsListProps {
   selectedStore: {
@@ -225,13 +198,25 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   const updateProductData = (productId: number, field: keyof Product, value: any) => {
     console.log(`Updating product ${productId}, field ${String(field)} to value:`, value);
     
-    // Обновляем продукт в состоянии React
     setProducts(prevProducts => {
-      const updatedProducts = prevProducts.map(product => 
-        product.nmID === productId 
-          ? { ...product, [field]: value } 
-          : product
-      );
+      // Находим индекс нужного продукта
+      const productIndex = prevProducts.findIndex(p => p.nmID === productId);
+      
+      if (productIndex === -1) {
+        console.error(`Product with ID ${productId} not found`);
+        return prevProducts;
+      }
+      
+      // Создаем копию массива продуктов
+      const updatedProducts = [...prevProducts];
+      
+      // Обновляем только конкретный продукт
+      updatedProducts[productIndex] = {
+        ...updatedProducts[productIndex],
+        [field]: value
+      };
+      
+      console.log(`Product ${productId} updated:`, updatedProducts[productIndex]);
       
       // Сохраняем обновленные данные в localStorage
       if (selectedStore) {

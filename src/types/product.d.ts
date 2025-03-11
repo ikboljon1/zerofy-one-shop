@@ -25,3 +25,5 @@ interface Product {
   salesPerDay?: number;
   storagePerDay?: number;
 }
+
+export type { Product };
