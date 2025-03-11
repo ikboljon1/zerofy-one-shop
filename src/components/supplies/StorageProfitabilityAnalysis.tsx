@@ -513,45 +513,51 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
   };
 
   const updateCostPrice = (nmId: number, value: string) => {
-    setCostPrices(prev => ({
-      ...prev,
-      [nmId]: value === "" ? null : Number(value)
-    }));
+    setCostPrices(prev => {
+      const newPrices = { ...prev };
+      newPrices[nmId] = value === "" ? null : Number(value);
+      return newPrices;
+    });
   };
 
   const updateSellingPrice = (nmId: number, value: string) => {
-    setSellingPrices(prev => ({
-      ...prev,
-      [nmId]: value === "" ? null : Number(value)
-    }));
+    setSellingPrices(prev => {
+      const newPrices = { ...prev };
+      newPrices[nmId] = value === "" ? null : Number(value);
+      return newPrices;
+    });
   };
 
   const updateDailySales = (nmId: number, value: string) => {
-    setDailySalesRates(prev => ({
-      ...prev,
-      [nmId]: value === "" ? null : Number(value)
-    }));
+    setDailySalesRates(prev => {
+      const newRates = { ...prev };
+      newRates[nmId] = value === "" ? null : Number(value);
+      return newRates;
+    });
   };
 
   const updateStorageCost = (nmId: number, value: string) => {
-    setStorageCostRates(prev => ({
-      ...prev,
-      [nmId]: value === "" ? null : Number(value)
-    }));
+    setStorageCostRates(prev => {
+      const newRates = { ...prev };
+      newRates[nmId] = value === "" ? null : Number(value);
+      return newRates;
+    });
   };
 
   const updateLogisticsCost = (nmId: number, value: string) => {
-    setLogisticsCosts(prev => ({
-      ...prev,
-      [nmId]: value === "" ? null : Number(value)
-    }));
+    setLogisticsCosts(prev => {
+      const newCosts = { ...prev };
+      newCosts[nmId] = value === "" ? null : Number(value);
+      return newCosts;
+    });
   };
 
   const updateWbCommission = (nmId: number, value: string) => {
-    setWbCommissions(prev => ({
-      ...prev,
-      [nmId]: value === "" ? null : Number(value)
-    }));
+    setWbCommissions(prev => {
+      const newCommissions = { ...prev };
+      newCommissions[nmId] = value === "" ? null : Number(value);
+      return newCommissions;
+    });
   };
 
   const fetchSalesAndStorageData = async (startDate: Date, endDate: Date) => {
@@ -1225,4 +1231,3 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
 };
 
 export default StorageProfitabilityAnalysis;
-
