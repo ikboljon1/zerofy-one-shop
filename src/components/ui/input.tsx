@@ -3,8 +3,34 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, ...props }, ref) => {
+export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  trackValue?: boolean;
+}
+
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, trackValue = false, ...props }, ref) => {
+    // For inputs that need individual tracking, use local state
+    const [localValue, setLocalValue] = React.useState<string>(props.value?.toString() || "");
+    
+    // Update local value when external value changes
+    React.useEffect(() => {
+      if (trackValue && props.value !== undefined) {
+        setLocalValue(props.value.toString());
+      }
+    }, [props.value, trackValue]);
+    
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      // Update local state first
+      if (trackValue) {
+        setLocalValue(e.target.value);
+      }
+      
+      // Call the original onChange handler
+      if (props.onChange) {
+        props.onChange(e);
+      }
+    };
+    
     return (
       <input
         type={type}
@@ -14,6 +40,8 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
         )}
         ref={ref}
         {...props}
+        value={trackValue ? localValue : props.value}
+        onChange={handleChange}
       />
     )
   }

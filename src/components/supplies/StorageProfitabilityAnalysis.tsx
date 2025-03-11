@@ -1117,6 +1117,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                       <TableCell className="text-right">
                         <div className="space-y-2">
                           <Input
+                            trackValue={true}
                             type="number" 
                             value={sellingPrices[result.remainItem.nmId] === null ? "" : sellingPrices[result.remainItem.nmId]?.toString() || ""}
                             onChange={(e) => updateSellingPrice(result.remainItem.nmId, e.target.value)}
@@ -1132,6 +1133,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                       </TableCell>
                       <TableCell className="text-right">
                         <Input
+                          trackValue={true}
                           type="number" 
                           value={costPrices[result.remainItem.nmId] === null ? "" : costPrices[result.remainItem.nmId]?.toString() || ""}
                           onChange={(e) => updateCostPrice(result.remainItem.nmId, e.target.value)}
@@ -1140,6 +1142,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                       </TableCell>
                       <TableCell className="text-right">
                         <Input
+                          trackValue={true}
                           type="number" 
                           value={wbCommissions[result.remainItem.nmId] === null ? "" : wbCommissions[result.remainItem.nmId]?.toString() || ""}
                           onChange={(e) => updateWbCommission(result.remainItem.nmId, e.target.value)}
@@ -1151,6 +1154,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                       </TableCell>
                       <TableCell className="text-right">
                         <Input
+                          trackValue={true}
                           type="number" 
                           value={dailySalesRates[result.remainItem.nmId] === null ? "" : dailySalesRates[result.remainItem.nmId]?.toString() || ""}
                           onChange={(e) => updateDailySales(result.remainItem.nmId, e.target.value)}
@@ -1160,6 +1164,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                       </TableCell>
                       <TableCell className="text-right">
                         <Input
+                          trackValue={true}
                           type="number" 
                           value={storageCostRates[result.remainItem.nmId] === null ? "" : storageCostRates[result.remainItem.nmId]?.toString() || ""}
                           onChange={(e) => updateStorageCost(result.remainItem.nmId, e.target.value)}
@@ -1231,3 +1236,4 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
 };
 
 export default StorageProfitabilityAnalysis;
+
