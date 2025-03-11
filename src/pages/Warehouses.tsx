@@ -25,9 +25,7 @@ import {
   WarehouseRemains,
   StorageProfitabilityAnalysis,
   PaidStorageCostReport,
-  WarehouseCoefficientsCard,
-  WarehouseSelector,
-  WarehouseCoefficientsDateCard
+  WarehouseCoefficientsCard
 } from '@/components/supplies';
 import { 
   WarehouseCoefficient, 
@@ -328,7 +326,7 @@ const Warehouses: React.FC = () => {
                 <div>
                   <h2 className="text-lg font-semibold flex items-center gap-2">
                     <Building2 className="h-5 w-5 text-primary" />
-                    <span>Управление поставками</span>
+                    Управление поставками
                   </h2>
                   <p className="text-sm text-muted-foreground">
                     Анализ коэффициентов приемки и выбор оптимального склада
@@ -346,33 +344,23 @@ const Warehouses: React.FC = () => {
                   ) : (
                     <RefreshCw className="h-4 w-4" />
                   )}
-                  <span>Обновить данные</span>
+                  Обновить данные
                 </Button>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="space-y-6">
                   <SupplyForm />
-                  
-                  <WarehouseSelector
-                    warehouses={wbWarehouses}
-                    coefficients={coefficients}
-                    onWarehouseSelect={handleWarehouseSelect}
-                    selectedWarehouseId={selectedWarehouseId}
-                    onSavePreferred={handleSavePreferredWarehouse}
-                    preferredWarehouses={preferredWarehouses}
-                  />
                 </div>
                 
                 <div className="lg:col-span-2">
                   {loading.coefficients ? (
                     <Skeleton className="h-[600px] w-full" />
                   ) : (
-                    <WarehouseCoefficientsDateCard 
+                    <WarehouseCoefficientsCard 
                       coefficients={coefficients} 
                       warehouses={wbWarehouses}
                       selectedWarehouseId={selectedWarehouseId}
-                      title="Коэффициенты приемки по датам"
                     />
                   )}
                 </div>
@@ -424,3 +412,4 @@ const Warehouses: React.FC = () => {
 };
 
 export default Warehouses;
+
