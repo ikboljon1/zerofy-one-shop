@@ -519,7 +519,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       <Input
                         id={`costPrice-${product.nmID}`}
                         type="number"
-                        value={product.costPrice || 0}
+                        value={product.costPrice ?? 0}
                         onChange={(e) => updateCostPrice(product.nmID, parseFloat(e.target.value))}
                         className="h-8 text-right"
                         placeholder="Введите себестоимость"
@@ -532,7 +532,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       <Input
                         id={`sellingPrice-${product.nmID}`}
                         type="number"
-                        value={product.price || 0}
+                        value={product.price ?? 0}
                         onChange={(e) => updateSellingPrice(product.nmID, parseFloat(e.target.value))}
                         className="h-8 text-right"
                         placeholder="Введите цену продажи"
@@ -545,7 +545,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       <Input
                         id={`salesPerDay-${product.nmID}`}
                         type="number"
-                        value={product.salesPerDay || 0}
+                        value={product.salesPerDay ?? 0}
                         onChange={(e) => updateSalesPerDay(product.nmID, parseFloat(e.target.value))}
                         className="h-8 text-right"
                         step="0.1"
@@ -559,7 +559,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       <Input
                         id={`storagePerDay-${product.nmID}`}
                         type="number"
-                        value={product.storagePerDay || 0}
+                        value={product.storagePerDay ?? 0}
                         onChange={(e) => updateStoragePerDay(product.nmID, parseFloat(e.target.value))}
                         className="h-8 text-right"
                         placeholder="Введите хранение за 30 дней"
