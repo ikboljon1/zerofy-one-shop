@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState } from 'react';
-import { WarehouseCoefficient } from '@/types/supplies';
+import { WarehouseCoefficient, Warehouse } from '@/types/supplies';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format, addDays } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -11,7 +11,8 @@ import {
   PackageOpen, 
   DollarSign,
   CalendarIcon,
-  SearchIcon
+  SearchIcon,
+  Warehouse as WarehouseIcon
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -22,14 +23,22 @@ interface WarehouseCoefficientsDateCardProps {
   coefficients: WarehouseCoefficient[];
   selectedWarehouseId?: number;
   title?: string;
+  warehouses?: Warehouse[]; // Added warehouses prop
 }
 
 const WarehouseCoefficientsDateCard: React.FC<WarehouseCoefficientsDateCardProps> = ({ 
   coefficients, 
   selectedWarehouseId,
-  title = "Коэффициенты приемки"
+  title = "Коэффициенты приемки",
+  warehouses = []
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Function to get warehouse name by ID
+  const getWarehouseName = (warehouseId: number): string => {
+    const warehouse = warehouses.find(w => w.ID === warehouseId);
+    return warehouse?.name || `Склад ${warehouseId}`;
+  };
   
   // Filter coefficients by selected warehouse if provided and by search term
   const filteredCoefficients = useMemo(() => {
@@ -41,17 +50,25 @@ const WarehouseCoefficientsDateCard: React.FC<WarehouseCoefficientsDateCardProps
     
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(c => 
-        (c.boxTypeName?.toLowerCase().includes(searchLower)) ||
-        String(c.boxTypeID).includes(searchLower) ||
-        String(c.warehouseID).includes(searchLower) ||
-        (c.deliveryCoef?.toString().toLowerCase().includes(searchLower)) ||
-        (c.storageCoef?.toString().toLowerCase().includes(searchLower))
-      );
+      filtered = filtered.filter(c => {
+        // Search by box type, ID, or coefficient values
+        const boxTypeMatch = (c.boxTypeName?.toLowerCase().includes(searchLower)) ||
+          String(c.boxTypeID).includes(searchLower) ||
+          (c.deliveryCoef?.toString().toLowerCase().includes(searchLower)) ||
+          (c.storageCoef?.toString().toLowerCase().includes(searchLower));
+          
+        // Search by warehouse name or ID if warehouses are provided
+        const warehouseMatch = warehouses.length > 0 ? 
+          getWarehouseName(c.warehouseID).toLowerCase().includes(searchLower) || 
+          String(c.warehouseID).includes(searchLower) :
+          String(c.warehouseID).includes(searchLower);
+          
+        return boxTypeMatch || warehouseMatch;
+      });
     }
     
     return filtered;
-  }, [coefficients, selectedWarehouseId, searchTerm]);
+  }, [coefficients, selectedWarehouseId, searchTerm, warehouses]);
   
   // Get the next 7 days from today instead of 14
   const next7Days = useMemo(() => {
@@ -116,13 +133,35 @@ const WarehouseCoefficientsDateCard: React.FC<WarehouseCoefficientsDateCardProps
         <CardTitle className="text-lg">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="mb-4">
+        <div className="mb-4 space-y-2">
           <SearchInput
-            placeholder="Поиск по типу коробов..."
+            placeholder="Поиск по складу или типу коробов..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full"
+            icon={<WarehouseIcon className="h-4 w-4 text-gray-400" />}
           />
+          {!selectedWarehouseId && warehouses.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {filteredCoefficients
+                .map(c => c.warehouseID)
+                .filter((value, index, self) => self.indexOf(value) === index) // Get unique warehouse IDs
+                .map(warehouseId => {
+                  const name = getWarehouseName(warehouseId);
+                  return (
+                    <Badge 
+                      key={warehouseId} 
+                      variant="outline" 
+                      className="cursor-pointer hover:bg-primary/10"
+                      onClick={() => setSearchTerm(name)}
+                    >
+                      {name}
+                    </Badge>
+                  );
+                })
+              }
+            </div>
+          )}
         </div>
         <ScrollArea className="h-[400px] pr-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -144,9 +183,16 @@ const WarehouseCoefficientsDateCard: React.FC<WarehouseCoefficientsDateCardProps
                     {Array.from(dayCoefficients.values()).map((coef, idx) => (
                       <div key={idx} className="border-b last:border-0 pb-2 last:pb-0">
                         <div className="flex justify-between items-center mb-1">
-                          <Badge variant="outline" className="mr-2">
-                            {boxTypeNames[coef.boxTypeID as keyof typeof boxTypeNames] || coef.boxTypeName}
-                          </Badge>
+                          <div className="flex flex-col">
+                            <Badge variant="outline" className="mr-2">
+                              {boxTypeNames[coef.boxTypeID as keyof typeof boxTypeNames] || coef.boxTypeName}
+                            </Badge>
+                            {!selectedWarehouseId && warehouses.length > 0 && (
+                              <span className="text-xs text-muted-foreground mt-1">
+                                {getWarehouseName(coef.warehouseID)}
+                              </span>
+                            )}
+                          </div>
                           <div className="flex items-center">
                             {coef.coefficient >= 0 && coef.allowUnload ? (
                               <TooltipProvider>
