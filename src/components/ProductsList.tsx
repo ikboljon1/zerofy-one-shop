@@ -223,6 +223,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   };
 
   const updateProductData = (productId: number, field: keyof Product, value: any) => {
+    console.log(`Updating product ${productId}, field ${String(field)} to value:`, value);
+    
     // Обновляем продукт в состоянии React
     setProducts(prevProducts => {
       const updatedProducts = prevProducts.map(product => 
