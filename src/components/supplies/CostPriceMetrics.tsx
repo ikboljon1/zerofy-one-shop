@@ -166,7 +166,7 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
             toast({
               title: "Внимание",
               description: `Не удалось определить себестоимость для категории "${category}". Добавьте эту категорию товарам в разделе "Товары".`,
-              variant: "warning"
+              variant: "default" // Изменено с "warning" на "default"
             });
           }
           continue;
