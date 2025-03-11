@@ -77,6 +77,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
   }>({ key: '', direction: 'asc' });
 
   useEffect(() => {
+    // Load data from localStorage
     const storedCostPrices = localStorage.getItem('product_cost_prices');
     if (storedCostPrices) {
       setCostPrices(JSON.parse(storedCostPrices));
@@ -92,12 +93,24 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       setLowStockThreshold(JSON.parse(storedLowStockThresholds));
     }
 
+    // Initialize data for new products that don't have saved values
     const initialDailySales: Record<number, number> = {};
     const initialStorageCosts: Record<number, number> = {};
     const initialDiscountLevels: Record<number, number> = {};
     const initialLowStockThresholds: Record<number, number> = {};
+    const initialCostPrices: Record<number, number> = {};
+    const initialSellingPrices: Record<number, number> = {};
 
     warehouseItems.forEach(item => {
+      // Only set initial values if they don't already exist in state
+      if (!costPrices[item.nmId]) {
+        initialCostPrices[item.nmId] = 0;
+      }
+      
+      if (!sellingPrices[item.nmId]) {
+        initialSellingPrices[item.nmId] = item.price || 0;
+      }
+      
       let itemStorageCost = dailyStorageCost[item.nmId] || 5;
       
       const matchingStorageItems = paidStorageData.filter(psi => psi.nmId === item.nmId);
@@ -106,14 +119,26 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         itemStorageCost = totalCost / matchingStorageItems.length;
       }
       
-      initialDailySales[item.nmId] = averageDailySalesRate[item.nmId] || 0.1;
-      initialStorageCosts[item.nmId] = itemStorageCost;
-      initialDiscountLevels[item.nmId] = 30;
+      if (!dailySalesRates[item.nmId]) {
+        initialDailySales[item.nmId] = averageDailySalesRate[item.nmId] || 0.1;
+      }
+      
+      if (!storageCostRates[item.nmId]) {
+        initialStorageCosts[item.nmId] = itemStorageCost;
+      }
+      
+      if (!discountLevels[item.nmId]) {
+        initialDiscountLevels[item.nmId] = 30;
+      }
       
       const salesRate = averageDailySalesRate[item.nmId] || 0.1;
-      initialLowStockThresholds[item.nmId] = Math.max(3, Math.ceil(salesRate * 7));
+      if (!lowStockThreshold[item.nmId]) {
+        initialLowStockThresholds[item.nmId] = Math.max(3, Math.ceil(salesRate * 7));
+      }
     });
 
+    setCostPrices(prevState => ({...prevState, ...initialCostPrices}));
+    setSellingPrices(prevState => ({...prevState, ...initialSellingPrices}));
     setDailySalesRates(prevState => ({...prevState, ...initialDailySales}));
     setStorageCostRates(prevState => ({...prevState, ...initialStorageCosts}));
     setDiscountLevels(prevState => ({...prevState, ...initialDiscountLevels}));

@@ -1,4 +1,3 @@
-
 // Original code is kept, but now we're making sure to export this correctly
 import * as React from "react"
 
@@ -145,13 +144,13 @@ function toast({ ...props }: Toast) {
   const id = genId()
 
   // Ensure strings are properly encoded before displaying
-  // Fix: Check that values are strings before calling string methods
+  // Safely handle non-string ReactNode types
   if (typeof props.title === 'string') {
-    props.title = decodeURIComponent(encodeURIComponent(props.title))
+    props.title = props.title.replace(/�/g, '');
   }
   
   if (typeof props.description === 'string') {
-    props.description = decodeURIComponent(encodeURIComponent(props.description))
+    props.description = props.description.replace(/�/g, '');
   }
 
   const update = (props: ToasterToast) =>

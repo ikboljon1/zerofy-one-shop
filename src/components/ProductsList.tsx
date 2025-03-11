@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Package, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import React from "react";
 
 interface Product {
   nmID: number;
@@ -28,7 +28,7 @@ interface Product {
     acceptance: number;
     deductions?: number;
     ppvz_for_pay?: number;
-    retail_price?: number; // Изменено с retail_amount на retail_price
+    retail_price?: number;
   };
 }
 
@@ -68,7 +68,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       salesAmount: 0,
       transferredAmount: 0,
       soldQuantity: 0,
-      margin: 0  // Added margin to the return object
+      margin: 0
     };
     
     console.log('Calculating for product:', {
@@ -100,13 +100,10 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     
     const netProfit = transferredAmount - costPriceTotal - totalExpenses;
     
-    // Calculate margin as a percentage of costs (not revenue)
-    // This prevents division by zero and unrealistic margins
     let margin = 0;
     if (costPriceTotal > 0) {
       margin = (netProfit / costPriceTotal) * 100;
     } else if (netProfit > 0) {
-      // If cost price is 0 but there's profit, cap the margin at 100%
       margin = 100;
     }
     
@@ -118,7 +115,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       salesAmount,
       transferredAmount,
       soldQuantity: productSales,
-      margin: Math.round(margin) // Return the calculated margin
+      margin: Math.round(margin)
     };
   };
 
@@ -415,7 +412,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     localStorage.setItem(`costPrices_${selectedStore?.id}`, JSON.stringify(costPrices));
   };
 
-  useState(() => {
+  React.useEffect(() => {
     if (selectedStore) {
       const storedProducts = localStorage.getItem(`products_${selectedStore.id}`);
       if (storedProducts) {
@@ -430,7 +427,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         setProducts([]);
       }
     }
-  });
+  }, [selectedStore]);
 
   if (!selectedStore) {
     return (

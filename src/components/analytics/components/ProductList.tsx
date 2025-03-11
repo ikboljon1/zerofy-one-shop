@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { ArrowUp, ArrowDown, TrendingUp, TrendingDown, DollarSign, FileText, Info, Image } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -42,17 +41,12 @@ const ProductList = ({ title, products = [], isProfitable }: ProductListProps) =
       : formatCurrency(numValue);
   };
 
-  // Improved text encoding function
   const safeText = (text: string | undefined): string => {
     if (!text) return "Нет данных";
     
     try {
-      // First decode if already encoded to prevent double encoding
-      const decoded = decodeURIComponent(text);
-      // Then encode again to ensure consistency
-      return decodeURIComponent(encodeURIComponent(decoded));
+      return text.replace(/�/g, '');
     } catch (e) {
-      // If any encoding/decoding error, return the original text
       return text;
     }
   };
