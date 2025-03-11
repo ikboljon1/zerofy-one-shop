@@ -16,30 +16,10 @@ interface DatePickerProps {
   value?: Date;
   onValueChange?: (date?: Date) => void;
   placeholder?: string;
-  className?: string;
-  // Add new props to match what's being passed
-  date?: Date;
-  setDate?: (date: Date) => void;
+  className?: string;  // Add className prop to the interface
 }
 
-export function DatePicker({ 
-  value, 
-  onValueChange, 
-  placeholder = "Выберите дату", 
-  className,
-  date,
-  setDate
-}: DatePickerProps) {
-  // Use either the date/setDate combo or value/onValueChange
-  const selectedDate = date || value;
-  const handleDateChange = React.useCallback((newDate?: Date) => {
-    if (setDate && newDate) {
-      setDate(newDate);
-    } else if (onValueChange) {
-      onValueChange(newDate);
-    }
-  }, [setDate, onValueChange]);
-
+export function DatePicker({ value, onValueChange, placeholder = "Выберите дату", className }: DatePickerProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -47,19 +27,19 @@ export function DatePicker({
           variant={"outline"}
           className={cn(
             "w-full justify-start text-left font-normal",
-            !selectedDate && "text-muted-foreground",
-            className
+            !value && "text-muted-foreground",
+            className  // Apply the className prop here
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {selectedDate ? format(selectedDate, "dd.MM.yyyy", { locale: ru }) : <span>{placeholder}</span>}
+          {value ? format(value, "dd.MM.yyyy", { locale: ru }) : <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
           mode="single"
-          selected={selectedDate}
-          onSelect={handleDateChange}
+          selected={value}
+          onSelect={onValueChange}
           initialFocus
           locale={ru}
           className="pointer-events-auto"
