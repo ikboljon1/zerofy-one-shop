@@ -1,13 +1,14 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Warehouse, WarehouseCoefficient } from '@/types/supplies';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Store, Star, StarOff, Building2, CheckCircle, Search, Clock, ArrowUpDown } from 'lucide-react';
+import { Store, Star, StarOff, Building2, Search, Clock, ArrowUpDown, Filter } from 'lucide-react';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface WarehouseSelectorProps {
   warehouses: Warehouse[];
@@ -27,21 +28,23 @@ const WarehouseSelector: React.FC<WarehouseSelectorProps> = ({
   preferredWarehouses = []
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredWarehouses, setFilteredWarehouses] = useState<Warehouse[]>(warehouses);
   const [sortBy, setSortBy] = useState<'name' | 'coefficient'>('name');
-
-  useEffect(() => {
-    let filtered = warehouses;
+  
+  // Use useMemo for filtered warehouses to improve performance
+  const filteredWarehouses = useMemo(() => {
+    let filtered = [...warehouses];
     
+    // Apply search filter
     if (searchTerm) {
-      filtered = warehouses.filter(warehouse => 
-        warehouse.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        warehouse.address.toLowerCase().includes(searchTerm.toLowerCase())
+      const lowerSearch = searchTerm.toLowerCase();
+      filtered = filtered.filter(warehouse => 
+        warehouse.name.toLowerCase().includes(lowerSearch) ||
+        warehouse.address.toLowerCase().includes(lowerSearch)
       );
     }
     
-    // Sort warehouses
-    filtered = [...filtered].sort((a, b) => {
+    // Apply sorting
+    filtered = filtered.sort((a, b) => {
       if (sortBy === 'name') {
         return a.name.localeCompare(b.name);
       } else {
@@ -58,7 +61,7 @@ const WarehouseSelector: React.FC<WarehouseSelectorProps> = ({
       filtered = [...preferred, ...others];
     }
     
-    setFilteredWarehouses(filtered);
+    return filtered;
   }, [searchTerm, warehouses, sortBy, preferredWarehouses, coefficients]);
 
   const getWarehouseCoefficient = (warehouseId: number) => {
@@ -80,7 +83,7 @@ const WarehouseSelector: React.FC<WarehouseSelectorProps> = ({
 
   return (
     <Card className="shadow-md overflow-hidden border-primary/10 bg-gradient-to-b from-background to-background/80">
-      <CardHeader className="pb-3 bg-muted/30">
+      <CardHeader className="pb-3 bg-muted/20">
         <CardTitle className="text-lg flex items-center">
           <Building2 className="h-5 w-5 mr-2 text-primary" />
           Выбор склада
@@ -161,7 +164,24 @@ const WarehouseSelector: React.FC<WarehouseSelectorProps> = ({
                 position="popper"
                 sideOffset={4}
               >
-                <div className="max-h-[400px] overflow-y-auto">
+                <div className="bg-muted/10 px-3 py-2 sticky top-0 z-10 flex items-center justify-between text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Filter className="h-3 w-3" />
+                    <span>Найдено складов: {filteredWarehouses.length}</span>
+                  </div>
+                  {searchTerm && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 text-xs px-2"
+                      onClick={() => setSearchTerm('')}
+                    >
+                      Сбросить
+                    </Button>
+                  )}
+                </div>
+                
+                <ScrollArea className="max-h-[400px] overflow-y-auto p-1">
                   {filteredWarehouses.length === 0 ? (
                     <div className="py-6 text-center text-muted-foreground">
                       Складов не найдено
@@ -220,7 +240,7 @@ const WarehouseSelector: React.FC<WarehouseSelectorProps> = ({
                       );
                     })
                   )}
-                </div>
+                </ScrollArea>
               </SelectContent>
             </Select>
           </div>
