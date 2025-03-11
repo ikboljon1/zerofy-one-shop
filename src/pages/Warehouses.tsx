@@ -25,7 +25,6 @@ import {
   WarehouseRemains,
   StorageProfitabilityAnalysis,
   PaidStorageCostReport,
-  WarehouseSelector,
   WarehouseCoefficientsCard
 } from '@/components/supplies';
 import { 
@@ -351,19 +350,6 @@ const Warehouses: React.FC = () => {
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="space-y-6">
-                  {loading.warehouses ? (
-                    <Skeleton className="h-[350px] w-full" />
-                  ) : (
-                    <WarehouseSelector 
-                      warehouses={wbWarehouses}
-                      coefficients={coefficients}
-                      onWarehouseSelect={handleWarehouseSelect}
-                      selectedWarehouseId={selectedWarehouseId}
-                      onSavePreferred={handleSavePreferredWarehouse}
-                      preferredWarehouses={preferredWarehouses}
-                    />
-                  )}
-
                   <SupplyForm />
                 </div>
                 
@@ -426,3 +412,4 @@ const Warehouses: React.FC = () => {
 };
 
 export default Warehouses;
+
