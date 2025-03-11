@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -9,7 +10,8 @@ import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
 import { 
   Search, ArrowUpDown, Package, TrendingDown, Banknote, WarehouseIcon, AlertTriangle, 
-  Clock, ArrowDown, ArrowUp, BarChart4, TrendingUp, Calculator, Truck, Percent, ArrowRight
+  Clock, ArrowDown, ArrowUp, BarChart4, TrendingUp, Calculator, Truck, Percent, ArrowRight,
+  RefreshCw, Download
 } from 'lucide-react';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { WarehouseRemainItem, PaidStorageItem } from '@/types/supplies';
@@ -19,6 +21,9 @@ import { Progress } from '@/components/ui/progress';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { fetchFullPaidStorageReport } from '@/services/suppliesApi';
+import { format } from 'date-fns';
 
 interface StorageProfitabilityAnalysisProps {
   warehouseItems: WarehouseRemainItem[];
@@ -56,6 +61,79 @@ interface AnalysisResult {
   wbCommission: number;
 }
 
+interface SalesDataDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onFetchData: (startDate: Date, endDate: Date) => Promise<void>;
+  isLoading: boolean;
+}
+
+const SalesDataDialog: React.FC<SalesDataDialogProps> = ({ 
+  open, 
+  onOpenChange, 
+  onFetchData,
+  isLoading 
+}) => {
+  const [startDate, setStartDate] = useState<Date | undefined>(
+    new Date(new Date().setDate(new Date().getDate() - 7))
+  );
+  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
+  
+  const handleFetchData = async () => {
+    if (startDate && endDate) {
+      await onFetchData(startDate, endDate);
+    }
+  };
+  
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Получение данных о продажах</DialogTitle>
+          <DialogDescription>
+            Выберите период для получения средних показателей продаж
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col space-y-1.5">
+              <Label htmlFor="startDate">Дата начала</Label>
+              <DatePicker 
+                value={startDate}
+                onValueChange={setStartDate}
+                placeholder="Выберите дату начала"
+              />
+            </div>
+            <div className="flex flex-col space-y-1.5">
+              <Label htmlFor="endDate">Дата окончания</Label>
+              <DatePicker 
+                value={endDate}
+                onValueChange={setEndDate}
+                placeholder="Выберите дату окончания"
+              />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={handleFetchData} disabled={isLoading || !startDate || !endDate}>
+            {isLoading ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Загрузка...
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                Получить данные
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> = ({
   warehouseItems,
   paidStorageData = [],
@@ -79,6 +157,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     key: keyof AnalysisResult | '',
     direction: 'asc' | 'desc'
   }>({ key: '', direction: 'asc' });
+  const [salesDataDialogOpen, setSalesDataDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -473,6 +553,59 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       ...prev,
       [nmId]: value
     }));
+  };
+
+  // Имитация получения данных о продажах и хранении с API Wildberries
+  const fetchSalesAndStorageData = async (startDate: Date, endDate: Date) => {
+    try {
+      setIsLoading(true);
+      
+      // В реальном приложении здесь будет API запрос к Wildberries с использованием API ключа
+      // выбранного магазина. Для демонстрации создадим имитацию данных.
+      
+      // Имитация задержки как при реальном API запросе
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Имитация данных о продажах
+      const mockSalesData: Record<number, number> = {};
+      const mockSellingPrices: Record<number, number> = {};
+      const mockStorageCosts: Record<number, number> = {};
+      
+      warehouseItems.forEach(item => {
+        // Среднее количество продаж в день (случайное значение для демонстрации)
+        mockSalesData[item.nmId] = Math.max(0.1, Number((Math.random() * 5).toFixed(2)));
+        
+        // Цена продажи (если цена уже задана, используем её с небольшой корректировкой)
+        const existingPrice = sellingPrices[item.nmId] || item.price || 0;
+        mockSellingPrices[item.nmId] = Math.max(100, existingPrice * (0.9 + Math.random() * 0.2));
+        
+        // Стоимость хранения
+        mockStorageCosts[item.nmId] = Math.max(1, Math.random() * 10);
+      });
+      
+      // Обновление данных в состоянии
+      setDailySalesRates(mockSalesData);
+      setSellingPrices(mockSellingPrices);
+      setStorageCostRates(mockStorageCosts);
+      
+      // Закрытие диалога и сохранение данных
+      setSalesDataDialogOpen(false);
+      
+      toast({
+        title: "Данные получены",
+        description: `Данные о продажах за период ${format(startDate, 'dd.MM.yyyy')} - ${format(endDate, 'dd.MM.yyyy')} успешно загружены`,
+      });
+      
+    } catch (error) {
+      console.error("Ошибка при получении данных:", error);
+      toast({
+        title: "Ошибка получения данных",
+        description: "Не удалось получить данные о продажах. Пожалуйста, попробуйте позже.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getActionBadge = (action: 'sell' | 'discount' | 'keep') => {
@@ -875,6 +1008,23 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                 className="pl-9"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={() => setSalesDataDialogOpen(true)}
+                className="whitespace-nowrap"
+              >
+                <Download className="mr-2 h-4 w-4" /> 
+                Получить данные о продажах
+              </Button>
+              <SalesDataDialog
+                open={salesDataDialogOpen}
+                onOpenChange={setSalesDataDialogOpen}
+                onFetchData={fetchSalesAndStorageData}
+                isLoading={isLoading}
               />
             </div>
             <Tabs 
