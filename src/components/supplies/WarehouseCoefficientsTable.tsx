@@ -10,12 +10,14 @@ import {
   TruckIcon, 
   PackageOpen, 
   DollarSign,
-  CalendarIcon
+  CalendarIcon,
+  InfoIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface WarehouseCoefficientsTableProps {
   coefficients: WarehouseCoefficient[];
@@ -107,7 +109,7 @@ const WarehouseCoefficientsTable: React.FC<WarehouseCoefficientsTableProps> = ({
                     {format(date, 'd MMMM', { locale: ru })}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-3 bg-card">
                   {dayCoefficients.map((coef, idx) => (
                     <div key={idx} className="space-y-2 pb-2 border-b last:border-0">
                       <div className="flex items-center justify-between">
@@ -116,26 +118,62 @@ const WarehouseCoefficientsTable: React.FC<WarehouseCoefficientsTableProps> = ({
                           {coef.coefficient >= 0 && coef.allowUnload ? (
                             <>
                               {coef.coefficient === 0 ? (
-                                <CheckCircle className="h-4 w-4 text-green-500" />
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="flex items-center">
+                                        <CheckCircle className="h-4 w-4 text-green-500" />
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Бесплатная приемка</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               ) : (
-                                <span className="text-amber-500 font-medium">{coef.coefficient}x</span>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="text-amber-500 font-medium">{coef.coefficient}x</span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Платная приемка (коэффициент {coef.coefficient})</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               )}
                             </>
                           ) : (
-                            <XCircle className="h-4 w-4 text-red-500" />
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center">
+                                    <XCircle className="h-4 w-4 text-red-500" />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Приемка недоступна</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           )}
                         </div>
                       </div>
 
                       {showLogistics && (
-                        <div className="text-sm space-y-1 mt-2">
+                        <div className="text-sm space-y-1 mt-2 p-2 bg-muted/20 rounded-md">
+                          <div className="text-xs font-medium mb-1 flex items-center gap-1 text-muted-foreground">
+                            <InfoIcon className="h-3 w-3" />
+                            <span>Информация о логистике:</span>
+                          </div>
+                          
                           {coef.deliveryCoef && (
                             <div className="flex items-center justify-between text-muted-foreground">
                               <div className="flex items-center gap-1">
                                 <TruckIcon className="h-3 w-3" />
                                 <span>Коэф. логистики:</span>
                               </div>
-                              <span>{coef.deliveryCoef}</span>
+                              <span className="font-mono text-xs">{coef.deliveryCoef}</span>
                             </div>
                           )}
                           {coef.deliveryBaseLiter && (
@@ -144,7 +182,7 @@ const WarehouseCoefficientsTable: React.FC<WarehouseCoefficientsTableProps> = ({
                                 <PackageOpen className="h-3 w-3" />
                                 <span>Первый литр:</span>
                               </div>
-                              <span>{coef.deliveryBaseLiter} ₽</span>
+                              <span className="font-mono text-xs">{coef.deliveryBaseLiter} ₽</span>
                             </div>
                           )}
                           {coef.deliveryAdditionalLiter && (
@@ -153,7 +191,7 @@ const WarehouseCoefficientsTable: React.FC<WarehouseCoefficientsTableProps> = ({
                                 <PackageOpen className="h-3 w-3" />
                                 <span>За доп. литр:</span>
                               </div>
-                              <span>{coef.deliveryAdditionalLiter} ₽</span>
+                              <span className="font-mono text-xs">{coef.deliveryAdditionalLiter} ₽</span>
                             </div>
                           )}
                           {coef.storageBaseLiter && (
@@ -162,7 +200,7 @@ const WarehouseCoefficientsTable: React.FC<WarehouseCoefficientsTableProps> = ({
                                 <DollarSign className="h-3 w-3" />
                                 <span>Хранение:</span>
                               </div>
-                              <span>{coef.storageBaseLiter} ₽</span>
+                              <span className="font-mono text-xs">{coef.storageBaseLiter} ₽</span>
                             </div>
                           )}
                         </div>
