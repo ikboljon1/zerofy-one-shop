@@ -14,7 +14,7 @@ interface ExpenseBreakdownProps {
         advertising: number;
         acceptance: number;
         deductions?: number;
-        costPrice?: number; // Добавляем новое поле для себестоимости
+        costPrice?: number; // Поле для себестоимости
       };
     };
   };
@@ -38,7 +38,8 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
     advertising: advertisingAmount,
     acceptance: acceptanceAmount,
     deductions: deductionsAmount,
-    costPrice: costPriceAmount
+    costPrice: costPriceAmount,
+    rawData: data // Добавляем логирование всех данных
   });
   
   // Общая сумма расходов для расчета процентов
