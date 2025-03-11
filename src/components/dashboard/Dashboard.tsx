@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
@@ -256,7 +257,7 @@ const Dashboard = () => {
               <OrderMetrics orders={filteredOrdersData.orders} />
               <OrdersChart 
                 orders={filteredOrdersData.orders} 
-                sales={filteredSalesData.sales}
+                sales={filteredSalesData}
               />
             </>
           )}
@@ -272,12 +273,12 @@ const Dashboard = () => {
           
           {sales.length > 0 && (
             <>
-              <SalesMetrics sales={filteredSalesData.sales} />
-              <SalesChart sales={filteredSalesData.sales} />
+              <SalesMetrics sales={filteredSalesData} />
+              <SalesChart sales={filteredSalesData} />
             </>
           )}
           
-          <SalesTable sales={filteredSalesData.sales} />
+          <SalesTable sales={filteredSalesData} />
         </TabsContent>
 
         <TabsContent value="geography" className="space-y-4">
@@ -288,7 +289,7 @@ const Dashboard = () => {
           <GeographySection 
             warehouseDistribution={warehouseDistribution} 
             regionDistribution={regionDistribution}
-            sales={filteredSalesData.sales}
+            sales={filteredSalesData}
           />
         </TabsContent>
 
