@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -44,6 +43,7 @@ const Warehouses: React.FC = () => {
   const [supplyResults, setSupplyResults] = useState<SupplyOptionsResponse | null>(null);
   const [warehouseRemains, setWarehouseRemains] = useState<WarehouseRemainItem[]>([]);
   const [paidStorageData, setPaidStorageData] = useState<PaidStorageItem[]>([]);
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState({
     warehouses: false,
     coefficients: false,
@@ -53,14 +53,12 @@ const Warehouses: React.FC = () => {
   });
   const [selectedStore, setSelectedStore] = useState<StoreType | null>(null);
 
-  // Загрузка выбранного магазина из localStorage при монтировании компонента
   useEffect(() => {
     const stores = ensureStoreSelectionPersistence();
     const selected = stores.find(store => store.isSelected);
     
     if (selected) {
       setSelectedStore(selected);
-      // Если есть выбранный магазин, загружаем соответствующие данные
       if (activeTab === 'supplies') {
         loadWarehouses(selected.apiKey);
         loadCoefficients(selected.apiKey);
@@ -70,7 +68,6 @@ const Warehouses: React.FC = () => {
         loadPaidStorageData(selected.apiKey);
       }
     } else if (stores.length > 0) {
-      // Если нет выбранного магазина, но есть магазины, выбираем первый
       setSelectedStore(stores[0]);
     }
   }, []);
@@ -101,16 +98,27 @@ const Warehouses: React.FC = () => {
     }
   };
 
-  const loadCoefficients = async (apiKey: string) => {
+  const loadCoefficients = async (apiKey: string, warehouseId?: number) => {
     try {
       setLoading(prev => ({ ...prev, coefficients: true }));
-      const data = await fetchAcceptanceCoefficients(apiKey);
+      const data = await fetchAcceptanceCoefficients(
+        apiKey, 
+        warehouseId ? [warehouseId] : undefined
+      );
       setCoefficients(data);
     } catch (error) {
       console.error('Ошибка при загрузке коэффициентов:', error);
       toast.error('Не удалось загрузить коэффициенты приемки');
     } finally {
       setLoading(prev => ({ ...prev, coefficients: false }));
+    }
+  };
+
+  const handleWarehouseSelect = (warehouseId: number) => {
+    setSelectedWarehouseId(warehouseId);
+    
+    if (selectedStore) {
+      loadCoefficients(selectedStore.apiKey, warehouseId);
     }
   };
 
@@ -124,7 +132,6 @@ const Warehouses: React.FC = () => {
       setLoading(prev => ({ ...prev, remains: true }));
       toast.info('Запрос на формирование отчета отправлен. Это может занять некоторое время...');
       
-      // Fetch warehouse remains with grouping
       const data = await fetchWarehouseRemains(apiKey, {
         groupByBrand: true,
         groupBySubject: true,
@@ -182,7 +189,6 @@ const Warehouses: React.FC = () => {
         return;
       }
       
-      // Проверка доступности товаров на выбранном складе
       const optionsResponse = await fetchAcceptanceOptions(
         selectedStore.apiKey,
         data.items,
@@ -191,7 +197,6 @@ const Warehouses: React.FC = () => {
       
       setSupplyResults(optionsResponse);
       
-      // Проверка на наличие ошибок
       const hasErrors = optionsResponse.result.some(item => item.isError);
       
       if (hasErrors) {
@@ -223,24 +228,19 @@ const Warehouses: React.FC = () => {
     }
   };
 
-  // Calculate average daily sales rates based on historical data
   const calculateAverageDailySales = () => {
     const result: Record<number, number> = {};
     warehouseRemains.forEach(item => {
-      // Mock data - in a real app, this would be calculated from historical sales
-      result[item.nmId] = Math.random() * 2; // Random value between 0 and 2
+      result[item.nmId] = Math.random() * 2;
     });
     return result;
   };
 
-  // Calculate daily storage costs
   const calculateDailyStorageCosts = () => {
     const result: Record<number, number> = {};
     warehouseRemains.forEach(item => {
-      // Calculate based on item volume and a base rate
-      // In a real app, this would come from actual storage costs
       const volume = item.volume || 1;
-      result[item.nmId] = volume * 5; // 5 rubles per volume unit per day
+      result[item.nmId] = volume * 5;
     });
     return result;
   };
@@ -281,7 +281,7 @@ const Warehouses: React.FC = () => {
               </CardHeader>
               <CardContent className="flex flex-col items-center justify-center py-8 text-center">
                 <Store className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Для работы с отчетами о складах необходимо выбрать магазин</p>
+                <p className="text-muted-foreground">Для работы с отчетами о с��ладах необходимо выбрать магазин</p>
                 <Button 
                   className="mt-4"
                   variant="outline"
@@ -326,7 +326,6 @@ const Warehouses: React.FC = () => {
                     isLoading={loading.remains} 
                   />
                   
-                  {/* Pass paidStorageData to the StorageProfitabilityAnalysis component */}
                   <div className="mt-8">
                     <StorageProfitabilityAnalysis 
                       warehouseItems={warehouseRemains}
@@ -382,7 +381,10 @@ const Warehouses: React.FC = () => {
                 ) : (
                   <SupplyForm 
                     warehouses={wbWarehouses} 
-                    onSupplySubmit={handleSupplySubmit} 
+                    onSupplySubmit={handleSupplySubmit}
+                    isLoading={loading.options}
+                    coefficients={coefficients}
+                    onWarehouseSelect={handleWarehouseSelect}
                   />
                 )}
               </div>
@@ -412,7 +414,10 @@ const Warehouses: React.FC = () => {
                           <Skeleton className="h-10 w-full" />
                         </div>
                       ) : (
-                        <WarehouseCoefficientsTable coefficients={coefficients} />
+                        <WarehouseCoefficientsTable 
+                          coefficients={coefficients} 
+                          selectedWarehouseId={selectedWarehouseId}
+                        />
                       )}
                     </CardContent>
                   </Card>

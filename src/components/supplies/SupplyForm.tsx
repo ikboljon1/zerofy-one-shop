@@ -1,11 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   SupplyFormData, 
   SupplyItem, 
   Warehouse,
   BoxType,
-  BOX_TYPES
+  BOX_TYPES,
+  WarehouseCoefficient
 } from '@/types/supplies';
 import { Plus, Trash2, ArrowRight, FileBarChart2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,9 +20,17 @@ interface SupplyFormProps {
   warehouses: Warehouse[];
   onSupplySubmit: (data: SupplyFormData) => void;
   isLoading?: boolean;
+  coefficients?: WarehouseCoefficient[];
+  onWarehouseSelect?: (warehouseId: number) => void;
 }
 
-const SupplyForm: React.FC<SupplyFormProps> = ({ warehouses, onSupplySubmit, isLoading = false }) => {
+const SupplyForm: React.FC<SupplyFormProps> = ({ 
+  warehouses, 
+  onSupplySubmit, 
+  isLoading = false,
+  coefficients = [],
+  onWarehouseSelect
+}) => {
   const [activeTab, setActiveTab] = useState<string>('manual');
   const [formData, setFormData] = useState<SupplyFormData>({
     selectedWarehouse: undefined,
@@ -32,10 +40,15 @@ const SupplyForm: React.FC<SupplyFormProps> = ({ warehouses, onSupplySubmit, isL
   const [csvContent, setCsvContent] = useState<string>('');
 
   const handleWarehouseChange = (warehouseId: string) => {
+    const warehouseIdNumber = parseInt(warehouseId);
     setFormData(prev => ({
       ...prev,
-      selectedWarehouse: parseInt(warehouseId)
+      selectedWarehouse: warehouseIdNumber
     }));
+    
+    if (onWarehouseSelect) {
+      onWarehouseSelect(warehouseIdNumber);
+    }
   };
 
   const handleBoxTypeChange = (boxType: string) => {
@@ -81,7 +94,6 @@ const SupplyForm: React.FC<SupplyFormProps> = ({ warehouses, onSupplySubmit, isL
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Проверка валидности данных
     if (!formData.selectedWarehouse) {
       toast.error('Выберите склад');
       return;
@@ -111,7 +123,6 @@ const SupplyForm: React.FC<SupplyFormProps> = ({ warehouses, onSupplySubmit, isL
     }
 
     try {
-      // Split by lines and process
       const lines = csvContent.trim().split('\n');
       const items: SupplyItem[] = [];
 
@@ -119,7 +130,7 @@ const SupplyForm: React.FC<SupplyFormProps> = ({ warehouses, onSupplySubmit, isL
         const [barcode, quantityStr] = line.split(',').map(item => item.trim());
         
         if (!barcode) {
-          continue; // Skip empty lines
+          continue;
         }
 
         const quantity = parseInt(quantityStr) || 1;
@@ -186,10 +197,10 @@ const SupplyForm: React.FC<SupplyFormProps> = ({ warehouses, onSupplySubmit, isL
               onValueChange={handleWarehouseChange}
               disabled={isLoading}
             >
-              <SelectTrigger id="warehouse">
+              <SelectTrigger id="warehouse" className="bg-background">
                 <SelectValue placeholder="Выберите склад" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-background z-50">
                 {warehouses.map(warehouse => (
                   <SelectItem 
                     key={warehouse.ID} 
@@ -213,10 +224,10 @@ const SupplyForm: React.FC<SupplyFormProps> = ({ warehouses, onSupplySubmit, isL
               onValueChange={handleBoxTypeChange}
               disabled={isLoading}
             >
-              <SelectTrigger id="boxType">
+              <SelectTrigger id="boxType" className="bg-background">
                 <SelectValue placeholder="Выберите тип упаковки" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-background z-50">
                 {Object.keys(BOX_TYPES).map((type) => (
                   <SelectItem key={type} value={type}>
                     {type}
