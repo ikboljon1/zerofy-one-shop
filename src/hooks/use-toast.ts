@@ -145,6 +145,7 @@ function toast({ ...props }: Toast) {
   const id = genId()
 
   // Ensure strings are properly encoded before displaying
+  // Fix: Check that values are strings before calling string methods
   if (typeof props.title === 'string') {
     props.title = decodeURIComponent(encodeURIComponent(props.title))
   }
