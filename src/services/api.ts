@@ -85,8 +85,10 @@ export const saveProductCostPrice = async (
     
     // Если API недоступен, сохраняем в localStorage
     try {
+      // Убедимся, что ключ соответствует тому, который используется в аналитике
+      const storageKey = `products_cost_price_${storeId}`;
       let productsCostPrice = [];
-      const storedData = localStorage.getItem(`products_cost_price_${storeId}`);
+      const storedData = localStorage.getItem(storageKey);
       if (storedData) {
         productsCostPrice = JSON.parse(storedData);
       }
@@ -101,7 +103,8 @@ export const saveProductCostPrice = async (
         productsCostPrice.push({ nmId, costPrice });
       }
       
-      localStorage.setItem(`products_cost_price_${storeId}`, JSON.stringify(productsCostPrice));
+      localStorage.setItem(storageKey, JSON.stringify(productsCostPrice));
+      console.log(`Saved cost price for nmId ${nmId}: ${costPrice} to localStorage with key ${storageKey}`);
       return true;
     } catch (localError) {
       console.error('Error saving to localStorage:', localError);

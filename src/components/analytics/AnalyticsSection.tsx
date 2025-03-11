@@ -158,8 +158,16 @@ const AnalyticsSection = () => {
 
   const getProductsCostPrice = (storeId: string): ProductCostPrice[] => {
     try {
-      const storedData = localStorage.getItem(`${PRODUCTS_COST_PRICE_KEY}_${storeId}`);
-      return storedData ? JSON.parse(storedData) : [];
+      const storageKey = `products_cost_price_${storeId}`;
+      const storedData = localStorage.getItem(storageKey);
+      console.log(`Loading cost price data with key: ${storageKey}`, storedData);
+      
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+        console.log(`Parsed cost price data:`, parsedData);
+        return parsedData;
+      }
+      return [];
     } catch (error) {
       console.error('Error loading products cost price:', error);
       return [];
@@ -170,6 +178,10 @@ const AnalyticsSection = () => {
     let totalCostPrice = 0;
     
     if (!productSales || !productSales.length || !productsCostPrice || !productsCostPrice.length) {
+      console.log('No product sales or cost price data available:', { 
+        hasSales: Boolean(productSales?.length), 
+        hasCostPrice: Boolean(productsCostPrice?.length) 
+      });
       return 0;
     }
     
@@ -178,14 +190,22 @@ const AnalyticsSection = () => {
       costPriceMap[item.nmId.toString()] = item.costPrice;
     });
     
+    console.log('Cost price map:', costPriceMap);
+    console.log('Product sales to calculate cost price:', productSales);
+    
     productSales.forEach(sale => {
       if (sale.nmId && costPriceMap[sale.nmId.toString()]) {
         const quantity = sale.quantity || 1;
         const costPrice = costPriceMap[sale.nmId.toString()] || 0;
-        totalCostPrice += quantity * costPrice;
+        const itemCost = quantity * costPrice;
+        totalCostPrice += itemCost;
+        console.log(`Product ${sale.nmId}: quantity=${quantity}, costPrice=${costPrice}, itemCost=${itemCost}`);
+      } else if (sale.nmId) {
+        console.log(`No cost price found for product ${sale.nmId}`);
       }
     });
     
+    console.log(`Total calculated cost price: ${totalCostPrice}`);
     return roundToTwoDecimals(totalCostPrice);
   };
 
@@ -261,8 +281,10 @@ const AnalyticsSection = () => {
       
       if (statsData) {
         const productsCostPrice = getProductsCostPrice(selectedStore.id);
+        console.log('Retrieved products cost price:', productsCostPrice);
         
         const totalCostPrice = calculateTotalCostPrice(statsData.productSales || [], productsCostPrice);
+        console.log('Calculated total cost price:', totalCostPrice);
         
         const sales = roundToTwoDecimals(statsData.currentPeriod.sales);
         const logistics = roundToTwoDecimals(statsData.currentPeriod.expenses.logistics);
@@ -622,7 +644,7 @@ const AnalyticsSection = () => {
             isProfitable={true}
           />
           <ProductList 
-            title="Самые убыточные товары"
+            title="Сам��е убыточные товары"
             products={data.topUnprofitableProducts}
             isProfitable={false}
           />
