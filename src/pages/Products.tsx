@@ -106,11 +106,44 @@ const Products = ({ selectedStore }: ProductsProps) => {
 
       const data = await response.json();
       
+      // Preserve existing cost prices when updating products
+      const existingProducts = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
+      const costPriceMap: Record<string, number> = {};
+      
+      existingProducts.forEach((product: any) => {
+        if (product.nmID && product.costPrice) {
+          costPriceMap[product.nmID.toString()] = product.costPrice;
+        } else if (product.nm_id && product.costPrice) {
+          costPriceMap[product.nm_id.toString()] = product.costPrice;
+        }
+      });
+      
+      // Apply existing cost prices to the new data
+      const enhancedProducts = data.cards.map((product: any) => {
+        const productKey = (product.nmID || product.nm_id)?.toString();
+        if (productKey && costPriceMap[productKey]) {
+          return {
+            ...product,
+            costPrice: costPriceMap[productKey]
+          };
+        }
+        return product;
+      });
+      
+      // Also store cost prices in a dedicated format for easier retrieval
+      const costPriceProducts = Object.entries(costPriceMap).map(([nmId, costPrice]) => ({
+        nmId,
+        costPrice
+      }));
+      
+      localStorage.setItem(`products_cost_price_${selectedStore.id}`, JSON.stringify(costPriceProducts));
+      console.log(`Stored ${costPriceProducts.length} cost price entries in dedicated storage`);
+      
       // Сохраняем полученные товары в БД
       try {
         await axios.post('http://localhost:3001/api/products', {
           storeId: selectedStore.id,
-          products: data.cards
+          products: enhancedProducts
         });
         
         toast({
@@ -121,7 +154,7 @@ const Products = ({ selectedStore }: ProductsProps) => {
         console.error("Error saving products to DB:", dbError);
         
         // Если не удалось сохранить в БД, используем localStorage
-        localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(data.cards));
+        localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(enhancedProducts));
         
         toast({
           title: "Частично успешно",

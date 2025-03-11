@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,43 +45,193 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
 
     try {
       console.log(`Loading cost price data for store: ${selectedStore.id}`);
-      const products = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
+      
+      // Try to load from both possible keys
+      let products = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
+      
       if (products.length === 0) {
-        console.log("No products found in localStorage");
-        return;
+        // Try alternative storage key (costPrices)
+        const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore.id}`) || "{}");
+        const costPricesList = Object.entries(costPrices).map(([nmId, costPrice]) => ({
+          nmID: parseInt(nmId, 10),
+          nm_id: parseInt(nmId, 10),
+          costPrice
+        }));
+        
+        if (costPricesList.length > 0) {
+          products = costPricesList;
+          console.log(`Found ${products.length} products in costPrices storage`);
+        } else {
+          // Try another alternative storage key (products_cost_price)
+          const altProducts = JSON.parse(localStorage.getItem(`products_cost_price_${selectedStore.id}`) || "[]");
+          if (altProducts.length > 0) {
+            products = altProducts.map((item: any) => ({
+              nmID: item.nmId,
+              nm_id: item.nmId,
+              costPrice: item.costPrice
+            }));
+            console.log(`Found ${products.length} products in products_cost_price storage`);
+          } else {
+            console.log("No products found in any localStorage key");
+            return;
+          }
+        }
+      } else {
+        console.log(`Found ${products.length} products in products_ localStorage`);
       }
 
-      console.log(`Found ${products.length} products in localStorage`);
+      // Get sales data to match with cost prices
+      const salesData = getSalesData(selectedStore.id);
+      console.log(`Retrieved sales data: ${salesData.length} items`);
+      
       let totalCost = 0;
       let itemsSold = 0;
-
+      let matchedCount = 0;
+      
+      // Create maps for faster lookups
+      const productByNmId: Record<string, ProductData> = {};
+      const productBySupplierArticle: Record<string, ProductData> = {};
+      const productBySaName: Record<string, ProductData> = {};
+      
+      // Index products by various identifiers
       products.forEach((product: ProductData) => {
-        const quantity = product.quantity || 0;
-        const costPrice = product.costPrice || 0;
+        if (product.nmID) {
+          productByNmId[product.nmID.toString()] = product;
+        }
+        if (product.nm_id) {
+          productByNmId[product.nm_id.toString()] = product;
+        }
+        if (product.supplierArticle) {
+          productBySupplierArticle[product.supplierArticle] = product;
+        }
+        if (product.sa_name) {
+          productBySaName[product.sa_name] = product;
+        }
+      });
+      
+      console.log("Products indexed by identifiers:", {
+        byNmId: Object.keys(productByNmId).length,
+        bySupplierArticle: Object.keys(productBySupplierArticle).length,
+        bySaName: Object.keys(productBySaName).length
+      });
+
+      // Match sales with cost prices and calculate totals
+      salesData.forEach((sale: any) => {
+        const quantity = sale.quantity || 0;
+        let costPrice = 0;
+        let matched = false;
+        let matchMethod = '';
         
-        console.log(`Product: ${JSON.stringify({
-          nmID: product.nmID,
-          nm_id: product.nm_id,
-          sa_name: product.sa_name,
-          supplierArticle: product.supplierArticle,
-          quantity,
-          costPrice
-        })}`);
+        // Try to match by nm_id
+        if ((sale.nmId || sale.nm_id) && (productByNmId[sale.nmId?.toString()] || productByNmId[sale.nm_id?.toString()])) {
+          const productKey = sale.nmId?.toString() || sale.nm_id?.toString();
+          costPrice = productByNmId[productKey]?.costPrice || 0;
+          matched = costPrice > 0;
+          matchMethod = 'nmId';
+        }
         
-        if (quantity > 0 && costPrice > 0) {
-          totalCost += quantity * costPrice;
-          itemsSold += quantity;
+        // Try to match by supplierArticle
+        if (!matched && sale.supplierArticle && productBySupplierArticle[sale.supplierArticle]) {
+          costPrice = productBySupplierArticle[sale.supplierArticle].costPrice || 0;
+          matched = costPrice > 0;
+          matchMethod = 'supplierArticle';
+        }
+        
+        // Try to match by sa_name
+        if (!matched && sale.sa_name && productBySaName[sale.sa_name]) {
+          costPrice = productBySaName[sale.sa_name].costPrice || 0;
+          matched = costPrice > 0;
+          matchMethod = 'sa_name';
+        }
+        
+        if (matched) {
+          matchedCount++;
+          console.log(`Matched sale item ${matchMethod}: ${JSON.stringify({
+            nmId: sale.nmId || sale.nm_id,
+            sa_name: sale.sa_name,
+            supplierArticle: sale.supplierArticle,
+            quantity,
+            costPrice
+          })}`);
+          
+          if (quantity > 0 && costPrice > 0) {
+            totalCost += quantity * costPrice;
+            itemsSold += quantity;
+          }
+        } else {
+          console.log(`No match found for: ${JSON.stringify({
+            nmId: sale.nmId || sale.nm_id,
+            sa_name: sale.sa_name,
+            supplierArticle: sale.supplierArticle,
+            quantity
+          })}`);
         }
       });
 
+      console.log(`Matched ${matchedCount} of ${salesData.length} sale items`);
+      
       setTotalCostPrice(totalCost);
       setTotalSoldItems(itemsSold);
       setAvgCostPrice(itemsSold > 0 ? totalCost / itemsSold : 0);
       
       setLastUpdateDate(new Date().toISOString());
-      console.log(`Calculated total cost price: ${totalCost}, items sold: ${itemsSold}, avg cost price: ${avgCostPrice}`);
+      console.log(`Calculated total cost price: ${totalCost}, items sold: ${itemsSold}, avg cost price: ${totalCost / (itemsSold || 1)}`);
     } catch (error) {
       console.error("Error loading cost price data:", error);
+    }
+  };
+
+  const getSalesData = (storeId: string): any[] => {
+    try {
+      // Try to get sales data from multiple sources
+      
+      // First, check if we have analytics data with product sales
+      const analyticsKey = `marketplace_analytics_${storeId}`;
+      const analyticsData = JSON.parse(localStorage.getItem(analyticsKey) || "{}");
+      
+      if (analyticsData.data?.productSales && analyticsData.data.productSales.length > 0) {
+        console.log(`Found ${analyticsData.data.productSales.length} sales items in analytics data`);
+        return analyticsData.data.productSales;
+      }
+      
+      // Next, check if we have top profitable products
+      if (analyticsData.data?.topProfitableProducts && analyticsData.data.topProfitableProducts.length > 0) {
+        console.log(`Found ${analyticsData.data.topProfitableProducts.length} top profitable products`);
+        return analyticsData.data.topProfitableProducts;
+      }
+      
+      // Finally, check if we have stats data for the store
+      const statsKey = `marketplace_stats_${storeId}`;
+      const statsData = JSON.parse(localStorage.getItem(statsKey) || "{}");
+      
+      if (statsData.productSales && statsData.productSales.length > 0) {
+        console.log(`Found ${statsData.productSales.length} sales items in stats data`);
+        return statsData.productSales;
+      }
+      
+      // Last resort, check if there's reports data
+      const reportsKey = `wb_reports_${storeId}`;
+      const reportsData = JSON.parse(localStorage.getItem(reportsKey) || "[]");
+      
+      if (reportsData.length > 0) {
+        console.log(`Found ${reportsData.length} items in reports data`);
+        return reportsData.filter((item: any) => item.doc_type_name === "Продажа");
+      }
+      
+      // Try to get from regular products storage to extract quantities
+      const products = JSON.parse(localStorage.getItem(`products_${storeId}`) || "[]");
+      const productsWithQuantity = products.filter((p: any) => p.quantity && p.quantity > 0);
+      
+      if (productsWithQuantity.length > 0) {
+        console.log(`Found ${productsWithQuantity.length} products with quantity`);
+        return productsWithQuantity;
+      }
+      
+      console.log("No sales data found in any storage");
+      return [];
+    } catch (error) {
+      console.error("Error retrieving sales data:", error);
+      return [];
     }
   };
 
