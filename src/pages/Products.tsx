@@ -26,6 +26,7 @@ interface ProductData {
   margin?: number;
   returnCount?: number;
   category?: string;
+  nmId?: number; // Добавлено поле nmId
 }
 
 const Products = ({ selectedStore }: ProductsProps) => {
@@ -105,6 +106,18 @@ const Products = ({ selectedStore }: ProductsProps) => {
       }
 
       const data = await response.json();
+      
+      // Логируем информацию о nmId в полученных продуктах
+      console.log('Received products data:');
+      if (data.cards && data.cards.length > 0) {
+        console.log('First product sample:', {
+          nmId: data.cards[0].nmID || data.cards[0].nmId,
+          vendorCode: data.cards[0].vendorCode,
+          sizes: data.cards[0].sizes
+        });
+      } else {
+        console.log('No products received');
+      }
       
       // Сохраняем полученные товары в БД
       try {

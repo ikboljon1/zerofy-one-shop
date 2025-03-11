@@ -5,13 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { Store } from "@/types/store";
 import { ArrowUpRight, ArrowDownRight, DollarSign, ShoppingCart, Wallet } from "lucide-react";
+import { getCostPriceByNmId } from "@/services/api";
 
 interface CostPriceMetricsProps {
   selectedStore?: Store | null;
 }
 
 interface ProductData {
-  nmID: number;
+  nmId: number;
   quantity?: number;
   costPrice?: number;
 }
@@ -37,7 +38,7 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
     setLastUpdateDate(null);
   };
 
-  const loadCostPriceData = () => {
+  const loadCostPriceData = async () => {
     if (!selectedStore) return;
 
     try {
@@ -46,17 +47,26 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
 
       let totalCost = 0;
       let itemsSold = 0;
+      
+      console.log("Loaded products:", products.slice(0, 3)); // Логируем первые 3 продукта для отладки
 
-      products.forEach((product: ProductData) => {
+      for (const product of products) {
         const quantity = product.quantity || 0;
-        const costPrice = product.costPrice || 0;
+        let costPrice = product.costPrice || 0;
+        
+        // Если себестоимость не указана, пробуем получить по nmId
+        if (costPrice === 0 && product.nmId) {
+          costPrice = await getCostPriceByNmId(product.nmId, selectedStore.id);
+        }
         
         if (quantity > 0 && costPrice > 0) {
           totalCost += quantity * costPrice;
           itemsSold += quantity;
+          console.log(`Product nmId=${product.nmId}, quantity=${quantity}, costPrice=${costPrice}`);
         }
-      });
+      }
 
+      console.log(`Total cost: ${totalCost}, Total items sold: ${itemsSold}`);
       setTotalCostPrice(totalCost);
       setTotalSoldItems(itemsSold);
       setAvgCostPrice(itemsSold > 0 ? totalCost / itemsSold : 0);

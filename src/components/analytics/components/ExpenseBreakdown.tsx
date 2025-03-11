@@ -1,6 +1,6 @@
 
 import { Card } from "@/components/ui/card";
-import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, Coins } from "lucide-react";
+import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, Coins, ShoppingCart } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 interface ExpenseBreakdownProps {
@@ -13,7 +13,8 @@ interface ExpenseBreakdownProps {
         penalties: number;
         advertising: number;
         acceptance: number;
-        deductions?: number; // Add deductions to the interface
+        deductions?: number;
+        costPrice?: number; // Добавлено поле для себестоимости
       };
     };
   };
@@ -23,10 +24,23 @@ interface ExpenseBreakdownProps {
 }
 
 const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps) => {
+  // Логирование для отладки
+  console.log('ExpenseBreakdown data:', data);
+  console.log('ExpenseBreakdown expenses:', data?.currentPeriod?.expenses);
+  console.log('ExpenseBreakdown total expenses:', data?.currentPeriod?.expenses?.total);
+  
+  // Проверяем, есть ли в данных информация о себестоимости
+  if (data?.currentPeriod?.expenses?.costPrice !== undefined) {
+    console.log('Found costPrice:', data.currentPeriod.expenses.costPrice);
+  } else {
+    console.log('costPrice not found in expenses data');
+  }
+  
   // Используем общую сумму расходов на рекламу без разбивки
   const advertisingAmount = data.currentPeriod.expenses.advertising || 0;
   const acceptanceAmount = data.currentPeriod.expenses.acceptance || 0;
   const deductionsAmount = data.currentPeriod.expenses.deductions || 0;
+  const costPriceAmount = data.currentPeriod.expenses.costPrice || 0;
   
   // Общая сумма расходов для расчета процентов
   const totalExpenses = data.currentPeriod.expenses.total;
@@ -37,7 +51,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
   return (
     <Card className="p-4">
       <h3 className="text-lg font-semibold mb-4">Структура расходов</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-6 gap-3">
         <div className="flex flex-col bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background border border-purple-200 dark:border-purple-800 rounded-xl p-3">
           <div className="flex justify-between items-center mb-1">
             <h4 className="text-sm font-medium">Логистика</h4>
@@ -146,6 +160,28 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
               <div className="flex justify-between text-xs">
                 <span>Прочие удержания</span>
                 <span className="font-medium">{formatCurrency(deductionsAmount)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Новая карточка для себестоимости товаров */}
+        <div className="flex flex-col bg-gradient-to-br from-green-50 to-white dark:from-green-950/20 dark:to-background border border-green-200 dark:border-green-800 rounded-xl p-3">
+          <div className="flex justify-between items-center mb-1">
+            <h4 className="text-sm font-medium">Себестоимость</h4>
+            <div className="bg-green-100 dark:bg-green-900/60 p-1.5 rounded-md">
+              <ShoppingCart className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+            </div>
+          </div>
+          <p className="text-xl font-bold">{formatCurrency(costPriceAmount)}</p>
+          <span className="text-xs text-muted-foreground mt-0.5">
+            {totalExpenses > 0 ? ((costPriceAmount / totalExpenses) * 100).toFixed(1) : '0'}% от общих расходов
+          </span>
+          <div className="mt-2 pt-2 border-t border-green-200 dark:border-green-800/50">
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs">
+                <span>Закупочная стоимость</span>
+                <span className="font-medium">{formatCurrency(costPriceAmount)}</span>
               </div>
             </div>
           </div>

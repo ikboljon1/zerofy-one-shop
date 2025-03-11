@@ -26,7 +26,18 @@ api.interceptors.request.use((config) => {
 
 // Add response interceptor for error handling
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Логирование для проверки наличия nm_id в ответе
+    if (response.data && Array.isArray(response.data)) {
+      const hasNmId = response.data.some(item => 'nmId' in item || 'nm_id' in item);
+      if (hasNmId) {
+        console.log('API response contains nmId:', 
+          response.data.slice(0, 2).map(item => ({nmId: item.nmId || item.nm_id}))
+        );
+      }
+    }
+    return response;
+  },
   (error) => {
     console.error('API Error:', error);
     
@@ -64,6 +75,35 @@ api.interceptors.response.use(
 // Function to set API key
 export const setApiKey = (apiKey: string) => {
   api.defaults.headers.common['Authorization'] = apiKey;
+};
+
+// Функция для получения себестоимости товара по nm_id
+export const getCostPriceByNmId = async (nmId: number, storeId: string): Promise<number> => {
+  try {
+    // Пробуем получить из локального хранилища
+    const products = JSON.parse(localStorage.getItem(`products_${storeId}`) || "[]");
+    const product = products.find((p: any) => p.nmId === nmId);
+    
+    if (product && product.costPrice) {
+      console.log(`Found cost price for nmId ${nmId}: ${product.costPrice}`);
+      return product.costPrice;
+    }
+    
+    // Если нет в локальном хранилище, пробуем получить с сервера
+    try {
+      const response = await api.get(`http://localhost:3001/api/products/cost-price/${nmId}?storeId=${storeId}`);
+      if (response.data && response.data.costPrice) {
+        return response.data.costPrice;
+      }
+    } catch (error) {
+      console.error(`Error fetching cost price for nmId ${nmId}:`, error);
+    }
+    
+    return 0; // Если себестоимость не найдена
+  } catch (error) {
+    console.error(`Error in getCostPriceByNmId for nmId ${nmId}:`, error);
+    return 0;
+  }
 };
 
 export default api;
