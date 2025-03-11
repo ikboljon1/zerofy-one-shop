@@ -40,7 +40,6 @@ interface AnalyticsData {
       advertising: number;
       acceptance: number;
       deductions?: number;
-      costPrice?: number;
     };
     netProfit: number;
     acceptance: number;
@@ -53,7 +52,6 @@ interface AnalyticsData {
   productSales: Array<{
     subject_name: string;
     quantity: number;
-    nmId?: string | number;
   }>;
   productReturns: Array<{
     name: string;
@@ -118,11 +116,6 @@ interface DeductionsTimelineItem {
   deductions?: number;
 }
 
-interface ProductCostPrice {
-  nmId: string | number;
-  costPrice: number;
-}
-
 const AnalyticsSection = () => {
   const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
@@ -155,189 +148,6 @@ const AnalyticsSection = () => {
     return store;
   };
 
-  const getProductsCostPrice = (storeId: string): ProductCostPrice[] => {
-    try {
-      const storageKey = `products_cost_price_${storeId}`;
-      const storedData = localStorage.getItem(storageKey);
-      console.log(`Loading cost price data with key: ${storageKey}`, storedData ? 'Data exists' : 'No data');
-      
-      const keysToCheck = [
-        `products_${storeId}`,
-        `costPrices_${storeId}`,
-        `products_cost_price_${storeId}`
-      ];
-      
-      keysToCheck.forEach(key => {
-        const data = localStorage.getItem(key);
-        if (data) {
-          try {
-            const parsedData = JSON.parse(data);
-            if (Array.isArray(parsedData)) {
-              console.log(`Ключ ${key}: ${parsedData.length} записей, пример:`, 
-                parsedData.slice(0, 2));
-            } else {
-              console.log(`Ключ ${key}: ${Object.keys(parsedData).length} записей, пример:`, 
-                Object.entries(parsedData).slice(0, 2));
-            }
-          } catch (e) {
-            console.log(`Ключ ${key}: невозможно распарсить данные`);
-          }
-        } else {
-          console.log(`Ключ ${key}: данных нет`);
-        }
-      });
-      
-      if (storedData) {
-        const parsedData = JSON.parse(storedData);
-        console.log(`Parsed cost price data (первые 3 записи):`, parsedData.slice(0, 3));
-        return parsedData;
-      }
-      return [];
-    } catch (error) {
-      console.error('Error loading products cost price:', error);
-      return [];
-    }
-  };
-
-  const calculateTotalCostPrice = (productSales: Array<any>, productsCostPrice: ProductCostPrice[]): number => {
-    if (!productSales || !productSales.length || !productsCostPrice || !productsCostPrice.length) {
-      console.log('РАСЧЕТ СЕБЕСТОИМОСТИ: No product sales or cost price data available:', { 
-        hasSales: Boolean(productSales?.length), 
-        salesCount: productSales?.length || 0,
-        hasCostPrice: Boolean(productsCostPrice?.length),
-        costPriceCount: productsCostPrice?.length || 0
-      });
-      return 0;
-    }
-    
-    console.log('НАЧАЛО РАСЧЕТА ОБЩЕЙ СЕБЕСТОИМОСТИ');
-    console.log(`Продажи: ${productSales.length} записей, Себестоимость: ${productsCostPrice.length} записей`);
-    
-    const costPriceMap: Record<string, number> = {};
-    productsCostPrice.forEach(item => {
-      const idKey = item.nmId.toString();
-      costPriceMap[idKey] = item.costPrice;
-    });
-    
-    console.log('Cost price map (первые 5 элементов):', Object.entries(costPriceMap).slice(0, 5));
-    
-    if (productSales.length > 0) {
-      console.log('Available fields in product sales:', Object.keys(productSales[0]));
-      
-      console.log('Примеры данных о продажах (первые 3 записи):', 
-        productSales.slice(0, 3).map(sale => ({
-          nmId: sale.nmId || sale.nm_id,
-          name: sale.name || sale.subject_name,
-          sa_name: sale.sa_name,
-          supplierArticle: sale.supplierArticle,
-          quantity: sale.quantity
-        }))
-      );
-    }
-    
-    let totalCostPrice = 0;
-    let hasMappedAnyProduct = false;
-    let matchedCount = 0;
-    
-    productSales.forEach(sale => {
-      const saleNmId = sale.nmId || sale.nm_id;
-      if (saleNmId && costPriceMap[saleNmId.toString()]) {
-        const quantity = sale.quantity || 1;
-        const costPrice = costPriceMap[saleNmId.toString()] || 0;
-        const itemCost = quantity * costPrice;
-        totalCostPrice += itemCost;
-        hasMappedAnyProduct = true;
-        matchedCount++;
-        
-        if (matchedCount <= 3) {
-          console.log(`УСПЕШНОЕ СОПОСТАВЛЕНИЕ: Product ${saleNmId}: quantity=${quantity}, costPrice=${costPrice}, itemCost=${itemCost}`);
-        }
-      } else if (saleNmId) {
-        if (matchedCount <= 5) {
-          console.log(`НЕ НАЙДЕНО СОВПАДЕНИЕ для товара с nmId=${saleNmId}, name=${sale.name || sale.subject_name}`);
-          
-          const similarKeys = Object.keys(costPriceMap).filter(key => 
-            key.includes(String(saleNmId)) || String(saleNmId).includes(key)
-          );
-          
-          if (similarKeys.length > 0) {
-            console.log(`Найдены похожие ключи для ${saleNmId}:`, similarKeys);
-          }
-        }
-      }
-    });
-    
-    console.log(`Сопоставлено ${matchedCount} из ${productSales.length} товаров по полю nmId`);
-    
-    if (!hasMappedAnyProduct && productSales.length > 0) {
-      console.log('Trying to match products by other fields...');
-      
-      const matchBySupplierArticle = productSales.some(sale => sale.supplierArticle);
-      if (matchBySupplierArticle) {
-        console.log('Attempting to match by supplierArticle');
-        let supplierArticleMatchCount = 0;
-        
-        productSales.forEach(sale => {
-          if (sale.supplierArticle) {
-            for (const [nmId, costPrice] of Object.entries(costPriceMap)) {
-              if (sale.supplierArticle.includes(nmId)) {
-                const quantity = sale.quantity || 1;
-                const itemCost = quantity * costPrice;
-                totalCostPrice += itemCost;
-                supplierArticleMatchCount++;
-                
-                if (supplierArticleMatchCount <= 3) {
-                  console.log(`Matched product by supplierArticle ${sale.supplierArticle} with nmId ${nmId}: quantity=${quantity}, costPrice=${costPrice}, itemCost=${itemCost}`);
-                }
-                hasMappedAnyProduct = true;
-                break;
-              }
-            }
-          }
-        });
-        
-        console.log(`Сопоставлено ${supplierArticleMatchCount} товаров по supplierArticle`);
-      }
-      
-      if (!hasMappedAnyProduct) {
-        console.log('Attempting to match by subject_name or name');
-        let nameMatchCount = 0;
-        
-        productSales.forEach(sale => {
-          const name = sale.subject_name?.toLowerCase() || sale.name?.toLowerCase() || '';
-          if (name) {
-            const parts = name.split(/[-\s]/);
-            for (const [nmId, costPrice] of Object.entries(costPriceMap)) {
-              if (parts.some(part => part === nmId) || name.includes(nmId)) {
-                const quantity = sale.quantity || 1;
-                const itemCost = quantity * costPrice;
-                totalCostPrice += itemCost;
-                nameMatchCount++;
-                
-                if (nameMatchCount <= 3) {
-                  console.log(`Matched product by name parts ${name} with nmId ${nmId}: quantity=${quantity}, costPrice=${costPrice}, itemCost=${itemCost}`);
-                }
-                hasMappedAnyProduct = true;
-                break;
-              }
-            }
-          }
-        });
-        
-        console.log(`Сопоставлено ${nameMatchCount} товаров по имени`);
-      }
-    }
-    
-    console.log(`ИТОГОВАЯ СЕБЕСТОИМОСТЬ: ${totalCostPrice.toFixed(2)} руб.`);
-    
-    if (totalCostPrice === 0) {
-      console.log('ВАЖНО: Себестоимость равна 0, устанавливаем тестовое значение для отображения компонента.');
-      totalCostPrice = 500000;
-    }
-    
-    return roundToTwoDecimals(totalCostPrice);
-  };
-
   const fetchData = async () => {
     try {
       setIsLoading(true);
@@ -354,41 +164,6 @@ const AnalyticsSection = () => {
       }
 
       const statsData = await fetchWildberriesStats(selectedStore.apiKey, dateFrom, dateTo);
-      
-      console.log("----- ДАННЫЕ АНАЛИТИКИ -----");
-      console.log("Полные данные статистики:", statsData);
-      
-      if (statsData && statsData.productSales && statsData.productSales.length > 0) {
-        console.log(`Найдено ${statsData.productSales.length} записей о продажах товаров`);
-        console.log("Структура первого элемента в productSales:", statsData.productSales[0]);
-        
-        const hasNmId = statsData.productSales.some(product => product.nmId || product.nm_id);
-        const hasSaName = statsData.productSales.some(product => product.sa_name);
-        
-        console.log(`Поле nm_id присутствует в данных: ${hasNmId ? 'ДА' : 'НЕТ'}`);
-        console.log(`Поле sa_name присутствует в данных: ${hasSaName ? 'ДА' : 'НЕТ'}`);
-        
-        if (statsData.productSales[0]) {
-          console.log("Доступные поля в данных о продажах:", Object.keys(statsData.productSales[0]));
-        }
-        
-        const productsWithNmId = statsData.productSales.filter(p => p.nmId || p.nm_id).length;
-        const productsWithSaName = statsData.productSales.filter(p => p.sa_name).length;
-        
-        console.log(`Количество товаров с полем nm_id: ${productsWithNmId} из ${statsData.productSales.length}`);
-        console.log(`Количество товаров с полем sa_name: ${productsWithSaName} из ${statsData.productSales.length}`);
-      } else {
-        console.log("Массив productSales отсутствует или пуст");
-      }
-      
-      const productsCostPrice = getProductsCostPrice(selectedStore.id);
-      console.log(`Найдено ${productsCostPrice.length} продуктов с установленной себестоимостью`);
-      
-      if (productsCostPrice.length > 0) {
-        console.log("Пример данных о себестоимости:", productsCostPrice.slice(0, 3));
-      }
-      
-      console.log("----- КОНЕЦ ДАННЫХ АНАЛИТИКИ -----");
       
       let totalAdvertisingCost = 0;
       try {
@@ -444,13 +219,6 @@ const AnalyticsSection = () => {
       }
       
       if (statsData) {
-        const productsCostPrice = getProductsCostPrice(selectedStore.id);
-        console.log('Retrieved products cost price:', productsCostPrice.length > 0 ? 
-          productsCostPrice.slice(0, 3) : 'No data');
-        
-        const totalCostPrice = calculateTotalCostPrice(statsData.productSales || [], productsCostPrice);
-        console.log('Calculated total cost price:', totalCostPrice);
-        
         const sales = roundToTwoDecimals(statsData.currentPeriod.sales);
         const logistics = roundToTwoDecimals(statsData.currentPeriod.expenses.logistics);
         const storage = roundToTwoDecimals(statsData.currentPeriod.expenses.storage);
@@ -462,7 +230,7 @@ const AnalyticsSection = () => {
         
         const forPay = roundToTwoDecimals(statsData.currentPeriod.transferred || 0);
         const netProfit = roundToTwoDecimals(
-          forPay - logistics - storage - penalties - totalAdvertisingCost - acceptance - deductionsValue - returns - totalCostPrice
+          forPay - logistics - storage - penalties - totalAdvertisingCost - acceptance - deductionsValue - returns
         );
         
         const modifiedData: AnalyticsData = {
@@ -478,8 +246,7 @@ const AnalyticsSection = () => {
               penalties: penalties,
               advertising: totalAdvertisingCost,
               acceptance: acceptance,
-              deductions: deductionsValue,
-              costPrice: totalCostPrice
+              deductions: deductionsValue
             }
           },
           dailySales: statsData.dailySales,
@@ -489,18 +256,8 @@ const AnalyticsSection = () => {
           topUnprofitableProducts: statsData.topUnprofitableProducts
         };
         
-        console.log('FINAL DATA being set to state (expenses):', {
-          totalCostPrice,
-          logistics,
-          storage,
-          penalties,
-          advertising: totalAdvertisingCost,
-          acceptance,
-          deductions: deductionsValue
-        });
-        
         modifiedData.currentPeriod.expenses.total = roundToTwoDecimals(
-          logistics + storage + penalties + totalAdvertisingCost + acceptance + deductionsValue + totalCostPrice
+          logistics + storage + penalties + totalAdvertisingCost + acceptance + deductionsValue
         );
         
         setData(modifiedData);
@@ -830,3 +587,4 @@ const AnalyticsSection = () => {
 };
 
 export default AnalyticsSection;
+

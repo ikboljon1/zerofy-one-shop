@@ -115,8 +115,6 @@ export interface ProductStats {
   sum_price: number;
   name: string;
   nmId: number;
-  nm_id?: number | string;
-  sa_name?: string;
 }
 
 interface BoosterStats {
@@ -385,6 +383,4 @@ export interface Campaign {
   numericStatus?: number;
   numericType?: number;
   changeTime?: string;
-  nm_id?: number | string;
-  sa_name?: string;
 }
