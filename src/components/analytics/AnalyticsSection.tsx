@@ -26,6 +26,8 @@ import {
   advertisingData
 } from "./data/demoData";
 
+const ANALYTICS_STORAGE_KEY = 'marketplace_analytics';
+
 interface AnalyticsData {
   currentPeriod: {
     sales: number;
@@ -802,3 +804,4 @@ const AnalyticsSection = () => {
 };
 
 export default AnalyticsSection;
+
