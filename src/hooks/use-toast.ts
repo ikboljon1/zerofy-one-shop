@@ -144,13 +144,33 @@ interface Toast extends Omit<ToasterToast, "id"> {}
 function toast({ ...props }: Toast) {
   const id = genId()
 
-  // Ensure strings are properly encoded before displaying
+  // Улучшенная обработка кодировки строк
   if (typeof props.title === 'string') {
-    props.title = decodeURIComponent(encodeURIComponent(props.title))
+    try {
+      // Сначала проверим, нет ли в тексте кракозябр
+      if (props.title.includes('�')) {
+        props.title = props.title.replace(/�/g, "?");
+      } else {
+        props.title = decodeURIComponent(encodeURIComponent(props.title));
+      }
+    } catch (e) {
+      console.error("Ошибка при обработке заголовка уведомления:", e);
+      props.title = props.title.replace(/�/g, "?");
+    }
   }
   
   if (typeof props.description === 'string') {
-    props.description = decodeURIComponent(encodeURIComponent(props.description))
+    try {
+      // Аналогично для описания
+      if (props.description.includes('�')) {
+        props.description = props.description.replace(/�/g, "?");
+      } else {
+        props.description = decodeURIComponent(encodeURIComponent(props.description));
+      }
+    } catch (e) {
+      console.error("Ошибка при обработке описания уведомления:", e);
+      props.description = props.description.replace(/�/g, "?");
+    }
   }
 
   const update = (props: ToasterToast) =>
