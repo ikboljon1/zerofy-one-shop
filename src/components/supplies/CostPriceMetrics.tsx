@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +23,7 @@ interface ProductData {
 interface ProductSale {
   subject_name: string;
   quantity: number;
-  nmId?: number;
+  nm_id?: number;
 }
 
 const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) => {
@@ -88,38 +89,17 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       }
       
       const productSales: ProductSale[] = analyticsData.data.productSales;
-      console.log(`Found ${productSales.length} product sales categories in analytics data`);
-      
-      const enhancedProductSales = productSales.map(sale => {
-        const matchingProducts = products.filter(p => 
-          p.subject === sale.subject_name || 
-          p.subject_name === sale.subject_name ||
-          p.subjectName === sale.subject_name
-        );
-        
-        if (matchingProducts.length > 0) {
-          const nmId = matchingProducts[0].nmId || matchingProducts[0].nmID;
-          if (nmId) {
-            console.log(`Added nmId ${nmId} to category "${sale.subject_name}"`);
-            return { ...sale, nmId };
-          }
-        }
-        return sale;
-      });
-      
-      analyticsData.data.productSales = enhancedProductSales;
-      localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
-      console.log("Updated analytics data with enhanced product sales including nmId");
+      console.log(`Found ${productSales.length} product sales categories in analytics data:`, productSales);
       
       let totalCost = 0;
       let totalItems = 0;
       let processedCategories = 0;
       let skippedCategories = 0;
       
-      for (const sale of enhancedProductSales) {
+      for (const sale of productSales) {
         const subjectName = sale.subject_name;
         const quantity = sale.quantity || 0;
-        const nmId = sale.nmId;
+        const nmId = sale.nm_id;
         
         if (quantity <= 0) {
           console.log(`Skipping category "${subjectName}" with zero quantity`);
@@ -129,6 +109,7 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
         let costPrice = 0;
         
         if (nmId) {
+          console.log(`Attempting to get cost price by nmId ${nmId} for category "${subjectName}"`);
           costPrice = await getCostPriceByNmId(nmId, selectedStore.id);
           if (costPrice > 0) {
             console.log(`Using cost price by nmId ${nmId} for category "${subjectName}": ${costPrice}`);

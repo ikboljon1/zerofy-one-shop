@@ -535,21 +535,37 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       returnsByNmId 
     } = result;
     
-    // 6. Группируем продажи по категориям
-    const salesByCategory: Record<string, number> = {};
+    // 6. Группируем продажи по категориям и собираем nmId
+    const salesByCategory: Record<string, { quantity: number, nmId?: number }> = {};
+    
     for (const record of reportData) {
       if (record.doc_type_name === 'Продажа' && record.subject_name) {
         if (!salesByCategory[record.subject_name]) {
-          salesByCategory[record.subject_name] = 0;
+          salesByCategory[record.subject_name] = { 
+            quantity: 0,
+            nmId: record.nm_id || undefined 
+          };
         }
-        salesByCategory[record.subject_name]++;
+        salesByCategory[record.subject_name].quantity++;
+        
+        // Если у записи есть nm_id и у категории ещё нет, сохраняем его
+        if (record.nm_id && !salesByCategory[record.subject_name].nmId) {
+          salesByCategory[record.subject_name].nmId = record.nm_id;
+          console.log(`Associated nmId ${record.nm_id} with category "${record.subject_name}"`);
+        }
       }
     }
     
     const productSales = Object.entries(salesByCategory)
-      .map(([subject_name, quantity]) => ({ subject_name, quantity }))
+      .map(([subject_name, data]) => ({ 
+        subject_name, 
+        quantity: data.quantity,
+        nm_id: data.nmId 
+      }))
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 10);
+    
+    console.log(`Generated product sales data with nmId where available: `, productSales);
     
     // 7. Группируем продажи по дням
     const salesByDay: Record<string, { sales: number, previousSales: number }> = {};
@@ -608,17 +624,17 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
     const response: WildberriesResponse = {
       currentPeriod: {
         sales: metrics.total_sales,
-        transferred: metrics.total_for_pay, // По логике Python-скрипта используем total_for_pay как transferred
+        transferred: metrics.total_for_pay,
         expenses: {
           total: metrics.total_delivery_rub + metrics.total_storage_fee + metrics.total_penalty + metrics.total_acceptance,
           logistics: metrics.total_delivery_rub,
           storage: metrics.total_storage_fee,
           penalties: metrics.total_penalty,
           acceptance: metrics.total_acceptance,
-          advertising: 0,  // Рекламные расходы в скрипте не учитываются
+          advertising: 0,
           deductions: metrics.total_deduction
         },
-        netProfit: metrics.total_to_pay, // По логике Python-скрипта используем total_to_pay как netProfit
+        netProfit: metrics.total_to_pay,
         acceptance: metrics.total_acceptance
       },
       dailySales,
