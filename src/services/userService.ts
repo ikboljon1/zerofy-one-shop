@@ -131,11 +131,6 @@ export const addUser = async (userData: Partial<User>): Promise<User> => {
   
   const users = await getUsers();
   
-  // Check if phone number is already in use
-  if (userData.phone && users.some(user => user.phone === userData.phone)) {
-    throw new Error('Пользователь с таким номером телефона уже существует');
-  }
-  
   const newUser: User = {
     id: Date.now().toString(),
     name: userData.name || '',
@@ -146,8 +141,7 @@ export const addUser = async (userData: Partial<User>): Promise<User> => {
     role: userData.role || 'user',
     avatar: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.name?.replace(/\s+/g, '') || 'user'}`,
     registeredAt: userData.registeredAt || new Date().toISOString(),
-    storeCount: 0,
-    phone: userData.phone || undefined
+    storeCount: 0
   };
   
   const updatedUsers = [...users, newUser];
@@ -163,12 +157,6 @@ export const updateUser = async (userId: string, userData: Partial<User>): Promi
   const userIndex = users.findIndex(user => user.id === userId);
   
   if (userIndex === -1) return null;
-  
-  // Check if updated phone number is already in use by another user
-  if (userData.phone && 
-      users.some(user => user.phone === userData.phone && user.id !== userId)) {
-    throw new Error('Пользователь с таким номером телефона уже существует');
-  }
   
   const updatedUser = { ...users[userIndex], ...userData };
   users[userIndex] = updatedUser;
@@ -221,8 +209,7 @@ export const authenticate = async (
 export const registerUser = async (
   name: string, 
   email: string, 
-  password: string,
-  phone?: string
+  password: string
 ): Promise<{ success: boolean; user?: User; errorMessage?: string }> => {
   await new Promise(resolve => setTimeout(resolve, 1200)); // Simulate network delay
   
@@ -236,20 +223,11 @@ export const registerUser = async (
     };
   }
   
-  // Check if phone number is already in use
-  if (phone && users.some(user => user.phone === phone)) {
-    return {
-      success: false,
-      errorMessage: 'Пользователь с таким номером телефона уже существует'
-    };
-  }
-  
   const newUser: User = {
     id: Date.now().toString(),
     name,
     email,
     password,
-    phone,
     tariffId: '3',
     isSubscriptionActive: false,
     isInTrial: true,

@@ -1,11 +1,36 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Package, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import type { Product } from "@/types/product";
+import React from "react";
+
+interface Product {
+  nmID: number;
+  vendorCode: string;
+  brand: string;
+  title: string;
+  photos: Array<{
+    big: string;
+    c246x328: string;
+  }>;
+  costPrice?: number;
+  price?: number;
+  discountedPrice?: number;
+  clubPrice?: number;
+  quantity?: number;
+  expenses?: {
+    logistics: number;
+    storage: number;
+    penalties: number;
+    acceptance: number;
+    deductions?: number;
+    ppvz_for_pay?: number;
+    retail_price?: number;
+  };
+}
 
 interface ProductsListProps {
   selectedStore: {
@@ -195,59 +220,6 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     }
   };
 
-  const updateProductData = (productId: number, field: keyof Product, value: any) => {
-    console.log(`Updating product ${productId}, field ${String(field)} to value:`, value);
-    
-    setProducts(prevProducts => {
-      // Находим индекс нужного продукта
-      const productIndex = prevProducts.findIndex(p => p.nmID === productId);
-      
-      if (productIndex === -1) {
-        console.error(`Product with ID ${productId} not found`);
-        return prevProducts;
-      }
-      
-      // Создаем копию массива продуктов
-      const updatedProducts = [...prevProducts];
-      
-      // Обновляем только конкретный продукт
-      updatedProducts[productIndex] = {
-        ...updatedProducts[productIndex],
-        [field]: value
-      };
-      
-      console.log(`Product ${productId} updated:`, updatedProducts[productIndex]);
-      
-      // Сохраняем обновленные данные в localStorage
-      if (selectedStore) {
-        const storageKey = `products_${selectedStore.id}`;
-        localStorage.setItem(storageKey, JSON.stringify(updatedProducts));
-      }
-      
-      return updatedProducts;
-    });
-  };
-
-  const updateCostPrice = (productId: number, costPrice: number) => {
-    console.log(`Updating cost price for product ${productId} to ${costPrice}`);
-    updateProductData(productId, 'costPrice', costPrice === 0 ? 0 : costPrice || null);
-  };
-
-  const updateSellingPrice = (productId: number, price: number) => {
-    console.log(`Updating selling price for product ${productId} to ${price}`);
-    updateProductData(productId, 'price', price === 0 ? 0 : price || null);
-  };
-
-  const updateSalesPerDay = (productId: number, salesPerDay: number) => {
-    console.log(`Updating sales per day for product ${productId} to ${salesPerDay}`);
-    updateProductData(productId, 'salesPerDay', salesPerDay === 0 ? 0 : salesPerDay || null);
-  };
-
-  const updateStoragePerDay = (productId: number, storagePerDay: number) => {
-    console.log(`Updating storage per day for product ${productId} to ${storagePerDay}`);
-    updateProductData(productId, 'storagePerDay', storagePerDay === 0 ? 0 : storagePerDay || null);
-  };
-
   const syncProducts = async () => {
     if (!selectedStore) {
       toast({
@@ -285,16 +257,13 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       const data = await response.json();
       console.log("Products data:", data);
       
-      // Загружаем существующие данные из localStorage, чтобы сохранить пользовательские значения
-      const storedProducts: Product[] = selectedStore.id 
-        ? JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]") 
-        : [];
-      
-      // Создаем Map для быстрого доступа к сохраненным данным по ID
-      const storedProductsMap = new Map();
-      storedProducts.forEach(product => {
-        storedProductsMap.set(product.nmID, product);
-      });
+      const storedProducts = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
+      const costPrices = storedProducts.reduce((acc: Record<number, number>, product: Product) => {
+        if (product.costPrice) {
+          acc[product.nmID] = product.costPrice;
+        }
+        return acc;
+      }, {});
 
       const nmIds = data.cards.map((product: Product) => product.nmID);
       const prices = await fetchProductPrices(nmIds);
@@ -320,7 +289,8 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       }
 
       const storageData = await storageResponse.json();
-      
+      console.log("Storage data:", storageData);
+
       const expensesMap = new Map();
       const salesMap = new Map();
       
@@ -328,7 +298,13 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       
       storageData.forEach((item: any) => {
         const nmId = item.nm_id;
-        
+        console.log('Processing item:', {
+          nmId,
+          doc_type_name: item.doc_type_name,
+          retail_price: item.retail_price,
+          quantity: item.quantity
+        });
+
         if (!expensesMap.has(nmId)) {
           expensesMap.set(nmId, {
             logistics: 0,
@@ -351,6 +327,11 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
 
         if (item.doc_type_name === "Продажа") {
           expenses.retail_price += item.retail_price || 0;
+          console.log('Adding sale:', {
+            nmId,
+            retail_price: item.retail_price,
+            current_total: expenses.retail_price
+          });
           
           if (!salesMap.has(nmId)) {
             salesMap.set(nmId, 0);
@@ -359,9 +340,11 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
         }
       });
 
+      console.log('Final expenses map:', Object.fromEntries(expensesMap));
+      console.log('Final sales map:', Object.fromEntries(salesMap));
+
       const quantities = await fetchProductQuantities(selectedStore.apiKey, startDate, endDate);
 
-      // Обновляем данные с сохранением пользовательских настроек
       const updatedProducts = data.cards.map((product: Product) => {
         const currentPrice = prices[product.nmID];
         const quantity = quantities[product.nmID] || 0;
@@ -374,29 +357,27 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           ppvz_for_pay: 0,
           retail_price: 0
         };
-
-        // Получаем сохраненные данные для этого продукта
-        const storedProduct = storedProductsMap.get(product.nmID);
         
-        // Возвращаем обновленный продукт с сохранением пользовательских настроек
+        console.log(`Processing product ${product.nmID}:`, {
+          price: currentPrice,
+          costPrice: costPrices[product.nmID],
+          quantity: quantity,
+          expenses: productExpenses,
+          salesAmount: salesMap.get(product.nmID) || 0
+        });
+        
         return {
           ...product,
-          costPrice: storedProduct?.costPrice ?? 0, // Используем nullish coalescing для сохранения нулевых значений
-          price: storedProduct?.price ?? currentPrice ?? 0,
-          salesPerDay: storedProduct?.salesPerDay ?? 0,
-          storagePerDay: storedProduct?.storagePerDay ?? 0,
+          costPrice: costPrices[product.nmID] || 0,
           discountedPrice: currentPrice || 0,
           quantity: quantity,
           expenses: productExpenses
         };
       });
 
+      console.log("Updated products:", updatedProducts);
       setProducts(updatedProducts);
-      
-      // Сохраняем полностью обновленный список в localStorage
-      if (selectedStore.id) {
-        localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(updatedProducts));
-      }
+      localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(updatedProducts));
 
       toast({
         title: "Успешно",
@@ -414,19 +395,34 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
     }
   };
 
-  // Загружаем данные из localStorage при выборе магазина
-  useEffect(() => {
+  const updateCostPrice = (productId: number, costPrice: number) => {
+    const updatedProducts = products.map(product => {
+      if (product.nmID === productId) {
+        const updatedProduct = { ...product, costPrice };
+        return updatedProduct;
+      }
+      return product;
+    });
+    
+    setProducts(updatedProducts);
+    localStorage.setItem(`products_${selectedStore?.id}`, JSON.stringify(updatedProducts));
+    
+    const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore?.id}`) || '{}');
+    costPrices[productId] = costPrice;
+    localStorage.setItem(`costPrices_${selectedStore?.id}`, JSON.stringify(costPrices));
+  };
+
+  React.useEffect(() => {
     if (selectedStore) {
-      const storedProductsData = localStorage.getItem(`products_${selectedStore.id}`);
-      if (storedProductsData) {
-        try {
-          const parsedProducts = JSON.parse(storedProductsData);
-          setProducts(parsedProducts);
-          console.log(`Loaded ${parsedProducts.length} products from localStorage for store ${selectedStore.id}`);
-        } catch (error) {
-          console.error("Error parsing products from localStorage:", error);
-          setProducts([]);
-        }
+      const storedProducts = localStorage.getItem(`products_${selectedStore.id}`);
+      if (storedProducts) {
+        const parsedProducts = JSON.parse(storedProducts);
+        const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore.id}`) || '{}');
+        const productsWithCostPrices = parsedProducts.map((product: Product) => ({
+          ...product,
+          costPrice: costPrices[product.nmID] || product.costPrice || 0
+        }));
+        setProducts(productsWithCostPrices);
       } else {
         setProducts([]);
       }
@@ -465,7 +461,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           </CardContent>
         </Card>
       ) : (
-        <div className={`grid gap-4 ${isMobile ? 'grid-cols-1 sm:grid-cols-2' : 'md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'}`}>
+        <div className={`grid gap-4 ${isMobile ? 'grid-cols-2' : 'md:grid-cols-3'}`}>
           {products.map((product) => {
             const profitDetails = calculateNetProfit(product);
             
@@ -519,62 +515,10 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       <Input
                         id={`costPrice-${product.nmID}`}
                         type="number"
-                        value={product.costPrice === undefined || product.costPrice === null ? "" : product.costPrice}
-                        onChange={(e) => {
-                          const value = e.target.value === "" ? 0 : parseFloat(e.target.value);
-                          updateCostPrice(product.nmID, value);
-                        }}
-                        className="h-8 text-right"
+                        value={product.costPrice || ""}
+                        onChange={(e) => updateCostPrice(product.nmID, Number(e.target.value))}
+                        className="h-8 text-sm"
                         placeholder="Введите себестоимость"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label htmlFor={`sellingPrice-${product.nmID}`} className="text-xs text-muted-foreground">
-                        Цена продажи:
-                      </label>
-                      <Input
-                        id={`sellingPrice-${product.nmID}`}
-                        type="number"
-                        value={product.price === undefined || product.price === null ? "" : product.price}
-                        onChange={(e) => {
-                          const value = e.target.value === "" ? 0 : parseFloat(e.target.value);
-                          updateSellingPrice(product.nmID, value);
-                        }}
-                        className="h-8 text-right"
-                        placeholder="Введите цену продажи"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label htmlFor={`salesPerDay-${product.nmID}`} className="text-xs text-muted-foreground">
-                        Продажи за 30 дней:
-                      </label>
-                      <Input
-                        id={`salesPerDay-${product.nmID}`}
-                        type="number"
-                        value={product.salesPerDay === undefined || product.salesPerDay === null ? "" : product.salesPerDay}
-                        onChange={(e) => {
-                          const value = e.target.value === "" ? 0 : parseFloat(e.target.value);
-                          updateSalesPerDay(product.nmID, value);
-                        }}
-                        className="h-8 text-right"
-                        step="0.1"
-                        placeholder="Введите продажи за 30 дней"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label htmlFor={`storagePerDay-${product.nmID}`} className="text-xs text-muted-foreground">
-                        Хранение за 30 дней:
-                      </label>
-                      <Input
-                        id={`storagePerDay-${product.nmID}`}
-                        type="number"
-                        value={product.storagePerDay === undefined || product.storagePerDay === null ? "" : product.storagePerDay}
-                        onChange={(e) => {
-                          const value = e.target.value === "" ? 0 : parseFloat(e.target.value);
-                          updateStoragePerDay(product.nmID, value);
-                        }}
-                        className="h-8 text-right"
-                        placeholder="Введите хранение за 30 дней"
                       />
                     </div>
                     <div className="space-y-1.5 border-t pt-2">
@@ -584,23 +528,23 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Общая логистика:</span>
-                        <span>{product.expenses?.logistics.toFixed(2) || "0.00"} ₽</span>
+                        <span>{product.expenses.logistics.toFixed(2)} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Общее хранение:</span>
-                        <span>{product.expenses?.storage.toFixed(2) || "0.00"} ₽</span>
+                        <span>{product.expenses.storage.toFixed(2)} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Общие штрафы:</span>
-                        <span>{product.expenses?.penalties.toFixed(2) || "0.00"} ₽</span>
+                        <span>{product.expenses.penalties.toFixed(2)} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Общая приемка:</span>
-                        <span>{product.expenses?.acceptance.toFixed(2) || "0.00"} ₽</span>
+                        <span>{product.expenses.acceptance.toFixed(2)} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Прочие удержания:</span>
-                        <span>{(product.expenses?.deductions || 0).toFixed(2)} ₽</span>
+                        <span>{(product.expenses.deductions || 0).toFixed(2)} ₽</span>
                       </div>
                       <div className="flex justify-between text-xs font-medium border-t pt-2">
                         <span className="text-muted-foreground">Общие расходы:</span>

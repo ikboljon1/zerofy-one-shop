@@ -1,4 +1,3 @@
-
 interface Product {
   nmID: number;
   vendorCode: string;
@@ -8,8 +7,8 @@ interface Product {
     big: string;
     c246x328: string;
   }>;
-  costPrice?: number | null;
-  price?: number | null;
+  costPrice?: number;
+  price?: number;
   discountedPrice?: number;
   clubPrice?: number;
   quantity?: number;
@@ -20,10 +19,5 @@ interface Product {
     acceptance: number;
     deductions?: number;
     ppvz_for_pay?: number;
-    retail_price?: number;
   };
-  salesPerDay?: number | null;
-  storagePerDay?: number | null;
 }
-
-export type { Product };
