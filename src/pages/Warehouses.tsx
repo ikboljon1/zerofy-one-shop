@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -25,7 +26,8 @@ import {
   WarehouseRemains,
   StorageProfitabilityAnalysis,
   PaidStorageCostReport,
-  WarehouseCoefficientsCard
+  WarehouseCoefficientsCard,
+  WarehouseCoefficientsDateCard
 } from '@/components/supplies';
 import { 
   WarehouseCoefficient, 
@@ -348,21 +350,21 @@ const Warehouses: React.FC = () => {
                 </Button>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="space-y-6">
-                  <SupplyForm />
-                </div>
-                
-                <div className="lg:col-span-2">
+              <div className="grid grid-cols-1 gap-6">
+                <div className="space-y-4">
                   {loading.coefficients ? (
                     <Skeleton className="h-[600px] w-full" />
                   ) : (
-                    <WarehouseCoefficientsCard 
+                    <WarehouseCoefficientsDateCard 
                       coefficients={coefficients} 
                       warehouses={wbWarehouses}
                       selectedWarehouseId={selectedWarehouseId}
                     />
                   )}
+                </div>
+                
+                <div className="space-y-4">
+                  <SupplyForm />
                 </div>
               </div>
             </>
@@ -412,4 +414,3 @@ const Warehouses: React.FC = () => {
 };
 
 export default Warehouses;
-
