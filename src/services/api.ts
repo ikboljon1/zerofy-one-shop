@@ -160,10 +160,33 @@ export const getCostPriceBySubjectName = async (subjectName: string, storeId: st
 // Function to get cost price by nm_id
 export const getCostPriceByNmId = async (nmId: number, storeId: string): Promise<number> => {
   try {
-    console.log(`Getting cost price for nmId ${nmId} from store ${storeId}`);
+    console.log(`Getting cost price for nmId ${nmId} (type: ${typeof nmId}) from store ${storeId}`);
+    
+    // Убедимся, что nmId является числом
+    const numericNmId = Number(nmId);
+    if (isNaN(numericNmId)) {
+      console.error(`Invalid nmId format: ${nmId}, expected a number`);
+      return 0;
+    }
+    
     // Пробуем получить из локального хранилища
     const products = JSON.parse(localStorage.getItem(`products_${storeId}`) || "[]");
-    const product = products.find((p: any) => p.nmId === nmId || p.nmID === nmId);
+    
+    // Логируем первые несколько продуктов для проверки
+    console.log("Sample products for debugging:");
+    products.slice(0, 3).forEach((p: any, i: number) => {
+      console.log(`Product[${i}]:`, {
+        nmId: p.nmId,
+        nmIdType: typeof p.nmId,
+        costPrice: p.costPrice
+      });
+    });
+    
+    // Пробуем найти продукт, учитывая возможные форматы nmId (число или строка)
+    const product = products.find((p: any) => 
+      Number(p.nmId) === numericNmId || 
+      Number(p.nmID) === numericNmId
+    );
     
     if (product && product.costPrice) {
       console.log(`Found cost price for nmId ${nmId}: ${product.costPrice}`);
@@ -174,7 +197,7 @@ export const getCostPriceByNmId = async (nmId: number, storeId: string): Promise
     
     // Если нет в локальном хранилище, пробуем получить с сервера
     try {
-      const response = await api.get(`http://localhost:3001/api/products/cost-price/${nmId}?storeId=${storeId}`);
+      const response = await api.get(`http://localhost:3001/api/products/cost-price/${numericNmId}?storeId=${storeId}`);
       if (response.data && response.data.costPrice) {
         console.log(`Received cost price from server for nmId ${nmId}: ${response.data.costPrice}`);
         return response.data.costPrice;

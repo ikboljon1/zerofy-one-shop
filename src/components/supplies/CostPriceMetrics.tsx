@@ -96,42 +96,59 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       let processedCategories = 0;
       let skippedCategories = 0;
       
+      // Создадим дебаг-информацию для анализа nm_id
+      console.log("Анализ nm_id в данных о продажах:");
+      productSales.forEach((sale, index) => {
+        console.log(`[${index}] subject_name: ${sale.subject_name}, quantity: ${sale.quantity}, nm_id:`, sale.nm_id);
+      });
+      
+      // Проверим формат nm_id в продуктах
+      console.log("Формат nm_id в первых 5 продуктах:");
+      products.slice(0, 5).forEach((product: any, index: number) => {
+        console.log(`[${index}] nmId: ${product.nmId}, тип: ${typeof product.nmId}, costPrice: ${product.costPrice}`);
+      });
+      
       for (const sale of productSales) {
         const subjectName = sale.subject_name;
         const quantity = sale.quantity || 0;
-        const nmId = sale.nm_id;
+        // Убедимся, что nm_id имеет правильный формат (число)
+        const nmId = sale.nm_id ? Number(sale.nm_id) : undefined;
         
         if (quantity <= 0) {
           console.log(`Skipping category "${subjectName}" with zero quantity`);
           continue;
         }
         
+        console.log(`Processing category: "${subjectName}", quantity: ${quantity}, nm_id: ${nmId || 'undefined'}`);
+        
         let costPrice = 0;
         
-        // First try to get cost price by nm_id if available
+        // Сначала ищем по nm_id, если он доступен
         if (nmId) {
-          console.log(`Attempting to get cost price by nmId ${nmId} for category "${subjectName}"`);
-          costPrice = await getCostPriceByNmId(nmId, selectedStore.id);
-          if (costPrice > 0) {
-            console.log(`Using cost price by nmId ${nmId} for category "${subjectName}": ${costPrice}`);
+          console.log(`Trying to get cost price by nmId ${nmId} for category "${subjectName}"`);
+          
+          // Сначала ищем напрямую в products по nmId
+          const productWithNmId = products.find((p: any) => Number(p.nmId) === nmId);
+          if (productWithNmId && productWithNmId.costPrice > 0) {
+            costPrice = productWithNmId.costPrice;
+            console.log(`Found product directly with nmId ${nmId}: costPrice = ${costPrice}`);
           } else {
-            console.log(`No cost price found by nmId ${nmId}, trying by subject name`);
+            // Если не нашли напрямую, используем API
+            costPrice = await getCostPriceByNmId(nmId, selectedStore.id);
+            console.log(`Result from getCostPriceByNmId for ${nmId}: ${costPrice}`);
           }
         }
         
-        // If nmId lookup failed or not available, try by subject name
+        // Если по nm_id не нашли, пробуем по subject_name
         if (costPrice === 0) {
+          console.log(`No cost price found by nmId, trying by subject_name: "${subjectName}"`);
           costPrice = calculateAverageCostPriceBySubject(products, subjectName);
           if (costPrice > 0) {
-            console.log(`Using average cost price for category "${subjectName}": ${costPrice}`);
-          }
-        }
-        
-        // As a last resort, try to get cost price from API
-        if (costPrice === 0) {
-          costPrice = await getCostPriceBySubjectName(subjectName, selectedStore.id);
-          if (costPrice > 0) {
-            console.log(`Using cost price from API for category "${subjectName}": ${costPrice}`);
+            console.log(`Found average cost price for category "${subjectName}": ${costPrice}`);
+          } else {
+            // Если и локально не нашли, запрашиваем через API по subject_name
+            costPrice = await getCostPriceBySubjectName(subjectName, selectedStore.id);
+            console.log(`Result from getCostPriceBySubjectName for "${subjectName}": ${costPrice}`);
           }
         }
         
@@ -141,7 +158,7 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
           totalItems += quantity;
           processedCategories++;
           
-          console.log(`Category: ${subjectName}, Quantity: ${quantity}, Cost Price: ${costPrice}, Total: ${categoryCost}`);
+          console.log(`Successfully calculated for "${subjectName}": ${quantity} x ${costPrice} = ${categoryCost}`);
         } else {
           console.log(`Could not determine cost price for category "${subjectName}"`);
           skippedCategories++;
