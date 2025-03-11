@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Zap, ChevronRight, Users, ShieldCheck, BarChart2, Package, CircleCheck, Rocket, Clock, Settings, CreditCard, HeartHandshake, MessageSquare, ArrowRight, LineChart, PieChart, Gauge, AreaChart, TrendingUp, CheckCircle2 } from "lucide-react";
+import { Zap, ChevronRight, Users, ShieldCheck, BarChart2, Package, CircleCheck, Rocket, Clock, Settings, CreditCard, HeartHandshake, MessageSquare, ArrowRight, LineChart, PieChart, Gauge, AreaChart, TrendingUp, CheckCircle2, Calculator, Database, BellRing, ArrowUpRight, BoxSelect, Wallet, PercentSquare, BadgeDollarSign, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import AuthModal from "@/components/auth/AuthModal";
@@ -63,6 +63,11 @@ const LandingPage = () => {
       description: "Возьмите полный контроль над вашим ассортиментом. Наша система не просто отслеживает остатки — она прогнозирует спрос, оптимизирует закупки и автоматизирует рутинные процессы управления каталогом."
     },
     {
+      icon: <Calculator className="h-6 w-6 text-primary" />,
+      title: "Расчет рентабельности",
+      description: "Мгновенно оценивайте прибыльность каждого товара с учетом всех скрытых расходов. Наш интеллектуальный калькулятор учитывает комиссии площадок, логистику, хранение и рекламу, показывая реальную маржинальность."
+    },
+    {
       icon: <ShieldCheck className="h-6 w-6 text-primary" />,
       title: "Непробиваемая защита данных",
       description: "Ваша бизнес-информация под надежной защитой. Многоуровневое шифрование, регулярное резервное копирование и строгий контроль доступа обеспечивают безопасность ваших самых ценных активов — ваших данных."
@@ -81,6 +86,16 @@ const LandingPage = () => {
       icon: <CreditCard className="h-6 w-6 text-primary" />,
       title: "Кристальная финансовая аналитика",
       description: "Трансформируйте хаос финансовых данных в четкую картину. Отслеживайте каждую копейку: от валовой выручки до чистой прибыли, с учетом всех комиссий, налогов и скрытых расходов маркетплейсов."
+    },
+    {
+      icon: <TrendingDown className="h-6 w-6 text-primary" />,
+      title: "Анализ платного хранения",
+      description: "Оптимизируйте свои расходы на хранение товаров на маркетплейсах. Наш уникальный инструмент анализирует стоимость хранения, сопоставляет с продажами и предлагает оптимальные решения по распределению запасов."
+    },
+    {
+      icon: <ArrowUpRight className="h-6 w-6 text-primary" />,
+      title: "Мониторинг эффективности рекламы",
+      description: "Получайте максимальную отдачу от рекламных бюджетов. Анализируйте эффективность каждой копейки, вложенной в рекламу, с детальной статистикой по кликам, конверсиям и возврату инвестиций."
     }
   ];
 
@@ -124,7 +139,7 @@ const LandingPage = () => {
       features: [
         "Неограниченное количество товаров",
         "Премиум-аналитика с ИИ-рекомендациями",
-        "Неограниченное число пользователей",
+        "Неограниченное число по��ьзователей",
         "Круглосуточная поддержка 24/7",
         "Полная интеграционная экосистема",
         "Расширенный API-доступ",
