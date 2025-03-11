@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -39,16 +39,14 @@ const Dashboard = () => {
   const [warehouseDistribution, setWarehouseDistribution] = useState<any[]>([]);
   const [regionDistribution, setRegionDistribution] = useState<any[]>([]);
   
-  // Date range for AI Analysis
   const [dateRange, setDateRange] = useState({
     from: new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
     to: new Date()
   });
 
-  // Analytics data for AI analysis
   const [analyticsData, setAnalyticsData] = useState<any>(null);
 
-  const filterDataByPeriod = (date: string, period: Period) => {
+  const filterDataByPeriod = useCallback((date: string, period: Period) => {
     const now = new Date();
     const itemDate = new Date(date);
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -75,7 +73,7 @@ const Dashboard = () => {
       default:
         return true;
     }
-  };
+  }, []);
 
   const getFilteredOrders = (orders: WildberriesOrder[]) => {
     const filteredOrders = orders.filter(order => filterDataByPeriod(order.date, period));
@@ -122,15 +120,15 @@ const Dashboard = () => {
     return sales.filter(sale => filterDataByPeriod(sale.date, period));
   };
 
-  useEffect(() => {
-    if (orders.length > 0) {
-      const { orders: filteredOrders, warehouseDistribution: newWarehouseDistribution, regionDistribution: newRegionDistribution } = getFilteredOrders(orders);
-      setWarehouseDistribution(newWarehouseDistribution);
-      setRegionDistribution(newRegionDistribution);
-    }
-  }, [period, orders]);
+  const filteredOrdersData = useMemo(() => {
+    return getFilteredOrders(orders);
+  }, [orders, period]);
 
-  const fetchData = async () => {
+  const filteredSalesData = useMemo(() => {
+    return getFilteredSales(sales);
+  }, [sales, period]);
+
+  const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
       const selectedStore = getSelectedStore();
@@ -148,7 +146,11 @@ const Dashboard = () => {
         setSelectedStoreId(selectedStore.id);
       }
 
-      const ordersResult = await fetchAndUpdateOrders(selectedStore);
+      const [ordersResult, salesResult] = await Promise.all([
+        fetchAndUpdateOrders(selectedStore),
+        fetchAndUpdateSales(selectedStore)
+      ]);
+
       if (ordersResult) {
         setOrders(ordersResult.orders);
         setWarehouseDistribution(ordersResult.warehouseDistribution);
@@ -162,7 +164,6 @@ const Dashboard = () => {
         }
       }
 
-      const salesResult = await fetchAndUpdateSales(selectedStore);
       if (salesResult) {
         setSales(salesResult);
       } else {
@@ -186,78 +187,37 @@ const Dashboard = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedStoreId, toast]);
 
   useEffect(() => {
     const selectedStore = getSelectedStore();
     
-    if (selectedStore) {
-      if (selectedStore.id !== selectedStoreId) {
-        setSelectedStoreId(selectedStore.id);
-      }
-      
+    if (selectedStore && selectedStore.id !== selectedStoreId) {
+      setSelectedStoreId(selectedStore.id);
       fetchData();
-
-      // Prepare analytics data for AI analysis
-      const simpleAnalyticsData = {
-        currentPeriod: {
-          sales: orders.length * 1200, // Simple simulation of sales data
-          expenses: {
-            total: orders.length * 700,
-            logistics: orders.length * 300,
-            storage: orders.length * 150,
-            penalties: orders.length * 50,
-            advertising: orders.length * 150,
-            acceptance: orders.length * 50
-          }
-        },
-        previousPeriod: {
-          sales: orders.length * 1100,
-          expenses: {
-            total: orders.length * 650
-          }
-        },
-        // Sample data structure for AI analysis
-        topProfitableProducts: orders.slice(0, 5).map((order, index) => ({
-          name: order.subject || `Product ${index + 1}`,
-          profit: (Math.random() * 5000 + 1000).toFixed(2),
-          margin: Math.round(Math.random() * 40 + 20),
-          quantitySold: Math.round(Math.random() * 50 + 10)
-        })),
-        topUnprofitableProducts: orders.slice(5, 10).map((order, index) => ({
-          name: order.subject || `Product ${index + 1}`,
-          profit: (-Math.random() * 2000 - 500).toFixed(2),
-          margin: Math.round(Math.random() * 10 - 20),
-          quantitySold: Math.round(Math.random() * 5 + 1)
-        }))
-      };
-
-      setAnalyticsData(simpleAnalyticsData);
     }
+  }, [selectedStoreId, fetchData]);
 
+  useEffect(() => {
+    let refreshInterval: NodeJS.Timeout;
+    
     const handleStoreSelectionChange = () => {
       console.log('Store selection changed, refreshing data...');
       fetchData();
     };
 
-    window.addEventListener('store-selection-changed', handleStoreSelectionChange);
-
-    const refreshInterval = setInterval(() => {
-      console.log('Auto-refreshing data...');
-      fetchData();
-    }, 60000);
+    if (selectedStoreId) {
+      window.addEventListener('store-selection-changed', handleStoreSelectionChange);
+      refreshInterval = setInterval(fetchData, 60000);
+    }
 
     return () => {
       window.removeEventListener('store-selection-changed', handleStoreSelectionChange);
-      clearInterval(refreshInterval);
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
     };
-  }, []);
-
-  useEffect(() => {
-    if (selectedStoreId) {
-      fetchData();
-    }
-  }, [selectedStoreId]);
+  }, [selectedStoreId, fetchData]);
 
   return (
     <div className="space-y-4">
@@ -293,15 +253,15 @@ const Dashboard = () => {
           
           {orders.length > 0 && (
             <>
-              <OrderMetrics orders={getFilteredOrders(orders).orders} />
+              <OrderMetrics orders={filteredOrdersData.orders} />
               <OrdersChart 
-                orders={getFilteredOrders(orders).orders} 
-                sales={getFilteredSales(sales)}
+                orders={filteredOrdersData.orders} 
+                sales={filteredSalesData.sales}
               />
             </>
           )}
           
-          <OrdersTable orders={getFilteredOrders(orders).orders} />
+          <OrdersTable orders={filteredOrdersData.orders} />
         </TabsContent>
 
         <TabsContent value="sales" className="space-y-4">
@@ -312,12 +272,12 @@ const Dashboard = () => {
           
           {sales.length > 0 && (
             <>
-              <SalesMetrics sales={getFilteredSales(sales)} />
-              <SalesChart sales={getFilteredSales(sales)} />
+              <SalesMetrics sales={filteredSalesData.sales} />
+              <SalesChart sales={filteredSalesData.sales} />
             </>
           )}
           
-          <SalesTable sales={getFilteredSales(sales)} />
+          <SalesTable sales={filteredSalesData.sales} />
         </TabsContent>
 
         <TabsContent value="geography" className="space-y-4">
@@ -328,7 +288,7 @@ const Dashboard = () => {
           <GeographySection 
             warehouseDistribution={warehouseDistribution} 
             regionDistribution={regionDistribution}
-            sales={getFilteredSales(sales)}
+            sales={filteredSalesData.sales}
           />
         </TabsContent>
 
@@ -340,4 +300,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default React.memo(Dashboard);

@@ -1,4 +1,3 @@
-
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WildberriesSale } from "@/types/store";
@@ -29,13 +28,11 @@ interface SalesChartProps {
 
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088fe', '#00C49F', '#FFBB28', '#FF8042'];
 
-const SalesChart: React.FC<SalesChartProps> = ({ sales }) => {
+const SalesChart: React.FC<SalesChartProps> = React.memo(({ sales }) => {
   const isMobile = useIsMobile();
   
   const shouldDisplayHourly = useMemo(() => {
     if (sales.length === 0) return false;
-    
-    // Check if all sales are from today or yesterday
     const firstSaleDate = new Date(sales[0].date);
     return isToday(firstSaleDate) || isYesterday(firstSaleDate);
   }, [sales]);
@@ -44,18 +41,15 @@ const SalesChart: React.FC<SalesChartProps> = ({ sales }) => {
     if (sales.length === 0) return [];
     
     if (shouldDisplayHourly) {
-      // Get the date of the first sale (assuming all sales are from the same day - today or yesterday)
       const saleDate = new Date(sales[0].date);
       const dayStart = startOfDay(saleDate);
       const dayEnd = endOfDay(saleDate);
       
-      // Generate array of all hours in the day
       const hoursInterval = eachHourOfInterval({
         start: dayStart,
         end: dayEnd,
       });
       
-      // Sum sales per hour
       return hoursInterval.map(hour => {
         const hourEnd = addHours(hour, 1);
         
@@ -76,17 +70,14 @@ const SalesChart: React.FC<SalesChartProps> = ({ sales }) => {
         };
       });
     } else {
-      // Get date range for the last 7 days
       const today = new Date();
-      const sevenDaysAgo = subDays(today, 6); // 7 days including today
+      const sevenDaysAgo = subDays(today, 6);
       
-      // Generate array of all days
       const daysInterval = eachDayOfInterval({
         start: sevenDaysAgo,
         end: today,
       });
       
-      // Sum sales per day
       return daysInterval.map(day => {
         const dayStart = startOfDay(day);
         const dayEnd = endOfDay(day);
@@ -114,7 +105,6 @@ const SalesChart: React.FC<SalesChartProps> = ({ sales }) => {
     if (sales.length === 0) return [];
     
     const categoryCounts: Record<string, { count: number, amount: number }> = {};
-    
     sales.forEach(sale => {
       if (!sale.category) return;
       if (!categoryCounts[sale.category]) {
@@ -133,6 +123,11 @@ const SalesChart: React.FC<SalesChartProps> = ({ sales }) => {
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 5);
   }, [sales]);
+
+  const totalRevenue = useMemo(() => 
+    categorySalesData.reduce((sum, category) => sum + category.amount, 0),
+    [categorySalesData]
+  );
 
   const salesConfig = {
     revenue: {
@@ -157,9 +152,6 @@ const SalesChart: React.FC<SalesChartProps> = ({ sales }) => {
       },
     },
   };
-
-  // Calculate total revenue for the pie chart percentage
-  const totalRevenue = categorySalesData.reduce((sum, category) => sum + category.amount, 0);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
@@ -321,7 +313,6 @@ const SalesChart: React.FC<SalesChartProps> = ({ sales }) => {
                 </Pie>
                 <Tooltip
                   formatter={(value, name) => {
-                    // Make sure value is treated as a number
                     const numValue = typeof value === 'number' ? value : 0;
                     const percentage = totalRevenue > 0 ? ((numValue / totalRevenue) * 100).toFixed(1) : '0';
                     return [
@@ -351,6 +342,8 @@ const SalesChart: React.FC<SalesChartProps> = ({ sales }) => {
       </Card>
     </div>
   );
-};
+});
+
+SalesChart.displayName = 'SalesChart';
 
 export default SalesChart;
