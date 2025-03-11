@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { ArrowUp, ArrowDown, TrendingUp, TrendingDown, DollarSign, FileText, Info, Image } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -42,6 +41,14 @@ const ProductList = ({ title, products = [], isProfitable }: ProductListProps) =
       : formatCurrency(numValue);
   };
 
+  const safeText = (text: string) => {
+    try {
+      return decodeURIComponent(encodeURIComponent(text));
+    } catch (e) {
+      return text;
+    }
+  };
+
   const getProfitabilityReason = (product: Product) => {
     if (isProfitable) {
       if (product.quantitySold && product.quantitySold > 50) {
@@ -63,7 +70,7 @@ const ProductList = ({ title, products = [], isProfitable }: ProductListProps) =
   return (
     <Card className={`p-4 ${isMobile ? 'p-3' : 'p-5'}`}>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">{title}</h3>
+        <h3 className="text-lg font-semibold">{safeText(title)}</h3>
         <div className={`p-2 rounded-md ${isProfitable ? 'bg-green-100 dark:bg-green-900/60' : 'bg-red-100 dark:bg-red-900/60'}`}>
           <IconComponent className={`h-4 w-4 ${isProfitable ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} />
         </div>
@@ -79,7 +86,7 @@ const ProductList = ({ title, products = [], isProfitable }: ProductListProps) =
                 <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 mr-4 bg-gray-100 dark:bg-gray-800">
                   <img 
                     src={product.image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"} 
-                    alt={product.name} 
+                    alt={safeText(product.name)} 
                     className="w-full h-full object-cover" 
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
@@ -89,7 +96,7 @@ const ProductList = ({ title, products = [], isProfitable }: ProductListProps) =
                 </div>
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
-                    <h4 className="font-medium text-base">{product.name || "Неизвестный товар"}</h4>
+                    <h4 className="font-medium text-base">{safeText(product.name || "Неизвестный товар")}</h4>
                     <div className="text-right flex items-center">
                       <span className={`${textColorClass} font-semibold mr-1`}>
                         {formatNumberWithSign(product.profit)}
@@ -106,7 +113,7 @@ const ProductList = ({ title, products = [], isProfitable }: ProductListProps) =
                   </p>
                   {product.category && (
                     <p className="text-sm text-muted-foreground">
-                      Категория: {product.category}
+                      Категория: {safeText(product.category)}
                     </p>
                   )}
                 </div>
@@ -130,7 +137,7 @@ const ProductList = ({ title, products = [], isProfitable }: ProductListProps) =
                 <div className="flex items-center">
                   <Info className="h-4 w-4 mr-1 text-muted-foreground" />
                   <span className="font-medium">
-                    {getProfitabilityReason(product)}
+                    {safeText(getProfitabilityReason(product))}
                   </span>
                 </div>
               </div>
