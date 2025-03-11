@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +48,14 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       console.log(`--------- ЗАГРУЗКА ДАННЫХ О СЕБЕСТОИМОСТИ ---------`);
       console.log(`Загрузка данных о себестоимости для магазина: ${selectedStore.id}`);
       
+      // ПРОВЕРКА ДАННЫХ В ХРАНИЛИЩЕ: Более подробное логирование всех ключей в localStorage
+      console.log('Все ключи в localStorage, связанные с продуктами:');
+      Object.keys(localStorage).forEach(key => {
+        if (key.includes('product') || key.includes('cost') || key.includes(selectedStore.id)) {
+          console.log(`${key}: ${localStorage.getItem(key)?.substring(0, 100)}...`);
+        }
+      });
+      
       // Try to load from both possible keys
       let products = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
       console.log(`Продукты из хранилища products_: ${products.length} элементов`);
@@ -57,11 +66,16 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
         // Проверяем наличие себестоимости
         const withCostPrice = products.filter((p: any) => p.costPrice !== undefined && p.costPrice > 0);
         console.log(`Из них с себестоимостью: ${withCostPrice.length} элементов`);
+        if (withCostPrice.length > 0) {
+          console.log("Пример продуктов с себестоимостью:", withCostPrice.slice(0, 3));
+        }
       }
       
       if (products.length === 0) {
         // Try alternative storage key (costPrices)
         const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore.id}`) || "{}");
+        console.log(`Данные о себестоимости из costPrices_: ${Object.keys(costPrices).length} записей`);
+        
         const costPricesList = Object.entries(costPrices).map(([nmId, costPrice]) => ({
           nmID: parseInt(nmId, 10),
           nm_id: parseInt(nmId, 10),
@@ -77,6 +91,8 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
         } else {
           // Try another alternative storage key (products_cost_price)
           const altProducts = JSON.parse(localStorage.getItem(`products_cost_price_${selectedStore.id}`) || "[]");
+          console.log(`Данные из products_cost_price_: ${altProducts.length} записей`);
+          
           if (altProducts.length > 0) {
             products = altProducts.map((item: any) => ({
               nmID: item.nmId,
@@ -112,6 +128,22 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
         console.log(`Продажи с sa_name: ${withSaName.length} из ${salesData.length}`);
         console.log(`Продажи с supplierArticle: ${withSupplierArticle.length} из ${salesData.length}`);
         console.log(`Продажи с quantity > 0: ${withQuantity.length} из ${salesData.length}`);
+        
+        // Проверим наличие ключей в первых 10 элементах более детально
+        console.log("Детальная проверка полей в первых 10 записях продаж:");
+        salesData.slice(0, 10).forEach((sale: any, index: number) => {
+          console.log(`Запись #${index+1}:`, {
+            hasNmId: Boolean(sale.nmId),
+            hasNm_id: Boolean(sale.nm_id),
+            nmIdValue: sale.nmId || sale.nm_id,
+            hasSaName: Boolean(sale.sa_name),
+            saNameValue: sale.sa_name,
+            hasSupplierArticle: Boolean(sale.supplierArticle),
+            supplierArticleValue: sale.supplierArticle,
+            hasQuantity: Boolean(sale.quantity),
+            quantityValue: sale.quantity
+          });
+        });
       }
       
       let totalCost = 0;
@@ -144,6 +176,17 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
         bySupplierArticle: Object.keys(productBySupplierArticle).length,
         bySaName: Object.keys(productBySaName).length
       });
+      
+      // Выведем примеры ключей для каждого типа идентификатора
+      if (Object.keys(productByNmId).length > 0) {
+        console.log("Примеры nmId:", Object.keys(productByNmId).slice(0, 5));
+      }
+      if (Object.keys(productBySupplierArticle).length > 0) {
+        console.log("Примеры supplierArticle:", Object.keys(productBySupplierArticle).slice(0, 5));
+      }
+      if (Object.keys(productBySaName).length > 0) {
+        console.log("Примеры sa_name:", Object.keys(productBySaName).slice(0, 5));
+      }
 
       // Match sales with cost prices and calculate totals
       salesData.forEach((sale: any) => {
@@ -217,10 +260,12 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
   const getSalesData = (storeId: string): any[] => {
     try {
       // Try to get sales data from multiple sources
+      console.log("Попытка получить данные о продажах из различных источников для магазина", storeId);
       
       // First, check if we have analytics data with product sales
       const analyticsKey = `marketplace_analytics_${storeId}`;
       const analyticsData = JSON.parse(localStorage.getItem(analyticsKey) || "{}");
+      console.log(`Проверка наличия данных в ключе ${analyticsKey}:`, Boolean(analyticsData.data));
       
       if (analyticsData.data?.productSales && analyticsData.data.productSales.length > 0) {
         console.log(`Found ${analyticsData.data.productSales.length} sales items in analytics data`);
@@ -236,6 +281,7 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       // Finally, check if we have stats data for the store
       const statsKey = `marketplace_stats_${storeId}`;
       const statsData = JSON.parse(localStorage.getItem(statsKey) || "{}");
+      console.log(`Проверка наличия данных в ключе ${statsKey}:`, Boolean(statsData.productSales));
       
       if (statsData.productSales && statsData.productSales.length > 0) {
         console.log(`Found ${statsData.productSales.length} sales items in stats data`);
@@ -245,6 +291,7 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       // Last resort, check if there's reports data
       const reportsKey = `wb_reports_${storeId}`;
       const reportsData = JSON.parse(localStorage.getItem(reportsKey) || "[]");
+      console.log(`Проверка наличия данных в ключе ${reportsKey}:`, reportsData.length);
       
       if (reportsData.length > 0) {
         console.log(`Found ${reportsData.length} items in reports data`);
@@ -253,6 +300,8 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       
       // Try to get from regular products storage to extract quantities
       const products = JSON.parse(localStorage.getItem(`products_${storeId}`) || "[]");
+      console.log(`Проверка наличия данных в products_${storeId}:`, products.length);
+      
       const productsWithQuantity = products.filter((p: any) => p.quantity && p.quantity > 0);
       
       if (productsWithQuantity.length > 0) {

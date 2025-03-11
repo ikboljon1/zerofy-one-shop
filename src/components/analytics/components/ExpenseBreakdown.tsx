@@ -30,6 +30,17 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
   const deductionsAmount = data.currentPeriod.expenses.deductions || 0;
   const costPriceAmount = data.currentPeriod.expenses.costPrice || 0;
   
+  console.log("ExpenseBreakdown: получены данные о расходах:", {
+    totalExpenses: data.currentPeriod.expenses.total,
+    logistics: data.currentPeriod.expenses.logistics,
+    storage: data.currentPeriod.expenses.storage,
+    penalties: data.currentPeriod.expenses.penalties,
+    advertising: advertisingAmount,
+    acceptance: acceptanceAmount,
+    deductions: deductionsAmount,
+    costPrice: costPriceAmount
+  });
+  
   // Общая сумма расходов для расчета процентов
   const totalExpenses = data.currentPeriod.expenses.total;
 
