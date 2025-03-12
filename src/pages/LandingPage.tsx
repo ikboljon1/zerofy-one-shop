@@ -636,4 +636,95 @@ const LandingPage = () => {
               </CardHeader>
               <CardContent>
                 <div className="relative p-4">
-                  <div className="h-40 w-40
+                  <div className="h-40 w-40 mx-auto relative">
+                    <div className="absolute inset-0 rounded-full bg-violet-100"></div>
+                    <div className="absolute inset-0 rounded-full bg-violet-200" style={{ clipPath: 'polygon(50% 50%, 100% 0, 100% 100%)' }}></div>
+                    <div className="absolute inset-0 rounded-full bg-violet-300" style={{ clipPath: 'polygon(50% 50%, 0 0, 100% 0)' }}></div>
+                    <div className="absolute inset-0 rounded-full bg-violet-400" style={{ clipPath: 'polygon(50% 50%, 0 0, 0 100%)' }}></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-sm font-medium">₽964K</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 mt-4">
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-violet-100 mr-2"></div>
+                      <span className="text-xs">Маркетинг (42%)</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-violet-200 mr-2"></div>
+                      <span className="text-xs">Логистика (28%)</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-violet-300 mr-2"></div>
+                      <span className="text-xs">Налоги (18%)</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-violet-400 mr-2"></div>
+                      <span className="text-xs">Прочее (12%)</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button variant="outline" size="sm" className="w-full">Подробный отчет</Button>
+              </CardFooter>
+            </Card>
+            <Card className="bg-white/80 backdrop-blur">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  <Wallet className="h-5 w-5 text-blue-500 mr-2" />
+                  Бюджет и планирование
+                </CardTitle>
+                <CardDescription>
+                  Исполнение месячного бюджета
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-sm">Маркетинг</span>
+                      <span className="text-sm">78%</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500" style={{ width: "78%" }} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-sm">Закупки</span>
+                      <span className="text-sm">92%</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-amber-500" style={{ width: "92%" }} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-sm">Развитие</span>
+                      <span className="text-sm">45%</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-green-500" style={{ width: "45%" }} />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button variant="outline" size="sm" className="w-full">Управление бюджетом</Button>
+              </CardFooter>
+            </Card>
+          </div>
+        </div>
+      </div>
+    )
+  };
+
+  return (
+    <div>
+      {/* Existing JSX code */}
+    </div>
+  );
+};
+
+export default LandingPage;
