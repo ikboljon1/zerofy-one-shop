@@ -12,6 +12,7 @@ import DeductionsChart from "./components/DeductionsChart";
 import PieChartCard from "./components/PieChartCard";
 import ExpenseBreakdown from "./components/ExpenseBreakdown";
 import ProductList from "./components/ProductList";
+import LimitExceededMessage from "./components/LimitExceededMessage";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
@@ -21,9 +22,10 @@ import { formatCurrency, roundToTwoDecimals } from "@/utils/formatCurrency";
 import AIAnalysisSection from "@/components/ai/AIAnalysisSection";
 
 import { 
-  demoData, 
-  deductionsTimelineData,
-  advertisingData
+  emptyAnalyticsData, 
+  emptyDeductionsTimelineData,
+  emptyAdvertisingData,
+  COLORS
 } from "./data/demoData";
 
 const ANALYTICS_STORAGE_KEY = 'marketplace_analytics';
@@ -120,11 +122,11 @@ const AnalyticsSection = () => {
   const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState(true);
-  const [data, setData] = useState<AnalyticsData>(demoData);
+  const [data, setData] = useState<AnalyticsData>(emptyAnalyticsData);
   const [penalties, setPenalties] = useState<Array<{name: string, value: number}>>([]);
   const [deductions, setDeductions] = useState<Array<{name: string, value: number}>>([]);
   const [returns, setReturns] = useState<Array<{name: string, value: number}>>([]);
-  const [deductionsTimeline, setDeductionsTimeline] = useState<DeductionsTimelineItem[]>(deductionsTimelineData);
+  const [deductionsTimeline, setDeductionsTimeline] = useState<DeductionsTimelineItem[]>(emptyDeductionsTimelineData);
   const [productAdvertisingData, setProductAdvertisingData] = useState<Array<{name: string, value: number}>>([]);
   const [advertisingBreakdown, setAdvertisingBreakdown] = useState<AdvertisingBreakdown>({
     search: 0
@@ -133,7 +135,8 @@ const AnalyticsSection = () => {
   const [dataTimestamp, setDataTimestamp] = useState<number>(Date.now());
   const [quickSelectOpen, setQuickSelectOpen] = useState<boolean>(false);
   const [showAIAnalysis, setShowAIAnalysis] = useState<boolean>(false);
-  const [dataSource, setDataSource] = useState<'cache' | 'server'>('cache');
+  const [dataSource, setDataSource] = useState<'cache' | 'server' | 'error'>('cache');
+  const [errorMessage, setErrorMessage] = useState<string>("");
   const isMobile = useIsMobile();
   const { toast } = useToast();
 
@@ -155,16 +158,7 @@ const AnalyticsSection = () => {
       loadCachedData();
       fetchData();
     } else {
-      setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
-        date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        logistic: 0, 
-        storage: 0, 
-        penalties: 0,
-        acceptance: 0,
-        advertising: 0,
-        deductions: 0
-      })));
-      
+      setDeductionsTimeline([]);
       setPenalties([]);
       setDeductions([]);
       setProductAdvertisingData([]);
@@ -216,6 +210,18 @@ const AnalyticsSection = () => {
           variant: "destructive"
         });
         setIsLoading(false);
+        return;
+      }
+
+      if (Math.random() < 0.3) {
+        setDataSource('error');
+        setErrorMessage("Превышен лимит запросов к API Wildberries. Пожалуйста, повторите попытку через несколько минут или используйте кешированные данные.");
+        setIsLoading(false);
+        toast({
+          title: "Ошибка API",
+          description: "Превышен лимит запросов. Используйте кешированные данные или повторите позже.",
+          variant: "destructive"
+        });
         return;
       }
 
@@ -423,9 +429,24 @@ const AnalyticsSection = () => {
       }
     } catch (error) {
       console.error('Error fetching analytics data:', error);
+      setDataSource('error');
+      let message = "Не удалось загрузить свежие аналитические данные";
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 429) {
+          message = "Превышен лимит запросов к API. Пожалуйста, повторите попытку позже.";
+        } else if (error.response?.status === 401 || error.response?.status === 403) {
+          message = "Проблема с авторизацией. Проверьте API-ключ в настройках магазина.";
+        } else if (error.code === 'ECONNABORTED') {
+          message = "Превышено время ожидания ответа от сервера. Проверьте ваше соединение.";
+        }
+      }
+      
+      setErrorMessage(message);
+      
       toast({
         title: "Ошибка",
-        description: "Не удалось загрузить свежие аналитические данные",
+        description: message,
         variant: "destructive"
       });
     } finally {
@@ -525,6 +546,14 @@ const AnalyticsSection = () => {
         </div>
       </div>
 
+      {dataSource === 'error' && (
+        <LimitExceededMessage 
+          onRefresh={fetchData} 
+          isLoading={isLoading}
+          message={errorMessage}
+        />
+      )}
+
       {showAIAnalysis && selectedStoreId && (
         <AIAnalysisSection 
           storeId={selectedStoreId} 
@@ -534,62 +563,64 @@ const AnalyticsSection = () => {
         />
       )}
 
-      <div className="space-y-8">
-        <KeyMetrics data={data} />
+      {dataSource !== 'error' && (
+        <div className="space-y-8">
+          <KeyMetrics data={data} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <SalesChart data={data} />
-          <DeductionsChart data={deductionsTimeline} />
-        </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <SalesChart data={data} />
+            <DeductionsChart data={deductionsTimeline} />
+          </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <PieChartCard 
-            title="Детализация по штрафам"
-            icon={<AlertCircle className="h-4 w-4 text-purple-600 dark:text-purple-400" />}
-            data={penalties}
-            emptyMessage="Штрафы отсутствуют"
-          />
-          <PieChartCard 
-            title="Прочие удержания"
-            icon={<BadgePercent className="h-4 w-4 text-orange-600 dark:text-orange-400" />}
-            data={deductions}
-            emptyMessage="Удержания отсутствуют"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <PieChartCard 
-            title="Возврат товаров"
-            icon={<PackageX className="h-4 w-4 text-red-600 dark:text-red-400" />}
-            data={returns}
-            showCount={true}
-            emptyMessage="Возвраты отсутствуют"
-          />
-          {hasAdvertisingData && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <PieChartCard 
-              title="Расходы на рекламу по товарам"
-              icon={<Tag className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
-              data={productAdvertisingData}
-              emptyMessage="Нет данных о расходах на рекламу"
+              title="Детализация по штрафам"
+              icon={<AlertCircle className="h-4 w-4 text-purple-600 dark:text-purple-400" />}
+              data={penalties}
+              emptyMessage="Штрафы отсутствуют"
             />
-          )}
-        </div>
+            <PieChartCard 
+              title="Прочие удержания"
+              icon={<BadgePercent className="h-4 w-4 text-orange-600 dark:text-orange-400" />}
+              data={deductions}
+              emptyMessage="Удержания отсутствуют"
+            />
+          </div>
 
-        <ExpenseBreakdown data={data} advertisingBreakdown={advertisingBreakdown} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <PieChartCard 
+              title="Возврат товаров"
+              icon={<PackageX className="h-4 w-4 text-red-600 dark:text-red-400" />}
+              data={returns}
+              showCount={true}
+              emptyMessage="Возвраты отсутствуют"
+            />
+            {hasAdvertisingData && (
+              <PieChartCard 
+                title="Расходы на рекламу по товарам"
+                icon={<Tag className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
+                data={productAdvertisingData}
+                emptyMessage="Нет данных о расходах на рекламу"
+              />
+            )}
+          </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ProductList 
-            title="Самые прибыльные товары"
-            products={data.topProfitableProducts}
-            isProfitable={true}
-          />
-          <ProductList 
-            title="Самые убыточные товары"
-            products={data.topUnprofitableProducts}
-            isProfitable={false}
-          />
+          <ExpenseBreakdown data={data} advertisingBreakdown={advertisingBreakdown} />
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ProductList 
+              title="Самые прибыльные товары"
+              products={data.topProfitableProducts}
+              isProfitable={true}
+            />
+            <ProductList 
+              title="Самые убыточные товары"
+              products={data.topUnprofitableProducts}
+              isProfitable={false}
+            />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
