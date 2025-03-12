@@ -95,7 +95,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           
           if (costPrices[nmId] && typeof costPrices[nmId] === 'number') {
             costPrice = costPrices[nmId];
-            console.log(`Найдена себестои��ость в costPrices для nmId ${nmId}: ${costPrice}`);
+            console.log(`Найдена себестоимость в costPrices для nmId ${nmId}: ${costPrice}`);
           } else {
             const product = products.find((p: any) => (Number(p.nmId) === nmId || Number(p.nmID) === nmId));
             
@@ -136,9 +136,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
             analyticsData.data.currentPeriod.expenses.costPrice = totalCost;
             
             analyticsData.data.currentPeriod.netProfit = 
-              analyticsData.data.currentPeriod.transferred - 
-              analyticsData.data.currentPeriod.expenses.total - 
-              (analyticsData.data.currentPeriod.returns || 0);
+              analyticsData.data.currentPeriod.transferred - analyticsData.data.currentPeriod.expenses.total;
             
             localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
           }
