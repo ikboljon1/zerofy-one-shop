@@ -724,17 +724,17 @@ app.get('/api/cost-price/:storeId', (req, res) => {
 
 // API для работы с данными о рекламе товаров
 app.post('/api/product-advertising', (req, res) => {
-  const { storeId, productAdvertisingData } = req.body;
+  const { storeId, userId, productAdvertisingData } = req.body;
   
   if (!storeId || !productAdvertisingData) {
     return res.status(400).json({ error: 'Необходимо указать storeId и productAdvertisingData' });
   }
 
   const timestamp = Date.now();
-  const query = `INSERT INTO product_advertising (store_id, product_advertising_data, timestamp) 
-                 VALUES (?, ?, ?)`;
+  const query = `INSERT INTO product_advertising (store_id, user_id, product_advertising_data, timestamp) 
+                 VALUES (?, ?, ?, ?)`;
   
-  db.run(query, [storeId, JSON.stringify(productAdvertisingData), timestamp], function(err) {
+  db.run(query, [storeId, userId, JSON.stringify(productAdvertisingData), timestamp], function(err) {
     if (err) {
       console.error('Error saving product advertising data:', err);
       return res.status(500).json({ error: 'Ошибка при сохранении данных о рекламе товаров' });
@@ -747,8 +747,20 @@ app.post('/api/product-advertising', (req, res) => {
 // Получение данных о рекламе товаров
 app.get('/api/product-advertising/:storeId', (req, res) => {
   const { storeId } = req.params;
+  const { userId } = req.query;
   
-  db.get('SELECT * FROM product_advertising WHERE store_id = ? ORDER BY timestamp DESC LIMIT 1', [storeId], (err, row) => {
+  let query = 'SELECT * FROM product_advertising WHERE store_id = ?';
+  let params = [storeId];
+
+  // Если передан userId, добавляем его в условие запроса
+  if (userId) {
+    query += ' AND user_id = ?';
+    params.push(userId);
+  }
+  
+  query += ' ORDER BY timestamp DESC LIMIT 1';
+  
+  db.get(query, params, (err, row) => {
     if (err) {
       console.error('Error getting product advertising data:', err);
       return res.status(500).json({ error: 'Ошибка при получении данных о рекламе товаров' });
@@ -772,7 +784,107 @@ app.get('/api/product-advertising/:storeId', (req, res) => {
   });
 });
 
+// API для управления магазинами пользователя
+app.post('/api/user-stores', (req, res) => {
+  const { userId, storeId, marketplace, storeName, apiKey, isSelected, lastFetchDate } = req.body;
+  
+  if (!userId || !storeId || !marketplace || !storeName || !apiKey) {
+    return res.status(400).json({ error: 'Необходимо указать userId, storeId, marketplace, storeName и apiKey' });
+  }
+
+  const query = `INSERT OR REPLACE INTO user_stores 
+                (user_id, store_id, marketplace, store_name, api_key, is_selected, last_fetch_date) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)`;
+  
+  db.run(query, [
+    userId, 
+    storeId, 
+    marketplace, 
+    storeName, 
+    apiKey, 
+    isSelected ? 1 : 0, 
+    lastFetchDate || new Date().toISOString()
+  ], function(err) {
+    if (err) {
+      console.error('Error saving user store:', err);
+      return res.status(500).json({ error: 'Ошибка при сохранении магазина' });
+    }
+
+    res.json({ success: true, id: this.lastID });
+  });
+});
+
+// Получение магазинов пользователя
+app.get('/api/user-stores/:userId', (req, res) => {
+  const { userId } = req.params;
+  
+  db.all('SELECT * FROM user_stores WHERE user_id = ?', [userId], (err, rows) => {
+    if (err) {
+      console.error('Error getting user stores:', err);
+      return res.status(500).json({ error: 'Ошибка при получении магазинов пользователя' });
+    }
+
+    if (!rows || rows.length === 0) {
+      return res.json([]);
+    }
+
+    const stores = rows.map(row => ({
+      id: row.store_id,
+      userId: row.user_id,
+      marketplace: row.marketplace,
+      name: row.store_name,
+      apiKey: row.api_key,
+      isSelected: row.is_selected === 1,
+      lastFetchDate: row.last_fetch_date
+    }));
+
+    res.json(stores);
+  });
+});
+
+// Обновление выбранного магазина
+app.put('/api/user-stores/:userId/select', (req, res) => {
+  const { userId } = req.params;
+  const { storeId } = req.body;
+  
+  if (!storeId) {
+    return res.status(400).json({ error: 'Необходимо указать storeId' });
+  }
+
+  // Сначала сбрасываем выбор для всех магазинов пользователя
+  db.run('UPDATE user_stores SET is_selected = 0 WHERE user_id = ?', [userId], function(err) {
+    if (err) {
+      console.error('Error resetting store selection:', err);
+      return res.status(500).json({ error: 'Ошибка при обновлении выбранного магазина' });
+    }
+
+    // Затем устанавливаем выбранный магазин
+    db.run('UPDATE user_stores SET is_selected = 1 WHERE user_id = ? AND store_id = ?', 
+      [userId, storeId], function(updateErr) {
+      if (updateErr) {
+        console.error('Error selecting store:', updateErr);
+        return res.status(500).json({ error: 'Ошибка при выборе магазина' });
+      }
+
+      res.json({ success: true });
+    });
+  });
+});
+
+// Удаление магазина пользователя
+app.delete('/api/user-stores/:userId/:storeId', (req, res) => {
+  const { userId, storeId } = req.params;
+  
+  db.run('DELETE FROM user_stores WHERE user_id = ? AND store_id = ?', [userId, storeId], function(err) {
+    if (err) {
+      console.error('Error deleting user store:', err);
+      return res.status(500).json({ error: 'Ошибка при удалении магазина' });
+    }
+
+    res.json({ success: true, deletedCount: this.changes });
+  });
+});
+
 app.listen(port, () => {
   console.log(`Сервер запущен на порту ${port}`);
 });
-

@@ -62,6 +62,10 @@ export async function saveProductAdvertisingData(storeId: string, data: any) {
       body: JSON.stringify(advertisingData),
     });
     
+    if (!response.ok) {
+      throw new Error('Failed to save product advertising data');
+    }
+    
     const result = await response.json();
     return result;
   } catch (error) {
