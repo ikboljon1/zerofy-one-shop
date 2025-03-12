@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { format, subDays, startOfWeek, startOfMonth } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,7 @@ import { CalendarIcon, Calendar as CalendarIcon2, ChevronDown, RefreshCw } from 
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-interface DateRangePickerProps {
+export interface DateRangePickerProps {
   dateFrom: Date;
   dateTo: Date;
   setDateFrom: (date: Date) => void;
@@ -44,7 +43,6 @@ const DateRangePicker = ({
       onUpdate();
     }
     
-    // Reset loading state after a short delay to show the loading indicator
     setTimeout(() => {
       setIsLoading(false);
     }, 1000);

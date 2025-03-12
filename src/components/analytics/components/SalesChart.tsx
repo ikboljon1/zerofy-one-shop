@@ -20,6 +20,9 @@ interface SalesChartProps {
       date: string;
       sales: number;
     }>;
+    currentPeriod: {
+      sales: number;
+    };
   };
 }
 

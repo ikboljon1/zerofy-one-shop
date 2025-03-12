@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from "react";
-import { fetchMarketplaceAnalytics } from "@/services/api";
+import api from "@/services/api"; // Changed import to use default export
 import { 
   KeyMetrics, 
   DateRangePicker, 
@@ -15,6 +16,34 @@ import { useToast } from "@/hooks/use-toast";
 import { eachDayOfInterval, format, subDays } from "date-fns";
 import axios from "axios";
 import { Card } from "@/components/ui/card";
+
+// Function to fetch marketplace analytics (since it's not exported from api.ts)
+const fetchMarketplaceAnalytics = async (apiKey: string, dateFrom: Date, dateTo: Date) => {
+  try {
+    // Format dates
+    const fromDate = dateFrom.toISOString().split('T')[0];
+    const toDate = dateTo.toISOString().split('T')[0];
+    
+    console.log(`Fetching analytics from ${fromDate} to ${toDate}`);
+    
+    // This would be the actual implementation - for now returning mock data
+    // You should replace this with your actual API call
+    const response = await api.get('/analytics', {
+      headers: {
+        'Authorization': apiKey
+      },
+      params: {
+        dateFrom: fromDate,
+        dateTo: toDate
+      }
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching analytics:', error);
+    throw error;
+  }
+};
 
 // Добавляем состояние для обновления себестоимости
 const AnalyticsSection = () => {
@@ -87,7 +116,7 @@ const AnalyticsSection = () => {
         const dataToCache = {
           ...data,
           dateFrom: dateRange.from.toISOString(),
-          dateTo: dateRange.to.toISOString(),
+          dateTo: dateTo.toISOString(),
           timestamp: new Date().toISOString()
         };
         localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(dataToCache));
@@ -121,8 +150,11 @@ const AnalyticsSection = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Аналитика</h2>
         <DateRangePicker 
-          dateRange={dateRange}
-          onDateRangeChange={handleDateRangeChange}
+          dateFrom={dateRange.from}
+          dateTo={dateRange.to}
+          setDateFrom={(date) => setDateRange(prev => ({ ...prev, from: date }))}
+          setDateTo={(date) => setDateRange(prev => ({ ...prev, to: date }))}
+          onApplyDateRange={fetchAnalytics}
         />
       </div>
       
@@ -146,16 +178,16 @@ const AnalyticsSection = () => {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
             <div className="md:col-span-8">
               <SalesChart 
-                data={analyticsData.data.dailySales}
-                previousPeriod={[]}
-                currentTotal={analyticsData.data.currentPeriod.sales}
-                previousTotal={0}
+                data={analyticsData.data}
               />
             </div>
             <div className="md:col-span-4">
               <PieChartCard 
-                productCategories={analyticsData.data.productSales}
-                returns={analyticsData.returns || []}
+                title="Продажи по категориям"
+                icon={<span className="text-purple-600">📊</span>}
+                data={analyticsData.data.productSales}
+                valueLabel="₽"
+                showCount={true}
               />
             </div>
           </div>
@@ -174,11 +206,7 @@ const AnalyticsSection = () => {
             unprofitableProducts={analyticsData.data.topUnprofitableProducts || []} 
           />
           
-          <ProfitabilityTips 
-            salesTotal={analyticsData.data.currentPeriod.sales}
-            profitTotal={analyticsData.data.currentPeriod.netProfit}
-            expensesTotal={analyticsData.data.currentPeriod.expenses.total}
-          />
+          <ProfitabilityTips />
         </div>
       )}
     </div>
