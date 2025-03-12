@@ -161,6 +161,15 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           }
           
           console.log(`Себестоимость рассчитана: ${formatCurrency(totalCost)}`);
+          
+          // Обновляем данные в компоненте
+          toast({
+            title: "Успешно",
+            description: `Себестоимость рассчитана: ${formatCurrency(totalCost)}`,
+          });
+          
+          // Полностью обновляем страницу, чтобы отразить изменения в KeyMetrics
+          window.location.reload();
         } else {
           toast({
             title: "Внимание",
