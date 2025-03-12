@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Package, Clock, AlertTriangle, Hourglass, LucideWrench, TrendingUp, TrendingDown, BarChart2, ShieldCheck, ArrowUpRight } from 'lucide-react';
+import { Package, Clock, AlertTriangle, Hourglass, LucideWrench, TrendingUp, TrendingDown, BarChart2, ShieldCheck, ArrowUpRight, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';

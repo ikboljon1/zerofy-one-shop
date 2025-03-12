@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Zap, ChevronRight, Users, ShieldCheck, BarChart2, Package, CircleCheck, Rocket, Clock, Settings, CreditCard, HeartHandshake, MessageSquare, ArrowRight, LineChart, PieChart, Gauge, AreaChart, TrendingUp, CheckCircle2, Calculator, Database, BellRing, ArrowUpRight, BoxSelect, Wallet, PercentSquare, BadgeDollarSign, TrendingDown, AlertTriangle, ChevronUp, BarChart3, Lightbulb, CircleDollarSign, Landmark } from "lucide-react";
+import { Zap, ChevronRight, Users, ShieldCheck, BarChart2, Package, CircleCheck, Rocket, Clock, Settings, CreditCard, HeartHandshake, MessageSquare, ArrowRight, LineChart, PieChart, Gauge, AreaChart, TrendingUp, CheckCircle, Calculator, Database, BellRing, ArrowUpRight, BoxSelect, Wallet, PercentSquare, BadgeDollarSign, TrendingDown, AlertTriangle, ChevronUp, BarChart3, Lightbulb, CircleDollarSign, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import AuthModal from "@/components/auth/AuthModal";
@@ -398,8 +397,7 @@ const LandingPage = () => {
             >
               <h2 className="text-3xl font-bold text-center mb-4 inline-block bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-500">Инновационные возможности платформы</h2>
               <p className="text-center text-muted-foreground mb-8 max-w-3xl mx-auto">
-                Мы создали комплексную экосистему инструментов для полного контроля над вашим бизнесом на маркетплейсах.
-                От глубинной аналитики до интеллектуального управления поставками — весь ваш бизнес на одной платформе.
+                От глубинной аналитики до интеллектуального управления поставками — весь ваш бизнес на одной платформе
               </p>
             </motion.div>
             
