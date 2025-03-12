@@ -49,6 +49,14 @@ export function StoreCard({
     onRefreshStats(store);
   };
 
+  // Рассчитываем чистую прибыль с учетом себестоимости, если она есть
+  const calculateNetProfit = () => {
+    if (!store.stats) return 0;
+    
+    const costPrice = store.stats.currentPeriod.expenses.costPrice || 0;
+    return store.stats.currentPeriod.netProfit - costPrice;
+  };
+
   return (
     <Card className={store.isSelected ? "border-primary" : ""}>
       <CardHeader className="pb-2">
@@ -90,11 +98,23 @@ export function StoreCard({
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Расходы:</span>
-                <span className="font-medium">{formatCurrency(store.stats.currentPeriod.expenses.total)}</span>
+                <span className="font-medium">
+                  {formatCurrency(store.stats.currentPeriod.expenses.total)}
+                </span>
               </div>
+              {store.stats.currentPeriod.expenses.costPrice > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Себестоимость:</span>
+                  <span className="font-medium text-amber-600">
+                    {formatCurrency(store.stats.currentPeriod.expenses.costPrice)}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Чистая прибыль:</span>
-                <span className="font-medium">{formatCurrency(store.stats.currentPeriod.netProfit)}</span>
+                <span className="font-medium text-green-600">
+                  {formatCurrency(calculateNetProfit())}
+                </span>
               </div>
             </>
           )}
