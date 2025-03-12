@@ -70,11 +70,13 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
   };
 
   return (
-    <Card>
+    <Card className="bg-gradient-to-br from-white to-purple-50/30 dark:from-gray-900 dark:to-purple-950/30 border-purple-100/30 dark:border-purple-800/20">
       <CardHeader>
-        <CardTitle className="flex items-center">
-          <Package className="mr-2 h-5 w-5" />
-          {title}
+        <CardTitle className="flex items-center gap-2">
+          <Package className="h-5 w-5 text-purple-500" />
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-700 to-indigo-700 dark:from-purple-400 dark:to-indigo-400">
+            {title}
+          </span>
         </CardTitle>
         <CardDescription>
           Всего заказов: {orders.length}
@@ -86,21 +88,21 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
               placeholder="Поиск заказов..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8"
+              className="pl-8 bg-white/50 dark:bg-gray-950/50 backdrop-blur-sm border-purple-100 dark:border-purple-800/30"
             />
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="rounded-md border">
+        <div className="rounded-md border border-purple-100/30 dark:border-purple-800/20 overflow-hidden bg-white/50 dark:bg-gray-950/50 backdrop-blur-sm">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="hover:bg-purple-50/50 dark:hover:bg-purple-950/50">
                 <TableHead>
                   <Button 
                     variant="ghost" 
                     onClick={() => handleSort("date")}
-                    className="flex items-center px-0"
+                    className="flex items-center px-0 text-purple-700 dark:text-purple-400"
                   >
                     <Calendar className="mr-2 h-4 w-4" />
                     Дата
@@ -143,19 +145,22 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
             <TableBody>
               {sortedOrders.length > 0 ? (
                 sortedOrders.map((order, index) => (
-                  <TableRow key={order.srid || index}>
+                  <TableRow 
+                    key={order.srid || index}
+                    className="hover:bg-purple-50/50 dark:hover:bg-purple-950/50 transition-colors"
+                  >
                     <TableCell>{formatDate(order.date)}</TableCell>
                     <TableCell>{order.supplierArticle}</TableCell>
                     <TableCell>{order.category}</TableCell>
                     <TableCell>{order.subject}</TableCell>
-                    <TableCell>{formatCurrency(order.priceWithDisc)} ₽</TableCell>
+                    <TableCell className="font-medium">{formatCurrency(order.priceWithDisc)} ₽</TableCell>
                     <TableCell>{order.warehouseName}</TableCell>
                     <TableCell>{order.regionName}</TableCell>
                     <TableCell>
                       <div className={`px-2 py-1 rounded-full text-xs font-medium inline-block ${
                         order.isCancel 
-                          ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300" 
-                          : "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300"
+                          ? "bg-red-100/80 text-red-800 dark:bg-red-900/30 dark:text-red-300" 
+                          : "bg-emerald-100/80 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
                       }`}>
                         {order.isCancel ? 'Отменен' : 'Активен'}
                       </div>
@@ -164,7 +169,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-4">
+                  <TableCell colSpan={8} className="text-center py-4 text-muted-foreground">
                     {searchTerm ? "Заказы не найдены" : "Заказов нет"}
                   </TableCell>
                 </TableRow>

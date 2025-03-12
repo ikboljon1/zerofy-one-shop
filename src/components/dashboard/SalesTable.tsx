@@ -70,11 +70,13 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales, title = "Продажи"
   const isReturn = (sale: WildberriesSale) => sale.priceWithDisc < 0;
 
   return (
-    <Card>
+    <Card className="bg-gradient-to-br from-white to-emerald-50/30 dark:from-gray-900 dark:to-emerald-950/30 border-emerald-100/30 dark:border-emerald-800/20">
       <CardHeader>
-        <CardTitle className="flex items-center">
-          <ShoppingBag className="mr-2 h-5 w-5" />
-          {title}
+        <CardTitle className="flex items-center gap-2">
+          <ShoppingBag className="h-5 w-5 text-emerald-500" />
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-700 to-green-700 dark:from-emerald-400 dark:to-green-400">
+            {title}
+          </span>
         </CardTitle>
         <CardDescription>
           Всего продаж: {sales.length}
@@ -86,16 +88,16 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales, title = "Продажи"
               placeholder="Поиск продаж..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8"
+              className="pl-8 bg-white/50 dark:bg-gray-950/50 backdrop-blur-sm border-emerald-100 dark:border-emerald-800/30"
             />
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="rounded-md border">
+        <div className="rounded-md border border-emerald-100/30 dark:border-emerald-800/20 overflow-hidden bg-white/50 dark:bg-gray-950/50 backdrop-blur-sm">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="hover:bg-emerald-50/50 dark:hover:bg-emerald-950/50">
                 <TableHead>
                   <Button 
                     variant="ghost" 
@@ -157,28 +159,35 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales, title = "Продажи"
                 sortedSales.map((sale, index) => (
                   <TableRow 
                     key={sale.saleID || index}
-                    className={isReturn(sale) ? "bg-red-50 dark:bg-red-950/20" : ""}
+                    className={`
+                      hover:bg-emerald-50/50 dark:hover:bg-emerald-950/50 transition-colors
+                      ${isReturn(sale) ? "bg-red-50/50 dark:bg-red-950/20" : ""}
+                    `}
                   >
                     <TableCell>{formatDate(sale.date)}</TableCell>
                     <TableCell>{sale.supplierArticle}</TableCell>
                     <TableCell>{sale.saleID}</TableCell>
                     <TableCell>{sale.category}</TableCell>
-                    <TableCell className={isReturn(sale) ? "text-red-600 dark:text-red-400 font-medium" : ""}>
+                    <TableCell className={`font-medium ${
+                      isReturn(sale) ? "text-red-600 dark:text-red-400" : ""
+                    }`}>
                       {formatCurrency(sale.priceWithDisc)} ₽
                     </TableCell>
-                    <TableCell className={isReturn(sale) ? "text-red-600 dark:text-red-400 font-medium" : ""}>
+                    <TableCell className={`font-medium ${
+                      isReturn(sale) ? "text-red-600 dark:text-red-400" : ""
+                    }`}>
                       {formatCurrency(sale.forPay)} ₽
                     </TableCell>
                     <TableCell>{sale.warehouseName}</TableCell>
                     <TableCell>{sale.regionName}</TableCell>
                     <TableCell>
                       {isReturn(sale) ? (
-                        <div className="flex items-center gap-1 px-2 py-1 bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300 rounded-full text-xs font-medium">
+                        <div className="flex items-center gap-1 px-2 py-1 bg-red-100/80 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded-full text-xs font-medium">
                           <PackageX className="h-3 w-3" />
                           <span>Возврат</span>
                         </div>
                       ) : (
-                        <div className="px-2 py-1 bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300 rounded-full text-xs font-medium">
+                        <div className="px-2 py-1 bg-emerald-100/80 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 rounded-full text-xs font-medium">
                           Продажа
                         </div>
                       )}
@@ -187,7 +196,7 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales, title = "Продажи"
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-4">
+                  <TableCell colSpan={9} className="text-center py-4 text-muted-foreground">
                     {searchTerm ? "Продажи не найдены" : "Продаж нет"}
                   </TableCell>
                 </TableRow>

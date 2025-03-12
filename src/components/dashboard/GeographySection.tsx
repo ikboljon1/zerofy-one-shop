@@ -125,48 +125,58 @@ const GeographySection: React.FC<GeographySectionProps> = ({
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        <Card className="bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-900 dark:to-blue-950/30 border-blue-100/30 dark:border-blue-800/20">
           <CardHeader>
             <CardTitle className="flex items-center">
-              <ShoppingBag className="mr-2 h-5 w-5" />
-              Количество проданных товаров
+              <ShoppingBag className="mr-2 h-5 w-5 text-blue-500" />
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-700 dark:from-blue-400 dark:to-indigo-400">
+                Количество проданных товаров
+              </span>
             </CardTitle>
             <CardDescription>
               Топ 5 самых продаваемых товаров по количеству
             </CardDescription>
           </CardHeader>
           <CardContent className="px-2">
-            {renderPieChart(productSalesDistribution, "count")}
-            <div className="mt-4 px-4">
-              {renderDistributionList(productSalesDistribution)}
+            <div className="bg-white/50 dark:bg-gray-950/50 backdrop-blur-sm rounded-lg p-4">
+              {renderPieChart(productSalesDistribution, "count")}
+              <div className="mt-4 px-4">
+                {renderDistributionList(productSalesDistribution)}
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-white to-purple-50/30 dark:from-gray-900 dark:to-purple-950/30 border-purple-100/30 dark:border-purple-800/20">
           <CardHeader>
             <CardTitle className="flex items-center">
-              <MapPin className="mr-2 h-5 w-5" />
-              Распределение по складам
+              <MapPin className="mr-2 h-5 w-5 text-purple-500" />
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-700 to-indigo-700 dark:from-purple-400 dark:to-indigo-400">
+                Распределение по складам
+              </span>
             </CardTitle>
             <CardDescription>
               Топ 5 складов по количеству отправленных товаров
             </CardDescription>
           </CardHeader>
           <CardContent className="px-2">
-            {renderPieChart(warehouseDistribution, "count")}
-            <div className="mt-4 px-4">
-              {renderDistributionList(warehouseDistribution)}
+            <div className="bg-white/50 dark:bg-gray-950/50 backdrop-blur-sm rounded-lg p-4">
+              {renderPieChart(warehouseDistribution, "count")}
+              <div className="mt-4 px-4">
+                {renderDistributionList(warehouseDistribution)}
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
       
-      <Card className="bg-muted/50 border-dashed">
+      <Card className="bg-gradient-to-br from-white to-gray-50/30 dark:from-gray-900 dark:to-gray-800/30 border-gray-100/30 dark:border-gray-700/20">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center">
             <Info className="mr-2 h-4 w-4 text-blue-500" />
-            Как рассчитываются данные
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-gray-700 to-gray-900 dark:from-gray-400 dark:to-gray-200">
+              Как рассчитываются данные
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-2">
