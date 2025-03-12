@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
@@ -46,6 +45,41 @@ const Dashboard = () => {
   });
 
   const [analyticsData, setAnalyticsData] = useState<any>(null);
+
+  useEffect(() => {
+    const loadCachedData = () => {
+      const selectedStore = getSelectedStore();
+      if (selectedStore) {
+        setSelectedStoreId(selectedStore.id);
+        
+        try {
+          const cachedOrdersData = localStorage.getItem(`orders_${selectedStore.id}`);
+          if (cachedOrdersData) {
+            const parsedOrdersData = JSON.parse(cachedOrdersData);
+            if (parsedOrdersData.orders) {
+              setOrders(parsedOrdersData.orders || []);
+              setWarehouseDistribution(parsedOrdersData.warehouseDistribution || []);
+              setRegionDistribution(parsedOrdersData.regionDistribution || []);
+              console.log('Cached orders data loaded:', parsedOrdersData.orders.length);
+            }
+          }
+          
+          const cachedSalesData = localStorage.getItem(`sales_${selectedStore.id}`);
+          if (cachedSalesData) {
+            const parsedSalesData = JSON.parse(cachedSalesData);
+            if (parsedSalesData.sales) {
+              setSales(parsedSalesData.sales || []);
+              console.log('Cached sales data loaded:', parsedSalesData.sales.length);
+            }
+          }
+        } catch (error) {
+          console.error('Error loading cached data:', error);
+        }
+      }
+    };
+    
+    loadCachedData();
+  }, []);
 
   const filterDataByPeriod = useCallback((date: string, period: Period) => {
     const now = new Date();
@@ -156,6 +190,9 @@ const Dashboard = () => {
         setOrders(ordersResult.orders);
         setWarehouseDistribution(ordersResult.warehouseDistribution);
         setRegionDistribution(ordersResult.regionDistribution);
+        
+        localStorage.setItem(`orders_${selectedStore.id}`, JSON.stringify(ordersResult));
+        console.log('Orders data cached:', ordersResult.orders.length);
       } else {
         const savedOrdersData = await getOrdersData(selectedStore.id);
         if (savedOrdersData) {
@@ -167,6 +204,9 @@ const Dashboard = () => {
 
       if (salesResult) {
         setSales(salesResult);
+        
+        localStorage.setItem(`sales_${selectedStore.id}`, JSON.stringify({ sales: salesResult }));
+        console.log('Sales data cached:', salesResult.length);
       } else {
         const savedSalesData = await getSalesData(selectedStore.id);
         if (savedSalesData) {
@@ -250,6 +290,20 @@ const Dashboard = () => {
           <div className={`mb-4 ${isMobile ? 'w-full' : 'flex items-center gap-4'}`}>
             <PeriodSelector value={period} onChange={setPeriod} />
             <div className="flex-grow"></div>
+            <Button 
+              onClick={fetchData} 
+              size="sm" 
+              variant="outline" 
+              className="flex items-center gap-2"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <div className="h-4 w-4" />
+              )}
+              Обновить данные
+            </Button>
           </div>
           
           {orders.length > 0 && (
@@ -269,6 +323,20 @@ const Dashboard = () => {
           <div className={`mb-4 ${isMobile ? 'w-full' : 'flex items-center gap-4'}`}>
             <PeriodSelector value={period} onChange={setPeriod} />
             <div className="flex-grow"></div>
+            <Button 
+              onClick={fetchData} 
+              size="sm" 
+              variant="outline" 
+              className="flex items-center gap-2"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <div className="h-4 w-4" />
+              )}
+              Обновить данные
+            </Button>
           </div>
           
           {sales.length > 0 && (
@@ -285,6 +353,20 @@ const Dashboard = () => {
           <div className={`mb-4 ${isMobile ? 'w-full' : 'flex items-center gap-4'}`}>
             <PeriodSelector value={period} onChange={setPeriod} />
             <div className="flex-grow"></div>
+            <Button 
+              onClick={fetchData} 
+              size="sm" 
+              variant="outline" 
+              className="flex items-center gap-2"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <div className="h-4 w-4" />
+              )}
+              Обновить данные
+            </Button>
           </div>
           <GeographySection 
             warehouseDistribution={warehouseDistribution} 
