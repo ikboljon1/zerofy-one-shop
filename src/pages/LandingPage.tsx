@@ -922,9 +922,9 @@ const LandingPage = () => {
 
       {showAuthModal && (
         <AuthModal 
-          isOpen={showAuthModal} 
+          open={showAuthModal} 
           onClose={() => setShowAuthModal(false)} 
-          initialView={authMode}
+          initialMode={authMode}
         />
       )}
     </div>
