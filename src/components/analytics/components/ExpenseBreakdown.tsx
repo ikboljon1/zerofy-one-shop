@@ -6,6 +6,7 @@ import { getCostPriceByNmId } from "@/services/api";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import LimitExceededMessage from "./LimitExceededMessage";
 
 interface ExpenseBreakdownProps {
   data: {
@@ -36,6 +37,7 @@ const ExpenseBreakdown = ({
   const [totalCostPrice, setTotalCostPrice] = useState(data.currentPeriod.expenses.costPrice || 0);
   const [isLoading, setIsLoading] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [apiLimitExceeded, setApiLimitExceeded] = useState(false);
   const {
     toast
   } = useToast();
@@ -180,14 +182,27 @@ const ExpenseBreakdown = ({
       }
     } catch (error) {
       console.error('Ошибка расчета себестоимости:', error);
-      toast({
-        title: "Ошибка",
-        description: "Произошла ошибка при расчете себестоимости товаров",
-        variant: "destructive"
-      });
+      
+      // Проверяем, является ли ошибка превышением лимита API
+      if (error instanceof Error && error.message.includes('429') || 
+          error instanceof Error && error.message.toLowerCase().includes('лимит')) {
+        setApiLimitExceeded(true);
+      } else {
+        toast({
+          title: "Ошибка",
+          description: "Произошла ошибка при расчете себестоимости товаров",
+          variant: "destructive"
+        });
+      }
     } finally {
       setIsCalculating(false);
     }
+  };
+
+  const handleRefresh = () => {
+    setApiLimitExceeded(false);
+    // Попробуем использовать кешированные данные
+    calculateCostPrice();
   };
 
   const totalExpensesWithCostPrice = data.currentPeriod.expenses.logistics + 
@@ -197,6 +212,15 @@ const ExpenseBreakdown = ({
                                     (data.currentPeriod.expenses.acceptance || 0) + 
                                     (data.currentPeriod.expenses.deductions || 0) + 
                                     totalCostPrice;
+
+  if (apiLimitExceeded) {
+    return <LimitExceededMessage 
+      onRefresh={handleRefresh} 
+      isLoading={isCalculating}
+      title="Превышен лимит запросов"
+      message="Превышен лимит запросов к API Wildberries. Мы можем использовать кешированные данные для расчета себестоимости."
+    />;
+  }
 
   return <Card className="p-4">
       <div className="flex justify-between items-center mb-4">
