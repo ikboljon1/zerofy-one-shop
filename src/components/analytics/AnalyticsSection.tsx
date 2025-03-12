@@ -133,6 +133,7 @@ const AnalyticsSection = () => {
   const [dataTimestamp, setDataTimestamp] = useState<number>(Date.now());
   const [quickSelectOpen, setQuickSelectOpen] = useState<boolean>(false);
   const [showAIAnalysis, setShowAIAnalysis] = useState<boolean>(false);
+  const [dataSource, setDataSource] = useState<'cache' | 'server'>('cache');
   const isMobile = useIsMobile();
   const { toast } = useToast();
 
@@ -148,9 +149,64 @@ const AnalyticsSection = () => {
     return store;
   };
 
+  useEffect(() => {
+    const selectedStore = getSelectedStore();
+    if (selectedStore) {
+      loadCachedData();
+      fetchData();
+    } else {
+      setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
+        date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        logistic: 0, 
+        storage: 0, 
+        penalties: 0,
+        acceptance: 0,
+        advertising: 0,
+        deductions: 0
+      })));
+      
+      setPenalties([]);
+      setDeductions([]);
+      setProductAdvertisingData([]);
+      setReturns([]);
+      setIsLoading(false);
+    }
+  }, [selectedStoreId]);
+
+  const loadCachedData = () => {
+    const selectedStore = getSelectedStore();
+    if (!selectedStore) return;
+
+    try {
+      const cachedData = getAnalyticsData(selectedStore.id);
+      if (cachedData && cachedData.data) {
+        console.log("Используем кешированные данные аналитики", cachedData);
+        setData(cachedData.data);
+        setPenalties(cachedData.penalties || []);
+        setReturns(cachedData.returns || []);
+        setDeductions(cachedData.deductions || []);
+        setDeductionsTimeline(cachedData.deductionsTimeline || []);
+        setProductAdvertisingData(cachedData.productAdvertisingData || []);
+        setAdvertisingBreakdown(cachedData.advertisingBreakdown || { search: 0 });
+        setDataTimestamp(cachedData.timestamp || Date.now());
+        setDataSource('cache');
+        setIsLoading(false);
+        
+        const now = Date.now();
+        const cacheAge = now - (cachedData.timestamp || 0);
+        const cacheExpiry = 30 * 60 * 1000;
+        
+        if (cacheAge > cacheExpiry) {
+          console.log("Кешированные данные устарели, будут загружены свежие данные");
+        }
+      }
+    } catch (error) {
+      console.error("Ошибка при загрузке кешированных данных:", error);
+    }
+  };
+
   const fetchData = async () => {
     try {
-      setIsLoading(true);
       const selectedStore = getSelectedStore();
       
       if (!selectedStore) {
@@ -329,36 +385,35 @@ const AnalyticsSection = () => {
         }
         
         setDeductionsTimeline(newDeductionsTimeline);
+        setDataSource('server');
         setDataTimestamp(Date.now());
         
+        const analyticsData = {
+          storeId: selectedStore.id,
+          dateFrom: dateFrom.toISOString(),
+          dateTo: dateTo.toISOString(),
+          data: modifiedData,
+          penalties: penaltiesData,
+          returns: returnsData,
+          deductions: deductionsData,
+          deductionsTimeline: newDeductionsTimeline,
+          productAdvertisingData: productAdvertisingData,
+          advertisingBreakdown: advertisingBreakdown,
+          timestamp: Date.now()
+        };
+        
+        localStorage.setItem(`${ANALYTICS_STORAGE_KEY}_${selectedStore.id}`, JSON.stringify(analyticsData));
+        console.log("Данные аналитики сохранены в кэш", analyticsData);
+        
         try {
-          await axios.post('http://localhost:3001/api/analytics', {
-            storeId: selectedStore.id,
-            dateFrom: dateFrom.toISOString(),
-            dateTo: dateTo.toISOString(),
-            data: modifiedData,
-            penalties: penaltiesData,
-            returns: returnsData,
-            deductions: deductionsData,
-            deductionsTimeline: newDeductionsTimeline,
-            productAdvertisingData: productAdvertisingData,
-            advertisingBreakdown: advertisingBreakdown
-          });
+          await axios.post('http://localhost:3001/api/analytics', analyticsData);
+          console.log("Данные аналитики сохранены в базу данных");
         } catch (dbError) {
           console.error('Error saving analytics to DB:', dbError);
-          localStorage.setItem(`${ANALYTICS_STORAGE_KEY}_${selectedStore.id}`, JSON.stringify({
-            storeId: selectedStore.id,
-            dateFrom: dateFrom.toISOString(),
-            dateTo: dateTo.toISOString(),
-            data: modifiedData,
-            penalties: penaltiesData,
-            returns: returnsData,
-            deductions: deductionsData,
-            deductionsTimeline: newDeductionsTimeline,
-            productAdvertisingData: productAdvertisingData,
-            advertisingBreakdown: advertisingBreakdown,
-            timestamp: Date.now()
-          }));
+          toast({
+            title: "Уведомление",
+            description: "Данные обновлены локально, но не удалось сохранить в базу данных",
+          });
         }
         
         toast({
@@ -370,55 +425,9 @@ const AnalyticsSection = () => {
       console.error('Error fetching analytics data:', error);
       toast({
         title: "Ошибка",
-        description: "Не удалось загрузить аналитические данные",
+        description: "Не удалось загрузить свежие аналитические данные",
         variant: "destructive"
       });
-      
-      try {
-        const analyticsData = await getAnalyticsData(selectedStoreId || '');
-        if (analyticsData && analyticsData.data) {
-          setData(analyticsData.data);
-          setPenalties(analyticsData.penalties);
-          setReturns(analyticsData.returns);
-          setDeductions(analyticsData.deductions);
-          setDeductionsTimeline(analyticsData.deductionsTimeline);
-          setProductAdvertisingData(analyticsData.productAdvertisingData);
-          setAdvertisingBreakdown(analyticsData.advertisingBreakdown);
-          setDataTimestamp(analyticsData.timestamp);
-        } else {
-          setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
-            date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            logistic: 0,
-            storage: 0, 
-            penalties: 0,
-            acceptance: 0,
-            advertising: 0,
-            deductions: 0
-          })));
-          
-          setPenalties([]);
-          setDeductions([]);
-          setProductAdvertisingData([]);
-          setReturns([]);
-        }
-      } catch (dbError) {
-        console.error('Error fetching analytics from DB:', dbError);
-        
-        setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
-          date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          logistic: 0,
-          storage: 0, 
-          penalties: 0,
-          acceptance: 0,
-          advertising: 0,
-          deductions: 0
-        })));
-        
-        setPenalties([]);
-        setDeductions([]);
-        setProductAdvertisingData([]);
-        setReturns([]);
-      }
     } finally {
       setIsLoading(false);
     }
@@ -454,38 +463,16 @@ const AnalyticsSection = () => {
     setTimeout(() => fetchData(), 100);
   };
 
-  useEffect(() => {
-    const selectedStore = getSelectedStore();
-    if (selectedStore) {
-      fetchData();
-    } else {
-      setDeductionsTimeline(Array.from({ length: 7 }, (_, i) => ({
-        date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        logistic: 0, 
-        storage: 0, 
-        penalties: 0,
-        acceptance: 0,
-        advertising: 0,
-        deductions: 0
-      })));
-      
-      setPenalties([]);
-      setDeductions([]);
-      setProductAdvertisingData([]);
-      setReturns([]);
-      setIsLoading(false);
-    }
-  }, [selectedStoreId]);
-
   const hasAdvertisingData = productAdvertisingData && productAdvertisingData.length > 0;
   const hasPenaltiesData = penalties && penalties.length > 0;
   const hasDeductionsData = deductions && deductions.length > 0;
 
   const handleDateChange = () => {
+    setIsLoading(true);
     fetchData();
   };
 
-  if (isLoading) {
+  if (isLoading && !data) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="flex flex-col items-center">
@@ -508,12 +495,33 @@ const AnalyticsSection = () => {
             onApplyDateRange={handleDateChange}
             onUpdate={handleDateChange}
           />
-          <Button 
-            variant="outline" 
-            onClick={() => setShowAIAnalysis(!showAIAnalysis)}
-          >
-            {showAIAnalysis ? "Скрыть AI анализ" : "Показать AI анализ"}
-          </Button>
+          <div className="flex items-center gap-3">
+            {dataSource === 'cache' && (
+              <span className="text-xs text-muted-foreground">
+                Данные из кэша от {new Date(dataTimestamp).toLocaleString('ru-RU')}
+              </span>
+            )}
+            <Button 
+              variant="outline" 
+              onClick={() => setShowAIAnalysis(!showAIAnalysis)}
+            >
+              {showAIAnalysis ? "Скрыть AI анализ" : "Показать AI анализ"}
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={fetchData}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Обновление...
+                </>
+              ) : (
+                <>Обновить данные</>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -587,4 +595,3 @@ const AnalyticsSection = () => {
 };
 
 export default AnalyticsSection;
-
