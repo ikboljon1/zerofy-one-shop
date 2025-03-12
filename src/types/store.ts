@@ -36,12 +36,33 @@ export type WildberriesResponse = {
       acceptance: number;
       advertising: number;
       deductions?: number;
+      costPrice?: number;
     };
     netProfit: number;
     acceptance: number;
     returns?: number;
     returnsAmount?: number;  // Added returnsAmount as optional property
   };
+  previousPeriod?: {
+    sales: number;
+    transferred: number;
+    expenses: {
+      total: number;
+      logistics: number;
+      storage: number;
+      penalties: number;
+      acceptance: number;
+      advertising: number;
+      deductions?: number;
+      costPrice?: number;
+    };
+    netProfit: number;
+    acceptance: number;
+    returns?: number;
+    returnsAmount?: number;  // Also adding it to previousPeriod for consistency
+  };
+  dailySales?: any[];
+  productSales?: any[];
 };
 
 // Интерфейс для возвратов по nmId, используемый в Python-скрипте

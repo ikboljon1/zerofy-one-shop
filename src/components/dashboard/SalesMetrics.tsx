@@ -23,10 +23,10 @@ const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales, storeId }) => {
   const totalProfit = sales.reduce((sum, sale) => sum + sale.forPay, 0);
   const avgSaleValue = totalSales > 0 ? totalAmount / totalSales : 0;
   
-  // Находим возвраты (продажи с отрицательной ценой)
-  const returnedItems = sales.filter(sale => sale.priceWithDisc < 0).length;
+  // Находим возвраты (продажи с отрицательной ценой или с isReturn=true)
+  const returnedItems = sales.filter(sale => sale.priceWithDisc < 0 || sale.isReturn === true).length;
   const returnedAmount = sales
-    .filter(sale => sale.priceWithDisc < 0)
+    .filter(sale => sale.priceWithDisc < 0 || sale.isReturn === true)
     .reduce((sum, sale) => sum + Math.abs(sale.priceWithDisc), 0);
   
   // Добавляем состояние для прослушивания событий обновления себестоимости
