@@ -150,7 +150,6 @@ export const useStores = (onStoreSelect?: (store: { id: string; apiKey: string }
       
       console.log("Store added successfully:", storeToAdd);
       
-      setIsOpen(false);
       toast({
         title: "Успешно",
         description: "Магазин успешно добавлен",

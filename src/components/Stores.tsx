@@ -1,3 +1,5 @@
+
+import { useState } from "react";
 import { ShoppingBag, Package2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AddStoreDialog } from "./stores/AddStoreDialog";
