@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import api from "@/services/api"; // Changed import to use default export
+import api from "@/services/api"; 
 import { 
   KeyMetrics, 
   DateRangePicker, 
@@ -47,7 +47,7 @@ const fetchMarketplaceAnalytics = async (apiKey: string, dateFrom: Date, dateTo:
 
 // Добавляем состояние для обновления себестоимости
 const AnalyticsSection = () => {
-  const [analyticsData, setAnalyticsData] = useState(null);
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [dateRange, setDateRange] = useState({
     from: subDays(new Date(), 30),
@@ -168,7 +168,7 @@ const AnalyticsSection = () => {
         </div>
       ) : null}
       
-      {analyticsData && (
+      {analyticsData && analyticsData.data && (
         <div className="space-y-4">
           <KeyMetrics 
             data={analyticsData.data} 
@@ -182,20 +182,22 @@ const AnalyticsSection = () => {
               />
             </div>
             <div className="md:col-span-4">
-              <PieChartCard 
-                title="Продажи по категориям"
-                icon={<span className="text-purple-600">📊</span>}
-                data={analyticsData.data.productSales}
-                valueLabel="₽"
-                showCount={true}
-              />
+              {analyticsData.data.productSales && (
+                <PieChartCard 
+                  title="Продажи по категориям"
+                  icon={<span className="text-purple-600">📊</span>}
+                  data={analyticsData.data.productSales}
+                  valueLabel="₽"
+                  showCount={true}
+                />
+              )}
             </div>
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <ExpenseBreakdown 
               data={analyticsData.data} 
-              advertisingBreakdown={analyticsData.data.advertisingBreakdown}
+              advertisingBreakdown={analyticsData.data.advertisingBreakdown || []}
               onCostPriceUpdate={handleCostPriceUpdate}
             />
             <DeductionsChart data={analyticsData.deductionsTimeline || []} />
