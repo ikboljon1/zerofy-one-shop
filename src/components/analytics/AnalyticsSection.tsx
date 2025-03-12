@@ -116,7 +116,7 @@ const AnalyticsSection = () => {
         const dataToCache = {
           ...data,
           dateFrom: dateRange.from.toISOString(),
-          dateTo: dateTo.toISOString(),
+          dateTo: dateRange.to.toISOString(),
           timestamp: new Date().toISOString()
         };
         localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(dataToCache));
