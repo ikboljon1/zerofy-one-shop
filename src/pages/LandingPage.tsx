@@ -316,7 +316,7 @@ const LandingPage = () => {
     finance: <div className="rounded-lg overflow-hidden border bg-card">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
         <div className="rounded-md overflow-hidden border">
-          <img src="/lovable-uploads/0a0d0dd7-b54d-4163-ba50-1ddbb5b6dd7d.png" alt="Финансовый контроль" className="w-full h-auto" />
+          <img src="/lovable-uploads/758cd31f-77d8-4fba-a4b5-6b5e48980883.png" alt="Финансовый контроль" className="w-full h-auto" />
         </div>
         <div className="flex flex-col justify-center">
           <h3 className="text-lg font-semibold mb-2">Полный финансовый контроль</h3>
