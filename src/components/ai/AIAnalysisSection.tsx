@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BrainCircuit } from "lucide-react";
 import AdvertisingAIAnalysis from "@/components/AdvertisingAIAnalysis";
@@ -33,7 +32,7 @@ const AIAnalysisSection = ({ storeId, analyticsData, dateFrom, dateTo }: AIAnaly
             </div>
           </div>
           <CardDescription>
-            Автоматический анализ данных и рекомендации по оптимизации работы магазина
+            А��томатический анализ данных и рекомендации по оптимизации работы магазина
           </CardDescription>
         </CardHeader>
         
@@ -51,16 +50,20 @@ const AIAnalysisSection = ({ storeId, analyticsData, dateFrom, dateTo }: AIAnaly
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Анализ эффективности использования складских площадей и рекомендации по оптимизации.
-                </p>
-                <AdvertisingAIAnalysis 
-                  storeId={storeId || ""}
-                  campaign={mockCampaign}
-                  dateFrom={dateFrom || new Date()} 
-                  dateTo={dateTo || new Date()}
-                  variant="card"
-                />
+                <div className="flex flex-col gap-4">
+                  <img 
+                    src="/lovable-uploads/a6565a9f-933e-4b3d-9010-dd9fd4fba5e7.png" 
+                    alt="Анализ рентабельности" 
+                    className="w-full h-auto rounded-lg"
+                  />
+                  <AdvertisingAIAnalysis 
+                    storeId={storeId || ""}
+                    campaign={mockCampaign}
+                    dateFrom={dateFrom || new Date()} 
+                    dateTo={dateTo || new Date()}
+                    variant="card"
+                  />
+                </div>
               </CardContent>
             </Card>
 
