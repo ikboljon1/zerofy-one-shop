@@ -95,14 +95,14 @@ const PieChartCard = ({
                           className="w-2 h-2 rounded-full mr-1.5" 
                           style={{ backgroundColor: COLORS[index % COLORS.length] }}
                         ></div>
-                        <span className="text-[10px]">{item.name}</span>
+                        <span className="text-[12px]">{item.name}</span>
                       </div>
                       <div className="text-right">
-                        <span className={`font-medium text-[10px] ${item.isNegative || item.value < 0 ? 'text-red-500' : ''}`}>
+                        <span className={`font-medium text-[12px] ${item.isNegative || item.value < 0 ? 'text-red-500' : ''}`}>
                           {item.isNegative || item.value < 0 ? '-' : ''}{formatCurrency(roundToTwoDecimals(Math.abs(item.value)))} {valueLabel}
                         </span>
                         {showCount && item.count !== undefined && (
-                          <div className="text-[10px] text-muted-foreground">
+                          <div className="text-[12px] text-muted-foreground">
                             Кол-во: {item.count}
                           </div>
                         )}
@@ -120,14 +120,14 @@ const PieChartCard = ({
                         className="w-2 h-2 rounded-full mr-1.5" 
                         style={{ backgroundColor: COLORS[index % COLORS.length] }}
                       ></div>
-                      <span className="text-[10px]">{item.name}</span>
+                      <span className="text-[12px]">{item.name}</span>
                     </div>
                     <div className="text-right">
-                      <span className={`font-medium text-[10px] ${item.isNegative || item.value < 0 ? 'text-red-500' : ''}`}>
+                      <span className={`font-medium text-[12px] ${item.isNegative || item.value < 0 ? 'text-red-500' : ''}`}>
                         {item.isNegative || item.value < 0 ? '-' : ''}{formatCurrency(roundToTwoDecimals(Math.abs(item.value)))} {valueLabel}
                       </span>
                       {showCount && item.count !== undefined && (
-                        <div className="text-[10px] text-muted-foreground">
+                        <div className="text-[12px] text-muted-foreground">
                           Кол-во: {item.count}
                         </div>
                       )}
