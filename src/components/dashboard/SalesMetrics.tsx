@@ -13,9 +13,10 @@ import { formatCurrency } from "@/utils/formatCurrency";
 
 interface SalesMetricsProps {
   sales: WildberriesSale[];
+  storeId?: string;
 }
 
-const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales }) => {
+const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales, storeId }) => {
   // Calculate metrics
   const totalSales = sales.length;
   const totalAmount = sales.reduce((sum, sale) => sum + sale.priceWithDisc, 0);

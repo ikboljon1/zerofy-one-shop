@@ -54,9 +54,20 @@ export function StoreCard({
     if (!store.stats) return 0;
     
     const { sales, expenses } = store.stats.currentPeriod;
-    const costPrice = expenses.costPrice || 0;
     
-    return sales - expenses.total;
+    // Fix: Get costPrice data from localStorage if it exists
+    let costPrice = 0;
+    try {
+      const costPriceData = localStorage.getItem(`costPriceMetrics_${store.id}`);
+      if (costPriceData) {
+        const parsedData = JSON.parse(costPriceData);
+        costPrice = parsedData.totalCostPrice || 0;
+      }
+    } catch (error) {
+      console.error("Error parsing cost price data:", error);
+    }
+    
+    return sales - expenses.total - costPrice;
   };
 
   return (
