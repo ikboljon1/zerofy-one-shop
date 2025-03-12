@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -52,25 +51,15 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
     if (!selectedStore) return;
 
     try {
-      // Загружаем продукты из localStorage
-      const products = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
-      if (products.length === 0) {
-        console.log("No products found in localStorage");
-        toast({
-          title: "Нет данных о товарах",
-          description: "Не найдены данные о товарах в локальном хранилище",
-          variant: "default",
-        });
-        return;
-      }
-
-      console.log(`Loaded ${products.length} products from localStorage`);
+      // Загружаем данные о себестоимости из localStorage
+      const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore.id}`) || "{}");
+      console.log("Загруженные данные о себестоимости:", costPrices);
       
       // Загружаем аналитические данные из localStorage
       const analyticsData = JSON.parse(localStorage.getItem(`marketplace_analytics_${selectedStore.id}`) || "{}");
       
       if (!analyticsData || !analyticsData.data || !analyticsData.data.productSales || analyticsData.data.productSales.length === 0) {
-        console.log("No product sales data found in analytics");
+        console.log("Нет данных о продажах товаров в аналитике");
         toast({
           title: "Нет данных о продажах",
           description: "Не найдены данные о продажах товаров в аналитике",
@@ -80,19 +69,15 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       }
       
       const productSales: ProductSale[] = analyticsData.data.productSales;
-      console.log(`Found ${productSales.length} product sales categories in analytics data:`, productSales);
+      console.log(`Найдено ${productSales.length} категорий продаж:`, productSales);
       
       // Проверяем наличие nm_id в данных о продажах
-      console.log("Анализ nm_id в данных о продажах:");
       productSales.forEach((sale, index) => {
-        console.log(`[${index}] subject_name: ${sale.subject_name}, quantity: ${sale.quantity}, nm_id:`, sale.nm_id);
+        console.log(`[${index}] Категория: ${sale.subject_name}, Количество: ${sale.quantity}, nm_id: ${sale.nm_id}`);
       });
       
-      // Проверяем формат nmId в продуктах
-      console.log("Формат nmId в первых 5 продуктах:");
-      products.slice(0, 5).forEach((product: any, index: number) => {
-        console.log(`[${index}] nmId: ${product.nmId}, тип: ${typeof product.nmId}, costPrice: ${product.costPrice}`);
-      });
+      // Загружаем продукты на случай, если costPrices не содержит данных
+      const products = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
       
       let totalCost = 0;
       let totalItems = 0;
@@ -100,54 +85,65 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       let skippedCategories = 0;
       
       for (const sale of productSales) {
-        const subjectName = sale.subject_name;
-        const quantity = sale.quantity || 0;
-        // Убедимся, что nm_id имеет правильный формат (число)
-        const nmId = sale.nm_id ? Number(sale.nm_id) : undefined;
-        
-        if (quantity <= 0) {
-          console.log(`Skipping category "${subjectName}" with zero quantity`);
+        if (!sale.nm_id) {
+          console.log(`Пропускаем категорию "${sale.subject_name}" - нет nm_id`);
+          skippedCategories++;
           continue;
         }
         
-        console.log(`Processing category: "${subjectName}", quantity: ${quantity}, nm_id: ${nmId || 'undefined'}`);
+        const quantity = sale.quantity || 0;
+        if (quantity <= 0) {
+          console.log(`Пропускаем категорию "${sale.subject_name}" с нулевым количеством`);
+          continue;
+        }
         
-        // Ищем себестоимость ТОЛЬКО по nm_id
+        const nmId = Number(sale.nm_id);
+        console.log(`Обработка товара с nmId ${nmId}, категория: "${sale.subject_name}", количество: ${quantity}`);
+        
+        // Ищем себестоимость сначала в costPrices
         let costPrice = 0;
         
-        if (nmId) {
-          console.log(`Trying to get cost price by nmId ${nmId} for category "${subjectName}"`);
-          
-          // Сначала ищем напрямую в products по nmId
+        if (costPrices[nmId] && typeof costPrices[nmId] === 'number') {
+          costPrice = costPrices[nmId];
+          console.log(`Найдена себестоимость в costPrices для nmId ${nmId}: ${costPrice}`);
+        } else {
+          // Если не нашли в costPrices, ищем в products
           const productWithNmId = products.find((p: any) => Number(p.nmId) === nmId);
           if (productWithNmId && productWithNmId.costPrice > 0) {
             costPrice = productWithNmId.costPrice;
-            console.log(`Found product directly with nmId ${nmId}: costPrice = ${costPrice}`);
-          } else {
-            // Если не нашли напрямую, используем API
-            costPrice = await getCostPriceByNmId(nmId, selectedStore.id);
-            console.log(`Result from getCostPriceByNmId for ${nmId}: ${costPrice}`);
-          }
-          
-          if (costPrice > 0) {
-            const categoryCost = costPrice * quantity;
-            totalCost += categoryCost;
-            totalItems += quantity;
-            processedCategories++;
+            console.log(`Найден товар напрямую с nmId ${nmId}: costPrice = ${costPrice}`);
             
-            console.log(`Successfully calculated for "${subjectName}": ${quantity} x ${costPrice} = ${categoryCost}`);
+            // Сохраняем найденную себестоимость в costPrices для будущего использования
+            costPrices[nmId] = costPrice;
+            localStorage.setItem(`costPrices_${selectedStore.id}`, JSON.stringify(costPrices));
           } else {
-            console.log(`Could not determine cost price for nmId ${nmId} (category "${subjectName}")`);
-            skippedCategories++;
+            // Если не нашли и тут, используем API
+            costPrice = await getCostPriceByNmId(nmId, selectedStore.id);
+            console.log(`Результат getCostPriceByNmId для ${nmId}: ${costPrice}`);
+            
+            if (costPrice > 0) {
+              // Сохраняем полученную себестоимость в costPrices
+              costPrices[nmId] = costPrice;
+              localStorage.setItem(`costPrices_${selectedStore.id}`, JSON.stringify(costPrices));
+            }
           }
+        }
+        
+        if (costPrice > 0) {
+          const categoryCost = costPrice * quantity;
+          totalCost += categoryCost;
+          totalItems += quantity;
+          processedCategories++;
+          
+          console.log(`Успешно рассчитано для "${sale.subject_name}": ${quantity} x ${costPrice} = ${categoryCost}`);
         } else {
-          console.log(`No nmId available for category "${subjectName}", skipping`);
+          console.log(`Не удалось определить себестоимость для nmId ${nmId} (категория "${sale.subject_name}")`);
           skippedCategories++;
         }
       }
       
-      console.log(`Processed ${processedCategories} categories, skipped ${skippedCategories} categories`);
-      console.log(`Total cost: ${totalCost}, Total items: ${totalItems}`);
+      console.log(`Обработано ${processedCategories} категорий, пропущено ${skippedCategories} категорий`);
+      console.log(`Общая себестоимость: ${totalCost}, Всего проданных товаров: ${totalItems}`);
       
       setTotalCostPrice(totalCost);
       setTotalSoldItems(totalItems);
@@ -158,7 +154,7 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       if (analyticsData && analyticsData.data && analyticsData.data.currentPeriod && analyticsData.data.currentPeriod.expenses) {
         analyticsData.data.currentPeriod.expenses.costPrice = totalCost;
         localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
-        console.log(`Updated analytics data with cost price: ${totalCost}`);
+        console.log(`Обновлены данные аналитики с себестоимостью: ${totalCost}`);
       }
       
       if (skippedCategories > 0) {
@@ -169,7 +165,7 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
         });
       }
     } catch (error) {
-      console.error("Error loading cost price data:", error);
+      console.error("Ошибка загрузки данных о себестоимости:", error);
       toast({
         title: "Ошибка загрузки данных",
         description: "Произошла ошибка при загрузке данных о себестоимости",

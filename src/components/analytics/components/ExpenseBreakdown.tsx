@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, Coins, ShoppingCart } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -35,156 +34,156 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
     const loadCostPrices = async () => {
       try {
         setIsLoading(true);
-        console.log('Starting cost price calculation...');
+        console.log('Начинаем расчет себестоимости...');
         
-        // Get store data from localStorage
+        // Получаем данные о магазине из localStorage
         const storeId = localStorage.getItem('selectedStoreId');
         if (!storeId) {
-          console.log('No selected store ID found');
+          console.log('Не найден ID выбранного магазина');
           setIsLoading(false);
           return;
         }
         
-        const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
-        const selectedStore = stores.find((store: any) => store.id === storeId || store.isSelected);
-        
-        if (!selectedStore || !selectedStore.apiKey) {
-          console.log('No store or API key found');
-          setIsLoading(false);
-          return;
-        }
-        
-        console.log('Selected store:', selectedStore.name, 'ID:', storeId);
-        
-        // Use existing cost price data if available
+        // Используем существующие данные о себестоимости, если они доступны
         if (data.currentPeriod.expenses.costPrice && data.currentPeriod.expenses.costPrice > 0) {
-          console.log('Using existing cost price from data:', data.currentPeriod.expenses.costPrice);
+          console.log('Используем существующую себестоимость из данных:', data.currentPeriod.expenses.costPrice);
           setTotalCostPrice(data.currentPeriod.expenses.costPrice);
           setIsLoading(false);
           return;
         }
         
-        // Load analytics data from localStorage
+        // Загружаем данные аналитики из localStorage
         const analyticsData = JSON.parse(localStorage.getItem(`marketplace_analytics_${storeId}`) || "{}");
-        console.log('Analytics data from localStorage:', !!analyticsData);
+        console.log('Данные аналитики из localStorage:', !!analyticsData);
         
-        // Check if date range is available
-        if (!analyticsData.dateFrom || !analyticsData.dateTo) {
-          console.log('No date range found in analytics data');
-          setIsLoading(false);
-          return;
-        }
-        
-        const dateFrom = new Date(analyticsData.dateFrom);
-        const dateTo = new Date(analyticsData.dateTo);
-        
-        console.log(`Date range: ${dateFrom.toISOString()} - ${dateTo.toISOString()}`);
-        
-        // Get detailed sales report with focus on nm_id
-        const result = await processSalesReport(selectedStore.apiKey, dateFrom, dateTo, storeId);
-        
-        if (result.totalCostPrice > 0) {
-          console.log('Calculated total cost price from sales report:', result.totalCostPrice);
-          setTotalCostPrice(result.totalCostPrice);
+        // Проверяем наличие данных о продажах с nmId
+        if (analyticsData?.data?.productSales) {
+          const productSales = analyticsData.data.productSales;
+          console.log(`Найдено ${productSales.length} категорий продаж:`, productSales);
           
-          // Save result to localStorage
-          if (analyticsData.data && analyticsData.data.currentPeriod && analyticsData.data.currentPeriod.expenses) {
-            analyticsData.data.currentPeriod.expenses.costPrice = result.totalCostPrice;
-            localStorage.setItem(`marketplace_analytics_${storeId}`, JSON.stringify(analyticsData));
-            console.log('Updated analytics data with cost price in localStorage');
+          // Загружаем данные о себестоимости из localStorage
+          const costPrices = JSON.parse(localStorage.getItem(`costPrices_${storeId}`) || "{}");
+          console.log('Загруженные данные о себестоимости:', costPrices);
+          
+          let totalCost = 0;
+          let processedCategories = 0;
+          
+          for (const sale of productSales) {
+            if (!sale.nm_id) {
+              console.log(`Пропускаем категорию "${sale.subject_name}" - нет nm_id`);
+              continue;
+            }
+            
+            const nmId = Number(sale.nm_id);
+            const quantity = sale.quantity || 0;
+            
+            if (quantity <= 0) {
+              console.log(`Пропускаем категорию "${sale.subject_name}" с нулевым количеством`);
+              continue;
+            }
+            
+            console.log(`Обработка товара с nmId ${nmId}, категория: "${sale.subject_name}", количество: ${quantity}`);
+            
+            // Ищем себестоимость сначала в costPrices
+            let costPrice = 0;
+            
+            if (costPrices[nmId] && typeof costPrices[nmId] === 'number') {
+              costPrice = costPrices[nmId];
+              console.log(`Найдена себестоимость в costPrices для nmId ${nmId}: ${costPrice}`);
+            } else {
+              // Если не нашли в costPrices, ищем в products
+              const products = JSON.parse(localStorage.getItem(`products_${storeId}`) || "[]");
+              const product = products.find((p: any) => Number(p.nmId) === nmId);
+              
+              if (product && product.costPrice > 0) {
+                costPrice = product.costPrice;
+                console.log(`Найден товар напрямую с nmId ${nmId}: costPrice = ${costPrice}`);
+                
+                // Сохраняем найденную себестоимость в costPrices
+                costPrices[nmId] = costPrice;
+                localStorage.setItem(`costPrices_${storeId}`, JSON.stringify(costPrices));
+              } else {
+                // Если не нашли и тут, используем API
+                costPrice = await getCostPriceByNmId(nmId, storeId);
+                console.log(`Результат getCostPriceByNmId для ${nmId}: ${costPrice}`);
+              }
+            }
+            
+            if (costPrice > 0) {
+              const categoryCost = costPrice * quantity;
+              totalCost += categoryCost;
+              processedCategories++;
+              
+              console.log(`Успешно рассчитано для "${sale.subject_name}": ${quantity} x ${costPrice} = ${categoryCost}`);
+            } else {
+              console.log(`Не удалось определить себестоимость для nmId ${nmId} (категория "${sale.subject_name}")`);
+            }
           }
           
-          toast({
-            title: "Себестоимость рассчитана",
-            description: `Общая себестоимость проданных товаров: ${formatCurrency(result.totalCostPrice)}`,
-          });
-        } else {
-          console.log('Could not calculate cost price from sales report, trying alternative method...');
+          console.log(`Обработано ${processedCategories} категорий из ${productSales.length}`);
+          console.log(`Общая себестоимость: ${totalCost}`);
           
-          // Попробуем рассчитать себестоимость на основе имеющихся данных о продажах, 
-          // но только для тех продаж, где есть nm_id
-          if (analyticsData?.data?.dailySales) {
-            let allSales: any[] = [];
-            for (const day of analyticsData.data.dailySales) {
-              if (day.sales && Array.isArray(day.sales)) {
-                console.log(`Found ${day.sales.length} sales for day ${day.date}`);
-                allSales = [...allSales, ...day.sales];
-              }
+          if (totalCost > 0) {
+            setTotalCostPrice(totalCost);
+            
+            // Сохраняем результат в localStorage
+            if (analyticsData.data && analyticsData.data.currentPeriod && analyticsData.data.currentPeriod.expenses) {
+              analyticsData.data.currentPeriod.expenses.costPrice = totalCost;
+              localStorage.setItem(`marketplace_analytics_${storeId}`, JSON.stringify(analyticsData));
+              console.log('Обновлены данные аналитики с себестоимостью в localStorage');
             }
             
-            console.log(`Total sales items collected: ${allSales.length}`);
-            
-            if (allSales.length > 0) {
-              // Фильтруем продажи только с nm_id
-              const salesWithNmId = allSales.filter(item => 'nmId' in item || 'nm_id' in item);
-              console.log(`Sales with nmId: ${salesWithNmId.length} out of ${allSales.length}`);
-              
-              if (salesWithNmId.length > 0) {
-                let totalCost = 0;
-                let processedItems = 0;
-                
-                // Получаем данные продуктов для быстрого поиска
-                const products = JSON.parse(localStorage.getItem(`products_${storeId}`) || "[]");
-                const costPrices = JSON.parse(localStorage.getItem(`costPrices_${storeId}`) || "{}");
-                
-                for (const sale of salesWithNmId) {
-                  const nmId = Number(sale.nmId || sale.nm_id);
-                  const quantity = Math.abs(sale.quantity || 1);
-                  
-                  let costPrice = 0;
-                  
-                  // Сначала проверим в costPrices
-                  if (costPrices[nmId]) {
-                    costPrice = costPrices[nmId];
-                    console.log(`Found cost price in costPrices for nmId ${nmId}: ${costPrice}`);
-                  }
-                  // Затем в products
-                  else {
-                    const product = products.find((p: any) => Number(p.nmId) === nmId);
-                    if (product && product.costPrice) {
-                      costPrice = product.costPrice;
-                      console.log(`Found cost price in products for nmId ${nmId}: ${costPrice}`);
-                    }
-                    // Наконец, через API
-                    else {
-                      costPrice = await getCostPriceByNmId(nmId, storeId);
-                      console.log(`Retrieved cost price via API for nmId ${nmId}: ${costPrice}`);
-                    }
-                  }
-                  
-                  if (costPrice > 0) {
-                    const itemCost = costPrice * quantity;
-                    totalCost += itemCost;
-                    processedItems++;
-                    console.log(`Added cost for nmId ${nmId}: ${costPrice} x ${quantity} = ${itemCost}`);
-                  }
-                }
-                
-                console.log(`Calculated total cost: ${totalCost} for ${processedItems} items`);
-                
-                if (totalCost > 0) {
-                  setTotalCostPrice(totalCost);
-                  
-                  // Save result to localStorage
-                  if (analyticsData.data && analyticsData.data.currentPeriod && analyticsData.data.currentPeriod.expenses) {
-                    analyticsData.data.currentPeriod.expenses.costPrice = totalCost;
-                    localStorage.setItem(`marketplace_analytics_${storeId}`, JSON.stringify(analyticsData));
-                    console.log('Updated analytics data with cost price in localStorage');
-                  }
-                  
-                  toast({
-                    title: "Себестоимость рассчитана",
-                    description: `Общая себестоимость проданных товаров: ${formatCurrency(totalCost)}`,
-                  });
-                }
-              }
-            }
+            toast({
+              title: "Себестоимость рассчитана",
+              description: `Общая себестоимость проданных товаров: ${formatCurrency(totalCost)}`,
+            });
           } else {
-            console.log('No daily sales data found in localStorage');
+            console.log('Не удалось рассчитать себестоимость по данным productSales');
+            
+            // Если не удалось рассчитать по productSales, используем метод с processSalesReport
+            const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
+            const selectedStore = stores.find((store: any) => store.id === storeId || store.isSelected);
+            
+            if (!selectedStore || !selectedStore.apiKey) {
+              console.log('Не найден магазин или API-ключ');
+              setIsLoading(false);
+              return;
+            }
+            
+            if (!analyticsData.dateFrom || !analyticsData.dateTo) {
+              console.log('Не найден диапазон дат в данных аналитики');
+              setIsLoading(false);
+              return;
+            }
+            
+            const dateFrom = new Date(analyticsData.dateFrom);
+            const dateTo = new Date(analyticsData.dateTo);
+            
+            console.log(`Диапазон дат: ${dateFrom.toISOString()} - ${dateTo.toISOString()}`);
+            
+            // Получаем детальный отчет о продажах с фокусом на nm_id
+            const result = await processSalesReport(selectedStore.apiKey, dateFrom, dateTo, storeId);
+            
+            if (result.totalCostPrice > 0) {
+              console.log('Рассчитана общая себестоимость из отчета о продажах:', result.totalCostPrice);
+              setTotalCostPrice(result.totalCostPrice);
+              
+              // Сохраняем результат в localStorage
+              if (analyticsData.data && analyticsData.data.currentPeriod && analyticsData.data.currentPeriod.expenses) {
+                analyticsData.data.currentPeriod.expenses.costPrice = result.totalCostPrice;
+                localStorage.setItem(`marketplace_analytics_${storeId}`, JSON.stringify(analyticsData));
+                console.log('Обновлены данные аналитики с себестоимостью в localStorage');
+              }
+              
+              toast({
+                title: "Себестоимость рассчитана",
+                description: `Общая себестоимость проданных товаров: ${formatCurrency(result.totalCostPrice)}`,
+              });
+            }
           }
         }
       } catch (error) {
-        console.error('Error loading cost prices:', error);
+        console.error('Ошибка загрузки себестоимости:', error);
         toast({
           title: "Ошибка",
           description: "Не удалось рассчитать себестоимость товаров",
@@ -198,6 +197,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
     loadCostPrices();
   }, [data]);
 
+  
   // Используем общую сумму расходов для расчета процентов
   const totalExpenses = data.currentPeriod.expenses.total + totalCostPrice;
 
