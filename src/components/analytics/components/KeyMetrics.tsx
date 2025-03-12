@@ -25,17 +25,31 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
   const [totalExpenses, setTotalExpenses] = useState(data.currentPeriod.expenses.total);
   
   useEffect(() => {
-    // Если costPrice определен, учитываем его в чистой прибыли
-    const costPrice = data.currentPeriod.expenses.costPrice || 0;
+    // Обновляем состояние с новыми данными, когда они изменяются
+    setTotalExpenses(data.currentPeriod.expenses.total);
+    setNetProfit(data.currentPeriod.netProfit);
     
-    // Проверяем, включена ли уже себестоимость в общие расходы
-    // Если нет, добавляем ее к общим расходам и вычитаем из чистой прибыли
-    const updatedExpenses = data.currentPeriod.expenses.total;
-    setTotalExpenses(updatedExpenses);
+    // Слушаем событие обновления себестоимости
+    const handleCostPriceUpdate = () => {
+      // Обновим данные из localStorage для текущего выбранного магазина
+      const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
+      const selectedStore = stores.find((store: any) => store.isSelected);
+      
+      if (selectedStore) {
+        const analyticsData = JSON.parse(localStorage.getItem(`marketplace_analytics_${selectedStore.id}`) || "{}");
+        if (analyticsData?.data?.currentPeriod) {
+          // Обновляем данные в компоненте
+          setTotalExpenses(analyticsData.data.currentPeriod.expenses.total);
+          setNetProfit(analyticsData.data.currentPeriod.netProfit);
+        }
+      }
+    };
     
-    // Чистая прибыль = продажи - общие расходы
-    const updatedNetProfit = data.currentPeriod.sales - updatedExpenses;
-    setNetProfit(updatedNetProfit);
+    window.addEventListener('costPriceUpdated', handleCostPriceUpdate);
+    
+    return () => {
+      window.removeEventListener('costPriceUpdated', handleCostPriceUpdate);
+    };
   }, [data]);
   
   return (

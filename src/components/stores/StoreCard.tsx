@@ -49,6 +49,16 @@ export function StoreCard({
     onRefreshStats(store);
   };
 
+  // Рассчитываем чистую прибыль с учетом себестоимости (если она указана)
+  const calculateNetProfit = () => {
+    if (!store.stats) return 0;
+    
+    const { sales, expenses } = store.stats.currentPeriod;
+    const costPrice = expenses.costPrice || 0;
+    
+    return sales - expenses.total;
+  };
+
   return (
     <Card className={store.isSelected ? "border-primary" : ""}>
       <CardHeader className="pb-2">
@@ -94,7 +104,7 @@ export function StoreCard({
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Чистая прибыль:</span>
-                <span className="font-medium">{formatCurrency(store.stats.currentPeriod.netProfit)}</span>
+                <span className="font-medium">{formatCurrency(calculateNetProfit())}</span>
               </div>
             </>
           )}

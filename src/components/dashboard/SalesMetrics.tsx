@@ -1,4 +1,5 @@
-import React from "react";
+
+import React, { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -21,6 +22,22 @@ const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales }) => {
   const totalProfit = sales.reduce((sum, sale) => sum + sale.forPay, 0);
   const avgSaleValue = totalSales > 0 ? totalAmount / totalSales : 0;
   const returnedItems = sales.filter(sale => sale.priceWithDisc < 0).length; // Возвраты имеют отрицательную цену
+  
+  // Добавляем состояние для прослушивания событий обновления себестоимости
+  const [refreshKey, setRefreshKey] = useState(0);
+  
+  useEffect(() => {
+    const handleCostPriceUpdate = () => {
+      // Просто вызываем ререндер компонента
+      setRefreshKey(prev => prev + 1);
+    };
+    
+    window.addEventListener('costPriceUpdated', handleCostPriceUpdate);
+    
+    return () => {
+      window.removeEventListener('costPriceUpdated', handleCostPriceUpdate);
+    };
+  }, []);
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">

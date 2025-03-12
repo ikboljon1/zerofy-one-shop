@@ -128,13 +128,20 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           setTotalCostPrice(totalCost);
           
           if (analyticsData.data && analyticsData.data.currentPeriod && analyticsData.data.currentPeriod.expenses) {
+            // Важное изменение: сохраняем предыдущую общую сумму без себестоимости
+            const previousTotal = analyticsData.data.currentPeriod.expenses.total || 0;
+            const previousCostPrice = analyticsData.data.currentPeriod.expenses.costPrice || 0;
+            
+            // Обновляем общие расходы, вычитая предыдущую себестоимость (если была) и добавляя новую
+            analyticsData.data.currentPeriod.expenses.total = 
+              previousTotal - previousCostPrice + totalCost;
+            
+            // Сохраняем новую себестоимость
             analyticsData.data.currentPeriod.expenses.costPrice = totalCost;
             
-            // Добавляем себестоимость в общие удержания
-            analyticsData.data.currentPeriod.expenses.total += totalCost;
-            
-            // Обновляем чистую прибыль с учетом себестоимости
-            analyticsData.data.currentPeriod.netProfit = analyticsData.data.currentPeriod.sales - analyticsData.data.currentPeriod.expenses.total;
+            // Обновляем чистую прибыль
+            analyticsData.data.currentPeriod.netProfit = 
+              analyticsData.data.currentPeriod.sales - analyticsData.data.currentPeriod.expenses.total;
             
             localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
             console.log('Обновлены данные аналитики с себестоимостью и чистой прибылью в localStorage');
@@ -168,8 +175,14 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
             description: `Себестоимость рассчитана: ${formatCurrency(totalCost)}`,
           });
           
-          // Полностью обновляем страницу, чтобы отразить изменения в KeyMetrics
-          window.location.reload();
+          // ВАЖНОЕ ИЗМЕНЕНИЕ: вместо перезагрузки страницы, отправляем событие на обновление компонентов
+          window.dispatchEvent(new CustomEvent('costPriceUpdated', {
+            detail: {
+              storeId: selectedStore.id,
+              costPrice: totalCost,
+              timestamp: Date.now()
+            }
+          }));
         } else {
           toast({
             title: "Внимание",
