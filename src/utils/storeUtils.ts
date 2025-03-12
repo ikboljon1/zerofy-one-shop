@@ -303,24 +303,7 @@ export const getProductProfitabilityData = (storeId: string) => {
 export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
   if (forceRefresh) {
     console.log('Forced refresh requested, returning default structure');
-    return {
-      data: null,
-      penalties: [],
-      returns: [],
-      deductions: [],
-      deductionsTimeline: Array.from({ length: 7 }, (_, i) => ({
-        date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        logistic: 0,
-        storage: 0, 
-        penalties: 0,
-        acceptance: 0,
-        advertising: 0,
-        deductions: 0
-      })),
-      productAdvertisingData: [],
-      advertisingBreakdown: { search: 0 },
-      timestamp: Date.now()
-    };
+    return initializeDefaultAnalyticsData();
   }
   
   try {
@@ -337,15 +320,7 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
         
         if (!parsedData.deductionsTimeline || !Array.isArray(parsedData.deductionsTimeline) || parsedData.deductionsTimeline.length === 0) {
           console.log("Creating default deductionsTimeline data");
-          parsedData.deductionsTimeline = Array.from({ length: 7 }, (_, i) => ({
-            date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            logistic: 0,
-            storage: 0, 
-            penalties: 0,
-            acceptance: 0,
-            advertising: 0,
-            deductions: 0
-          }));
+          parsedData.deductionsTimeline = generateDefaultTimelineData();
         } else {
           parsedData.deductionsTimeline = parsedData.deductionsTimeline.map((item: any) => ({
             date: item.date || new Date().toISOString().split('T')[0],
@@ -362,16 +337,18 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
           parsedData.penalties = [];
         }
         
-        if (!parsedData.returns || !Array.isArray(parsedData.returns)) {
-          parsedData.returns = [];
+        if (!parsedData.returns || !Array.isArray(parsedData.returns) || parsedData.returns.length === 0) {
+          const { getDefaultReturnsData } = require('@/components/analytics/data/productAdvertisingData');
+          parsedData.returns = getDefaultReturnsData();
         }
         
         if (!parsedData.deductions || !Array.isArray(parsedData.deductions)) {
           parsedData.deductions = [];
         }
         
-        if (!parsedData.productAdvertisingData || !Array.isArray(parsedData.productAdvertisingData)) {
-          parsedData.productAdvertisingData = [];
+        if (!parsedData.productAdvertisingData || !Array.isArray(parsedData.productAdvertisingData) || parsedData.productAdvertisingData.length === 0) {
+          const { getDefaultProductAdvertisingData } = require('@/components/analytics/data/productAdvertisingData');
+          parsedData.productAdvertisingData = getDefaultProductAdvertisingData();
         }
         
         if (!parsedData.advertisingBreakdown) {
@@ -390,60 +367,82 @@ export const getAnalyticsData = (storeId: string, forceRefresh?: boolean) => {
       console.error('Error parsing localStorage analytics data:', localError);
     }
     
-    axios.get(`http://localhost:3001/api/analytics/${storeId}`)
-      .then(response => {
-        if (response.data) {
-          const parsedData = {
-            data: response.data.data,
-            penalties: response.data.penalties || [],
-            returns: response.data.returns || [],
-            deductions: response.data.deductions || [],
-            deductionsTimeline: response.data.deductions_timeline || [],
-            productAdvertisingData: response.data.product_advertising_data || [],
-            advertisingBreakdown: response.data.advertising_breakdown || { search: 0 },
-            timestamp: response.data.timestamp
-          };
-          
-          if (!parsedData.deductionsTimeline || !Array.isArray(parsedData.deductionsTimeline) || parsedData.deductionsTimeline.length === 0) {
-            parsedData.deductionsTimeline = Array.from({ length: 7 }, (_, i) => ({
-              date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-              logistic: 0,
-              storage: 0, 
-              penalties: 0,
-              acceptance: 0,
-              advertising: 0,
-              deductions: 0
-            }));
-          }
-          
-          localStorage.setItem(`marketplace_analytics_${storeId}`, JSON.stringify(parsedData));
-          return parsedData;
-        }
-        return null;
-      })
-      .catch(error => {
-        console.error('Error fetching analytics data from DB:', error);
-        return null;
-      });
+    fetchAndCacheAnalyticsData(storeId);
+    
+    return initializeDefaultAnalyticsData();
   } catch (error) {
     console.error('Error in getAnalyticsData:', error);
   }
   
+  return initializeDefaultAnalyticsData();
+};
+
+const fetchAndCacheAnalyticsData = async (storeId: string) => {
+  try {
+    const response = await axios.get(`http://localhost:3001/api/analytics/${storeId}`);
+    if (response.data) {
+      const parsedData = {
+        data: response.data.data,
+        penalties: response.data.penalties || [],
+        returns: response.data.returns || [],
+        deductions: response.data.deductions || [],
+        deductionsTimeline: response.data.deductions_timeline || [],
+        productAdvertisingData: response.data.product_advertising_data || [],
+        advertisingBreakdown: response.data.advertising_breakdown || { search: 0 },
+        timestamp: response.data.timestamp
+      };
+      
+      if (!parsedData.deductionsTimeline || !Array.isArray(parsedData.deductionsTimeline) || parsedData.deductionsTimeline.length === 0) {
+        parsedData.deductionsTimeline = generateDefaultTimelineData();
+      }
+      
+      if (!parsedData.returns || parsedData.returns.length === 0) {
+        const { getDefaultReturnsData } = require('@/components/analytics/data/productAdvertisingData');
+        parsedData.returns = getDefaultReturnsData();
+      }
+      
+      if (!parsedData.productAdvertisingData || parsedData.productAdvertisingData.length === 0) {
+        const { getDefaultProductAdvertisingData } = require('@/components/analytics/data/productAdvertisingData');
+        parsedData.productAdvertisingData = getDefaultProductAdvertisingData();
+      }
+      
+      localStorage.setItem(`marketplace_analytics_${storeId}`, JSON.stringify(parsedData));
+      console.log('Analytics data cached successfully');
+      
+      window.dispatchEvent(new CustomEvent('analytics-data-updated', { 
+        detail: { storeId, timestamp: Date.now() } 
+      }));
+      
+      return parsedData;
+    }
+  } catch (error) {
+    console.error('Error fetching analytics data from DB:', error);
+  }
+  return null;
+};
+
+const generateDefaultTimelineData = () => {
+  return Array.from({ length: 7 }, (_, i) => ({
+    date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    logistic: 0,
+    storage: 0, 
+    penalties: 0,
+    acceptance: 0,
+    advertising: 0,
+    deductions: 0
+  }));
+};
+
+const initializeDefaultAnalyticsData = () => {
+  const { getDefaultProductAdvertisingData, getDefaultReturnsData } = require('@/components/analytics/data/productAdvertisingData');
+  
   return {
     data: null,
     penalties: [],
-    returns: [],
+    returns: getDefaultReturnsData(),
     deductions: [],
-    deductionsTimeline: Array.from({ length: 7 }, (_, i) => ({
-      date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      logistic: 0,
-      storage: 0, 
-      penalties: 0,
-      acceptance: 0,
-      advertising: 0,
-      deductions: 0
-    })),
-    productAdvertisingData: [],
+    deductionsTimeline: generateDefaultTimelineData(),
+    productAdvertisingData: getDefaultProductAdvertisingData(),
     advertisingBreakdown: { search: 0 },
     timestamp: Date.now()
   };

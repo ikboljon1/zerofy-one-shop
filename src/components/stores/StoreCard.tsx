@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2 } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { useEffect, useState } from "react";
 
 interface StoreCardProps {
   store: Store;
@@ -23,6 +24,26 @@ export function StoreCard({
   isLoading,
   canDelete = true
 }: StoreCardProps) {
+  const [netProfit, setNetProfit] = useState(0);
+  
+  useEffect(() => {
+    // Calculate initial net profit
+    setNetProfit(calculateNetProfit());
+    
+    // Listen for cost price updates
+    const handleCostPriceUpdate = () => {
+      setNetProfit(calculateNetProfit());
+    };
+    
+    window.addEventListener('costPriceUpdated', handleCostPriceUpdate);
+    window.addEventListener('analytics-data-updated', handleCostPriceUpdate);
+    
+    return () => {
+      window.removeEventListener('costPriceUpdated', handleCostPriceUpdate);
+      window.removeEventListener('analytics-data-updated', handleCostPriceUpdate);
+    };
+  }, [store]);
+
   // Modified the handleSelectionChange function to prevent redundant selections
   const handleSelectionChange = () => {
     // Only allow selecting a store, not deselecting it
@@ -115,7 +136,7 @@ export function StoreCard({
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Чистая прибыль:</span>
-                <span className="font-medium">{formatCurrency(calculateNetProfit())}</span>
+                <span className="font-medium">{formatCurrency(netProfit)}</span>
               </div>
             </>
           )}
