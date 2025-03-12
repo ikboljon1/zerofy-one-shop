@@ -59,7 +59,7 @@ const LandingPage = () => {
   }, {
     icon: <Calculator className="h-6 w-6 text-primary" />,
     title: "Расчет рентабельности",
-    description: "Мгновенно оцениваем прибыльность каждого товара с учетом всех ��крытых расходов маркетплейсов."
+    description: "Мгновенно оцениваем прибыльность каждого товара с учетом всех скрытых расхо��ов маркетплейсов."
   }, {
     icon: <ShieldCheck className="h-6 w-6 text-primary" />,
     title: "Защита данных",
@@ -150,7 +150,7 @@ const LandingPage = () => {
   };
   const pricingInsight = {
     title: "Оптимизация ценообразования",
-    description: "ИИ-модел�� рассчитала идеальную цену для максимизации прибыли:",
+    description: "ИИ-модель рассчитала идеальную цену для максимизации прибыли:",
     values: [{
       label: "Текущая цена",
       value: "2 490 ₽"
@@ -196,7 +196,7 @@ const LandingPage = () => {
     author: "Сергей К.",
     company: "ТехноМаркет"
   }, {
-    quote: "Благодаря интеллектуальной системе планирования поставок Zerofy, мы сократили складские издержки на 22% и полностью избавились от проблемы неликвидов. При этом доступность товаров выросла до 98%. Фантастичный результат!",
+    quote: "Благодаря интеллектуальной системе планирования поставок Zerofy, мы сократили складские издержки на 22% и полностью избавились от проблемы неликвидов. При этом доступность товаров выросла до 98%. Фантастиче��кий результат!",
     author: "Елена В.",
     company: "Детские игрушки 'Радость'"
   }];
@@ -224,6 +224,11 @@ const LandingPage = () => {
   
   const demoContent = {
     analytics: <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+        <img 
+          src="/lovable-uploads/84016c72-9b0f-4155-a959-56497d632524.png" 
+          alt="Аналитика продаж" 
+          className="w-full h-auto max-w-md rounded-md border shadow-sm" 
+        />
         <div className="space-y-4">
           <h3 className="font-semibold text-xl">Всесторонняя аналитика продаж</h3>
           <p className="text-muted-foreground">
@@ -249,18 +254,6 @@ const LandingPage = () => {
               <span>Детализация по товарам, категориям и клиентам</span>
             </li>
           </ul>
-        </div>
-        <div className="grid grid-cols-1 gap-4">
-          <img 
-            src="/lovable-uploads/42404964-533e-45d7-a4d0-a4be679962cd.png" 
-            alt="Структура удержаний по дням" 
-            className="w-full h-auto rounded-md border shadow-sm" 
-          />
-          <img 
-            src="/lovable-uploads/5014bd9f-ee06-4894-98d1-49a98e034243.png" 
-            alt="Аналитика продаж" 
-            className="w-full h-auto rounded-md border shadow-sm" 
-          />
         </div>
       </div>,
       
@@ -352,7 +345,7 @@ const LandingPage = () => {
       
     finance: <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
         <img 
-          src="/lovable-uploads/a5384b91-770a-4aaa-b708-67429a45ef48.png" 
+          src="/lovable-uploads/0a0d0dd7-b54d-4163-ba50-1ddbb5b6dd7d.png" 
           alt="Финансовый контроль" 
           className="w-full h-auto max-w-md rounded-md border shadow-sm" 
         />
