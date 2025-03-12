@@ -1,6 +1,6 @@
 
 import { Card } from "@/components/ui/card";
-import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, Coins, ShoppingCart, Calculator, RefreshCw } from "lucide-react";
+import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, Coins, ShoppingCart, Calculator } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { getCostPriceByNmId } from "@/services/api";
 import { useEffect, useState } from "react";
@@ -37,27 +37,6 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
     // Обновляем себестоимость из входных данных при их изменении
     setTotalCostPrice(data.currentPeriod.expenses.costPrice || 0);
   }, [data]);
-
-  // Загрузка данных из кэша при монтировании компонента
-  useEffect(() => {
-    try {
-      const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
-      const selectedStore = stores.find((store: any) => store.isSelected);
-      
-      if (selectedStore) {
-        // Получаем сохраненную себестоимость из локального хранилища
-        const analyticsData = JSON.parse(localStorage.getItem(`marketplace_analytics_${selectedStore.id}`) || "{}");
-        
-        if (analyticsData?.data?.currentPeriod?.expenses?.costPrice) {
-          const cachedCostPrice = analyticsData.data.currentPeriod.expenses.costPrice;
-          console.log('Loaded cost price from cache:', cachedCostPrice);
-          setTotalCostPrice(cachedCostPrice);
-        }
-      }
-    } catch (error) {
-      console.error('Ошибка при загрузке себестоимости из кэша:', error);
-    }
-  }, []);
 
   const calculateCostPrice = async () => {
     try {
@@ -229,8 +208,8 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
         >
           {isCalculating ? (
             <>
-              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-              <span>Расчет себестоимости...</span>
+              <div className="h-3 w-3 animate-spin rounded-full border-b-2 border-current"></div>
+              <span>Расчет...</span>
             </>
           ) : (
             <>

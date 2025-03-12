@@ -1,16 +1,14 @@
-import React, { useState, useMemo, useEffect } from 'react';
+
+import React, { useState, useMemo } from 'react';
 import { WarehouseRemainItem, WarehouseEfficiency } from '@/types/supplies';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
 import { 
   PackageIcon, TruckIcon, ArrowLeftRight, Search, Package, Truck, 
-  Warehouse, Package2, BarChart3, TrendingUp, Clock, BadgeCheck, Award,
-  RefreshCw 
+  Warehouse, Package2, BarChart3, TrendingUp, Clock, BadgeCheck, Award 
 } from 'lucide-react';
 import { BarChart, ResponsiveContainer, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, PieChart, Pie, Legend, LineChart, Line } from 'recharts';
 import { formatCurrency } from '@/utils/formatCurrency';
@@ -23,102 +21,30 @@ import {
 interface WarehouseRemainsProps {
   data: WarehouseRemainItem[];
   isLoading: boolean;
-  onRefresh?: () => Promise<void>;
 }
 
 const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1', '#EF4444', '#14B8A6', '#F97316'];
 
-const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading, onRefresh }) => {
+const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
-  const [localData, setLocalData] = useState<WarehouseRemainItem[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
-  const { toast } = useToast();
   
-  // Загрузка данных из localStorage при монтировании
-  useEffect(() => {
-    const loadLocalData = () => {
-      try {
-        const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
-        const selectedStore = stores.find((store: any) => store.isSelected);
-        
-        if (selectedStore) {
-          const cachedData = localStorage.getItem(`warehouse_remains_${selectedStore.id}`);
-          if (cachedData) {
-            const parsedData = JSON.parse(cachedData);
-            setLocalData(parsedData);
-            console.log('Loaded warehouse data from cache:', parsedData.length);
-          }
-        }
-      } catch (error) {
-        console.error('Ошибка при загрузке данных из кэша:', error);
-      }
-    };
-    
-    loadLocalData();
-  }, []);
-  
-  // Обновляем локальные данные при изменении props
-  useEffect(() => {
-    if (data && data.length > 0) {
-      setLocalData(data);
-      
-      // Сохраняем данные в localStorage
-      try {
-        const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
-        const selectedStore = stores.find((store: any) => store.isSelected);
-        
-        if (selectedStore) {
-          localStorage.setItem(`warehouse_remains_${selectedStore.id}`, JSON.stringify(data));
-          console.log('Warehouse data saved to cache:', data.length);
-        }
-      } catch (error) {
-        console.error('Ошибка при сохранении данных в кэш:', error);
-      }
-    }
-  }, [data]);
-  
-  // Используем локальные данные или данные из props
-  const displayData = localData.length > 0 ? localData : data;
-  
-  const filteredData = displayData.filter(item => 
+  const filteredData = data.filter(item => 
     item.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.subjectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.vendorCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.barcode.includes(searchTerm)
   );
   
-  const handleRefresh = async () => {
-    if (onRefresh) {
-      try {
-        setRefreshing(true);
-        await onRefresh();
-        toast({
-          title: "Успех",
-          description: "Данные успешно обновлены с сервера",
-        });
-      } catch (error) {
-        console.error('Ошибка при обновлении данных:', error);
-        toast({
-          title: "Ошибка",
-          description: "Не удалось обновить данные с сервера",
-          variant: "destructive"
-        });
-      } finally {
-        setRefreshing(false);
-      }
-    }
-  };
-  
   const processedData = useMemo(() => {
-    if (!displayData.length) return null;
+    if (!data.length) return null;
     
     const warehouses = [...new Set(
-      displayData.flatMap(item => item.warehouses.map(wh => wh.warehouseName))
+      data.flatMap(item => item.warehouses.map(wh => wh.warehouseName))
     )];
     
     const warehouseData = warehouses.map(warehouse => {
-      const warehouseItems = displayData.filter(item => 
+      const warehouseItems = data.filter(item => 
         item.warehouses.some(wh => wh.warehouseName === warehouse)
       );
       
@@ -168,29 +94,29 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading, on
       rank: index + 1
     }));
     
-    const brands = [...new Set(displayData.map(item => item.brand))];
+    const brands = [...new Set(data.map(item => item.brand))];
     const brandData = brands.map(brand => {
-      const items = displayData.filter(item => item.brand === brand);
+      const items = data.filter(item => item.brand === brand);
       return {
         name: brand,
         value: items.reduce((sum, item) => sum + item.quantityWarehousesFull, 0),
       };
     }).sort((a, b) => b.value - a.value).slice(0, 10);
     
-    const categories = [...new Set(displayData.map(item => item.subjectName))];
+    const categories = [...new Set(data.map(item => item.subjectName))];
     const categoryData = categories.map(category => {
-      const items = displayData.filter(item => item.subjectName === category);
+      const items = data.filter(item => item.subjectName === category);
       return {
         name: category,
         value: items.reduce((sum, item) => sum + item.quantityWarehousesFull, 0),
       };
     }).sort((a, b) => b.value - a.value).slice(0, 10);
     
-    const totalItems = displayData.reduce((sum, item) => sum + item.quantityWarehousesFull, 0);
-    const totalInWayToClient = displayData.reduce((sum, item) => sum + item.inWayToClient, 0);
-    const totalInWayFromClient = displayData.reduce((sum, item) => sum + item.inWayFromClient, 0);
+    const totalItems = data.reduce((sum, item) => sum + item.quantityWarehousesFull, 0);
+    const totalInWayToClient = data.reduce((sum, item) => sum + item.inWayToClient, 0);
+    const totalInWayFromClient = data.reduce((sum, item) => sum + item.inWayFromClient, 0);
     
-    const totalPrice = displayData.reduce((sum, item) => {
+    const totalPrice = data.reduce((sum, item) => {
       if (item.price && !isNaN(Number(item.price))) {
         return sum + (Number(item.price) * item.quantityWarehousesFull);
       }
@@ -213,10 +139,9 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading, on
       totalPrice,
       formatNumber,
     };
-  }, [displayData]);
+  }, [data]);
   
-  // Показываем индикатор загрузки, только если нет локальных данных
-  if (isLoading && !localData.length) {
+  if (isLoading) {
     return (
       <div className="grid gap-4">
         <Card>
@@ -236,7 +161,7 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading, on
     );
   }
   
-  if (!displayData.length) {
+  if (!data.length) {
     return (
       <Card>
         <CardHeader>
@@ -259,24 +184,6 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading, on
   
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold">Остатки на складах</h2>
-        <Button 
-          onClick={handleRefresh} 
-          variant="outline" 
-          size="sm" 
-          disabled={refreshing || isLoading}
-          className="flex items-center gap-2"
-        >
-          {refreshing ? (
-            <RefreshCw className="h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCw className="h-4 w-4" />
-          )}
-          {refreshing ? "Обновление..." : "Обновить данные"}
-        </Button>
-      </div>
-      
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid grid-cols-5 w-full max-w-md">
           <TabsTrigger value="overview">Обзор</TabsTrigger>
@@ -420,7 +327,6 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading, on
           {processedData && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                {/* Эффективность использования */}
                 <Card className="overflow-hidden">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center">
@@ -485,7 +391,6 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading, on
                   </CardContent>
                 </Card>
                 
-                {/* Оборачиваемость */}
                 <Card className="overflow-hidden">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center">
@@ -549,7 +454,6 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading, on
                   </CardContent>
                 </Card>
                 
-                {/* Скорость обработки */}
                 <Card className="overflow-hidden">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center">
@@ -614,7 +518,6 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading, on
                 </Card>
               </div>
               
-              {/* Самые эффективные склады и другие секции */}
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 <Card className="col-span-1 xl:col-span-2">
                   <CardHeader>
@@ -680,7 +583,6 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading, on
                   </CardContent>
                 </Card>
                 
-                {/* Остальные карточки */}
                 <Card className="bg-muted/50 border-dashed">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base">Как увеличить прибыль?</CardTitle>
@@ -799,4 +701,220 @@ const WarehouseRemains: React.FC<WarehouseRemainsProps> = ({ data, isLoading, on
                           activeDot={{ r: 6 }}
                         />
                         <Line 
-                          type="mon
+                          type="monotone" 
+                          dataKey="efficiency" 
+                          stroke="var(--color-efficiency)" 
+                          strokeWidth={2}
+                          dot={{ r: 4 }}
+                          activeDot={{ r: 6 }}
+                        />
+                      </LineChart>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="brands" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Остатки по брендам</CardTitle>
+              <CardDescription>Распределение товаров по брендам</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-gray-400" />
+                </div>
+                <Input
+                  type="search"
+                  placeholder="Поиск по бренду..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="max-w-sm pl-10"
+                />
+              </div>
+              
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Бренд</TableHead>
+                    <TableHead>Количество SKU</TableHead>
+                    <TableHead>Всего на складах</TableHead>
+                    <TableHead>В пути к клиентам</TableHead>
+                    <TableHead>В пути от клиентов</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...new Set(filteredData.map(item => item.brand))].map(brand => {
+                    const items = filteredData.filter(item => item.brand === brand);
+                    const totalQuantity = items.reduce((sum, item) => sum + item.quantityWarehousesFull, 0);
+                    const totalInWayToClient = items.reduce((sum, item) => sum + item.inWayToClient, 0);
+                    const totalInWayFromClient = items.reduce((sum, item) => sum + item.inWayFromClient, 0);
+                    
+                    return (
+                      <TableRow key={brand}>
+                        <TableCell className="font-medium">{brand}</TableCell>
+                        <TableCell>{items.length}</TableCell>
+                        <TableCell>{totalQuantity.toLocaleString()}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <TruckIcon className="h-4 w-4 text-blue-500 mr-1" />
+                            {totalInWayToClient.toLocaleString()}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <ArrowLeftRight className="h-4 w-4 text-amber-500 mr-1" />
+                            {totalInWayFromClient.toLocaleString()}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="categories" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Остатки по категориям</CardTitle>
+              <CardDescription>Распределение товаров по категориям</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-gray-400" />
+                </div>
+                <Input
+                  type="search"
+                  placeholder="Поиск по категории..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="max-w-sm pl-10"
+                />
+              </div>
+              
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Категория</TableHead>
+                    <TableHead>Количество SKU</TableHead>
+                    <TableHead>Всего на складах</TableHead>
+                    <TableHead>Бренды</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...new Set(filteredData.map(item => item.subjectName))].map(subject => {
+                    const items = filteredData.filter(item => item.subjectName === subject);
+                    const totalQuantity = items.reduce((sum, item) => sum + item.quantityWarehousesFull, 0);
+                    const brands = [...new Set(items.map(item => item.brand))];
+                    
+                    return (
+                      <TableRow key={subject}>
+                        <TableCell className="font-medium">{subject}</TableCell>
+                        <TableCell>{items.length}</TableCell>
+                        <TableCell>{totalQuantity.toLocaleString()}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {brands.slice(0, 3).map(brand => (
+                              <Badge key={brand} variant="outline">{brand}</Badge>
+                            ))}
+                            {brands.length > 3 && (
+                              <Badge variant="outline">+{brands.length - 3}</Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="items" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Список товаров</CardTitle>
+              <CardDescription>Детальная информация по товарам на складах</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-gray-400" />
+                </div>
+                <Input
+                  type="search"
+                  placeholder="Поиск по товару..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="max-w-sm pl-10"
+                />
+              </div>
+              
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Артикул</TableHead>
+                    <TableHead>Бренд</TableHead>
+                    <TableHead>Категория</TableHead>
+                    <TableHead>Размер</TableHead>
+                    <TableHead>Всего</TableHead>
+                    <TableHead>Склады</TableHead>
+                    <TableHead>В пути</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredData.map((item, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="font-medium">
+                        <div>
+                          <div>{item.vendorCode}</div>
+                          <div className="text-xs text-muted-foreground">WB: {item.nmId}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{item.brand}</TableCell>
+                      <TableCell>{item.subjectName}</TableCell>
+                      <TableCell>{item.techSize === "0" ? "Без размера" : item.techSize}</TableCell>
+                      <TableCell>{item.quantityWarehousesFull}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          {item.warehouses.map((wh, idx) => (
+                            <div key={idx} className="text-xs">
+                              {wh.warehouseName}: <span className="font-medium">{wh.quantity}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <div className="flex items-center">
+                            <TruckIcon className="h-3 w-3 text-blue-500 mr-1" />
+                            <span className="text-xs">К клиенту: {item.inWayToClient}</span>
+                          </div>
+                          <div className="flex items-center mt-1">
+                            <ArrowLeftRight className="h-3 w-3 text-amber-500 mr-1" />
+                            <span className="text-xs">От клиента: {item.inWayFromClient}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+export default WarehouseRemains;
