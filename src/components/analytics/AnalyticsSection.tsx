@@ -560,14 +560,12 @@ const AnalyticsSection = () => {
               icon={<AlertCircle className="h-4 w-4 text-purple-600 dark:text-purple-400" />}
               data={penalties}
               emptyMessage="Штрафы отсутствуют"
-              noFallbackData={true}
             />
             <PieChartCard 
               title="Прочие удержания"
               icon={<BadgePercent className="h-4 w-4 text-orange-600 dark:text-orange-400" />}
               data={deductions}
               emptyMessage="Удержания отсутствуют"
-              noFallbackData={true}
             />
           </div>
 
@@ -578,7 +576,6 @@ const AnalyticsSection = () => {
               data={returns}
               showCount={true}
               emptyMessage="Возвраты отсутствуют"
-              noFallbackData={true}
             />
             {hasAdvertisingData && (
               <PieChartCard 
@@ -586,7 +583,6 @@ const AnalyticsSection = () => {
                 icon={<Tag className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
                 data={productAdvertisingData}
                 emptyMessage="Нет данных о расходах на рекламу"
-                noFallbackData={true}
               />
             )}
           </div>
