@@ -87,7 +87,7 @@ const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ userId }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 py-4" autoComplete="off">
+    <form onSubmit={handleSubmit} className="space-y-4 py-4">
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -100,13 +100,11 @@ const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ userId }) => {
           <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             id="currentPassword"
-            name="current-password"
             type={showCurrentPassword ? "text" : "password"}
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
             className="pl-9 pr-9"
             placeholder="Введите текущий пароль"
-            autoComplete="new-password"
           />
           <button
             type="button"
@@ -128,13 +126,11 @@ const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ userId }) => {
           <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             id="newPassword"
-            name="new-password"
             type={showNewPassword ? "text" : "password"}
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             className="pl-9 pr-9"
             placeholder="Введите новый пароль"
-            autoComplete="new-password"
           />
           <button
             type="button"
@@ -156,13 +152,11 @@ const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ userId }) => {
           <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             id="confirmPassword"
-            name="confirm-password"
             type={showConfirmPassword ? "text" : "password"}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             className="pl-9 pr-9"
             placeholder="Подтвердите новый пароль"
-            autoComplete="new-password"
           />
           <button
             type="button"
