@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import { DollarSign, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { ShoppingCart, TrendingDown, Percent } from "../icons";
@@ -15,6 +16,7 @@ interface KeyMetricsProps {
       };
       netProfit: number;
       transferred: number;
+      returns?: number;
     };
   };
 }
@@ -26,7 +28,7 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
   
   useEffect(() => {
     setTotalExpenses(data.currentPeriod.expenses.total);
-    setNetProfit(data.currentPeriod.netProfit);
+    setNetProfit(data.currentPeriod.transferred - data.currentPeriod.expenses.total - (data.currentPeriod.returns || 0));
     
     const handleCostPriceUpdate = () => {
       const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
@@ -36,7 +38,11 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
         const analyticsData = JSON.parse(localStorage.getItem(`marketplace_analytics_${selectedStore.id}`) || "{}");
         if (analyticsData?.data?.currentPeriod) {
           setTotalExpenses(analyticsData.data.currentPeriod.expenses.total);
-          setNetProfit(analyticsData.data.currentPeriod.netProfit);
+          setNetProfit(
+            analyticsData.data.currentPeriod.transferred - 
+            analyticsData.data.currentPeriod.expenses.total - 
+            (analyticsData.data.currentPeriod.returns || 0)
+          );
         }
       }
     };
