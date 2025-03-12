@@ -9,14 +9,16 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
+import AuthModal from "@/components/auth/AuthModal";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   
   const handleLogin = () => {
-    navigate("/dashboard");
+    setShowAuthModal(true);
   };
   
   const handleTariffClick = () => {
@@ -83,12 +85,22 @@ const Navbar = () => {
                       }}>
                   Тарифы
                 </span>
-                <Button onClick={handleLogin}>Войти</Button>
+                <Button onClick={() => {
+                  handleLogin();
+                  setIsMenuOpen(false);
+                }}>Войти</Button>
               </div>
             </SheetContent>
           </Sheet>
         )}
       </div>
+      
+      {/* Auth Modal */}
+      <AuthModal 
+        open={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+        initialMode="login"
+      />
     </nav>
   );
 };
