@@ -59,7 +59,7 @@ const LandingPage = () => {
   }, {
     icon: <Calculator className="h-6 w-6 text-primary" />,
     title: "Расчет рентабельности",
-    description: "Мгновенно оцениваем прибыльность каждого товара с учетом всех скрытых расходов маркетплейсов."
+    description: "Мгновенно оцениваем прибыльность каждого товара с учетом всех ��крытых расходов маркетплейсов."
   }, {
     icon: <ShieldCheck className="h-6 w-6 text-primary" />,
     title: "Защита данных",
@@ -150,7 +150,7 @@ const LandingPage = () => {
   };
   const pricingInsight = {
     title: "Оптимизация ценообразования",
-    description: "ИИ-модель рассчитала идеальную цену для максимизации прибыли:",
+    description: "ИИ-модел�� рассчитала идеальную цену для максимизации прибыли:",
     values: [{
       label: "Текущая цена",
       value: "2 490 ₽"
@@ -352,7 +352,7 @@ const LandingPage = () => {
       
     finance: <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
         <img 
-          src="/lovable-uploads/0a0d0dd7-b54d-4163-ba50-1ddbb5b6dd7d.png" 
+          src="/lovable-uploads/a5384b91-770a-4aaa-b708-67429a45ef48.png" 
           alt="Финансовый контроль" 
           className="w-full h-auto max-w-md rounded-md border shadow-sm" 
         />
@@ -571,4 +571,3 @@ const QuoteIcon = ({
   </svg>;
 
 export default LandingPage;
-
