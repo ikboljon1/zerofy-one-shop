@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { DollarSign, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { ShoppingCart, TrendingDown, Percent } from "../icons";
@@ -15,6 +14,7 @@ interface KeyMetricsProps {
         costPrice?: number;
       };
       netProfit: number;
+      transferred: number;
     };
   };
 }
@@ -25,20 +25,16 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
   const [totalExpenses, setTotalExpenses] = useState(data.currentPeriod.expenses.total);
   
   useEffect(() => {
-    // Обновляем состояние с новыми данными, когда они изменяются
     setTotalExpenses(data.currentPeriod.expenses.total);
     setNetProfit(data.currentPeriod.netProfit);
     
-    // Слушаем событие обновления себестоимости
     const handleCostPriceUpdate = () => {
-      // Обновим данные из localStorage для текущего выбранного магазина
       const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
       const selectedStore = stores.find((store: any) => store.isSelected);
       
       if (selectedStore) {
         const analyticsData = JSON.parse(localStorage.getItem(`marketplace_analytics_${selectedStore.id}`) || "{}");
         if (analyticsData?.data?.currentPeriod) {
-          // Обновляем данные в компоненте
           setTotalExpenses(analyticsData.data.currentPeriod.expenses.total);
           setNetProfit(analyticsData.data.currentPeriod.netProfit);
         }
@@ -50,6 +46,10 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
     return () => {
       window.removeEventListener('costPriceUpdated', handleCostPriceUpdate);
     };
+  }, [data]);
+  
+  useEffect(() => {
+    setNetProfit(data.currentPeriod.transferred - data.currentPeriod.expenses.total);
   }, [data]);
   
   return (

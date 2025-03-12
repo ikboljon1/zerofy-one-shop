@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, Coins, ShoppingCart, Calculator } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -128,54 +127,27 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           setTotalCostPrice(totalCost);
           
           if (analyticsData.data && analyticsData.data.currentPeriod && analyticsData.data.currentPeriod.expenses) {
-            // Важное изменение: сохраняем предыдущую общую сумму без себестоимости
             const previousTotal = analyticsData.data.currentPeriod.expenses.total || 0;
             const previousCostPrice = analyticsData.data.currentPeriod.expenses.costPrice || 0;
             
-            // Обновляем общие расходы, вычитая предыдущую себестоимость (если была) и добавляя новую
             analyticsData.data.currentPeriod.expenses.total = 
               previousTotal - previousCostPrice + totalCost;
             
-            // Сохраняем новую себестоимость
             analyticsData.data.currentPeriod.expenses.costPrice = totalCost;
             
-            // Обновляем чистую прибыль
             analyticsData.data.currentPeriod.netProfit = 
-              analyticsData.data.currentPeriod.sales - analyticsData.data.currentPeriod.expenses.total;
+              analyticsData.data.currentPeriod.transferred - analyticsData.data.currentPeriod.expenses.total;
             
             localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
-            console.log('Обновлены данные аналитики с себестоимостью и чистой прибылью в localStorage');
-            
-            try {
-              await fetch('http://localhost:3001/api/cost-price', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  storeId: selectedStore.id,
-                  totalCostPrice: totalCost,
-                  totalSoldItems: productSales.reduce((acc, sale) => acc + (sale.quantity || 0), 0),
-                  avgCostPrice: totalCost / productSales.reduce((acc, sale) => acc + (sale.quantity || 0), 0),
-                  netProfit: analyticsData.data.currentPeriod.netProfit,
-                  lastUpdateDate: new Date().toISOString()
-                }),
-              });
-              console.log('Данные о себестоимости сохранены в базу данных');
-            } catch (error) {
-              console.error('Ошибка сохранения себестоимости в базу данных:', error);
-            }
           }
           
-          console.log(`Себестоимость рассчитана: ${formatCurrency(totalCost)}`);
+          console.log(`Себес��оимость рассчитана: ${formatCurrency(totalCost)}`);
           
-          // Обновляем данные в компоненте
           toast({
             title: "Успешно",
             description: `Себестоимость рассчитана: ${formatCurrency(totalCost)}`,
           });
           
-          // ВАЖНОЕ ИЗМЕНЕНИЕ: вместо перезагрузки страницы, отправляем событие на обновление компонентов
           window.dispatchEvent(new CustomEvent('costPriceUpdated', {
             detail: {
               storeId: selectedStore.id,
@@ -210,7 +182,6 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
     }
   };
   
-  // Пересчитываем общие расходы, включая себестоимость
   const totalExpensesWithCostPrice = data.currentPeriod.expenses.logistics + 
                                     data.currentPeriod.expenses.storage + 
                                     data.currentPeriod.expenses.penalties + 
