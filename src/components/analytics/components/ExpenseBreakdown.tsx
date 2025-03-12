@@ -130,15 +130,11 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           if (analyticsData.data && analyticsData.data.currentPeriod && analyticsData.data.currentPeriod.expenses) {
             analyticsData.data.currentPeriod.expenses.costPrice = totalCost;
             
-            // Calculate new net profit with cost price included in total expenses
-            const newTotalExpenses = analyticsData.data.currentPeriod.expenses.total + totalCost;
-            const newNetProfit = analyticsData.data.currentPeriod.sales - newTotalExpenses;
+            // Добавляем себестоимость в общие удержания
+            analyticsData.data.currentPeriod.expenses.total += totalCost;
             
-            // Update expenses.total to include cost price
-            analyticsData.data.currentPeriod.expenses.total = newTotalExpenses;
-            
-            // Update net profit in analytics data
-            analyticsData.data.currentPeriod.netProfit = newNetProfit;
+            // Обновляем чистую прибыль с учетом себестоимости
+            analyticsData.data.currentPeriod.netProfit = analyticsData.data.currentPeriod.sales - analyticsData.data.currentPeriod.expenses.total;
             
             localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
             console.log('Обновлены данные аналитики с себестоимостью и чистой прибылью в localStorage');
@@ -154,7 +150,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
                   totalCostPrice: totalCost,
                   totalSoldItems: productSales.reduce((acc, sale) => acc + (sale.quantity || 0), 0),
                   avgCostPrice: totalCost / productSales.reduce((acc, sale) => acc + (sale.quantity || 0), 0),
-                  netProfit: newNetProfit,
+                  netProfit: analyticsData.data.currentPeriod.netProfit,
                   lastUpdateDate: new Date().toISOString()
                 }),
               });
@@ -192,8 +188,8 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
     }
   };
   
-  // Include cost price in total expenses calculation
-  const totalExpenses = data.currentPeriod.expenses.total;
+  // Учитываем себестоимость в общих расходах
+  const totalExpensesWithCostPrice = data.currentPeriod.expenses.total;
 
   return (
     <Card className="p-4">
@@ -230,7 +226,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           </div>
           <p className="text-lg font-bold">{formatCurrency(data.currentPeriod.expenses.logistics)}</p>
           <span className="text-xs text-muted-foreground mt-0.5">
-            {totalExpenses > 0 ? ((data.currentPeriod.expenses.logistics / totalExpenses) * 100).toFixed(1) : '0'}%
+            {totalExpensesWithCostPrice > 0 ? ((data.currentPeriod.expenses.logistics / totalExpensesWithCostPrice) * 100).toFixed(1) : '0'}%
           </span>
         </div>
 
@@ -243,7 +239,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           </div>
           <p className="text-lg font-bold">{formatCurrency(data.currentPeriod.expenses.storage)}</p>
           <span className="text-xs text-muted-foreground mt-0.5">
-            {totalExpenses > 0 ? ((data.currentPeriod.expenses.storage / totalExpenses) * 100).toFixed(1) : '0'}%
+            {totalExpensesWithCostPrice > 0 ? ((data.currentPeriod.expenses.storage / totalExpensesWithCostPrice) * 100).toFixed(1) : '0'}%
           </span>
         </div>
 
@@ -256,7 +252,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           </div>
           <p className="text-lg font-bold">{formatCurrency(data.currentPeriod.expenses.penalties)}</p>
           <span className="text-xs text-muted-foreground mt-0.5">
-            {totalExpenses > 0 ? ((data.currentPeriod.expenses.penalties / totalExpenses) * 100).toFixed(1) : '0'}%
+            {totalExpensesWithCostPrice > 0 ? ((data.currentPeriod.expenses.penalties / totalExpensesWithCostPrice) * 100).toFixed(1) : '0'}%
           </span>
         </div>
 
@@ -269,7 +265,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           </div>
           <p className="text-lg font-bold">{formatCurrency(data.currentPeriod.expenses.advertising)}</p>
           <span className="text-xs text-muted-foreground mt-0.5">
-            {totalExpenses > 0 ? ((data.currentPeriod.expenses.advertising / totalExpenses) * 100).toFixed(1) : '0'}%
+            {totalExpensesWithCostPrice > 0 ? ((data.currentPeriod.expenses.advertising / totalExpensesWithCostPrice) * 100).toFixed(1) : '0'}%
           </span>
         </div>
 
@@ -282,7 +278,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           </div>
           <p className="text-lg font-bold">{formatCurrency(data.currentPeriod.expenses.deductions || 0)}</p>
           <span className="text-xs text-muted-foreground mt-0.5">
-            {totalExpenses > 0 ? (((data.currentPeriod.expenses.deductions || 0) / totalExpenses) * 100).toFixed(1) : '0'}%
+            {totalExpensesWithCostPrice > 0 ? (((data.currentPeriod.expenses.deductions || 0) / totalExpensesWithCostPrice) * 100).toFixed(1) : '0'}%
           </span>
         </div>
         
@@ -295,7 +291,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           </div>
           <p className="text-lg font-bold">{formatCurrency(totalCostPrice)}</p>
           <span className="text-xs text-muted-foreground mt-0.5">
-            {totalExpenses > 0 ? ((totalCostPrice / totalExpenses) * 100).toFixed(1) : '0'}%
+            {totalExpensesWithCostPrice > 0 ? ((totalCostPrice / totalExpensesWithCostPrice) * 100).toFixed(1) : '0'}%
           </span>
         </div>
       </div>
