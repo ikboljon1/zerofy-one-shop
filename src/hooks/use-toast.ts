@@ -139,6 +139,12 @@ function dispatch(action: Action) {
 interface Toast extends Omit<ToasterToast, "id"> {}
 
 function toast({ ...props }: Toast) {
+  // Skip success notifications unless they are critical
+  if (props.title === "Успех" || props.title?.toString().toLowerCase().includes("успешно")) {
+    // Don't show success notifications
+    return { id: "", dismiss: () => {}, update: () => {} };
+  }
+  
   const id = genId()
 
   if (typeof props.title === 'string') {

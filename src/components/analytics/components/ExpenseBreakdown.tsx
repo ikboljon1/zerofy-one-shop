@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, Coins, ShoppingCart, Calculator } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -34,7 +33,6 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
   const { toast } = useToast();
 
   useEffect(() => {
-    // Обновляем себестоимость из входных данных при их изменении
     setTotalCostPrice(data.currentPeriod.expenses.costPrice || 0);
   }, [data]);
 
@@ -43,7 +41,6 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
       setIsCalculating(true);
       console.log('Начинаем расчет себестоимости проданных товаров...');
       
-      // Получаем данные о магазине из localStorage
       const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
       const selectedStore = stores.find((store: any) => store.isSelected);
       
@@ -58,20 +55,16 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
         return;
       }
       
-      // Загружаем данные аналитики из localStorage
       const analyticsData = JSON.parse(localStorage.getItem(`marketplace_analytics_${selectedStore.id}`) || "{}");
       console.log('Данные аналитики из localStorage:', !!analyticsData);
       
-      // Проверяем наличие данных о продажах с nmId
       if (analyticsData?.data?.productSales) {
         const productSales = analyticsData.data.productSales;
         console.log(`Найдено ${productSales.length} категорий продаж:`, productSales);
         
-        // Загружаем данные о себестоимости из localStorage
         const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore.id}`) || "{}");
         console.log('Загруженные данные о себестоимости:', costPrices);
         
-        // Загружаем список продуктов
         const products = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
         console.log(`Загружено ${products.length} продуктов из localStorage`);
         
@@ -96,21 +89,18 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           
           console.log(`Обработка товара с nmId ${nmId}, категория: "${sale.subject_name}", количество: ${quantity}`);
           
-          // Ищем себестоимость сначала в costPrices
           let costPrice = 0;
           
           if (costPrices[nmId] && typeof costPrices[nmId] === 'number') {
             costPrice = costPrices[nmId];
             console.log(`Найдена себестоимость в costPrices для nmId ${nmId}: ${costPrice}`);
           } else {
-            // Если не нашли в costPrices, ищем в products
             const product = products.find((p: any) => (Number(p.nmId) === nmId || Number(p.nmID) === nmId));
             
             if (product && product.costPrice > 0) {
               costPrice = product.costPrice;
               console.log(`Найден товар с nmId ${nmId}: costPrice = ${costPrice}`);
               
-              // Сохраняем найденную себестоимость в costPrices
               costPrices[nmId] = costPrice;
               localStorage.setItem(`costPrices_${selectedStore.id}`, JSON.stringify(costPrices));
             }
@@ -134,13 +124,11 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
         if (totalCost > 0) {
           setTotalCostPrice(totalCost);
           
-          // Сохраняем результат в localStorage и аналитику
           if (analyticsData.data && analyticsData.data.currentPeriod && analyticsData.data.currentPeriod.expenses) {
             analyticsData.data.currentPeriod.expenses.costPrice = totalCost;
             localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
             console.log('Обновлены данные аналитики с себестоимостью в localStorage');
             
-            // Сохраняем также в базу данных
             try {
               await fetch('http://localhost:3001/api/cost-price', {
                 method: 'POST',
@@ -161,10 +149,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
             }
           }
           
-          toast({
-            title: "Себестоимость рассчитана",
-            description: `Общая себестоимость проданных товаров: ${formatCurrency(totalCost)}`,
-          });
+          console.log(`Себестоимость рассчитана: ${formatCurrency(totalCost)}`);
         } else {
           toast({
             title: "Внимание",
@@ -192,7 +177,6 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
     }
   };
   
-  // Используем общую сумму расходов для расчета процентов
   const totalExpenses = data.currentPeriod.expenses.total + totalCostPrice;
 
   return (

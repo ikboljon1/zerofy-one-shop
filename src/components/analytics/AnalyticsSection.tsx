@@ -28,7 +28,6 @@ import {
   COLORS
 } from "./data/demoData";
 
-// Import the advertisement data
 import { productAdvertisingData } from "./data/productAdvertisingData";
 
 const ANALYTICS_STORAGE_KEY = 'marketplace_analytics';
@@ -220,7 +219,7 @@ const AnalyticsSection = () => {
         setErrorMessage("Превышен лимит запросов к API Wildberries. Пожалуйста, повторите попытку через несколько минут или используйте кешированные данные.");
         setIsLoading(false);
         toast({
-          title: "��шибка API",
+          title: "Ошибка API",
           description: "Превышен лимит запросов. Используйте кешированные данные или повторите позже.",
           variant: "destructive"
         });
@@ -423,11 +422,6 @@ const AnalyticsSection = () => {
             description: "Данные обновлены локально, но не удалось сохранить в базу данных",
           });
         }
-        
-        toast({
-          title: "Успех",
-          description: "Аналитические данные успешно обновлены",
-        });
       }
     } catch (error) {
       console.error('Error fetching analytics data:', error);
