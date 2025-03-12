@@ -10,6 +10,7 @@ import Warehouses from "./pages/Warehouses";
 import Advertising from "./components/Advertising";
 import Admin from "./pages/Admin";
 import LandingPage from "./pages/LandingPage";
+import Navbar from "./components/layout/Navbar";
 import { useEffect, useState } from "react";
 
 const queryClient = new QueryClient();
@@ -43,7 +44,10 @@ const App = () => {
           <Routes>
             {/* Route to landing page or redirect to dashboard if authenticated */}
             <Route path="/" element={
-              isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />
+              <>
+                <Navbar />
+                {isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />}
+              </>
             } />
             
             {/* Protected routes */}
