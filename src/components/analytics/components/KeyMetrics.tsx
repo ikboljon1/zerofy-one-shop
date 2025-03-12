@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import { DollarSign, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { ShoppingCart, TrendingDown, Percent } from "../icons";
@@ -15,6 +16,7 @@ interface KeyMetricsProps {
       };
       netProfit: number;
       transferred: number;
+      returnsAmount?: number;
     };
   };
 }
@@ -23,10 +25,12 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
   const isMobile = useIsMobile();
   const [netProfit, setNetProfit] = useState(data.currentPeriod.netProfit);
   const [totalExpenses, setTotalExpenses] = useState(data.currentPeriod.expenses.total);
+  const [returnsAmount, setReturnsAmount] = useState(data.currentPeriod.returnsAmount || 0);
   
   useEffect(() => {
     setTotalExpenses(data.currentPeriod.expenses.total);
     setNetProfit(data.currentPeriod.netProfit);
+    setReturnsAmount(data.currentPeriod.returnsAmount || 0);
     
     const handleCostPriceUpdate = () => {
       const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
@@ -37,6 +41,7 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
         if (analyticsData?.data?.currentPeriod) {
           setTotalExpenses(analyticsData.data.currentPeriod.expenses.total);
           setNetProfit(analyticsData.data.currentPeriod.netProfit);
+          setReturnsAmount(analyticsData.data.currentPeriod.returnsAmount || 0);
         }
       }
     };
@@ -49,7 +54,8 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
   }, [data]);
   
   useEffect(() => {
-    setNetProfit(data.currentPeriod.transferred - data.currentPeriod.expenses.total);
+    // Обновляем расчет чистой прибыли с учетом возвратов
+    setNetProfit(data.currentPeriod.transferred - data.currentPeriod.expenses.total - (data.currentPeriod.returnsAmount || 0));
   }, [data]);
   
   return (
@@ -98,9 +104,9 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
             <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-red-50 to-white dark:from-red-950/20 dark:to-background border-red-200 dark:border-red-800">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Общие удержания</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Общие удержания и возвраты</p>
                   <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-700 to-red-900 dark:from-red-400 dark:to-red-200">
-                    {formatCurrency(totalExpenses)}
+                    {formatCurrency(totalExpenses + returnsAmount)}
                   </h3>
                   <div className="flex items-center mt-2 text-sm text-red-600 dark:text-red-400">
                     <ArrowDownRight className="h-4 w-4 mr-1" />
@@ -173,9 +179,9 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
           <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-red-50 to-white dark:from-red-950/20 dark:to-background border-red-200 dark:border-red-800">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Общие удержания</p>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Общие удержания и возвраты</p>
                 <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-700 to-red-900 dark:from-red-400 dark:to-red-200">
-                  {formatCurrency(totalExpenses)}
+                  {formatCurrency(totalExpenses + returnsAmount)}
                 </h3>
                 <div className="flex items-center mt-2 text-sm text-red-600 dark:text-red-400">
                   <ArrowDownRight className="h-4 w-4 mr-1" />

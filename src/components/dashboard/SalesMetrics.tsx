@@ -22,7 +22,12 @@ const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales, storeId }) => {
   const totalAmount = sales.reduce((sum, sale) => sum + sale.priceWithDisc, 0);
   const totalProfit = sales.reduce((sum, sale) => sum + sale.forPay, 0);
   const avgSaleValue = totalSales > 0 ? totalAmount / totalSales : 0;
-  const returnedItems = sales.filter(sale => sale.priceWithDisc < 0).length; // Возвраты имеют отрицательную цену
+  
+  // Находим возвраты (продажи с отрицательной ценой)
+  const returnedItems = sales.filter(sale => sale.priceWithDisc < 0).length;
+  const returnedAmount = sales
+    .filter(sale => sale.priceWithDisc < 0)
+    .reduce((sum, sale) => sum + Math.abs(sale.priceWithDisc), 0);
   
   // Добавляем состояние для прослушивания событий обновления себестоимости
   const [refreshKey, setRefreshKey] = useState(0);
@@ -86,7 +91,7 @@ const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales, storeId }) => {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-green-700 dark:text-green-300">
-            {formatCurrency(totalProfit)}
+            {formatCurrency(totalProfit - returnedAmount)}
           </div>
         </CardContent>
       </Card>
@@ -115,11 +120,13 @@ const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales, storeId }) => {
             Возвраты
           </CardTitle>
           <CardDescription className="text-rose-600/70 dark:text-rose-400/70">
-            Количество возвратов
+            Количество и сумма
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-rose-700 dark:text-rose-300">{returnedItems}</div>
+          <div className="text-2xl font-bold text-rose-700 dark:text-rose-300">
+            {returnedItems} ({formatCurrency(returnedAmount)})
+          </div>
         </CardContent>
       </Card>
     </div>

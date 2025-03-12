@@ -1,3 +1,4 @@
+
 import { Store } from "@/types/store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -100,6 +101,10 @@ export function StoreCard({
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Расходы:</span>
                 <span className="font-medium">{formatCurrency(store.stats.currentPeriod.expenses.total)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Возвраты:</span>
+                <span className="font-medium">{formatCurrency(store.stats.currentPeriod.returnsAmount || 0)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Чистая прибыль:</span>
