@@ -1,7 +1,9 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BrainCircuit } from "lucide-react";
 import AdvertisingAIAnalysis from "@/components/AdvertisingAIAnalysis";
 import { Button } from "@/components/ui/button";
+import { Campaign } from "@/services/advertisingApi";
 
 interface AIAnalysisSectionProps {
   storeId?: string;
@@ -11,14 +13,13 @@ interface AIAnalysisSectionProps {
 }
 
 const AIAnalysisSection = ({ storeId, analyticsData, dateFrom, dateTo }: AIAnalysisSectionProps = {}) => {
-  // Mock campaign data for the AI analysis component
-  const mockCampaign = {
-    id: "mock-campaign-1",
-    name: "Складские остатки",
-    adType: "auto",
-    startDate: new Date(),
-    type: "auto",
-    status: "active"
+  // Mock campaign data for the AI analysis component that matches the Campaign interface
+  const mockCampaign: Campaign = {
+    advertId: 1234,  // Required by Campaign interface
+    campName: "Складские остатки",  // Required by Campaign interface
+    status: "active",
+    type: "automatic",
+    changeTime: new Date().toISOString()
   };
 
   return (
