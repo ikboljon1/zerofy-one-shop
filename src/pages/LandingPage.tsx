@@ -141,7 +141,7 @@ const LandingPage = () => {
 
   const pricingInsight = {
     title: "Оптимизация ценообразования",
-    description: "ИИ-модель рассчитала идеальную цену для максимизации прибыли:",
+    description: "ИИ-модель рассчитала идеальную цену для максимизации приб��ли:",
     values: [
       { label: "Текущая цена", value: "2 490 ₽" },
       { label: "Оптимальная цена", value: "2 190 ₽" },
@@ -474,7 +474,7 @@ const LandingPage = () => {
                   <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold shadow-lg">2</div>
                   <h3 className="text-xl font-semibold mb-4 mt-6 text-center">Мгновенная аналитика</h3>
                   <p className="text-muted-foreground text-center">
-                    Система автоматически собирает и обрабатывает данные, представляя их в удобном интерфейсе
+                    Система автоматически собирает и обрабатывает данные, представляя их в удобном ��нтерфейсе
                   </p>
                 </div>
               </motion.div>
@@ -594,7 +594,7 @@ const LandingPage = () => {
               >
                 <div className="text-4xl font-bold text-primary mb-2 flex items-center justify-center">
                   <span className="mr-2">500+</span>
-                  <CheckCircle2 className="h-6 w-6 text-green-500" />
+                  <CheckCircle className="h-6 w-6 text-green-500" />
                 </div>
                 <p className="text-muted-foreground">Активных клиентов</p>
               </motion.div>
