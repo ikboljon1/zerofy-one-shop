@@ -28,7 +28,6 @@ const LandingPage = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Проверяем URL на наличие параметра section для автоскролла при загрузке страницы
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const section = params.get('section');
@@ -191,7 +190,6 @@ const LandingPage = () => {
     }]
   };
 
-  // Filter only active tariffs for the landing page
   const activeTariffs = initialTariffs.filter(tariff => tariff.isActive);
 
   const pricing = activeTariffs.map(tariff => ({
@@ -200,7 +198,7 @@ const LandingPage = () => {
     description: tariff.description,
     features: tariff.features,
     popular: tariff.isPopular,
-    buttonVariant: tariff.isPopular ? "default" : "outline" as const
+    buttonVariant: tariff.isPopular ? "default" : "outline" as "default" | "outline"
   }));
 
   const testimonials = [{
@@ -518,7 +516,6 @@ const LandingPage = () => {
     </div>;
 };
 
-// Quote Icon component for testimonials
 const QuoteIcon = ({
   className
 }: {
