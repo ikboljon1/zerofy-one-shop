@@ -1,6 +1,5 @@
-
 import { Card } from "@/components/ui/card";
-import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, Coins, ShoppingCart, Calculator, PackageX } from "lucide-react";
+import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, Coins, ShoppingCart, Calculator } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { getCostPriceByNmId } from "@/services/api";
 import { useEffect, useState } from "react";
@@ -22,7 +21,6 @@ interface ExpenseBreakdownProps {
         costPrice?: number;
       };
       netProfit: number;
-      returnsAmount?: number; // Добавляем сумму возвратов
     };
   };
   advertisingBreakdown?: {
@@ -32,14 +30,12 @@ interface ExpenseBreakdownProps {
 
 const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps) => {
   const [totalCostPrice, setTotalCostPrice] = useState(data.currentPeriod.expenses.costPrice || 0);
-  const [returnsAmount, setReturnsAmount] = useState(data.currentPeriod.returnsAmount || 0);
   const [isLoading, setIsLoading] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     setTotalCostPrice(data.currentPeriod.expenses.costPrice || 0);
-    setReturnsAmount(data.currentPeriod.returnsAmount || 0);
   }, [data]);
 
   const calculateCostPrice = async () => {
@@ -169,8 +165,6 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
                                     (data.currentPeriod.expenses.deductions || 0) +
                                     totalCostPrice;
 
-  const totalWithReturns = totalExpensesWithCostPrice + returnsAmount;
-
   return (
     <Card className="p-4">
       <div className="flex justify-between items-center mb-4">
@@ -196,7 +190,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
         </Button>
       </div>
       
-      <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-7 gap-2">
+      <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-2">
         <div className="flex flex-col bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background border border-purple-200 dark:border-purple-800 rounded-lg p-2">
           <div className="flex justify-between items-center mb-1">
             <h4 className="text-xs font-medium">Логистика</h4>
@@ -206,7 +200,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           </div>
           <p className="text-lg font-bold">{formatCurrency(data.currentPeriod.expenses.logistics)}</p>
           <span className="text-xs text-muted-foreground mt-0.5">
-            {totalWithReturns > 0 ? ((data.currentPeriod.expenses.logistics / totalWithReturns) * 100).toFixed(1) : '0'}%
+            {totalExpensesWithCostPrice > 0 ? ((data.currentPeriod.expenses.logistics / totalExpensesWithCostPrice) * 100).toFixed(1) : '0'}%
           </span>
         </div>
 
@@ -219,7 +213,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           </div>
           <p className="text-lg font-bold">{formatCurrency(data.currentPeriod.expenses.storage)}</p>
           <span className="text-xs text-muted-foreground mt-0.5">
-            {totalWithReturns > 0 ? ((data.currentPeriod.expenses.storage / totalWithReturns) * 100).toFixed(1) : '0'}%
+            {totalExpensesWithCostPrice > 0 ? ((data.currentPeriod.expenses.storage / totalExpensesWithCostPrice) * 100).toFixed(1) : '0'}%
           </span>
         </div>
 
@@ -232,7 +226,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           </div>
           <p className="text-lg font-bold">{formatCurrency(data.currentPeriod.expenses.penalties)}</p>
           <span className="text-xs text-muted-foreground mt-0.5">
-            {totalWithReturns > 0 ? ((data.currentPeriod.expenses.penalties / totalWithReturns) * 100).toFixed(1) : '0'}%
+            {totalExpensesWithCostPrice > 0 ? ((data.currentPeriod.expenses.penalties / totalExpensesWithCostPrice) * 100).toFixed(1) : '0'}%
           </span>
         </div>
 
@@ -245,7 +239,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           </div>
           <p className="text-lg font-bold">{formatCurrency(data.currentPeriod.expenses.advertising)}</p>
           <span className="text-xs text-muted-foreground mt-0.5">
-            {totalWithReturns > 0 ? ((data.currentPeriod.expenses.advertising / totalWithReturns) * 100).toFixed(1) : '0'}%
+            {totalExpensesWithCostPrice > 0 ? ((data.currentPeriod.expenses.advertising / totalExpensesWithCostPrice) * 100).toFixed(1) : '0'}%
           </span>
         </div>
 
@@ -258,7 +252,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           </div>
           <p className="text-lg font-bold">{formatCurrency(data.currentPeriod.expenses.deductions || 0)}</p>
           <span className="text-xs text-muted-foreground mt-0.5">
-            {totalWithReturns > 0 ? (((data.currentPeriod.expenses.deductions || 0) / totalWithReturns) * 100).toFixed(1) : '0'}%
+            {totalExpensesWithCostPrice > 0 ? (((data.currentPeriod.expenses.deductions || 0) / totalExpensesWithCostPrice) * 100).toFixed(1) : '0'}%
           </span>
         </div>
         
@@ -271,28 +265,15 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           </div>
           <p className="text-lg font-bold">{formatCurrency(totalCostPrice)}</p>
           <span className="text-xs text-muted-foreground mt-0.5">
-            {totalWithReturns > 0 ? ((totalCostPrice / totalWithReturns) * 100).toFixed(1) : '0'}%
-          </span>
-        </div>
-        
-        <div className="flex flex-col bg-gradient-to-br from-pink-50 to-white dark:from-pink-950/20 dark:to-background border border-pink-200 dark:border-pink-800 rounded-lg p-2">
-          <div className="flex justify-between items-center mb-1">
-            <h4 className="text-xs font-medium">Возвраты</h4>
-            <div className="bg-pink-100 dark:bg-pink-900/60 p-1 rounded-md">
-              <PackageX className="h-3 w-3 text-pink-600 dark:text-pink-400" />
-            </div>
-          </div>
-          <p className="text-lg font-bold">{formatCurrency(returnsAmount)}</p>
-          <span className="text-xs text-muted-foreground mt-0.5">
-            {totalWithReturns > 0 ? ((returnsAmount / totalWithReturns) * 100).toFixed(1) : '0'}%
+            {totalExpensesWithCostPrice > 0 ? ((totalCostPrice / totalExpensesWithCostPrice) * 100).toFixed(1) : '0'}%
           </span>
         </div>
       </div>
       
       <div className="flex flex-col mt-4 p-3 bg-gradient-to-br from-gray-50 to-white dark:from-gray-950/20 dark:to-background border border-gray-200 dark:border-gray-800 rounded-lg">
         <div className="flex justify-between items-center">
-          <h4 className="text-sm font-medium">Общие удержания (включая себестоимость и возвраты)</h4>
-          <p className="text-lg font-bold">{formatCurrency(totalWithReturns)}</p>
+          <h4 className="text-sm font-medium">Общие удержания (включая себестоимость)</h4>
+          <p className="text-lg font-bold">{formatCurrency(totalExpensesWithCostPrice)}</p>
         </div>
       </div>
     </Card>

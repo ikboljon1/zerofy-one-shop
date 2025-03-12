@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { DollarSign, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { ShoppingCart, TrendingDown, Percent } from "../icons";
@@ -16,7 +15,6 @@ interface KeyMetricsProps {
       };
       netProfit: number;
       transferred: number;
-      returnsAmount?: number; // Добавляем сумму возвратов
     };
   };
 }
@@ -25,12 +23,10 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
   const isMobile = useIsMobile();
   const [netProfit, setNetProfit] = useState(data.currentPeriod.netProfit);
   const [totalExpenses, setTotalExpenses] = useState(data.currentPeriod.expenses.total);
-  const [returnsAmount, setReturnsAmount] = useState(data.currentPeriod.returnsAmount || 0);
   
   useEffect(() => {
     setTotalExpenses(data.currentPeriod.expenses.total);
     setNetProfit(data.currentPeriod.netProfit);
-    setReturnsAmount(data.currentPeriod.returnsAmount || 0);
     
     const handleCostPriceUpdate = () => {
       const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
@@ -41,7 +37,6 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
         if (analyticsData?.data?.currentPeriod) {
           setTotalExpenses(analyticsData.data.currentPeriod.expenses.total);
           setNetProfit(analyticsData.data.currentPeriod.netProfit);
-          setReturnsAmount(analyticsData.data.currentPeriod.returnsAmount || 0);
         }
       }
     };
@@ -54,9 +49,8 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
   }, [data]);
   
   useEffect(() => {
-    // Расчет чистой прибыли, учитывая сумму возвратов
-    setNetProfit(data.currentPeriod.transferred - data.currentPeriod.expenses.total - (data.currentPeriod.returnsAmount || 0));
-  }, [data, returnsAmount]);
+    setNetProfit(data.currentPeriod.transferred - data.currentPeriod.expenses.total);
+  }, [data]);
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
