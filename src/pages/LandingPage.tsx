@@ -635,5 +635,5 @@ const LandingPage = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-40 w-40 mx-auto relative">
-                  <div className="absolute inset-
+                <div className="relative p-4">
+                  <div className="h-40 w-40 mx-auto
