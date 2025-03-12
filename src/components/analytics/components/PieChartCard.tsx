@@ -50,24 +50,24 @@ const PieChartCard = ({
   const needScroll = filteredData && filteredData.length > 5;
 
   return (
-    <Card className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold">{title}</h3>
-        <div className="bg-primary/10 dark:bg-primary/20 p-2 rounded-md">
+    <Card className="p-4">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-base font-semibold">{title}</h3>
+        <div className="bg-primary/10 dark:bg-primary/20 p-1.5 rounded-md">
           {icon}
         </div>
       </div>
       {hasData ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="h-[200px]">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="h-[180px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={chartData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={40}
-                  outerRadius={80}
+                  innerRadius={35}
+                  outerRadius={70}
                   paddingAngle={2}
                   dataKey="value"
                 >
@@ -82,21 +82,21 @@ const PieChartCard = ({
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className={needScroll ? "relative" : "space-y-4"}>
+          <div className={needScroll ? "relative" : "space-y-3"}>
             {needScroll ? (
-              <ScrollArea className="h-[200px] pr-4">
-                <div className="space-y-4 pr-2">
+              <ScrollArea className="h-[180px] pr-3">
+                <div className="space-y-3 pr-2">
                   {filteredData.map((item, index) => (
                     <div key={index} className="flex items-center justify-between">
                       <div className="flex items-center">
                         <div 
-                          className="w-3 h-3 rounded-full mr-2" 
+                          className="w-2.5 h-2.5 rounded-full mr-2" 
                           style={{ backgroundColor: COLORS[index % COLORS.length] }}
                         ></div>
-                        <span className="text-sm">{item.name}</span>
+                        <span className="text-xs">{item.name}</span>
                       </div>
                       <div className="text-right">
-                        <span className={`font-medium ${item.isNegative || item.value < 0 ? 'text-red-500' : ''}`}>
+                        <span className={`font-medium text-xs ${item.isNegative || item.value < 0 ? 'text-red-500' : ''}`}>
                           {item.isNegative || item.value < 0 ? '-' : ''}{formatCurrency(roundToTwoDecimals(Math.abs(item.value)))} {valueLabel}
                         </span>
                         {showCount && item.count !== undefined && (
@@ -115,13 +115,13 @@ const PieChartCard = ({
                   <div key={index} className="flex items-center justify-between">
                     <div className="flex items-center">
                       <div 
-                        className="w-3 h-3 rounded-full mr-2" 
+                        className="w-2.5 h-2.5 rounded-full mr-2" 
                         style={{ backgroundColor: COLORS[index % COLORS.length] }}
                       ></div>
-                      <span className="text-sm">{item.name}</span>
+                      <span className="text-xs">{item.name}</span>
                     </div>
                     <div className="text-right">
-                      <span className={`font-medium ${item.isNegative || item.value < 0 ? 'text-red-500' : ''}`}>
+                      <span className={`font-medium text-xs ${item.isNegative || item.value < 0 ? 'text-red-500' : ''}`}>
                         {item.isNegative || item.value < 0 ? '-' : ''}{formatCurrency(roundToTwoDecimals(Math.abs(item.value)))} {valueLabel}
                       </span>
                       {showCount && item.count !== undefined && (
@@ -137,8 +137,8 @@ const PieChartCard = ({
           </div>
         </div>
       ) : (
-        <div className="py-8 text-center text-muted-foreground">
-          <p>{emptyMessage}</p>
+        <div className="py-6 text-center text-muted-foreground">
+          <p className="text-sm">{emptyMessage}</p>
         </div>
       )}
     </Card>

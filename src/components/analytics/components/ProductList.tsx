@@ -71,22 +71,22 @@ const ProductList = ({ title, products = [], isProfitable }: ProductListProps) =
   };
 
   return (
-    <Card className={`p-4 ${isMobile ? 'p-3' : 'p-5'}`}>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">{safeText(title)}</h3>
-        <div className={`p-2 rounded-md ${isProfitable ? 'bg-green-100 dark:bg-green-900/60' : 'bg-red-100 dark:bg-red-900/60'}`}>
-          <IconComponent className={`h-4 w-4 ${isProfitable ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} />
+    <Card className={`p-3 ${isMobile ? 'p-2' : 'p-3'}`}>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-base font-semibold">{safeText(title)}</h3>
+        <div className={`p-1.5 rounded-md ${isProfitable ? 'bg-green-100 dark:bg-green-900/60' : 'bg-red-100 dark:bg-red-900/60'}`}>
+          <IconComponent className={`h-3.5 w-3.5 ${isProfitable ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} />
         </div>
       </div>
-      <div className="space-y-4">
+      <div className="space-y-3">
         {products && products.length > 0 ? (
           products.map((product, index) => (
             <div 
               key={index} 
-              className={`flex flex-col p-4 rounded-lg border ${bgGradientClass}`}
+              className={`flex flex-col p-3 rounded-lg border ${bgGradientClass}`}
             >
-              <div className="flex items-start mb-2">
-                <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 mr-4 bg-gray-100 dark:bg-gray-800">
+              <div className="flex items-start mb-1.5">
+                <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 mr-3 bg-gray-100 dark:bg-gray-800">
                   <img 
                     src={product.image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"} 
                     alt={safeText(product.name)} 
@@ -99,46 +99,46 @@ const ProductList = ({ title, products = [], isProfitable }: ProductListProps) =
                 </div>
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
-                    <h4 className="font-medium text-base">{safeText(product.name || "Неизвестный товар")}</h4>
+                    <h4 className="font-medium text-sm">{safeText(product.name || "Неизвестный товар")}</h4>
                     <div className="text-right flex items-center">
-                      <span className={`${textColorClass} font-semibold mr-1`}>
+                      <span className={`${textColorClass} font-semibold mr-1 text-sm`}>
                         {formatNumberWithSign(product.profit)}
                       </span>
                       {isProfitable ? (
-                        <ArrowUp className="h-4 w-4 text-green-500" />
+                        <ArrowUp className="h-3.5 w-3.5 text-green-500" />
                       ) : (
-                        <ArrowDown className="h-4 w-4 text-red-500" />
+                        <ArrowDown className="h-3.5 w-3.5 text-red-500" />
                       )}
                     </div>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     Цена: {formatCurrency(parseFloat(product.price || "0"))}
                   </p>
                   {product.category && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Категория: {safeText(product.category)}
                     </p>
                   )}
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-1.5 text-xs">
                 <div className="flex items-center">
-                  <FileText className="h-4 w-4 mr-1 text-muted-foreground" />
+                  <FileText className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
                   <span>
                     Продано: {product.quantitySold !== undefined ? `${product.quantitySold} шт.` : 'Н/Д'}
                   </span>
                 </div>
                 
                 <div className="flex items-center">
-                  <ArrowDown className={`h-4 w-4 mr-1 ${product.returnCount && product.returnCount > 5 ? 'text-red-500' : 'text-muted-foreground'}`} />
+                  <ArrowDown className={`h-3.5 w-3.5 mr-1 ${product.returnCount && product.returnCount > 5 ? 'text-red-500' : 'text-muted-foreground'}`} />
                   <span>
                     Возвраты: {product.returnCount !== undefined ? `${product.returnCount} шт.` : 'Н/Д'}
                   </span>
                 </div>
                 
                 <div className="flex items-center">
-                  <Info className="h-4 w-4 mr-1 text-muted-foreground" />
+                  <Info className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
                   <span className="font-medium">
                     {safeText(getProfitabilityReason(product))}
                   </span>
@@ -147,10 +147,10 @@ const ProductList = ({ title, products = [], isProfitable }: ProductListProps) =
             </div>
           ))
         ) : (
-          <div className="py-6 px-4 text-center text-muted-foreground">
+          <div className="py-4 px-3 text-center text-muted-foreground">
             <div className="flex flex-col items-center">
-              <Image className="h-12 w-12 text-muted-foreground opacity-20 mb-2" />
-              <p>Нет данных за выбранный период</p>
+              <Image className="h-10 w-10 text-muted-foreground opacity-20 mb-2" />
+              <p className="text-sm">Нет данных за выбранный период</p>
             </div>
           </div>
         )}
