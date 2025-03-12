@@ -2,7 +2,7 @@
 import { Card } from "@/components/ui/card";
 import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, Coins, ShoppingCart } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
-import { getCostPriceByNmId, getCostPriceBySubjectName, calculateTotalCostPrice, processSalesReport } from "@/services/api";
+import { getCostPriceByNmId, processSalesReport } from "@/services/api";
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -80,7 +80,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
         
         console.log(`Date range: ${dateFrom.toISOString()} - ${dateTo.toISOString()}`);
         
-        // Get detailed sales report
+        // Get detailed sales report with focus on nm_id
         const result = await processSalesReport(selectedStore.apiKey, dateFrom, dateTo, storeId);
         
         if (result.totalCostPrice > 0) {
@@ -101,7 +101,8 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
         } else {
           console.log('Could not calculate cost price from sales report, trying alternative method...');
           
-          // Try alternative method with existing sales data
+          // Попробуем рассчитать себестоимость на основе имеющихся данных о продажах, 
+          // но только для тех продаж, где есть nm_id
           if (analyticsData?.data?.dailySales) {
             let allSales: any[] = [];
             for (const day of analyticsData.data.dailySales) {
@@ -114,29 +115,66 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
             console.log(`Total sales items collected: ${allSales.length}`);
             
             if (allSales.length > 0) {
-              // Check if sales have nmId or subject_name
-              const hasNmId = allSales.some(item => 'nmId' in item || 'nm_id' in item);
-              const hasSubjectName = allSales.some(item => 'subject_name' in item);
-              console.log('Sales items have nmId property:', hasNmId);
-              console.log('Sales items have subject_name property:', hasSubjectName);
+              // Фильтруем продажи только с nm_id
+              const salesWithNmId = allSales.filter(item => 'nmId' in item || 'nm_id' in item);
+              console.log(`Sales with nmId: ${salesWithNmId.length} out of ${allSales.length}`);
               
-              if (hasNmId || hasSubjectName) {
-                const cost = await calculateTotalCostPrice(allSales, storeId);
-                console.log('Calculated total cost price from existing sales data:', cost);
+              if (salesWithNmId.length > 0) {
+                let totalCost = 0;
+                let processedItems = 0;
                 
-                if (cost > 0) {
-                  setTotalCostPrice(cost);
+                // Получаем данные продуктов для быстрого поиска
+                const products = JSON.parse(localStorage.getItem(`products_${storeId}`) || "[]");
+                const costPrices = JSON.parse(localStorage.getItem(`costPrices_${storeId}`) || "{}");
+                
+                for (const sale of salesWithNmId) {
+                  const nmId = Number(sale.nmId || sale.nm_id);
+                  const quantity = Math.abs(sale.quantity || 1);
+                  
+                  let costPrice = 0;
+                  
+                  // Сначала проверим в costPrices
+                  if (costPrices[nmId]) {
+                    costPrice = costPrices[nmId];
+                    console.log(`Found cost price in costPrices for nmId ${nmId}: ${costPrice}`);
+                  }
+                  // Затем в products
+                  else {
+                    const product = products.find((p: any) => Number(p.nmId) === nmId);
+                    if (product && product.costPrice) {
+                      costPrice = product.costPrice;
+                      console.log(`Found cost price in products for nmId ${nmId}: ${costPrice}`);
+                    }
+                    // Наконец, через API
+                    else {
+                      costPrice = await getCostPriceByNmId(nmId, storeId);
+                      console.log(`Retrieved cost price via API for nmId ${nmId}: ${costPrice}`);
+                    }
+                  }
+                  
+                  if (costPrice > 0) {
+                    const itemCost = costPrice * quantity;
+                    totalCost += itemCost;
+                    processedItems++;
+                    console.log(`Added cost for nmId ${nmId}: ${costPrice} x ${quantity} = ${itemCost}`);
+                  }
+                }
+                
+                console.log(`Calculated total cost: ${totalCost} for ${processedItems} items`);
+                
+                if (totalCost > 0) {
+                  setTotalCostPrice(totalCost);
                   
                   // Save result to localStorage
                   if (analyticsData.data && analyticsData.data.currentPeriod && analyticsData.data.currentPeriod.expenses) {
-                    analyticsData.data.currentPeriod.expenses.costPrice = cost;
+                    analyticsData.data.currentPeriod.expenses.costPrice = totalCost;
                     localStorage.setItem(`marketplace_analytics_${storeId}`, JSON.stringify(analyticsData));
                     console.log('Updated analytics data with cost price in localStorage');
                   }
                   
                   toast({
                     title: "Себестоимость рассчитана",
-                    description: `Общая себестоимость проданных товаров: ${formatCurrency(cost)}`,
+                    description: `Общая себестоимость проданных товаров: ${formatCurrency(totalCost)}`,
                   });
                 }
               }

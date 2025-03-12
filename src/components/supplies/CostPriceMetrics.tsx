@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { Store } from "@/types/store";
 import { ArrowUpRight, ArrowDownRight, DollarSign, ShoppingCart, Wallet } from "lucide-react";
-import { getCostPriceByNmId, getCostPriceBySubjectName } from "@/services/api";
+import { getCostPriceByNmId } from "@/services/api";
 import { useToast } from "@/components/ui/use-toast";
 
 interface CostPriceMetricsProps {
@@ -48,21 +48,11 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
     setLastUpdateDate(null);
   };
 
-  const calculateAverageCostPriceBySubject = (products: ProductData[], subjectName: string): number => {
-    const matchingProducts = products.filter(
-      p => (p.subject === subjectName || p.subject_name === subjectName) && p.costPrice && p.costPrice > 0
-    );
-    
-    if (matchingProducts.length === 0) return 0;
-    
-    const totalCost = matchingProducts.reduce((sum, p) => sum + (p.costPrice || 0), 0);
-    return totalCost / matchingProducts.length;
-  };
-
   const loadCostPriceData = async () => {
     if (!selectedStore) return;
 
     try {
+      // Загружаем продукты из localStorage
       const products = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
       if (products.length === 0) {
         console.log("No products found in localStorage");
@@ -76,6 +66,7 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
 
       console.log(`Loaded ${products.length} products from localStorage`);
       
+      // Загружаем аналитические данные из localStorage
       const analyticsData = JSON.parse(localStorage.getItem(`marketplace_analytics_${selectedStore.id}`) || "{}");
       
       if (!analyticsData || !analyticsData.data || !analyticsData.data.productSales || analyticsData.data.productSales.length === 0) {
@@ -91,22 +82,22 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       const productSales: ProductSale[] = analyticsData.data.productSales;
       console.log(`Found ${productSales.length} product sales categories in analytics data:`, productSales);
       
-      let totalCost = 0;
-      let totalItems = 0;
-      let processedCategories = 0;
-      let skippedCategories = 0;
-      
-      // Создадим дебаг-информацию для анализа nm_id
+      // Проверяем наличие nm_id в данных о продажах
       console.log("Анализ nm_id в данных о продажах:");
       productSales.forEach((sale, index) => {
         console.log(`[${index}] subject_name: ${sale.subject_name}, quantity: ${sale.quantity}, nm_id:`, sale.nm_id);
       });
       
-      // Проверим формат nm_id в продуктах
-      console.log("Формат nm_id в первых 5 продуктах:");
+      // Проверяем формат nmId в продуктах
+      console.log("Формат nmId в первых 5 продуктах:");
       products.slice(0, 5).forEach((product: any, index: number) => {
         console.log(`[${index}] nmId: ${product.nmId}, тип: ${typeof product.nmId}, costPrice: ${product.costPrice}`);
       });
+      
+      let totalCost = 0;
+      let totalItems = 0;
+      let processedCategories = 0;
+      let skippedCategories = 0;
       
       for (const sale of productSales) {
         const subjectName = sale.subject_name;
@@ -121,9 +112,9 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
         
         console.log(`Processing category: "${subjectName}", quantity: ${quantity}, nm_id: ${nmId || 'undefined'}`);
         
+        // Ищем себестоимость ТОЛЬКО по nm_id
         let costPrice = 0;
         
-        // Сначала ищем по nm_id, если он доступен
         if (nmId) {
           console.log(`Trying to get cost price by nmId ${nmId} for category "${subjectName}"`);
           
@@ -137,30 +128,20 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
             costPrice = await getCostPriceByNmId(nmId, selectedStore.id);
             console.log(`Result from getCostPriceByNmId for ${nmId}: ${costPrice}`);
           }
-        }
-        
-        // Если по nm_id не нашли, пробуем по subject_name
-        if (costPrice === 0) {
-          console.log(`No cost price found by nmId, trying by subject_name: "${subjectName}"`);
-          costPrice = calculateAverageCostPriceBySubject(products, subjectName);
-          if (costPrice > 0) {
-            console.log(`Found average cost price for category "${subjectName}": ${costPrice}`);
-          } else {
-            // Если и локально не нашли, запрашиваем через API по subject_name
-            costPrice = await getCostPriceBySubjectName(subjectName, selectedStore.id);
-            console.log(`Result from getCostPriceBySubjectName for "${subjectName}": ${costPrice}`);
-          }
-        }
-        
-        if (costPrice > 0) {
-          const categoryCost = costPrice * quantity;
-          totalCost += categoryCost;
-          totalItems += quantity;
-          processedCategories++;
           
-          console.log(`Successfully calculated for "${subjectName}": ${quantity} x ${costPrice} = ${categoryCost}`);
+          if (costPrice > 0) {
+            const categoryCost = costPrice * quantity;
+            totalCost += categoryCost;
+            totalItems += quantity;
+            processedCategories++;
+            
+            console.log(`Successfully calculated for "${subjectName}": ${quantity} x ${costPrice} = ${categoryCost}`);
+          } else {
+            console.log(`Could not determine cost price for nmId ${nmId} (category "${subjectName}")`);
+            skippedCategories++;
+          }
         } else {
-          console.log(`Could not determine cost price for category "${subjectName}"`);
+          console.log(`No nmId available for category "${subjectName}", skipping`);
           skippedCategories++;
         }
       }
@@ -173,6 +154,7 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       setAvgCostPrice(totalItems > 0 ? totalCost / totalItems : 0);
       setLastUpdateDate(new Date().toISOString());
       
+      // Обновляем данные аналитики с новой себестоимостью
       if (analyticsData && analyticsData.data && analyticsData.data.currentPeriod && analyticsData.data.currentPeriod.expenses) {
         analyticsData.data.currentPeriod.expenses.costPrice = totalCost;
         localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));

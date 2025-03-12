@@ -103,6 +103,86 @@ export const setApiKey = (apiKey: string) => {
   api.defaults.headers.common['Authorization'] = apiKey;
 };
 
+// Function to get cost price by nm_id
+export const getCostPriceByNmId = async (nmId: number, storeId: string): Promise<number> => {
+  try {
+    console.log(`Getting cost price for nmId ${nmId} (type: ${typeof nmId}) from store ${storeId}`);
+    
+    // Убедимся, что nmId является числом
+    const numericNmId = Number(nmId);
+    if (isNaN(numericNmId)) {
+      console.error(`Invalid nmId format: ${nmId}, expected a number`);
+      return 0;
+    }
+
+    // Сначала проверяем в локальном хранилище costPrices
+    try {
+      const costPrices = JSON.parse(localStorage.getItem(`costPrices_${storeId}`) || "{}");
+      const costPrice = costPrices[numericNmId];
+      
+      if (costPrice && typeof costPrice === 'number' && costPrice > 0) {
+        console.log(`Found cost price for nmId ${nmId} in costPrices: ${costPrice}`);
+        return costPrice;
+      }
+    } catch (e) {
+      console.error('Error parsing costPrices from localStorage:', e);
+    }
+    
+    // Если не нашли в costPrices, ищем в products
+    const products = JSON.parse(localStorage.getItem(`products_${storeId}`) || "[]");
+    
+    // Логируем первые несколько продуктов для проверки
+    console.log("Sample products for debugging:");
+    products.slice(0, 3).forEach((p: any, i: number) => {
+      console.log(`Product[${i}]:`, {
+        nmId: p.nmId,
+        nmIdType: typeof p.nmId,
+        costPrice: p.costPrice
+      });
+    });
+    
+    // Ищем продукт по nmId, проверяя как число и как строку
+    const product = products.find((p: any) => 
+      Number(p.nmId) === numericNmId || 
+      Number(p.nmID) === numericNmId
+    );
+    
+    if (product && product.costPrice) {
+      console.log(`Found cost price for nmId ${nmId} in products: ${product.costPrice}`);
+      return product.costPrice;
+    }
+    
+    console.log(`No cost price found for nmId ${nmId} in localStorage`);
+    
+    // Если не нашли в локальном хранилище, делаем запрос к API
+    try {
+      const response = await api.get(`http://localhost:3001/api/products/cost-price/${numericNmId}?storeId=${storeId}`);
+      if (response.data && response.data.costPrice) {
+        console.log(`Received cost price from server for nmId ${nmId}: ${response.data.costPrice}`);
+        
+        // Сохраняем полученную себестоимость в costPrices
+        try {
+          const costPrices = JSON.parse(localStorage.getItem(`costPrices_${storeId}`) || "{}");
+          costPrices[numericNmId] = response.data.costPrice;
+          localStorage.setItem(`costPrices_${storeId}`, JSON.stringify(costPrices));
+          console.log(`Saved cost price for nmId ${nmId} to costPrices`);
+        } catch (e) {
+          console.error('Error saving to costPrices in localStorage:', e);
+        }
+        
+        return response.data.costPrice;
+      }
+    } catch (error) {
+      console.error(`Error fetching cost price for nmId ${nmId}:`, error);
+    }
+    
+    return 0; // Если себестоимость не найдена
+  } catch (error) {
+    console.error(`Error in getCostPriceByNmId for nmId ${nmId}:`, error);
+    return 0;
+  }
+};
+
 // Function to get cost price by subject name
 export const getCostPriceBySubjectName = async (subjectName: string, storeId: string): Promise<number> => {
   try {
@@ -153,62 +233,6 @@ export const getCostPriceBySubjectName = async (subjectName: string, storeId: st
     return 0; // No cost price found
   } catch (error) {
     console.error(`Error in getCostPriceBySubjectName for "${subjectName}":`, error);
-    return 0;
-  }
-};
-
-// Function to get cost price by nm_id
-export const getCostPriceByNmId = async (nmId: number, storeId: string): Promise<number> => {
-  try {
-    console.log(`Getting cost price for nmId ${nmId} (type: ${typeof nmId}) from store ${storeId}`);
-    
-    // Убедимся, что nmId является числом
-    const numericNmId = Number(nmId);
-    if (isNaN(numericNmId)) {
-      console.error(`Invalid nmId format: ${nmId}, expected a number`);
-      return 0;
-    }
-    
-    // Пробуем получить из локального хранилища
-    const products = JSON.parse(localStorage.getItem(`products_${storeId}`) || "[]");
-    
-    // Логируем первые несколько продуктов для проверки
-    console.log("Sample products for debugging:");
-    products.slice(0, 3).forEach((p: any, i: number) => {
-      console.log(`Product[${i}]:`, {
-        nmId: p.nmId,
-        nmIdType: typeof p.nmId,
-        costPrice: p.costPrice
-      });
-    });
-    
-    // Пробуем найти продукт, учитывая возможные форматы nmId (число или строка)
-    const product = products.find((p: any) => 
-      Number(p.nmId) === numericNmId || 
-      Number(p.nmID) === numericNmId
-    );
-    
-    if (product && product.costPrice) {
-      console.log(`Found cost price for nmId ${nmId}: ${product.costPrice}`);
-      return product.costPrice;
-    }
-    
-    console.log(`No cost price found for nmId ${nmId} in localStorage`);
-    
-    // Если нет в локальном хранилище, пробуем получить с сервера
-    try {
-      const response = await api.get(`http://localhost:3001/api/products/cost-price/${numericNmId}?storeId=${storeId}`);
-      if (response.data && response.data.costPrice) {
-        console.log(`Received cost price from server for nmId ${nmId}: ${response.data.costPrice}`);
-        return response.data.costPrice;
-      }
-    } catch (error) {
-      console.error(`Error fetching cost price for nmId ${nmId}:`, error);
-    }
-    
-    return 0; // Если себестоимость не найдена
-  } catch (error) {
-    console.error(`Error in getCostPriceByNmId for nmId ${nmId}:`, error);
     return 0;
   }
 };
