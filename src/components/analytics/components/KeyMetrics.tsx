@@ -1,5 +1,6 @@
+
 import { Card } from "@/components/ui/card";
-import { DollarSign, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { DollarSign, ArrowUpRight, ArrowDownRight, PackageX } from "lucide-react";
 import { ShoppingCart, TrendingDown, Percent } from "../icons";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -15,6 +16,7 @@ interface KeyMetricsProps {
       };
       netProfit: number;
       transferred: number;
+      returnsAmount?: number; // Добавляем сумму возвратов
     };
   };
 }
@@ -23,10 +25,12 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
   const isMobile = useIsMobile();
   const [netProfit, setNetProfit] = useState(data.currentPeriod.netProfit);
   const [totalExpenses, setTotalExpenses] = useState(data.currentPeriod.expenses.total);
+  const [returnsAmount, setReturnsAmount] = useState(data.currentPeriod.returnsAmount || 0);
   
   useEffect(() => {
     setTotalExpenses(data.currentPeriod.expenses.total);
     setNetProfit(data.currentPeriod.netProfit);
+    setReturnsAmount(data.currentPeriod.returnsAmount || 0);
     
     const handleCostPriceUpdate = () => {
       const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
@@ -37,6 +41,7 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
         if (analyticsData?.data?.currentPeriod) {
           setTotalExpenses(analyticsData.data.currentPeriod.expenses.total);
           setNetProfit(analyticsData.data.currentPeriod.netProfit);
+          setReturnsAmount(analyticsData.data.currentPeriod.returnsAmount || 0);
         }
       }
     };
@@ -49,8 +54,9 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
   }, [data]);
   
   useEffect(() => {
-    setNetProfit(data.currentPeriod.transferred - data.currentPeriod.expenses.total);
-  }, [data]);
+    // Расчет чистой прибыли, учитывая сумму возвратов
+    setNetProfit(data.currentPeriod.transferred - data.currentPeriod.expenses.total - (data.currentPeriod.returnsAmount || 0));
+  }, [data, returnsAmount]);
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -100,7 +106,7 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">Общие удержания</p>
                   <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-700 to-red-900 dark:from-red-400 dark:to-red-200">
-                    {formatCurrency(totalExpenses)}
+                    {formatCurrency(totalExpenses + (returnsAmount || 0))}
                   </h3>
                   <div className="flex items-center mt-2 text-sm text-red-600 dark:text-red-400">
                     <ArrowDownRight className="h-4 w-4 mr-1" />
@@ -175,7 +181,7 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
               <div>
                 <p className="text-sm font-medium text-muted-foreground mb-1">Общие удержания</p>
                 <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-700 to-red-900 dark:from-red-400 dark:to-red-200">
-                  {formatCurrency(totalExpenses)}
+                  {formatCurrency(totalExpenses + (returnsAmount || 0))}
                 </h3>
                 <div className="flex items-center mt-2 text-sm text-red-600 dark:text-red-400">
                   <ArrowDownRight className="h-4 w-4 mr-1" />
