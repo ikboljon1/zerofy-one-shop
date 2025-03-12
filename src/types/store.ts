@@ -38,7 +38,7 @@ export type WildberriesResponse = {
     netProfit: number;
     acceptance: number;
     returns?: number;
-    returnsAmount?: number; // Explicitly add returnsAmount property
+    returnsAmount?: number; // Добавляем сумму возвратов
   };
 };
 
