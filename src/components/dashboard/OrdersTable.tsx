@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,13 +40,11 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
     let valueA: any = a[sortField];
     let valueB: any = b[sortField];
 
-    // Преобразование дат для правильной сортировки
     if (sortField === "date" || sortField === "lastChangeDate") {
       valueA = new Date(valueA).getTime();
       valueB = new Date(valueB).getTime();
     }
 
-    // Преобразование числовых строк для правильной сортировки
     if (typeof valueA === "string" && !isNaN(Number(valueA))) {
       valueA = Number(valueA);
     }
@@ -70,33 +67,35 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
   };
 
   return (
-    <Card className="overflow-hidden border-0 shadow-xl bg-gradient-to-br from-white to-indigo-50/60 dark:from-gray-900 dark:to-indigo-950/40 backdrop-blur-sm">
-      <CardHeader className="pb-3 border-b border-indigo-100/30 dark:border-indigo-800/20">
-        <CardTitle className="flex items-center gap-2">
-          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-indigo-100/80 dark:bg-indigo-900/30">
-            <Package className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-          </div>
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-violet-700 dark:from-indigo-400 dark:to-violet-400 text-2xl font-bold">
-            {title}
-          </span>
-        </CardTitle>
-        <CardDescription className="text-sm font-medium text-indigo-600/70 dark:text-indigo-400/70">
-          Всего заказов: <span className="font-bold">{orders.length}</span>
-        </CardDescription>
+    <Card className="overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-white to-fuchsia-50/40 dark:from-gray-900 dark:to-fuchsia-950/30 backdrop-blur-sm">
+      <CardHeader className="pb-3 border-b border-fuchsia-100/30 dark:border-fuchsia-800/20">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-xl flex items-center gap-2">
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-fuchsia-100/80 dark:bg-fuchsia-900/50 shadow-inner">
+              <Package className="h-5 w-5 text-fuchsia-600 dark:text-fuchsia-400" />
+            </div>
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-fuchsia-700 to-violet-700 dark:from-fuchsia-400 dark:to-violet-400 font-bold">
+              {title}
+            </span>
+          </CardTitle>
+          <CardDescription className="text-sm font-medium text-fuchsia-600/70 dark:text-fuchsia-300/70">
+            Всего заказов: <span className="font-bold">{orders.length}</span>
+          </CardDescription>
+        </div>
         <div className="flex gap-2 mt-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-indigo-500/70 dark:text-indigo-400/70" />
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-fuchsia-500/70 dark:text-fuchsia-400/70" />
             <Input
               placeholder="Поиск заказов..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 bg-white/70 dark:bg-indigo-950/30 backdrop-blur-sm border-indigo-200/50 dark:border-indigo-800/30 ring-indigo-100 dark:ring-indigo-800/20 focus:ring-2 focus:ring-indigo-200/50 dark:focus:ring-indigo-700/30 transition-all"
+              className="pl-9 bg-white/70 dark:bg-fuchsia-950/30 backdrop-blur-sm border-fuchsia-200/50 dark:border-fuchsia-800/30"
             />
           </div>
         </div>
       </CardHeader>
       <CardContent className="p-4">
-        <div className="rounded-lg overflow-hidden border border-indigo-100/40 dark:border-indigo-800/30 bg-white/80 dark:bg-gray-950/60 backdrop-blur-sm shadow-inner">
+        <div className="rounded-lg overflow-hidden border border-fuchsia-100/40 dark:border-fuchsia-800/30 bg-white/80 dark:bg-gray-950/60 backdrop-blur-sm shadow-inner">
           <Table>
             <TableHeader>
               <TableRow className="bg-indigo-50/80 dark:bg-indigo-950/40 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/30">
@@ -193,3 +192,4 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
 };
 
 export default OrdersTable;
+

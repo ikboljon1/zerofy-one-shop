@@ -13,7 +13,7 @@ import {
   ResponsiveContainer, 
   PieChart, 
   Pie, 
-  Cell, 
+  Cell,
   Legend,
   BarChart,
   Bar,
@@ -526,4 +526,3 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders, sales = [] }) => {
 };
 
 export default OrdersChart;
-
