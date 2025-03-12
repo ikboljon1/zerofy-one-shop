@@ -19,15 +19,11 @@ const Navbar = () => {
     navigate("/dashboard");
   };
   
-  const handleTariffsClick = () => {
-    navigate("/tariffs");
-  };
-  
   return (
     <nav className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur border-b">
       <div className="container flex items-center justify-between h-16 px-4 md:px-6">
         {/* Logo */}
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
+        <div className="flex items-center gap-2">
           <Zap className="h-6 w-6 text-primary" />
           <span className="font-bold text-xl">Zerofy</span>
         </div>
@@ -35,12 +31,7 @@ const Navbar = () => {
         {/* Desktop Navigation */}
         {!isMobile && (
           <div className="flex items-center gap-6">
-            <span 
-              className="text-sm font-medium cursor-pointer hover:text-primary transition-colors" 
-              onClick={handleTariffsClick}
-            >
-              Тарифы
-            </span>
+            <span className="text-sm font-medium">Тарифы</span>
             <Button onClick={handleLogin}>Войти</Button>
           </div>
         )}
@@ -69,21 +60,8 @@ const Navbar = () => {
             </SheetTrigger>
             <SheetContent side="right">
               <div className="flex flex-col gap-6 mt-6">
-                <span 
-                  className="text-sm font-medium cursor-pointer hover:text-primary transition-colors" 
-                  onClick={() => {
-                    handleTariffsClick();
-                    setIsMenuOpen(false);
-                  }}
-                >
-                  Тарифы
-                </span>
-                <Button onClick={() => {
-                  handleLogin();
-                  setIsMenuOpen(false);
-                }}>
-                  Войти
-                </Button>
+                <span className="text-sm font-medium">Тарифы</span>
+                <Button onClick={handleLogin}>Войти</Button>
               </div>
             </SheetContent>
           </Sheet>
