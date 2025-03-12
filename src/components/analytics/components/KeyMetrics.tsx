@@ -1,6 +1,6 @@
 
 import { Card } from "@/components/ui/card";
-import { DollarSign, ArrowUpRight, ArrowDownRight, PackageX } from "lucide-react";
+import { DollarSign, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { ShoppingCart, TrendingDown, Percent } from "../icons";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -106,7 +106,7 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">Общие удержания</p>
                   <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-700 to-red-900 dark:from-red-400 dark:to-red-200">
-                    {formatCurrency(totalExpenses + (returnsAmount || 0))}
+                    {formatCurrency(totalExpenses)}
                   </h3>
                   <div className="flex items-center mt-2 text-sm text-red-600 dark:text-red-400">
                     <ArrowDownRight className="h-4 w-4 mr-1" />
@@ -181,7 +181,7 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
               <div>
                 <p className="text-sm font-medium text-muted-foreground mb-1">Общие удержания</p>
                 <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-700 to-red-900 dark:from-red-400 dark:to-red-200">
-                  {formatCurrency(totalExpenses + (returnsAmount || 0))}
+                  {formatCurrency(totalExpenses)}
                 </h3>
                 <div className="flex items-center mt-2 text-sm text-red-600 dark:text-red-400">
                   <ArrowDownRight className="h-4 w-4 mr-1" />
