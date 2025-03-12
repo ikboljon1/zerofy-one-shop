@@ -6,6 +6,7 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import { Store } from "@/types/store";
 import { ArrowUpRight, ArrowDownRight, DollarSign, ShoppingCart, Wallet } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import axios from "axios";
 
 interface CostPriceMetricsProps {
   selectedStore?: Store | null;
@@ -30,6 +31,7 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
   const [totalSoldItems, setTotalSoldItems] = useState<number>(0);
   const [avgCostPrice, setAvgCostPrice] = useState<number>(0);
   const [lastUpdateDate, setLastUpdateDate] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -48,6 +50,74 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
   };
 
   const loadCostPriceData = async () => {
+    if (!selectedStore) return;
+
+    setIsLoading(true);
+    
+    try {
+      // Сначала пробуем загрузить данные из базы данных
+      const dbData = await loadFromDatabase(selectedStore.id);
+      
+      if (dbData) {
+        // Если данные есть в базе данных, используем их
+        console.log("Загружены данные о себестоимости из базы данных");
+        setTotalCostPrice(dbData.totalCostPrice);
+        setTotalSoldItems(dbData.totalSoldItems);
+        setAvgCostPrice(dbData.avgCostPrice);
+        setLastUpdateDate(dbData.lastUpdateDate);
+      } else {
+        // Если данных в базе нет, рассчитываем их из localStorage
+        await calculateFromLocalStorage();
+      }
+    } catch (error) {
+      console.error("Ошибка загрузки данных о себестоимости:", error);
+      toast({
+        title: "Ошибка загрузки данных",
+        description: "Произошла ошибка при загрузке данных о себестоимости",
+        variant: "destructive",
+      });
+      
+      // В случае ошибки пробуем рассчитать из localStorage
+      await calculateFromLocalStorage();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadFromDatabase = async (storeId: string) => {
+    try {
+      const response = await axios.get(`http://localhost:3001/api/cost-price/${storeId}`);
+      if (response.data && response.status === 200) {
+        return {
+          totalCostPrice: response.data.totalCostPrice,
+          totalSoldItems: response.data.totalSoldItems,
+          avgCostPrice: response.data.avgCostPrice,
+          lastUpdateDate: response.data.lastUpdateDate
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error("Ошибка загрузки данных из базы:", error);
+      return null;
+    }
+  };
+
+  const saveToDatabase = async (storeId: string, data: any) => {
+    try {
+      await axios.post('http://localhost:3001/api/cost-price', {
+        storeId,
+        totalCostPrice: data.totalCostPrice,
+        totalSoldItems: data.totalSoldItems,
+        avgCostPrice: data.avgCostPrice,
+        lastUpdateDate: data.lastUpdateDate
+      });
+      console.log("Данные о себестоимости сохранены в базу данных");
+    } catch (error) {
+      console.error("Ошибка сохранения данных в базу:", error);
+    }
+  };
+
+  const calculateFromLocalStorage = async () => {
     if (!selectedStore) return;
 
     try {
@@ -135,10 +205,13 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       console.log(`Обработано ${processedCategories} категорий, пропущено ${skippedCategories} категорий`);
       console.log(`Общая себестоимость: ${totalCost}, Всего проданных товаров: ${totalItems}`);
       
+      const avgCost = totalItems > 0 ? totalCost / totalItems : 0;
+      const currentDate = new Date().toISOString();
+      
       setTotalCostPrice(totalCost);
       setTotalSoldItems(totalItems);
-      setAvgCostPrice(totalItems > 0 ? totalCost / totalItems : 0);
-      setLastUpdateDate(new Date().toISOString());
+      setAvgCostPrice(avgCost);
+      setLastUpdateDate(currentDate);
       
       // Обновляем данные аналитики с новой себестоимостью
       if (analyticsData && analyticsData.data && analyticsData.data.currentPeriod && analyticsData.data.currentPeriod.expenses) {
@@ -146,6 +219,14 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
         localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
         console.log(`Обновлены данные аналитики с себестоимостью: ${totalCost}`);
       }
+      
+      // Сохраняем рассчитанные данные в базу данных
+      await saveToDatabase(selectedStore.id, {
+        totalCostPrice: totalCost,
+        totalSoldItems: totalItems,
+        avgCostPrice: avgCost,
+        lastUpdateDate: currentDate
+      });
       
       if (skippedCategories > 0) {
         toast({
@@ -155,10 +236,10 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
         });
       }
     } catch (error) {
-      console.error("Ошибка загрузки данных о себестоимости:", error);
+      console.error("Ошибка расчета себестоимости из localStorage:", error);
       toast({
         title: "Ошибка загрузки данных",
-        description: "Произошла ошибка при загрузке данных о себестоимости",
+        description: "Произошла ошибка при расчете данных о себестоимости",
         variant: "destructive",
       });
     }
@@ -172,10 +253,17 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Статистика себестоимости</h2>
-        {lastUpdateDate && (
-          <Badge variant="outline" className="text-xs text-muted-foreground">
-            Последнее обновление: {new Date(lastUpdateDate).toLocaleString('ru-RU')}
-          </Badge>
+        {isLoading ? (
+          <div className="flex items-center space-x-2">
+            <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-primary"></div>
+            <span className="text-xs text-muted-foreground">Загрузка...</span>
+          </div>
+        ) : (
+          lastUpdateDate && (
+            <Badge variant="outline" className="text-xs text-muted-foreground">
+              Последнее обновление: {new Date(lastUpdateDate).toLocaleString('ru-RU')}
+            </Badge>
+          )
         )}
       </div>
 

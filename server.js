@@ -109,6 +109,17 @@ db.serialize(() => {
     advertising_breakdown TEXT NOT NULL,
     timestamp INTEGER NOT NULL
   )`);
+
+  // Таблица для хранения данных о себестоимости
+  db.run(`CREATE TABLE IF NOT EXISTS cost_price (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    store_id TEXT NOT NULL,
+    total_cost_price REAL NOT NULL,
+    total_sold_items INTEGER NOT NULL,
+    avg_cost_price REAL NOT NULL,
+    last_update_date TEXT NOT NULL,
+    timestamp INTEGER NOT NULL
+  )`);
 });
 
 // Регистрация пользователя
@@ -631,6 +642,51 @@ app.get('/api/analytics/:storeId', (req, res) => {
       console.error('Error parsing JSON data:', e);
       res.status(500).json({ error: 'Ошибка при обработке данных' });
     }
+  });
+});
+
+// API для работы с данными о себестоимости
+app.post('/api/cost-price', (req, res) => {
+  const { storeId, totalCostPrice, totalSoldItems, avgCostPrice, lastUpdateDate } = req.body;
+  
+  if (!storeId) {
+    return res.status(400).json({ error: 'Необходимо указать storeId' });
+  }
+
+  const timestamp = Date.now();
+  const query = `INSERT INTO cost_price (store_id, total_cost_price, total_sold_items, avg_cost_price, last_update_date, timestamp) 
+                 VALUES (?, ?, ?, ?, ?, ?)`;
+  
+  db.run(query, [storeId, totalCostPrice, totalSoldItems, avgCostPrice, lastUpdateDate, timestamp], function(err) {
+    if (err) {
+      console.error('Error saving cost price data:', err);
+      return res.status(500).json({ error: 'Ошибка при сохранении данных о себестоимости' });
+    }
+
+    res.json({ success: true, id: this.lastID });
+  });
+});
+
+// Получение данных о себестоимости
+app.get('/api/cost-price/:storeId', (req, res) => {
+  const { storeId } = req.params;
+  
+  db.get('SELECT * FROM cost_price WHERE store_id = ? ORDER BY timestamp DESC LIMIT 1', [storeId], (err, row) => {
+    if (err) {
+      console.error('Error getting cost price data:', err);
+      return res.status(500).json({ error: 'Ошибка при получении данных о себестоимости' });
+    }
+
+    if (!row) {
+      return res.status(404).json({ error: 'Данные о себестоимости не найдены' });
+    }
+
+    res.json({
+      totalCostPrice: row.total_cost_price,
+      totalSoldItems: row.total_sold_items,
+      avgCostPrice: row.avg_cost_price,
+      lastUpdateDate: row.last_update_date
+    });
   });
 });
 
