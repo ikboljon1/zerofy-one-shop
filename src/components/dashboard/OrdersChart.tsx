@@ -61,7 +61,7 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
         
         const totalOrders = ordersInHour.length;
         const totalAmount = ordersInHour.reduce((sum, order) => sum + (order.finishedPrice || 0), 0);
-        const canceledOrders = ordersInHour.filter(order => order.status === 'cancel').length;
+        const canceledOrders = ordersInHour.filter(order => order.isCancel).length;
         
         return {
           date: format(hour, 'HH:00', { locale: ru }),
@@ -90,7 +90,7 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
         
         const totalOrders = ordersOnDay.length;
         const totalAmount = ordersOnDay.reduce((sum, order) => sum + (order.finishedPrice || 0), 0);
-        const canceledOrders = ordersOnDay.filter(order => order.status === 'cancel').length;
+        const canceledOrders = ordersOnDay.filter(order => order.isCancel).length;
         
         return {
           date: format(day, 'dd.MM', { locale: ru }),
