@@ -262,7 +262,11 @@ const LandingPage = () => {
     recommendations: <div className="rounded-lg overflow-hidden border bg-card">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
         <div className="rounded-md overflow-hidden border">
-          <img src="/lovable-uploads/73027550-3b12-417f-9974-895de2852cfe.png" alt="AI-рекомендации" className="w-full h-auto" />
+          <img 
+          src="/lovable-uploads/73027550-3b12-417f-9974-895de2852cfe.png" 
+          alt="AI-рекомендации" 
+          className="w-[300px] h-auto mx-auto" // Changed size here
+        />
         </div>
         <div className="flex flex-col justify-center">
           <h3 className="text-lg font-semibold mb-2">Интеллектуальные AI-рекомендации</h3>
