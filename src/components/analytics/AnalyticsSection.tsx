@@ -44,6 +44,7 @@ interface AnalyticsData {
       advertising: number;
       acceptance: number;
       deductions?: number;
+      costPrice?: number;
     };
     netProfit: number;
     acceptance: number;
