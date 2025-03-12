@@ -33,17 +33,10 @@ const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales, storeId }) => {
       setRefreshKey(prev => prev + 1);
     };
     
-    const handleAnalyticsDataUpdate = () => {
-      // Также вызываем ререндер при обновлении аналитических данных
-      setRefreshKey(prev => prev + 1);
-    };
-    
     window.addEventListener('costPriceUpdated', handleCostPriceUpdate);
-    window.addEventListener('analytics-data-updated', handleAnalyticsDataUpdate);
     
     return () => {
       window.removeEventListener('costPriceUpdated', handleCostPriceUpdate);
-      window.removeEventListener('analytics-data-updated', handleAnalyticsDataUpdate);
     };
   }, []);
   
