@@ -298,7 +298,6 @@ const AnalyticsSection = () => {
             sales: sales,
             transferred: roundToTwoDecimals(statsData.currentPeriod.transferred),
             netProfit: netProfit,
-            returnsAmount: returnsAmount,
             expenses: {
               ...statsData.currentPeriod.expenses,
               logistics: logistics,
@@ -307,7 +306,8 @@ const AnalyticsSection = () => {
               advertising: totalAdvertisingCost,
               acceptance: acceptance,
               deductions: deductionsValue
-            }
+            },
+            returnsAmount: returnsAmount
           },
           dailySales: statsData.dailySales,
           productSales: statsData.productSales,
