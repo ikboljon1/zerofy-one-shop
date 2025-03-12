@@ -19,7 +19,7 @@ const SupplyForm: React.FC = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6 pt-6">
-        {/* Визуальный пример интеллектуальных рекомендаций */}
+        {/* Визуальные примеры интеллектуальных рекомендаций */}
         <div className="bg-card border rounded-lg shadow-sm p-4">
           <h3 className="text-lg font-semibold mb-3 flex items-center">
             <BarChart2 className="h-5 w-5 text-primary mr-2" />
@@ -96,6 +96,156 @@ const SupplyForm: React.FC = () => {
             <div className="mt-3 text-xs text-muted-foreground flex items-center">
               <ArrowUpRight className="h-3 w-3 mr-1 text-primary" />
               <span>При снижении цены на 25% скорость продаж возрастет в 2.5 раза</span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Визуальные примеры анализа скорости продаж */}
+        <div className="bg-card border rounded-lg shadow-sm p-4">
+          <h3 className="text-lg font-semibold mb-3 flex items-center">
+            <Clock className="h-5 w-5 text-primary mr-2" />
+            Анализ скорости продаж
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+            <div className="p-3 bg-indigo-50/50 border border-indigo-200/50 rounded-lg">
+              <div className="flex items-center mb-2">
+                <div className="p-1.5 bg-indigo-100 rounded-full mr-2">
+                  <TrendingUp className="h-3.5 w-3.5 text-indigo-600" />
+                </div>
+                <h4 className="font-medium text-sm">Высокая скорость</h4>
+              </div>
+              <div className="flex justify-between items-center">
+                <div className="w-full bg-indigo-100 h-3 rounded-full">
+                  <div className="h-full bg-indigo-500 rounded-full" style={{ width: '90%' }}></div>
+                </div>
+                <span className="text-xs font-semibold text-indigo-600 ml-2">9.2</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">5-7 единиц в день</p>
+            </div>
+            
+            <div className="p-3 bg-amber-50/50 border border-amber-200/50 rounded-lg">
+              <div className="flex items-center mb-2">
+                <div className="p-1.5 bg-amber-100 rounded-full mr-2">
+                  <TrendingDown className="h-3.5 w-3.5 text-amber-600" />
+                </div>
+                <h4 className="font-medium text-sm">Средняя скорость</h4>
+              </div>
+              <div className="flex justify-between items-center">
+                <div className="w-full bg-amber-100 h-3 rounded-full">
+                  <div className="h-full bg-amber-500 rounded-full" style={{ width: '50%' }}></div>
+                </div>
+                <span className="text-xs font-semibold text-amber-600 ml-2">5.0</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">2-4 единиц в день</p>
+            </div>
+            
+            <div className="p-3 bg-red-50/50 border border-red-200/50 rounded-lg">
+              <div className="flex items-center mb-2">
+                <div className="p-1.5 bg-red-100 rounded-full mr-2">
+                  <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
+                </div>
+                <h4 className="font-medium text-sm">Низкая скорость</h4>
+              </div>
+              <div className="flex justify-between items-center">
+                <div className="w-full bg-red-100 h-3 rounded-full">
+                  <div className="h-full bg-red-500 rounded-full" style={{ width: '20%' }}></div>
+                </div>
+                <span className="text-xs font-semibold text-red-600 ml-2">2.1</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Менее 1 единицы в день</p>
+            </div>
+          </div>
+          
+          <div className="text-xs text-muted-foreground bg-muted/20 p-2 rounded-lg">
+            <div className="flex items-start mb-1">
+              <ShieldCheck className="h-3.5 w-3.5 text-primary mt-0.5 mr-1 flex-shrink-0" />
+              <span>Система автоматически анализирует скорость продаж и прогнозирует оптимальное количество дней хранения для каждого товара.</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Визуальные примеры модели распределения товаров */}
+        <div className="bg-card border rounded-lg shadow-sm p-4">
+          <h3 className="text-lg font-semibold mb-3 flex items-center">
+            <Package className="h-5 w-5 text-primary mr-2" />
+            Оптимальное распределение по складам
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+            <div className="border rounded-lg overflow-hidden">
+              <div className="bg-muted/10 border-b p-2">
+                <h4 className="text-sm font-medium">Коэффициенты приемки</h4>
+              </div>
+              <div className="p-3">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <div className="h-3 w-3 rounded-full bg-emerald-500 mr-2"></div>
+                      <span className="text-xs">Коледино</span>
+                    </div>
+                    <div className="text-xs font-medium">98.7%</div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <div className="h-3 w-3 rounded-full bg-blue-500 mr-2"></div>
+                      <span className="text-xs">Электросталь</span>
+                    </div>
+                    <div className="text-xs font-medium">92.3%</div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <div className="h-3 w-3 rounded-full bg-amber-500 mr-2"></div>
+                      <span className="text-xs">Казань</span>
+                    </div>
+                    <div className="text-xs font-medium">85.1%</div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <div className="h-3 w-3 rounded-full bg-red-500 mr-2"></div>
+                      <span className="text-xs">Новосибирск</span>
+                    </div>
+                    <div className="text-xs font-medium">78.5%</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="border rounded-lg overflow-hidden">
+              <div className="bg-muted/10 border-b p-2">
+                <h4 className="text-sm font-medium">Рекомендуемое распределение</h4>
+              </div>
+              <div className="p-3">
+                <div className="mb-3">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span>По категории "Обувь женская"</span>
+                  </div>
+                  <div className="w-full h-5 bg-muted/30 rounded-full overflow-hidden flex">
+                    <div className="h-full bg-emerald-500" style={{ width: '40%' }}>
+                      <span className="text-[10px] text-white px-1 leading-5">40%</span>
+                    </div>
+                    <div className="h-full bg-blue-500" style={{ width: '30%' }}>
+                      <span className="text-[10px] text-white px-1 leading-5">30%</span>
+                    </div>
+                    <div className="h-full bg-amber-500" style={{ width: '20%' }}>
+                      <span className="text-[10px] text-white px-1 leading-5">20%</span>
+                    </div>
+                    <div className="h-full bg-red-500" style={{ width: '10%' }}>
+                      <span className="text-[10px] text-white px-1 leading-5">10%</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="text-xs text-muted-foreground">
+                  <div className="flex items-start">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mt-0.5 mr-1 flex-shrink-0" />
+                    <span>ИИ анализирует историю продаж и распределяет товары для максимальной скорости реализации</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
