@@ -17,26 +17,19 @@ interface KeyMetricsProps {
       netProfit: number;
     };
   };
+  costPriceUpdated?: number;
 }
 
-const KeyMetrics = ({ data }: KeyMetricsProps) => {
+const KeyMetrics = ({ data, costPriceUpdated }: KeyMetricsProps) => {
   const isMobile = useIsMobile();
   const [netProfit, setNetProfit] = useState(data.currentPeriod.netProfit);
   const [totalExpenses, setTotalExpenses] = useState(data.currentPeriod.expenses.total);
   
   useEffect(() => {
-    // Если costPrice определен, учитываем его в чистой прибыли
-    const costPrice = data.currentPeriod.expenses.costPrice || 0;
-    
-    // Проверяем, включена ли уже себестоимость в общие расходы
-    // Если нет, добавляем ее к общим расходам и вычитаем из чистой прибыли
-    const updatedExpenses = data.currentPeriod.expenses.total;
-    setTotalExpenses(updatedExpenses);
-    
-    // Чистая прибыль = продажи - общие расходы
-    const updatedNetProfit = data.currentPeriod.sales - updatedExpenses;
-    setNetProfit(updatedNetProfit);
-  }, [data]);
+    // Обновляем состояние при изменении входных данных
+    setTotalExpenses(data.currentPeriod.expenses.total);
+    setNetProfit(data.currentPeriod.sales - data.currentPeriod.expenses.total);
+  }, [data, costPriceUpdated]);
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

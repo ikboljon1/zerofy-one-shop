@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, Coins, ShoppingCart, Calculator } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -27,9 +26,10 @@ interface ExpenseBreakdownProps {
   advertisingBreakdown?: {
     search: number;
   };
+  onCostPriceUpdate?: (costPrice: number) => void;
 }
 
-const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps) => {
+const ExpenseBreakdown = ({ data, advertisingBreakdown, onCostPriceUpdate }: ExpenseBreakdownProps) => {
   const [totalCostPrice, setTotalCostPrice] = useState(data.currentPeriod.expenses.costPrice || 0);
   const [isLoading, setIsLoading] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
@@ -128,16 +128,21 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           setTotalCostPrice(totalCost);
           
           if (analyticsData.data && analyticsData.data.currentPeriod && analyticsData.data.currentPeriod.expenses) {
+            const totalWithoutCostPrice = analyticsData.data.currentPeriod.expenses.total - 
+                                         (analyticsData.data.currentPeriod.expenses.costPrice || 0);
+            
             analyticsData.data.currentPeriod.expenses.costPrice = totalCost;
             
-            // Добавляем себестоимость в общие удержания
-            analyticsData.data.currentPeriod.expenses.total += totalCost;
+            analyticsData.data.currentPeriod.expenses.total = totalWithoutCostPrice + totalCost;
             
-            // Обновляем чистую прибыль с учетом себестоимости
             analyticsData.data.currentPeriod.netProfit = analyticsData.data.currentPeriod.sales - analyticsData.data.currentPeriod.expenses.total;
             
             localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
             console.log('Обновлены данные аналитики с себестоимостью и чистой прибылью в localStorage');
+            
+            if (onCostPriceUpdate) {
+              onCostPriceUpdate(totalCost);
+            }
             
             try {
               await fetch('http://localhost:3001/api/cost-price', {
@@ -162,14 +167,10 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           
           console.log(`Себестоимость рассчитана: ${formatCurrency(totalCost)}`);
           
-          // Обновляем данные в компоненте
           toast({
             title: "Успешно",
             description: `Себестоимость рассчитана: ${formatCurrency(totalCost)}`,
           });
-          
-          // Полностью обновляем страницу, чтобы отразить изменения в KeyMetrics
-          window.location.reload();
         } else {
           toast({
             title: "Внимание",
@@ -197,7 +198,6 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
     }
   };
   
-  // Пересчитываем общие расходы, включая себестоимость
   const totalExpensesWithCostPrice = data.currentPeriod.expenses.logistics + 
                                     data.currentPeriod.expenses.storage + 
                                     data.currentPeriod.expenses.penalties + 
