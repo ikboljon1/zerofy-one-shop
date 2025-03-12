@@ -198,6 +198,16 @@ export default function Admin() {
           </TabsContent>
 
           <TabsContent value="smtp">
+            <div className="mb-4 p-4 bg-blue-900/30 border border-blue-800/50 rounded-lg">
+              <h3 className="text-lg font-medium text-white mb-2 flex items-center">
+                <Mail className="h-5 w-5 mr-2 text-blue-400" />
+                Важно: Настройка SMTP для сброса пароля
+              </h3>
+              <p className="text-gray-300">
+                Настройте параметры SMTP-сервера для корректной работы функции сброса пароля и отправки системных уведомлений.
+                Без правильной настройки SMTP пользователи не смогут восстанавливать доступ к своим учетным записям.
+              </p>
+            </div>
             <SMTPSettings />
           </TabsContent>
 

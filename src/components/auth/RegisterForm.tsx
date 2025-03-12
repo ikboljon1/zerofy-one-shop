@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { registerUser } from "@/services/userService";
+import { registerUser, checkPhoneExists } from "@/services/userService";
+import { Info } from "lucide-react";
 
 // Country codes with Kyrgyzstan (+996) as default
 const countryCodes = [
@@ -29,7 +30,11 @@ const registerSchema = z.object({
   name: z.string().min(2, { message: "Имя должно содержать минимум 2 символа" }),
   email: z.string().email({ message: "Введите корректный email" }),
   password: z.string().min(6, { message: "Пароль должен содержать минимум 6 символов" }),
-  phone: z.string().min(9, { message: "Введите корректный номер телефона" }),
+  phone: z.string()
+    .min(9, { message: "Введите корректный номер телефона" })
+    .refine(val => !val.startsWith('0'), {
+      message: "Номер не должен начинаться с нуля"
+    })
 });
 
 interface RegisterFormProps {
@@ -39,6 +44,7 @@ interface RegisterFormProps {
 const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [countryCode, setCountryCode] = useState("+996"); // Kyrgyzstan as default
+  const [isPhoneUnique, setIsPhoneUnique] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -46,6 +52,8 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
     register,
     handleSubmit,
     formState: { errors },
+    watch,
+    trigger
   } = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -55,6 +63,30 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
       phone: "",
     },
   });
+  
+  const phoneValue = watch("phone");
+  
+  useEffect(() => {
+    if (phoneValue && phoneValue.length >= 9) {
+      const checkPhone = async () => {
+        const fullPhoneNumber = `${countryCode}${phoneValue}`;
+        const exists = await checkPhoneExists(fullPhoneNumber);
+        setIsPhoneUnique(!exists);
+        
+        if (exists) {
+          toast({
+            title: "Предупреждение",
+            description: "Номер телефона уже зарегистрирован в системе",
+            variant: "destructive",
+          });
+        }
+      };
+      
+      checkPhone();
+    } else {
+      setIsPhoneUnique(true);
+    }
+  }, [phoneValue, countryCode, toast]);
 
   const onSubmit = async (data: z.infer<typeof registerSchema>) => {
     setIsLoading(true);
@@ -63,8 +95,21 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
       // Combine country code with phone number
       const fullPhoneNumber = `${countryCode}${data.phone}`;
       
-      // Use userService to register the user
-      const result = await registerUser(data.name, data.email, data.password);
+      // Check if phone is unique before registration
+      const exists = await checkPhoneExists(fullPhoneNumber);
+      if (exists) {
+        setIsPhoneUnique(false);
+        toast({
+          title: "Ошибка",
+          description: "Номер телефона уже зарегистрирован в системе",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      // Use userService to register the user with phone number
+      const result = await registerUser(data.name, data.email, data.password, fullPhoneNumber);
       
       if (result.success) {
         toast({
@@ -123,11 +168,20 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="phone">Номер телефона</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="phone">Номер телефона</Label>
+          <div className="text-xs text-muted-foreground flex items-center">
+            <Info className="h-3 w-3 mr-1" />
+            Без нуля в начале
+          </div>
+        </div>
         <div className="flex">
           <Select 
             value={countryCode} 
-            onValueChange={setCountryCode}
+            onValueChange={(value) => {
+              setCountryCode(value);
+              trigger("phone"); // Re-validate phone when country code changes
+            }}
           >
             <SelectTrigger className="w-[140px] mr-2">
               <SelectValue placeholder="Код страны" />
@@ -144,12 +198,15 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
             id="phone"
             type="tel"
             placeholder="Номер телефона"
-            className="flex-1"
+            className={`flex-1 ${!isPhoneUnique ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
             {...register("phone")}
           />
         </div>
         {errors.phone && (
           <p className="text-sm text-destructive">{errors.phone.message}</p>
+        )}
+        {!isPhoneUnique && (
+          <p className="text-sm text-destructive">Этот номер уже зарегистрирован</p>
         )}
       </div>
       
@@ -165,7 +222,7 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
         )}
       </div>
       
-      <Button type="submit" className="w-full" disabled={isLoading}>
+      <Button type="submit" className="w-full" disabled={isLoading || !isPhoneUnique}>
         {isLoading ? "Регистрация..." : "Зарегистрироваться"}
       </Button>
     </form>
