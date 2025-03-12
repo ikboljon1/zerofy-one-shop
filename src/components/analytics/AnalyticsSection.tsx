@@ -44,6 +44,7 @@ interface AnalyticsData {
     };
     netProfit: number;
     acceptance: number;
+    returnsAmount?: number;
   };
   dailySales: Array<{
     date: string;
@@ -217,7 +218,7 @@ const AnalyticsSection = () => {
         setIsLoading(false);
         toast({
           title: "Ошибка API",
-          description: "Превышен лимит запросов. Используйте кешированные данные или повторите позже.",
+          description: "Превышен лимит запросов. Используйте кешированные данные и повторите позже.",
           variant: "destructive"
         });
         return;

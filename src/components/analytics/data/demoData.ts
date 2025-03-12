@@ -17,7 +17,8 @@ export const emptyAnalyticsData = {
       deductions: 0
     },
     netProfit: 0,
-    acceptance: 0
+    acceptance: 0,
+    returnsAmount: 0 // Add returnsAmount property with default value of 0
   },
   dailySales: [],
   productSales: [],
