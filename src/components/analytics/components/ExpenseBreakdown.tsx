@@ -1,14 +1,16 @@
+
 import { Card } from "@/components/ui/card";
-import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, Coins, ShoppingCart, Calculator } from "lucide-react";
+import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, Coins, ShoppingCart, Calculator, TrendingUp } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { getCostPriceByNmId } from "@/services/api";
 import { useEffect, useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 
 interface ExpenseBreakdownProps {
   data: {
     currentPeriod: {
+      sales: number;
       expenses: {
         total: number;
         logistics: number;
@@ -19,6 +21,7 @@ interface ExpenseBreakdownProps {
         deductions?: number;
         costPrice?: number;
       };
+      netProfit: number;
     };
   };
   advertisingBreakdown?: {
@@ -30,11 +33,20 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
   const [totalCostPrice, setTotalCostPrice] = useState(data.currentPeriod.expenses.costPrice || 0);
   const [isLoading, setIsLoading] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [netProfit, setNetProfit] = useState(data.currentPeriod.netProfit);
   const { toast } = useToast();
 
   useEffect(() => {
     setTotalCostPrice(data.currentPeriod.expenses.costPrice || 0);
+    // Recalculate net profit when expenses or cost price changes
+    calculateNetProfit(data.currentPeriod.sales, data.currentPeriod.expenses.total, data.currentPeriod.expenses.costPrice || 0);
   }, [data]);
+
+  const calculateNetProfit = (sales: number, expenses: number, costPrice: number) => {
+    const calculatedNetProfit = sales - expenses - costPrice;
+    setNetProfit(calculatedNetProfit);
+    return calculatedNetProfit;
+  };
 
   const calculateCostPrice = async () => {
     try {
@@ -126,8 +138,19 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           
           if (analyticsData.data && analyticsData.data.currentPeriod && analyticsData.data.currentPeriod.expenses) {
             analyticsData.data.currentPeriod.expenses.costPrice = totalCost;
+            
+            // Calculate new net profit with cost price
+            const newNetProfit = calculateNetProfit(
+              analyticsData.data.currentPeriod.sales,
+              analyticsData.data.currentPeriod.expenses.total,
+              totalCost
+            );
+            
+            // Update net profit in analytics data
+            analyticsData.data.currentPeriod.netProfit = newNetProfit;
+            
             localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
-            console.log('Обновлены данные аналитики с себестоимостью в localStorage');
+            console.log('Обновлены данные аналитики с себестоимостью и чистой прибылью в localStorage');
             
             try {
               await fetch('http://localhost:3001/api/cost-price', {
@@ -140,6 +163,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
                   totalCostPrice: totalCost,
                   totalSoldItems: productSales.reduce((acc, sale) => acc + (sale.quantity || 0), 0),
                   avgCostPrice: totalCost / productSales.reduce((acc, sale) => acc + (sale.quantity || 0), 0),
+                  netProfit: newNetProfit,
                   lastUpdateDate: new Date().toISOString()
                 }),
               });
@@ -204,7 +228,7 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
         </Button>
       </div>
       
-      <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-2">
+      <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-7 gap-2">
         <div className="flex flex-col bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background border border-purple-200 dark:border-purple-800 rounded-lg p-2">
           <div className="flex justify-between items-center mb-1">
             <h4 className="text-xs font-medium">Логистика</h4>
@@ -280,6 +304,19 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           <p className="text-lg font-bold">{formatCurrency(totalCostPrice)}</p>
           <span className="text-xs text-muted-foreground mt-0.5">
             {totalExpenses > 0 ? ((totalCostPrice / totalExpenses) * 100).toFixed(1) : '0'}%
+          </span>
+        </div>
+
+        <div className="flex flex-col bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/20 dark:to-background border border-emerald-200 dark:border-emerald-800 rounded-lg p-2">
+          <div className="flex justify-between items-center mb-1">
+            <h4 className="text-xs font-medium">Чистая прибыль</h4>
+            <div className="bg-emerald-100 dark:bg-emerald-900/60 p-1 rounded-md">
+              <TrendingUp className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+            </div>
+          </div>
+          <p className="text-lg font-bold">{formatCurrency(netProfit)}</p>
+          <span className="text-xs text-muted-foreground mt-0.5">
+            {data.currentPeriod.sales > 0 ? ((netProfit / data.currentPeriod.sales) * 100).toFixed(1) : '0'}%
           </span>
         </div>
       </div>
