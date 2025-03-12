@@ -6,22 +6,26 @@ import { useNavigate } from "react-router-dom";
 import AuthModal from "@/components/auth/AuthModal";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+
 const LandingPage = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [activeScreenshot, setActiveScreenshot] = useState(0);
   const [activeDemoTab, setActiveDemoTab] = useState("analytics");
   const navigate = useNavigate();
+
   const handleAuthClick = (mode: 'login' | 'register') => {
     setAuthMode(mode);
     setShowAuthModal(true);
   };
+  
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveScreenshot(prev => (prev + 1) % screenshots.length);
     }, 4000);
     return () => clearInterval(interval);
   }, []);
+  
   const screenshots = [{
     src: "/lovable-uploads/84016c72-9b0f-4155-a959-56497d632524.png",
     alt: "Аналитика продаж",
@@ -43,6 +47,7 @@ const LandingPage = () => {
     title: "Умное управление товарами",
     description: "Полная информация о каждом товаре с показателями прибыльности и динамикой продаж"
   }];
+  
   const features = [{
     icon: <BarChart2 className="h-6 w-6 text-primary" />,
     title: "Интеллектуальная аналитика",
@@ -216,20 +221,99 @@ const LandingPage = () => {
     icon: <CircleDollarSign className="h-5 w-5" />,
     description: "Отслеживание всех финансовых показателей вашего бизнеса"
   }];
+  
   const demoContent = {
     analytics: <div className="rounded-lg overflow-hidden border bg-card p-1">
-        
+        <img src="/lovable-uploads/84016c72-9b0f-4155-a959-56497d632524.png" alt="Аналитика продаж" className="w-full h-auto rounded-md" />
+        <div className="p-4">
+          <h3 className="font-semibold text-lg mb-2">Всесторонняя аналитика продаж</h3>
+          <p className="text-muted-foreground">Отслеживайте динамику продаж, анализируйте доходность и выявляйте тренды с помощью интерактивных диаграмм и детальных отчетов</p>
+        </div>
       </div>,
+      
     recommendations: <div className="rounded-lg overflow-hidden border bg-card p-1">
-        
+        <img src="/lovable-uploads/5241b8dd-cd83-40f4-91e9-3bdec64e62f2.png" alt="AI-рекомендации" className="w-full h-auto rounded-md" />
+        <div className="p-4">
+          <h3 className="font-semibold text-lg mb-2">Умные AI-рекомендации</h3>
+          <p className="text-muted-foreground">Система анализирует рентабельность хранения товаров, учитывая их маржинальность, затраты на хранение и скорость продаж. На основе этих данных ИИ предлагает оптимальную стратегию: установку скидок для ускорения продаж или вывод товара из ассортимента.</p>
+          <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="flex items-start gap-2">
+              <div className="mt-1 bg-green-100 dark:bg-green-900/20 p-1.5 rounded-full">
+                <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">Анализ маржинальности</p>
+                <p className="text-xs text-muted-foreground">Оценка доходности каждого товара</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="mt-1 bg-amber-100 dark:bg-amber-900/20 p-1.5 rounded-full">
+                <Wallet className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">Расчет затрат</p>
+                <p className="text-xs text-muted-foreground">Учет всех издержек на хранение</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="mt-1 bg-blue-100 dark:bg-blue-900/20 p-1.5 rounded-full">
+                <Calculator className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">Сценарное моделирование</p>
+                <p className="text-xs text-muted-foreground">Сравнение финансовых результатов</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>,
+      
     warehouses: <div className="rounded-lg overflow-hidden border bg-card p-1">
-        
+        <img src="/lovable-uploads/d3555da5-3bf5-4985-b8f4-065667922c6f.png" alt="Управление складами" className="w-full h-auto rounded-md" />
+        <div className="p-4">
+          <h3 className="font-semibold text-lg mb-2">Эффективное управление складами</h3>
+          <p className="text-muted-foreground">Комплексное решение для контроля за товарными запасами на всех складах маркетплейсов. Отслеживайте количество товаров, анализируйте их распределение и оптимизируйте логистические процессы.</p>
+          <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="flex items-start gap-2">
+              <div className="mt-1 bg-indigo-100 dark:bg-indigo-900/20 p-1.5 rounded-full">
+                <Package className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">Мониторинг запасов</p>
+                <p className="text-xs text-muted-foreground">Актуальные данные о количестве товаров на складах</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="mt-1 bg-cyan-100 dark:bg-cyan-900/20 p-1.5 rounded-full">
+                <BarChart3 className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">Распределение по складам</p>
+                <p className="text-xs text-muted-foreground">Визуализация товарных запасов по локациям</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="mt-1 bg-purple-100 dark:bg-purple-900/20 p-1.5 rounded-full">
+                <TrendingDown className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">Анализ рентабельности</p>
+                <p className="text-xs text-muted-foreground">Оценка эффективности хранения товаров</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>,
+      
     finance: <div className="rounded-lg overflow-hidden border bg-card p-1">
-        
+        <img src="/lovable-uploads/0a0d0dd7-b54d-4163-ba50-1ddbb5b6dd7d.png" alt="Финансовый контроль" className="w-full h-auto rounded-md" />
+        <div className="p-4">
+          <h3 className="font-semibold text-lg mb-2">Полный финансовый контроль</h3>
+          <p className="text-muted-foreground">Отслеживайте все финансовые показатели вашего бизнеса: выручку, прибыль, затраты на рекламу, логистику и хранение. Платформа автоматически рассчитывает рентабельность каждого товара.</p>
+        </div>
       </div>
   };
+
   return <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <section className="py-16 px-6 md:px-12 lg:px-16">
@@ -405,4 +489,5 @@ const QuoteIcon = ({
     <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z" />
     <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z" />
   </svg>;
+
 export default LandingPage;
