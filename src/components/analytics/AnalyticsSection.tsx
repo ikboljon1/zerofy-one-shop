@@ -124,7 +124,7 @@ interface DeductionsTimelineItem {
 const AnalyticsSection = () => {
   const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState<AnalyticsData>(emptyAnalyticsData);
   const [penalties, setPenalties] = useState<Array<{name: string, value: number}>>([]);
   const [deductions, setDeductions] = useState<Array<{name: string, value: number}>>([]);
@@ -159,7 +159,6 @@ const AnalyticsSection = () => {
     const selectedStore = getSelectedStore();
     if (selectedStore) {
       loadCachedData();
-      fetchData();
     } else {
       setDeductionsTimeline([]);
       setPenalties([]);
@@ -221,7 +220,7 @@ const AnalyticsSection = () => {
         setErrorMessage("Превышен лимит запросов к API Wildberries. Пожалуйста, повторите попытку через несколько минут или используйте кешированные данные.");
         setIsLoading(false);
         toast({
-          title: "Ошибка API",
+          title: "��шибка API",
           description: "Превышен лимит запросов. Используйте кешированные данные или повторите позже.",
           variant: "destructive"
         });
@@ -530,20 +529,6 @@ const AnalyticsSection = () => {
               onClick={() => setShowAIAnalysis(!showAIAnalysis)}
             >
               {showAIAnalysis ? "Скрыть AI анализ" : "Показать AI анализ"}
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={fetchData}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Обновление...
-                </>
-              ) : (
-                <>Обновить данные</>
-              )}
             </Button>
           </div>
         </div>

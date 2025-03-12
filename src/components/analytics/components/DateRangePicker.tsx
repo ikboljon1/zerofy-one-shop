@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { CalendarIcon, Calendar as CalendarIcon2, ChevronDown } from 'lucide-react';
+import { CalendarIcon, Calendar as CalendarIcon2, ChevronDown, RefreshCw } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -31,15 +31,23 @@ const DateRangePicker = ({
   const [fromOpen, setFromOpen] = useState(false);
   const [toOpen, setToOpen] = useState(false);
   const [quickSelectOpen, setQuickSelectOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const isMobile = useIsMobile();
 
   const handleApply = () => {
+    setIsLoading(true);
+    
     if (onApplyDateRange) {
       onApplyDateRange();
     }
     if (onUpdate) {
       onUpdate();
     }
+    
+    // Reset loading state after a short delay to show the loading indicator
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
   };
 
   const applyPreset = (preset: string) => {
@@ -116,8 +124,15 @@ const DateRangePicker = ({
                 </div>
               </PopoverContent>
             </Popover>
-            <Button size="sm" className="h-9" onClick={handleApply}>
-              Применить
+            <Button size="sm" className="h-9" onClick={handleApply} disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Загрузка...
+                </>
+              ) : (
+                "Применить"
+              )}
             </Button>
           </div>
         ) : (
@@ -180,8 +195,15 @@ const DateRangePicker = ({
               </PopoverContent>
             </Popover>
             
-            <Button onClick={handleApply} className="h-9">
-              Применить
+            <Button onClick={handleApply} className="h-9" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Загрузка...
+                </>
+              ) : (
+                "Применить"
+              )}
             </Button>
           </div>
         )}
