@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -34,6 +33,19 @@ export function AddStoreDialog({
   const [apiKey, setApiKey] = useState("");
   const [apiKeyValidationStatus, setApiKeyValidationStatus] = useState<"idle" | "validating" | "valid" | "invalid">("idle");
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        setUserId(user.id);
+      } catch (error) {
+        console.error("Ошибка получения ID пользователя:", error);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -46,7 +58,6 @@ export function AddStoreDialog({
   }, [isOpen]);
 
   useEffect(() => {
-    // Сбрасываем статус валидации при изменении API ключа
     if (apiKey) {
       setApiKeyValidationStatus("idle");
       setValidationError(null);
@@ -74,7 +85,6 @@ export function AddStoreDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Проверка API ключа при отправке формы
     const isValid = await validateKey();
     if (!isValid) {
       toast.error(validationError || "API ключ не прошел проверку", {
@@ -87,6 +97,7 @@ export function AddStoreDialog({
       name: storeName,
       marketplace: marketplace as any,
       apiKey,
+      userId
     });
   };
 

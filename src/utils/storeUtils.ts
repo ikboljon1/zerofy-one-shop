@@ -457,38 +457,59 @@ export const getStoresLastUpdateTime = (): number => {
 export const ensureStoreSelectionPersistence = (): Store[] => {
   const stores = loadStores();
   
-  const hasSelectedStore = stores.some(store => store.isSelected);
+  const userData = localStorage.getItem('user');
+  const currentUserId = userData ? JSON.parse(userData).id : null;
   
-  if (!hasSelectedStore && stores.length > 0) {
+  const userStores = currentUserId 
+    ? stores.filter(store => store.userId === currentUserId) 
+    : stores;
+  
+  if (!userStores.length) return userStores;
+  
+  const hasSelectedStore = userStores.some(store => store.isSelected);
+  
+  if (!hasSelectedStore && userStores.length > 0) {
     const lastSelectedStoreData = localStorage.getItem('last_selected_store');
     
     if (lastSelectedStoreData) {
       try {
         const { storeId } = JSON.parse(lastSelectedStoreData);
-        const updatedStores = stores.map(store => ({
-          ...store,
-          isSelected: store.id === storeId
-        }));
         
-        saveStores(updatedStores);
-        return updatedStores;
+        const storeExists = userStores.some(store => store.id === storeId);
+        
+        if (storeExists) {
+          const updatedAllStores = stores.map(store => ({
+            ...store,
+            isSelected: store.id === storeId
+          }));
+          
+          saveStores(updatedAllStores);
+          
+          return currentUserId 
+            ? updatedAllStores.filter(store => store.userId === currentUserId)
+            : updatedAllStores;
+        }
       } catch (error) {
         console.error('Error restoring store selection:', error);
       }
     }
     
-    if (stores.length > 0) {
-      const updatedStores = stores.map((store, index) => ({
-        ...store,
-        isSelected: index === 0
-      }));
-      
-      saveStores(updatedStores);
-      return updatedStores;
-    }
+    const updatedAllStores = stores.map(store => {
+      if (currentUserId && store.userId === currentUserId) {
+        const isFirst = store.id === userStores[0].id;
+        return { ...store, isSelected: isFirst };
+      }
+      return { ...store, isSelected: false };
+    });
+    
+    saveStores(updatedAllStores);
+    
+    return currentUserId 
+      ? updatedAllStores.filter(store => store.userId === currentUserId)
+      : updatedAllStores;
   }
   
-  return stores;
+  return userStores;
 };
 
 /**
@@ -497,8 +518,17 @@ export const ensureStoreSelectionPersistence = (): Store[] => {
  */
 export const getSelectedStore = (): Store | null => {
   try {
+    const userData = localStorage.getItem('user');
+    const currentUserId = userData ? JSON.parse(userData).id : null;
+    
     const stores = JSON.parse(localStorage.getItem(STORES_STORAGE_KEY) || '[]');
-    return stores.find((store: Store) => store.isSelected) || null;
+    
+    const userStores = currentUserId 
+      ? stores.filter((store: Store) => store.userId === currentUserId)
+      : stores;
+    
+    return userStores.find((store: Store) => store.isSelected) || 
+           (userStores.length > 0 ? userStores[0] : null);
   } catch (error) {
     console.error('Error getting selected store:', error);
     return null;

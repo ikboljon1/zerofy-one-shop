@@ -24,8 +24,16 @@ export default function Stores({ onStoreSelect }: StoresProps) {
 
   useEffect(() => {
     try {
+      const userData = localStorage.getItem('user');
+      const currentUserId = userData ? JSON.parse(userData).id : null;
+      
+      // Загружаем и фильтруем магазины по текущему пользователю
       const savedStores = ensureStoreSelectionPersistence();
-      setStores(savedStores);
+      const userStores = currentUserId 
+        ? savedStores.filter(store => store.userId === currentUserId)
+        : savedStores;
+      
+      setStores(userStores);
       checkDeletePermissions();
       getStoreLimitFromTariff();
     } catch (error) {
@@ -132,13 +140,18 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         return;
       }
 
+      // Получаем текущего пользователя из localStorage
+      const userData = localStorage.getItem('user');
+      const currentUserId = userData ? JSON.parse(userData).id : null;
+
       const store: StoreType = {
         id: Date.now().toString(),
         marketplace: newStore.marketplace,
         name: newStore.name,
         apiKey: newStore.apiKey,
         isSelected: false,
-        lastFetchDate: new Date().toISOString()
+        lastFetchDate: new Date().toISOString(),
+        userId: currentUserId // Привязываем магазин к текущему пользователю
       };
 
       console.log("Created new store object:", store);
@@ -160,9 +173,17 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
       }
       
-      const updatedStores = [...stores, storeToAdd];
-      setStores(updatedStores);
-      saveStores(updatedStores);
+      // Получаем все магазины и добавляем новый
+      const allStores = loadStores();
+      const updatedStores = [...allStores, storeToAdd];
+      
+      // Обновляем только магазины текущего пользователя в состоянии
+      const userStores = currentUserId 
+        ? updatedStores.filter(s => s.userId === currentUserId)
+        : updatedStores;
+      
+      setStores(userStores);
+      saveStores(updatedStores); // Сохраняем все магазины
       
       console.log("Store added successfully:", storeToAdd);
       
@@ -184,13 +205,23 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   };
 
   const handleToggleSelection = (storeId: string) => {
-    const updatedStores = stores.map(store => ({
+    // Получаем все магазины
+    const allStores = loadStores();
+    const updatedAllStores = allStores.map(store => ({
       ...store,
       isSelected: store.id === storeId
     }));
     
-    setStores(updatedStores);
-    saveStores(updatedStores);
+    // Обновляем состояние только для магазинов текущего пользователя
+    const userData = localStorage.getItem('user');
+    const currentUserId = userData ? JSON.parse(userData).id : null;
+    
+    const userStores = currentUserId 
+      ? updatedAllStores.filter(store => store.userId === currentUserId)
+      : updatedAllStores;
+    
+    setStores(userStores);
+    saveStores(updatedAllStores); // Сохраняем все магазины
 
     // Save the selected store separately for better persistence
     localStorage.setItem('last_selected_store', JSON.stringify({
@@ -212,11 +243,22 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     try {
       const updatedStore = await refreshStoreStats(store);
       if (updatedStore) {
-        const updatedStores = stores.map(s => 
+        // Получаем все магазины
+        const allStores = loadStores();
+        const updatedAllStores = allStores.map(s => 
           s.id === store.id ? updatedStore : s
         );
-        setStores(updatedStores);
-        saveStores(updatedStores);
+        
+        // Обновляем состояние только для магазинов текущего пользователя
+        const userData = localStorage.getItem('user');
+        const currentUserId = userData ? JSON.parse(userData).id : null;
+        
+        const userStores = currentUserId 
+          ? updatedAllStores.filter(s => s.userId === currentUserId)
+          : updatedAllStores;
+        
+        setStores(userStores);
+        saveStores(updatedAllStores); // Сохраняем все магазины
         
         // Также обновляем данные для использования в Analytics и Dashboard
         if (updatedStore.stats) {
@@ -263,9 +305,21 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     const storeToDelete = stores.find(store => store.id === storeId);
     if (!storeToDelete) return;
 
-    const updatedStores = stores.filter(store => store.id !== storeId);
-    setStores(updatedStores);
-    saveStores(updatedStores);
+    // Получаем все магазины и удаляем нужный
+    const allStores = loadStores();
+    const updatedAllStores = allStores.filter(store => store.id !== storeId);
+    
+    // Обновляем состояние только для магазинов текущего пользователя
+    const userData = localStorage.getItem('user');
+    const currentUserId = userData ? JSON.parse(userData).id : null;
+    
+    const userStores = currentUserId 
+      ? updatedAllStores.filter(store => store.userId === currentUserId)
+      : updatedAllStores;
+    
+    setStores(userStores);
+    saveStores(updatedAllStores); // Сохраняем все магазины
+    
     localStorage.removeItem(`${STATS_STORAGE_KEY}_${storeId}`);
     localStorage.removeItem(`marketplace_analytics_${storeId}`);
     

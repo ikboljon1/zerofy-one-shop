@@ -43,8 +43,13 @@ export const getTypeString = (numericType: number): 'auction' | 'automatic' => {
 // API для получения и сохранения данных о рекламе в БД
 export async function saveProductAdvertisingData(storeId: string, data: any) {
   try {
+    // Получаем текущего пользователя
+    const userData = localStorage.getItem('user');
+    const userId = userData ? JSON.parse(userData).id : null;
+    
     const advertisingData = {
       storeId,
+      userId, // Добавляем ID пользователя
       productAdvertisingData: data
     };
     
@@ -67,8 +72,17 @@ export async function saveProductAdvertisingData(storeId: string, data: any) {
 
 export async function getProductAdvertisingData(storeId: string) {
   try {
+    // Получаем текущего пользователя
+    const userData = localStorage.getItem('user');
+    const userId = userData ? JSON.parse(userData).id : null;
+    
+    // Если у нас есть userId, добавляем его в запрос
+    const url = userId 
+      ? `/api/product-advertising/${storeId}?userId=${userId}`
+      : `/api/product-advertising/${storeId}`;
+    
     // Получаем из БД через API
-    const response = await fetch(`/api/product-advertising/${storeId}`);
+    const response = await fetch(url);
     
     if (!response.ok) {
       throw new Error('Failed to fetch product advertising data');

@@ -132,7 +132,18 @@ const Dashboard = () => {
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
-      const selectedStore = getSelectedStore();
+      
+      // Получаем текущего пользователя
+      const userData = localStorage.getItem('user');
+      const currentUserId = userData ? JSON.parse(userData).id : null;
+      
+      // Получаем выбранный магазин с учетом текущего пользователя
+      const allStores = loadStores();
+      const userStores = currentUserId 
+        ? allStores.filter(store => store.userId === currentUserId)
+        : allStores;
+      
+      const selectedStore = userStores.find(store => store.isSelected) || (userStores.length > 0 ? userStores[0] : null);
       
       if (!selectedStore) {
         toast({
