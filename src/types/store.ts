@@ -1,3 +1,4 @@
+
 import { WildberriesResponse as ApiWildberriesResponse } from "@/services/wildberriesApi";
 
 export type Marketplace = "Wildberries" | "Ozon" | "Yandexmarket" | "Uzum";
@@ -21,7 +22,6 @@ export const SALES_STORAGE_KEY = 'marketplace_sales';
 
 export const marketplaces: Marketplace[] = ["Wildberries", "Ozon", "Yandexmarket", "Uzum"];
 
-// Re-export the WildberriesResponse from the API to avoid duplicate definitions
 export type WildberriesResponse = {
   currentPeriod: {
     sales: number;
@@ -38,6 +38,7 @@ export type WildberriesResponse = {
     netProfit: number;
     acceptance: number;
     returns?: number;
+    returnsAmount?: number; // Добавляем сумму возвратов
   };
 };
 

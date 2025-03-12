@@ -42,7 +42,7 @@ export function StoreCard({
   const calculateNetProfit = () => {
     if (!store.stats) return 0;
     
-    const { transferred, expenses, returns = 0 } = store.stats.currentPeriod;
+    const { transferred, expenses, returnsAmount = 0 } = store.stats.currentPeriod;
     
     let costPrice = 0;
     try {
@@ -55,7 +55,7 @@ export function StoreCard({
       console.error("Error parsing cost price data:", error);
     }
     
-    return transferred - expenses.total - costPrice - returns;
+    return transferred - expenses.total - costPrice - returnsAmount;
   };
 
   return (
