@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Zap, ChevronRight, Users, ShieldCheck, BarChart2, Package, CircleCheck, Rocket, Clock, Settings, CreditCard, HeartHandshake, MessageSquare, ArrowRight, LineChart, PieChart, Gauge, AreaChart, TrendingUp, CheckCircle, Calculator, Database, BellRing, ArrowUpRight, BoxSelect, Wallet, PercentSquare, BadgeDollarSign, TrendingDown, AlertTriangle, ChevronUp, BarChart3, Lightbulb, CircleDollarSign, Landmark } from "lucide-react";
@@ -721,10 +722,232 @@ const LandingPage = () => {
   };
 
   return (
-    <div>
-      {/* Existing JSX code */}
+    <div className="min-h-screen bg-background">
+      {/* Hero Section */}
+      <section className="py-16 px-6 md:px-12 lg:px-16">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+            <div>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
+                Управляйте бизнесом на маркетплейсах <span className="text-primary">эффективнее</span>
+              </h1>
+              <p className="text-lg text-muted-foreground mb-8">
+                Аналитическая платформа для эффективного управления продажами на маркетплейсах. Получайте актуальные данные и рекомендации в одном интерфейсе.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button size="lg" onClick={() => handleAuthClick('register')}>
+                  Попробовать бесплатно <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+                <Button size="lg" variant="outline" onClick={() => handleAuthClick('login')}>
+                  Войти в аккаунт
+                </Button>
+              </div>
+            </div>
+            <div className="relative">
+              <div className="rounded-xl overflow-hidden border shadow-lg">
+                <img 
+                  src={screenshots[activeScreenshot].src}
+                  alt={screenshots[activeScreenshot].alt}
+                  className="w-full h-auto"
+                />
+              </div>
+              <div className="absolute bottom-4 left-4 right-4 bg-background/80 backdrop-blur-sm p-4 rounded-lg border">
+                <h3 className="font-medium">{screenshots[activeScreenshot].title}</h3>
+                <p className="text-sm text-muted-foreground">{screenshots[activeScreenshot].description}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Feature Section */}
+      <section className="py-16 px-6 bg-muted/30 md:px-12 lg:px-16">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Инструменты для эффективного управления бизнесом</h2>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+              Наша платформа предоставляет все необходимые функции для оптимизации процессов и увеличения прибыли
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {features.map((feature, index) => (
+              <Card key={index} className="bg-card hover:shadow-md transition-all">
+                <CardHeader>
+                  <div className="bg-primary/10 p-3 rounded-lg w-fit mb-3">
+                    {feature.icon}
+                  </div>
+                  <CardTitle className="text-xl">{feature.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">{feature.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Demo Section */}
+      <section className="py-16 px-6 md:px-12 lg:px-16">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Посмотрите как это работает</h2>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+              Интерактивная демонстрация основных функций платформы
+            </p>
+          </div>
+          
+          <div className="border rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-muted p-4 flex overflow-x-auto">
+              {demoTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveDemoTab(tab.id)}
+                  className={cn(
+                    "flex items-center px-4 py-2 rounded-lg whitespace-nowrap mr-2",
+                    activeDemoTab === tab.id
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-background/40"
+                  )}
+                >
+                  <span className="mr-2">{tab.icon}</span>
+                  <span>{tab.title}</span>
+                </button>
+              ))}
+            </div>
+            <div className="p-4">
+              {demoContent[activeDemoTab as keyof typeof demoContent]}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section className="py-16 px-6 bg-muted/30 md:px-12 lg:px-16">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Тарифы</h2>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+              Выберите подходящий для вас тариф
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {pricing.map((plan, index) => (
+              <Card 
+                key={index} 
+                className={cn(
+                  "flex flex-col",
+                  plan.popular ? "border-primary shadow-md relative" : ""
+                )}
+              >
+                {plan.popular && (
+                  <div className="absolute top-0 right-0 -translate-y-1/2 px-4 py-1 bg-primary text-primary-foreground rounded-full text-sm font-medium">
+                    Популярный выбор
+                  </div>
+                )}
+                <CardHeader>
+                  <CardTitle>{plan.name}</CardTitle>
+                  <CardDescription>{plan.description}</CardDescription>
+                  <div className="mt-4">
+                    <span className="text-4xl font-bold">{plan.price === "0" ? "Бесплатно" : `${plan.price} ₽`}</span>
+                    {plan.price !== "0" && <span className="text-muted-foreground ml-1">/мес</span>}
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <ul className="space-y-2">
+                    {plan.features.map((feature, i) => (
+                      <li key={i} className="flex items-start">
+                        <CheckCircle className="h-5 w-5 text-primary mr-2 flex-shrink-0 mt-0.5" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+                <CardFooter>
+                  <Button className="w-full" variant={plan.buttonVariant}>
+                    {plan.price === "0" ? "Начать бесплатно" : "Выбрать план"}
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-16 px-6 md:px-12 lg:px-16">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Отзывы клиентов</h2>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+              Узнайте, что говорят о нас наши клиенты
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {testimonials.map((testimonial, index) => (
+              <Card key={index} className="bg-card">
+                <CardContent className="pt-6">
+                  <div className="mb-4 text-muted-foreground">
+                    <QuoteIcon className="h-10 w-10 opacity-50" />
+                  </div>
+                  <p className="mb-6 italic">{testimonial.quote}</p>
+                  <div>
+                    <p className="font-semibold">{testimonial.author}</p>
+                    <p className="text-sm text-muted-foreground">{testimonial.company}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-16 px-6 bg-primary text-primary-foreground md:px-12 lg:px-16">
+        <div className="max-w-7xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">Начните оптимизировать свой бизнес сегодня</h2>
+          <p className="text-lg opacity-90 mb-8 max-w-3xl mx-auto">
+            Присоединяйтесь к тысячам продавцов, которые уже используют нашу платформу для повышения эффективности своего бизнеса
+          </p>
+          <Button 
+            size="lg" 
+            variant="secondary" 
+            className="text-primary font-medium"
+            onClick={() => handleAuthClick('register')}
+          >
+            Попробовать бесплатно <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
+        </div>
+      </section>
+
+      {showAuthModal && (
+        <AuthModal 
+          isOpen={showAuthModal} 
+          onClose={() => setShowAuthModal(false)} 
+          initialView={authMode}
+        />
+      )}
     </div>
   );
 };
+
+// Quote Icon component for testimonials
+const QuoteIcon = ({ className }: { className?: string }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z" />
+    <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z" />
+  </svg>
+);
 
 export default LandingPage;
