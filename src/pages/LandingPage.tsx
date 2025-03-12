@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Zap, ChevronRight, Users, ShieldCheck, BarChart2, Package, CircleCheck, Rocket, Clock, Settings, CreditCard, HeartHandshake, MessageSquare, ArrowRight, LineChart, PieChart, Gauge, AreaChart, TrendingUp, CheckCircle, Calculator, Database, BellRing, ArrowUpRight, BoxSelect, Wallet, PercentSquare, BadgeDollarSign, TrendingDown, AlertTriangle, ChevronUp, BarChart3, Lightbulb, CircleDollarSign, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import AuthModal from "@/components/auth/AuthModal";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,7 @@ const LandingPage = () => {
   const [activeScreenshot, setActiveScreenshot] = useState(0);
   const [activeDemoTab, setActiveDemoTab] = useState("analytics");
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleAuthClick = (mode: 'login' | 'register') => {
     setAuthMode(mode);
@@ -25,6 +26,21 @@ const LandingPage = () => {
     }, 4000);
     return () => clearInterval(interval);
   }, []);
+
+  // Проверяем URL на наличие параметра section для автоскролла при загрузке страницы
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const section = params.get('section');
+    
+    if (section === 'pricing') {
+      setTimeout(() => {
+        const pricingSection = document.querySelector('#pricing-section');
+        if (pricingSection) {
+          pricingSection.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 300); // Небольшая задержка для гарантии загрузки DOM
+    }
+  }, [location]);
 
   const screenshots = [{
     src: "/lovable-uploads/a6565a9f-933e-4b3d-9010-dd9fd4fba5e7.png",
@@ -424,7 +440,7 @@ const LandingPage = () => {
       </section>
 
       {/* Pricing Section */}
-      <section className="py-16 px-6 bg-muted/30 md:px-12 lg:px-16">
+      <section id="pricing-section" className="py-16 px-6 bg-muted/30 md:px-12 lg:px-16">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Тарифы</h2>
