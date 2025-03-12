@@ -29,7 +29,7 @@ const LandingPage = () => {
 
   const screenshots = [
     {
-      src: "/lovable-uploads/4ea57e12-c728-4a2d-96bd-041c251862ec.png",
+      src: "/lovable-uploads/84016c72-9b0f-4155-a959-56497d632524.png",
       alt: "Аналитика продаж",
       title: "Детальная аналитика продаж",
       description: "Полная структура продаж, динамика выручки и данные о возвратах в одном интерфейсе"
