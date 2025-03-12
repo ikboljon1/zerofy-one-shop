@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import { DollarSign, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { ShoppingCart, TrendingDown, Percent, PackageX } from "../icons";
@@ -54,6 +55,7 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
   }, [data]);
   
   useEffect(() => {
+    // Вычитаем возвраты из чистой прибыли
     setNetProfit(data.currentPeriod.transferred - data.currentPeriod.expenses.total - returnsAmount);
   }, [data, returnsAmount]);
   
