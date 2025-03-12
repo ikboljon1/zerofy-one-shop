@@ -68,149 +68,212 @@ export const TARIFF_STORE_LIMITS: Record<string, number> = {
 };
 
 export const getUsers = async (): Promise<User[]> => {
-  await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-  
-  const storedUsers = localStorage.getItem('users');
-  if (storedUsers) {
-    return JSON.parse(storedUsers);
-  }
-  
-  const mockUsers: User[] = [
-    {
-      id: '1',
-      name: 'Администратор',
-      email: 'admin@example.com',
-      tariffId: '3',
-      isSubscriptionActive: true,
-      subscriptionEndDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString(),
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin',
-      role: 'admin',
-      status: 'active',
-      registeredAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString(),
-      storeCount: 2
-    },
-    {
-      id: '2',
-      name: 'Иван Иванов',
-      email: 'ivan@example.com',
-      tariffId: '2',
-      isSubscriptionActive: true,
-      phone: '+7 (999) 123-45-67',
-      company: 'ООО Компания',
-      subscriptionEndDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString(),
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ivan',
-      role: 'user',
-      status: 'active',
-      registeredAt: new Date(new Date().setMonth(new Date().getMonth() - 2)).toISOString(),
-      lastLogin: new Date(new Date().setDate(new Date().getDate() - 2)).toISOString(),
-      storeCount: 1
-    },
-    {
-      id: '3',
-      name: 'Мария Петрова',
-      email: 'maria@example.com',
-      tariffId: '1',
-      isSubscriptionActive: false,
-      isInTrial: true,
-      trialEndDate: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString(),
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maria',
-      role: 'user',
-      status: 'active',
-      registeredAt: new Date(new Date().setDate(new Date().getDate() - 5)).toISOString(),
-      storeCount: 1
+  try {
+    const response = await fetch('http://localhost:3001/api/users');
+    if (!response.ok) {
+      throw new Error('Failed to fetch users');
     }
-  ];
-  
-  localStorage.setItem('users', JSON.stringify(mockUsers));
-  return mockUsers;
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    
+    // Fallback для разработки - используем localStorage если API недоступен
+    const storedUsers = localStorage.getItem('users');
+    if (storedUsers) {
+      return JSON.parse(storedUsers);
+    }
+    
+    // Базовые пользователи если нет данных
+    const mockUsers: User[] = [
+      {
+        id: '1',
+        name: 'Администратор',
+        email: 'admin@example.com',
+        tariffId: '3',
+        isSubscriptionActive: true,
+        subscriptionEndDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString(),
+        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin',
+        role: 'admin',
+        status: 'active',
+        registeredAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+        storeCount: 2
+      }
+    ];
+    
+    return mockUsers;
+  }
 };
 
 export const addUser = async (userData: Partial<User>): Promise<User> => {
-  await new Promise(resolve => setTimeout(resolve, 800)); // Simulate network delay
-  
-  const users = await getUsers();
-  
-  const newUser: User = {
-    id: Date.now().toString(),
-    name: userData.name || '',
-    email: userData.email || '',
-    tariffId: userData.tariffId || '1',
-    isSubscriptionActive: userData.isSubscriptionActive || false,
-    status: userData.status || 'active',
-    role: userData.role || 'user',
-    avatar: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.name?.replace(/\s+/g, '') || 'user'}`,
-    registeredAt: userData.registeredAt || new Date().toISOString(),
-    storeCount: 0
-  };
-  
-  const updatedUsers = [...users, newUser];
-  localStorage.setItem('users', JSON.stringify(updatedUsers));
-  
-  return newUser;
+  try {
+    const response = await fetch('http://localhost:3001/api/users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userData),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to add user');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error adding user:', error);
+    
+    // Fallback для разработки
+    const users = await getUsers();
+    
+    const newUser: User = {
+      id: Date.now().toString(),
+      name: userData.name || '',
+      email: userData.email || '',
+      tariffId: userData.tariffId || '1',
+      isSubscriptionActive: userData.isSubscriptionActive || false,
+      status: userData.status || 'active',
+      role: userData.role || 'user',
+      avatar: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.name?.replace(/\s+/g, '') || 'user'}`,
+      registeredAt: userData.registeredAt || new Date().toISOString(),
+      storeCount: 0
+    };
+    
+    const updatedUsers = [...users, newUser];
+    localStorage.setItem('users', JSON.stringify(updatedUsers));
+    
+    return newUser;
+  }
 };
 
 export const updateUser = async (userId: string, userData: Partial<User>): Promise<User | null> => {
-  await new Promise(resolve => setTimeout(resolve, 800)); // Simulate network delay
-  
-  const users = await getUsers();
-  const userIndex = users.findIndex(user => user.id === userId);
-  
-  if (userIndex === -1) return null;
-  
-  const updatedUser = { ...users[userIndex], ...userData };
-  users[userIndex] = updatedUser;
-  
-  localStorage.setItem('users', JSON.stringify(users));
-  
-  return updatedUser;
+  try {
+    const response = await fetch(`http://localhost:3001/api/users/${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userData),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to update user');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating user:', error);
+    
+    // Fallback для разработки
+    const users = await getUsers();
+    const userIndex = users.findIndex(user => user.id === userId);
+    
+    if (userIndex === -1) return null;
+    
+    const updatedUser = { ...users[userIndex], ...userData };
+    users[userIndex] = updatedUser;
+    
+    localStorage.setItem('users', JSON.stringify(users));
+    
+    return updatedUser;
+  }
 };
 
 export const authenticate = async (
   email: string, 
   password: string
 ): Promise<{ success: boolean; user?: User; errorMessage?: string }> => {
-  await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
-  
-  if (email === 'admin' && password === 'admin') {
-    const users = await getUsers();
-    const adminUser = users.find(user => user.role === 'admin') || users[0];
+  try {
+    const response = await fetch('http://localhost:3001/api/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+    });
     
-    if (adminUser) {
-      adminUser.lastLogin = new Date().toISOString();
-      await updateUser(adminUser.id, { lastLogin: adminUser.lastLogin });
-      
+    const data = await response.json();
+    
+    if (!response.ok) {
       return { 
-        success: true,
-        user: adminUser
+        success: false,
+        errorMessage: data.error || 'Неверный логин или пароль'
       };
     }
-  }
-  
-  const users = await getUsers();
-  const user = users.find(u => u.email === email);
-  
-  if (user && (password === 'password' || password === user.password)) {
-    user.lastLogin = new Date().toISOString();
-    await updateUser(user.id, { lastLogin: user.lastLogin });
+    
+    // Обновляем дату последнего входа
+    const now = new Date().toISOString();
+    await updateUser(data.id, { lastLogin: now });
+    
+    // Собираем полные данные пользователя
+    const userResponse = await fetch(`http://localhost:3001/api/users/${data.id}`);
+    if (!userResponse.ok) {
+      return { success: false, errorMessage: 'Ошибка при получении данных пользователя' };
+    }
+    
+    const user = await userResponse.json();
     
     return { 
       success: true,
-      user
+      user: {
+        ...user,
+        lastLogin: now
+      }
+    };
+  } catch (error) {
+    console.error('Error during authentication:', error);
+    
+    // Fallback для разработки
+    if (email === 'admin' && password === 'admin') {
+      const users = await getUsers();
+      const adminUser = users.find(user => user.role === 'admin') || users[0];
+      
+      if (adminUser) {
+        adminUser.lastLogin = new Date().toISOString();
+        await updateUser(adminUser.id, { lastLogin: adminUser.lastLogin });
+        
+        return { 
+          success: true,
+          user: adminUser
+        };
+      }
+    }
+    
+    const users = await getUsers();
+    const user = users.find(u => u.email === email);
+    
+    if (user && (password === 'password' || password === user.password)) {
+      user.lastLogin = new Date().toISOString();
+      await updateUser(user.id, { lastLogin: user.lastLogin });
+      
+      return { 
+        success: true,
+        user
+      };
+    }
+    
+    return { 
+      success: false,
+      errorMessage: 'Неверный логин или пароль'
     };
   }
-  
-  return { 
-    success: false,
-    errorMessage: 'Неверный логин или пароль'
-  };
 };
 
 export const checkPhoneExists = async (phone: string): Promise<boolean> => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simulate network delay
-  
-  const users = await getUsers();
-  return users.some(user => user.phone === phone);
+  try {
+    const response = await fetch(`http://localhost:3001/api/check-phone?phone=${encodeURIComponent(phone)}`);
+    if (!response.ok) {
+      throw new Error('Failed to check phone');
+    }
+    const data = await response.json();
+    return data.exists;
+  } catch (error) {
+    console.error('Error checking phone:', error);
+    
+    // Fallback для разработки
+    const users = await getUsers();
+    return users.some(user => user.phone === phone);
+  }
 };
 
 export const registerUser = async (
@@ -219,53 +282,78 @@ export const registerUser = async (
   password: string,
   phone?: string
 ): Promise<{ success: boolean; user?: User; errorMessage?: string }> => {
-  await new Promise(resolve => setTimeout(resolve, 1200)); // Simulate network delay
-  
-  const users = await getUsers();
-  const userExists = users.some(user => user.email === email);
-  
-  if (userExists) {
-    return {
-      success: false,
-      errorMessage: 'Пользователь с таким email уже существует'
-    };
-  }
-  
-  if (phone) {
-    const phoneExists = users.some(user => user.phone === phone);
-    if (phoneExists) {
+  try {
+    const response = await fetch('http://localhost:3001/api/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name, email, password, phone }),
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
       return {
         success: false,
-        errorMessage: 'Пользователь с таким номером телефона уже существует'
+        errorMessage: data.error || 'Ошибка при регистрации пользователя'
       };
     }
+    
+    return {
+      success: true,
+      user: data.user
+    };
+  } catch (error) {
+    console.error('Error during registration:', error);
+    
+    // Fallback для разработки
+    const users = await getUsers();
+    const userExists = users.some(user => user.email === email);
+    
+    if (userExists) {
+      return {
+        success: false,
+        errorMessage: 'Пользователь с таким email уже существует'
+      };
+    }
+    
+    if (phone) {
+      const phoneExists = users.some(user => user.phone === phone);
+      if (phoneExists) {
+        return {
+          success: false,
+          errorMessage: 'Пользователь с таким номером телефона уже существует'
+        };
+      }
+    }
+    
+    const newUser: User = {
+      id: Date.now().toString(),
+      name,
+      email,
+      password,
+      phone,
+      tariffId: '3',
+      isSubscriptionActive: false,
+      isInTrial: true,
+      trialEndDate: new Date(new Date().setDate(new Date().getDate() + 3)).toISOString(),
+      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name.replace(/\s+/g, '')}`,
+      role: 'user',
+      status: 'active',
+      registeredAt: new Date().toISOString(),
+      lastLogin: new Date().toISOString(),
+      storeCount: 0
+    };
+    
+    users.push(newUser);
+    localStorage.setItem('users', JSON.stringify(users));
+    
+    return {
+      success: true,
+      user: newUser
+    };
   }
-  
-  const newUser: User = {
-    id: Date.now().toString(),
-    name,
-    email,
-    password,
-    phone,
-    tariffId: '3',
-    isSubscriptionActive: false,
-    isInTrial: true,
-    trialEndDate: new Date(new Date().setDate(new Date().getDate() + 3)).toISOString(),
-    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name.replace(/\s+/g, '')}`,
-    role: 'user',
-    status: 'active',
-    registeredAt: new Date().toISOString(),
-    lastLogin: new Date().toISOString(),
-    storeCount: 0
-  };
-  
-  users.push(newUser);
-  localStorage.setItem('users', JSON.stringify(users));
-  
-  return {
-    success: true,
-    user: newUser
-  };
 };
 
 export const activateSubscription = async (
@@ -1138,5 +1226,155 @@ export const changePassword = async (
     return { success: true };
   } else {
     return { success: false, message: "Неверный текущий пароль" };
+  }
+};
+
+export interface UserStore {
+  id: string;
+  userId: string;
+  storeId: string;
+  marketplace: string;
+  storeName: string;
+  apiKey: string;
+  isSelected: boolean;
+  createdAt: string;
+  lastFetchDate?: string;
+}
+
+export const getUserStores = async (userId: string): Promise<UserStore[]> => {
+  try {
+    const response = await fetch(`http://localhost:3001/api/user-stores/${userId}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch user stores');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching user stores:', error);
+    
+    // Fallback для разработки
+    const storedStores = localStorage.getItem(`user_stores_${userId}`);
+    if (storedStores) {
+      return JSON.parse(storedStores);
+    }
+    
+    return [];
+  }
+};
+
+export const addUserStore = async (userStore: Omit<UserStore, 'id' | 'createdAt'>): Promise<UserStore> => {
+  try {
+    const response = await fetch('http://localhost:3001/api/user-stores', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userStore),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to add user store');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error adding user store:', error);
+    
+    // Fallback для разработки
+    const stores = await getUserStores(userStore.userId);
+    
+    const newStore: UserStore = {
+      id: Date.now().toString(),
+      ...userStore,
+      createdAt: new Date().toISOString()
+    };
+    
+    const updatedStores = [...stores, newStore];
+    localStorage.setItem(`user_stores_${userStore.userId}`, JSON.stringify(updatedStores));
+    
+    return newStore;
+  }
+};
+
+export const selectUserStore = async (userId: string, storeId: string): Promise<UserStore | null> => {
+  try {
+    const response = await fetch(`http://localhost:3001/api/user-stores/${userId}/select/${storeId}`, {
+      method: 'PUT'
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to select user store');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error selecting user store:', error);
+    
+    // Fallback для разработки
+    const stores = await getUserStores(userId);
+    const updatedStores = stores.map(store => ({
+      ...store,
+      isSelected: store.storeId === storeId
+    }));
+    
+    localStorage.setItem(`user_stores_${userId}`, JSON.stringify(updatedStores));
+    
+    return updatedStores.find(store => store.storeId === storeId) || null;
+  }
+};
+
+export const updateUserStore = async (
+  userId: string, 
+  storeId: string, 
+  updates: Partial<UserStore>
+): Promise<UserStore | null> => {
+  try {
+    const response = await fetch(`http://localhost:3001/api/user-stores/${userId}/${storeId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updates),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to update user store');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating user store:', error);
+    
+    // Fallback для разработки
+    const stores = await getUserStores(userId);
+    const storeIndex = stores.findIndex(store => store.storeId === storeId);
+    
+    if (storeIndex === -1) return null;
+    
+    const updatedStore = { ...stores[storeIndex], ...updates };
+    stores[storeIndex] = updatedStore;
+    
+    localStorage.setItem(`user_stores_${userId}`, JSON.stringify(stores));
+    
+    return updatedStore;
+  }
+};
+
+export const deleteUserStore = async (userId: string, storeId: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`http://localhost:3001/api/user-stores/${userId}/${storeId}`, {
+      method: 'DELETE'
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error('Error deleting user store:', error);
+    
+    // Fallback для разработки
+    const stores = await getUserStores(userId);
+    const updatedStores = stores.filter(store => store.storeId !== storeId);
+    
+    localStorage.setItem(`user_stores_${userId}`, JSON.stringify(updatedStores));
+    
+    return true;
   }
 };

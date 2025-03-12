@@ -54,7 +54,7 @@ export async function saveProductAdvertisingData(storeId: string, data: any) {
     };
     
     // Сохраняем в БД через API
-    const response = await fetch('/api/product-advertising', {
+    const response = await fetch('http://localhost:3001/api/product-advertising', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -78,8 +78,8 @@ export async function getProductAdvertisingData(storeId: string) {
     
     // Если у нас есть userId, добавляем его в запрос
     const url = userId 
-      ? `/api/product-advertising/${storeId}?userId=${userId}`
-      : `/api/product-advertising/${storeId}`;
+      ? `http://localhost:3001/api/product-advertising/${storeId}?userId=${userId}`
+      : `http://localhost:3001/api/product-advertising/${storeId}`;
     
     // Получаем из БД через API
     const response = await fetch(url);

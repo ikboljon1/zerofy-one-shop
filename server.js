@@ -14,14 +14,21 @@ app.use(bodyParser.json());
 const db = new sqlite3.Database('./database.sqlite');
 
 db.serialize(() => {
+  // Обновляем таблицу users добавляя необходимые поля
   db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
+    name TEXT,
+    phone TEXT UNIQUE,
+    company TEXT,
     role TEXT DEFAULT 'user',
     status TEXT DEFAULT 'active',
     subscription_type TEXT DEFAULT 'free',
-    subscription_expiry DATETIME
+    subscription_expiry DATETIME,
+    registered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_login DATETIME,
+    store_count INTEGER DEFAULT 0
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS email_settings (
@@ -121,7 +128,7 @@ db.serialize(() => {
     timestamp INTEGER NOT NULL
   )`);
 
-  // Создаем новую таблицу для связи пользователей с магазинами
+  // Обновляем таблицу user_stores для хранения связи пользователей с магазинами
   db.run(`CREATE TABLE IF NOT EXISTS user_stores (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
@@ -136,12 +143,14 @@ db.serialize(() => {
     UNIQUE(user_id, store_id)
   )`);
   
-  // Создаем новую таблицу для хранения данных о рекламе товаров
+  // Обновляем таблицу product_advertising добавляя поле user_id
   db.run(`CREATE TABLE IF NOT EXISTS product_advertising (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     store_id TEXT NOT NULL,
+    user_id INTEGER,
     product_advertising_data TEXT NOT NULL,
-    timestamp INTEGER NOT NULL
+    timestamp INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id)
   )`);
 });
 
@@ -766,3 +775,4 @@ app.get('/api/product-advertising/:storeId', (req, res) => {
 app.listen(port, () => {
   console.log(`Сервер запущен на порту ${port}`);
 });
+
