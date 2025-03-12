@@ -1,4 +1,3 @@
-
 import { Store } from "@/types/store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,39 +22,28 @@ export function StoreCard({
   isLoading,
   canDelete = true
 }: StoreCardProps) {
-  // Modified the handleSelectionChange function to prevent redundant selections
   const handleSelectionChange = () => {
-    // Only allow selecting a store, not deselecting it
-    // This ensures the checkbox stays checked until another store is selected
     if (!store.isSelected) {
-      // Call the parent component's toggle selection handler
       onToggleSelection(store.id);
-      
-      // Dispatch selection event only when we're actually changing the selection
       window.dispatchEvent(new CustomEvent('store-selection-changed', { 
         detail: { storeId: store.id, selected: true, timestamp: Date.now() } 
       }));
-      
-      // Save this selection to localStorage with timestamp to help with persistence
       localStorage.setItem('last_selected_store', JSON.stringify({
         storeId: store.id,
         timestamp: Date.now()
       }));
     }
   };
-  
-  // Create a separate handler for refreshing stats without triggering reselection
+
   const handleRefreshStats = () => {
     onRefreshStats(store);
   };
 
-  // Рассчитываем чистую прибыль с учетом себестоимости (если она указана)
   const calculateNetProfit = () => {
     if (!store.stats) return 0;
     
-    const { sales, expenses } = store.stats.currentPeriod;
+    const { transferred, expenses } = store.stats.currentPeriod;
     
-    // Fix: Get costPrice data from localStorage if it exists
     let costPrice = 0;
     try {
       const costPriceData = localStorage.getItem(`costPriceMetrics_${store.id}`);
@@ -67,7 +55,7 @@ export function StoreCard({
       console.error("Error parsing cost price data:", error);
     }
     
-    return sales - expenses.total - costPrice;
+    return transferred - expenses.total - costPrice;
   };
 
   return (
