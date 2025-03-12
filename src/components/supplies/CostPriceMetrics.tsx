@@ -168,6 +168,7 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       console.log("Загруженные данные о себестоимости:", costPrices);
       
       const analyticsData = JSON.parse(localStorage.getItem(`marketplace_analytics_${selectedStore.id}`) || "{}");
+      const productsData = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
       
       if (!analyticsData?.data?.productSales || analyticsData.data.productSales.length === 0) {
         console.log("Нет данных о продажах товаров в аналитике");
@@ -219,7 +220,7 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
         
         let costPrice = costPrices[nmId];
         if (!costPrice) {
-          const product = products.find((p: any) => Number(p.nmId) === nmId);
+          const product = productsData.find((p: any) => Number(p.nmId) === nmId);
           if (product?.costPrice > 0) {
             costPrice = product.costPrice;
             costPrices[nmId] = costPrice;
@@ -235,6 +236,12 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
           
           console.log(`Успешно рассчитано для "${sale.subject_name}": ${quantity} x ${costPrice} = ${categoryCost}`);
         } else {
+          const product = productsData.find((p: any) => Number(p.nmId) === nmId);
+          if (product?.costPrice > 0) {
+            costPrice = product.costPrice;
+            costPrices[nmId] = costPrice;
+            localStorage.setItem(`costPrices_${selectedStore.id}`, JSON.stringify(costPrices));
+          }
           console.log(`Не удалось определить себестоимость для nmId ${nmId}`);
           skippedCategories++;
         }
