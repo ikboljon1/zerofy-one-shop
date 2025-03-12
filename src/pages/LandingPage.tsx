@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Zap, ChevronRight, Users, ShieldCheck, BarChart2, Package, CircleCheck, Rocket, Clock, Settings, CreditCard, HeartHandshake, MessageSquare, ArrowRight, LineChart, PieChart, Gauge, AreaChart, TrendingUp, CheckCircle2, Calculator, Database, BellRing, ArrowUpRight, BoxSelect, Wallet, PercentSquare, BadgeDollarSign, TrendingDown } from "lucide-react";
+import { Zap, ChevronRight, Users, ShieldCheck, BarChart2, Package, CircleCheck, Rocket, Clock, Settings, CreditCard, HeartHandshake, MessageSquare, ArrowRight, LineChart, PieChart, Gauge, AreaChart, TrendingUp, CheckCircle2, Calculator, Database, BellRing, ArrowUpRight, BoxSelect, Wallet, PercentSquare, BadgeDollarSign, TrendingDown, TrendingUp, AlertTriangle, ChevronUp, BarChart3, Lightbulb, CircleDollarSign, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import AuthModal from "@/components/auth/AuthModal";
@@ -55,49 +55,100 @@ const LandingPage = () => {
     {
       icon: <BarChart2 className="h-6 w-6 text-primary" />,
       title: "Интеллектуальная аналитика",
-      description: "Превратите данные в золото с нашей передовой аналитикой. Отслеживайте динамику продаж, выявляйте скрытые тренды и принимайте стратегические решения на основе точных данных в режиме реального времени."
+      description: "Превращаем данные в золото с передовой аналитикой и выявляем скрытые тренды для стратегических решений."
     },
     {
       icon: <Package className="h-6 w-6 text-primary" />,
       title: "Умное управление товарами",
-      description: "Возьмите полный контроль над вашим ассортиментом. Наша система не просто отслеживает остатки — она прогнозирует спрос, оптимизирует закупки и автоматизирует рутинные процессы управления каталогом."
+      description: "Автоматизируем управление ассортиментом, прогнозируем спрос и оптимизируем закупки."
     },
     {
       icon: <Calculator className="h-6 w-6 text-primary" />,
       title: "Расчет рентабельности",
-      description: "Мгновенно оценивайте прибыльность каждого товара с учетом всех скрытых расходов. Наш интеллектуальный калькулятор учитывает комиссии площадок, логистику, хранение и рекламу, показывая реальную маржинальность."
+      description: "Мгновенно оцениваем прибыльность каждого товара с учетом всех скрытых расходов маркетплейсов."
     },
     {
       icon: <ShieldCheck className="h-6 w-6 text-primary" />,
-      title: "Непробиваемая защита данных",
-      description: "Ваша бизнес-информация под надежной защитой. Многоуровневое шифрование, регулярное резервное копирование и строгий контроль доступа обеспечивают безопасность ваших самых ценных активов — ваших данных."
+      title: "Защита данных",
+      description: "Обеспечиваем безопасность вашей бизнес-информации с многоуровневым шифрованием и контролем доступа."
     },
     {
       icon: <Rocket className="h-6 w-6 text-primary" />,
       title: "Революционная автоматизация",
-      description: "Забудьте о рутинных задачах. Наша система автоматически обновляет данные, генерирует отчеты и отправляет уведомления о критически важных событиях, позволяя вам сосредоточиться на стратегическом развитии бизнеса."
+      description: "Автоматически обновляем данные, генерируем отчеты и отправляем уведомления о важных событиях."
     },
     {
       icon: <Clock className="h-6 w-6 text-primary" />,
-      title: "Точное планирование поставок",
-      description: "Прощайте, неликвиды и упущенные продажи! Наши алгоритмы машинного обучения анализируют историю продаж и сезонные тренды, создавая оптимальный график поставок и идеальный баланс складских запасов."
-    },
-    {
-      icon: <CreditCard className="h-6 w-6 text-primary" />,
-      title: "Кристальная финансовая аналитика",
-      description: "Трансформируйте хаос финансовых данных в четкую картину. Отслеживайте каждую копейку: от валовой выручки до чистой прибыли, с учетом всех комиссий, налогов и скрытых расходов маркетплейсов."
-    },
-    {
-      icon: <TrendingDown className="h-6 w-6 text-primary" />,
-      title: "Анализ платного хранения",
-      description: "Оптимизируйте свои расходы на хранение товаров на маркетплейсах. Наш уникальный инструмент анализирует стоимость хранения, сопоставляет с продажами и предлагает оптимальные решения по распределению запасов."
-    },
-    {
-      icon: <ArrowUpRight className="h-6 w-6 text-primary" />,
-      title: "Мониторинг эффективности рекламы",
-      description: "Получайте максимальную отдачу от рекламных бюджетов. Анализируйте эффективность каждой копейки, вложенной в рекламу, с детальной статистикой по кликам, конверсиям и возврату инвестиций."
+      title: "Планирование поставок",
+      description: "Анализируем историю продаж и сезонные тренды для оптимизации графика поставок."
     }
   ];
+
+  const recommendations = [
+    {
+      productName: "Кроссовки спортивные NIKE Air Max",
+      sku: "WB-12547863",
+      image: "https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?q=80&w=150&h=150&auto=format&fit=crop",
+      recommendation: "сохранить цену",
+      reason: "Оптимальный баланс продаж и маржинальности",
+      icon: <TrendingUp className="h-5 w-5 text-emerald-500" />,
+      color: "bg-emerald-50 text-emerald-800 border-emerald-200",
+      stats: [
+        { label: "Текущая цена", value: "6 990 ₽" },
+        { label: "Продажи/нед.", value: "47 шт." },
+        { label: "Маржа", value: "32%" }
+      ]
+    },
+    {
+      productName: "Сумка женская кожаная COACH",
+      sku: "WB-98547632",
+      image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?q=80&w=150&h=150&auto=format&fit=crop",
+      recommendation: "снизить цену",
+      reason: "Высокая конкуренция и падение спроса",
+      icon: <TrendingDown className="h-5 w-5 text-blue-500" />,
+      color: "bg-blue-50 text-blue-800 border-blue-200",
+      stats: [
+        { label: "Текущая цена", value: "12 500 ₽" },
+        { label: "Рекомендуемая", value: "10 900 ₽" },
+        { label: "Прогноз роста", value: "+45%" }
+      ]
+    },
+    {
+      productName: "Платье летнее ZARA",
+      sku: "WB-45632178",
+      image: "https://images.unsplash.com/photo-1612336307429-8a898d10e223?q=80&w=150&h=150&auto=format&fit=crop",
+      recommendation: "срочно продать",
+      reason: "Высокие затраты на хранение, конец сезона",
+      icon: <AlertTriangle className="h-5 w-5 text-red-500" />,
+      color: "bg-red-50 text-red-800 border-red-200",
+      stats: [
+        { label: "Затраты/мес.", value: "15 800 ₽" },
+        { label: "Текущая цена", value: "4 990 ₽" },
+        { label: "Рекомендуемая", value: "2 990 ₽" }
+      ]
+    }
+  ];
+
+  const storageAnalysis = {
+    title: "Анализ платного хранения",
+    description: "Алгоритм выявил товары с высокими затратами на хранение относительно продаж:",
+    data: [
+      { name: "Товар А", storage: 80, sales: 20, ratio: 4.0 },
+      { name: "Товар Б", storage: 65, sales: 35, ratio: 1.86 },
+      { name: "Товар В", storage: 40, sales: 60, ratio: 0.67 }
+    ]
+  };
+
+  const pricingInsight = {
+    title: "Оптимизация ценообразования",
+    description: "ИИ-модель рассчитала идеальную цену для максимизации прибыли:",
+    values: [
+      { label: "Текущая цена", value: "2 490 ₽" },
+      { label: "Оптимальная цена", value: "2 190 ₽" },
+      { label: "Рост продаж", value: "+35%" },
+      { label: "Рост прибыли", value: "+18%" }
+    ]
+  };
 
   const pricing = [
     {
@@ -210,7 +261,6 @@ const LandingPage = () => {
       </header>
 
       <main className="flex-1">
-        {/* Hero Section */}
         <section className="py-20 px-4 bg-gradient-to-b from-background to-muted/30 relative overflow-hidden">
           <div className="absolute inset-0 opacity-40">
             <div className="absolute top-10 left-0 w-72 h-72 bg-primary/20 rounded-full filter blur-3xl"></div>
@@ -242,7 +292,6 @@ const LandingPage = () => {
               </div>
             </motion.div>
 
-            {/* App Screenshots Carousel */}
             <div className="relative mt-16 mb-12 max-w-5xl mx-auto rounded-xl overflow-hidden shadow-2xl group">
               <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               
@@ -337,7 +386,6 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* Features */}
         <section className="py-20 px-4 bg-muted/50">
           <div className="container mx-auto max-w-6xl">
             <motion.div
@@ -376,7 +424,6 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* How It Works */}
         <section className="py-20 px-4 bg-gradient-to-b from-background to-muted/10 relative overflow-hidden">
           <div className="absolute inset-0 opacity-30">
             <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-purple-500/20 rounded-full filter blur-3xl"></div>
@@ -452,9 +499,8 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* Why Choose Us */}
-        <section className="py-20 px-4 relative overflow-hidden">
-          <div className="container mx-auto max-w-6xl relative z-10">
+        <section className="py-20 px-4 bg-muted/30">
+          <div className="container mx-auto max-w-6xl">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -520,43 +566,7 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* Testimonials */}
-        <section className="py-20 px-4 bg-muted/30">
-          <div className="container mx-auto max-w-6xl">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7 }}
-              viewport={{ once: true }}
-              className="text-center mb-12"
-            >
-              <h2 className="text-3xl font-bold text-center mb-4 inline-block bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-500">Истории успеха наших клиентов</h2>
-            </motion.div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {testimonials.map((testimonial, index) => (
-                <motion.div 
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  viewport={{ once: true }}
-                  className="bg-card p-6 rounded-lg shadow-sm border hover:border-primary/50 transition-all duration-300 hover:shadow-md relative overflow-hidden"
-                >
-                  <div className="absolute -top-4 -left-4 text-8xl text-primary/10 font-serif">"</div>
-                  <p className="text-muted-foreground mb-4 italic relative z-10">"{testimonial.quote}"</p>
-                  <div className="relative z-10">
-                    <p className="font-semibold">{testimonial.author}</p>
-                    <p className="text-sm text-muted-foreground">{testimonial.company}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Key Statistics */}
-        <section className="py-20 px-4 bg-gradient-to-b from-background to-muted/20 relative overflow-hidden">
+        <section className="py-20 px-4 bg-gradient-to-b from-background to-muted/30 relative overflow-hidden">
           <div className="absolute inset-0 opacity-30">
             <div className="absolute top-1/4 left-1/3 w-72 h-72 bg-primary/20 rounded-full filter blur-3xl"></div>
             <div className="absolute bottom-1/4 right-1/3 w-80 h-80 bg-purple-500/20 rounded-full filter blur-3xl"></div>
@@ -626,7 +636,6 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* Pricing */}
         <section className="py-20 px-4">
           <div className="container mx-auto max-w-6xl">
             <motion.div
@@ -689,7 +698,6 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* CTA Section */}
         <section className="py-20 px-4 bg-gradient-to-b from-primary/5 to-purple-500/5 relative overflow-hidden">
           <div className="absolute inset-0 opacity-30">
             <div className="absolute top-1/3 left-1/4 w-64 h-64 bg-primary/20 rounded-full filter blur-3xl"></div>
