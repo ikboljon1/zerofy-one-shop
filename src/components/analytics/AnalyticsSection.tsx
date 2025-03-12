@@ -24,11 +24,8 @@ import AIAnalysisSection from "@/components/ai/AIAnalysisSection";
 import { 
   emptyAnalyticsData, 
   emptyDeductionsTimelineData,
-  emptyAdvertisingData,
   COLORS
 } from "./data/demoData";
-
-import { productAdvertisingData } from "./data/productAdvertisingData";
 
 const ANALYTICS_STORAGE_KEY = 'marketplace_analytics';
 
@@ -263,10 +260,7 @@ const AnalyticsSection = () => {
           
           setProductAdvertisingData(topProductsList.length > 0 ? topProductsList : []);
         } else {
-          if (productAdvertisingData.length === 0) {
-            setProductAdvertisingData(emptyAdvertisingData);
-          }
-          
+          setProductAdvertisingData([]);
           setAdvertisingBreakdown({
             search: roundToTwoDecimals(0)
           });
@@ -274,7 +268,7 @@ const AnalyticsSection = () => {
         }
       } catch (error) {
         console.error('Error fetching advertising data:', error);
-        setProductAdvertisingData(emptyAdvertisingData);
+        setProductAdvertisingData([]);
         setAdvertisingBreakdown({
           search: roundToTwoDecimals(0)
         });
@@ -483,6 +477,7 @@ const AnalyticsSection = () => {
   const hasAdvertisingData = productAdvertisingData && productAdvertisingData.length > 0;
   const hasPenaltiesData = penalties && penalties.length > 0;
   const hasDeductionsData = deductions && deductions.length > 0;
+  const hasReturnsData = returns && returns.length > 0;
 
   const handleDateChange = () => {
     setIsLoading(true);
@@ -557,34 +552,36 @@ const AnalyticsSection = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <PieChartCard 
               title="Детализация по штрафам"
-              icon={<AlertCircle className="h-4 w-4 text-purple-600 dark:text-purple-400" />}
+              icon={<AlertCircle className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />}
               data={penalties}
               emptyMessage="Штрафы отсутствуют"
+              noFallbackData={true}
             />
             <PieChartCard 
               title="Прочие удержания"
-              icon={<BadgePercent className="h-4 w-4 text-orange-600 dark:text-orange-400" />}
+              icon={<BadgePercent className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />}
               data={deductions}
               emptyMessage="Удержания отсутствуют"
+              noFallbackData={true}
             />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <PieChartCard 
               title="Возврат товаров"
-              icon={<PackageX className="h-4 w-4 text-red-600 dark:text-red-400" />}
+              icon={<PackageX className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />}
               data={returns}
               showCount={true}
               emptyMessage="Возвраты отсутствуют"
+              noFallbackData={true}
             />
-            {hasAdvertisingData && (
-              <PieChartCard 
-                title="Расходы на рекламу по товарам"
-                icon={<Tag className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
-                data={productAdvertisingData}
-                emptyMessage="Нет данных о расходах на рекламу"
-              />
-            )}
+            <PieChartCard 
+              title="Расходы на рекламу по товарам"
+              icon={<Tag className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />}
+              data={productAdvertisingData}
+              emptyMessage="Нет данных о расходах на рекламу"
+              noFallbackData={true}
+            />
           </div>
 
           <ExpenseBreakdown data={data} advertisingBreakdown={advertisingBreakdown} />
