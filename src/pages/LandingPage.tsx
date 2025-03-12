@@ -59,7 +59,7 @@ const LandingPage = () => {
   }, {
     icon: <Calculator className="h-6 w-6 text-primary" />,
     title: "Расчет рентабельности",
-    description: "Мгновенно оцениваем прибыльность каждого товара с учетом всех скрытых расходов маркетплейсов."
+    description: "Мгновенно оцениваем прибыльность каждого товара с учетом всех скрытых расхо��ов маркетплейсов."
   }, {
     icon: <ShieldCheck className="h-6 w-6 text-primary" />,
     title: "Защита данных",
@@ -196,7 +196,7 @@ const LandingPage = () => {
     author: "Сергей К.",
     company: "ТехноМаркет"
   }, {
-    quote: "Благодаря интеллектуальной системе планирования поставок Zerofy, мы сократили складские издержки на 22% и полностью избавились от проблемы неликвидов. При этом доступность товаров выросла до 98%. Фантастический результат!",
+    quote: "Благодаря интеллектуальной системе планирования поставок Zerofy, мы сократили складские издержки на 22% и полностью избавились от проблемы неликвидов. При этом доступность товаров выросла до 98%. Фантастиче��кий результат!",
     author: "Елена В.",
     company: "Детские игрушки 'Радость'"
   }];
@@ -261,7 +261,7 @@ const LandingPage = () => {
         <img 
           src="/lovable-uploads/5241b8dd-cd83-40f4-91e9-3bdec64e62f2.png" 
           alt="AI-рекомендации" 
-          className="w-full h-auto max-w-md rounded-md border shadow-sm" 
+          className="w-full h-auto max-w-sm rounded-md border shadow-sm" 
         />
         <div className="space-y-4">
           <h3 className="font-semibold text-xl">Умные AI-рекомендации</h3>
