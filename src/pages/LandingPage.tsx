@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Zap, ChevronRight, Users, ShieldCheck, BarChart2, Package, CircleCheck, Rocket, Clock, Settings, CreditCard, HeartHandshake, MessageSquare, ArrowRight, LineChart, PieChart, Gauge, AreaChart, TrendingUp, CheckCircle, Calculator, Database, BellRing, ArrowUpRight, BoxSelect, Wallet, PercentSquare, BadgeDollarSign, TrendingDown, AlertTriangle, ChevronUp, BarChart3, Lightbulb, CircleDollarSign, Landmark } from "lucide-react";
@@ -705,9 +706,9 @@ const LandingPage = () => {
 
       {showAuthModal && (
         <AuthModal
-          isOpen={showAuthModal}
+          open={showAuthModal}
           onClose={() => setShowAuthModal(false)}
-          initialView={authMode}
+          initialMode={authMode}
         />
       )}
     </div>
