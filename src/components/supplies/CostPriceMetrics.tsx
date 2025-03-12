@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -63,7 +62,6 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
 
     setIsLoading(true);
     
-    // Сначала проверяем данные в localStorage для быстрого отображения
     const savedMetrics = localStorage.getItem(`costPriceMetrics_${selectedStore.id}`);
     if (savedMetrics) {
       try {
@@ -79,13 +77,11 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       }
     }
     
-    // Параллельно запрашиваем данные из базы данных
     try {
       const response = await axios.get(`http://localhost:3001/api/cost-price/${selectedStore.id}`);
       if (response.data && response.status === 200) {
         console.log("Получены данные из базы данных:", response.data);
         
-        // Обновляем только если данные свежее или данные из localStorage не были загружены
         const dbDataTimestamp = new Date(response.data.lastUpdateDate).getTime();
         const localDataTimestamp = savedMetrics ? new Date(JSON.parse(savedMetrics).lastUpdateDate).getTime() : 0;
         
@@ -95,7 +91,6 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
           setAvgCostPrice(response.data.avgCostPrice);
           setLastUpdateDate(response.data.lastUpdateDate);
           
-          // Обновляем также данные в localStorage
           localStorage.setItem(`costPriceMetrics_${selectedStore.id}`, JSON.stringify({
             totalCostPrice: response.data.totalCostPrice,
             totalSoldItems: response.data.totalSoldItems,
@@ -113,7 +108,6 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
     } catch (error) {
       console.error("Ошибка загрузки данных из базы данных:", error);
       
-      // Если данные из localStorage не были загружены, продолжаем загрузку
       if (!savedMetrics) {
         calculateFromLocalStorage();
       }
@@ -153,7 +147,6 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
     } catch (error) {
       console.error("Ошибка сохранения данных в базу:", error);
       
-      // В случае ошибки сохраняем в localStorage как резервный вариант
       localStorage.setItem(`costPriceMetrics_${storeId}`, JSON.stringify({
         totalCostPrice: data.totalCostPrice,
         totalSoldItems: data.totalSoldItems,
@@ -171,14 +164,12 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
     setIsCalculatingCostPrice(true);
     
     try {
-      // Загружаем данные о себестоимости из localStorage
       const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore.id}`) || "{}");
       console.log("Загруженные данные о себестоимости:", costPrices);
       
-      // Загружаем аналитические данные из localStorage
       const analyticsData = JSON.parse(localStorage.getItem(`marketplace_analytics_${selectedStore.id}`) || "{}");
       
-      if (!analyticsData || !analyticsData.data || !analyticsData.data.productSales || analyticsData.data.productSales.length === 0) {
+      if (!analyticsData?.data?.productSales || analyticsData.data.productSales.length === 0) {
         console.log("Нет данных о продажах товаров в аналитике");
         toast({
           title: "Нет данных о продажах",
@@ -190,20 +181,23 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       }
       
       const productSales: ProductSale[] = analyticsData.data.productSales;
-      console.log(`Найдено ${productSales.length} категорий продаж:`, productSales);
+      const productReturns = analyticsData.data.productReturns || [];
       
-      // Проверяем наличие nm_id в данных о продажах
-      productSales.forEach((sale, index) => {
-        console.log(`[${index}] Категория: ${sale.subject_name}, Количество: ${sale.quantity}, nm_id: ${sale.nm_id}`);
-      });
-      
-      // Загружаем продукты на случай, если costPrices не содержит данных
-      const products = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
+      console.log(`Найдено ${productSales.length} категорий продаж и ${productReturns.length} возвратов`);
       
       let totalCost = 0;
       let totalItems = 0;
       let processedCategories = 0;
       let skippedCategories = 0;
+      
+      const returnsMap = new Map();
+      productReturns.forEach((return_item: any) => {
+        const nmId = return_item.nm_id || return_item.nmId;
+        if (nmId) {
+          const currentCount = returnsMap.get(nmId) || 0;
+          returnsMap.set(nmId, currentCount + (return_item.quantity || 1));
+        }
+      });
       
       for (const sale of productSales) {
         if (!sale.nm_id) {
@@ -212,29 +206,22 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
           continue;
         }
         
-        const quantity = sale.quantity || 0;
+        const nmId = Number(sale.nm_id);
+        const returns = returnsMap.get(nmId) || 0;
+        const quantity = (sale.quantity || 0) - returns;
+        
         if (quantity <= 0) {
-          console.log(`Пропускаем категорию "${sale.subject_name}" с нулевым количеством`);
+          console.log(`Пропускаем категорию "${sale.subject_name}" после учета возвратов (${returns} возвратов)`);
           continue;
         }
         
-        const nmId = Number(sale.nm_id);
-        console.log(`Обработка товара с nmId ${nmId}, категория: "${sale.subject_name}", количество: ${quantity}`);
+        console.log(`Обработка товара с nmId ${nmId}, категория: "${sale.subject_name}", количество: ${quantity} (возвраты: ${returns})`);
         
-        // Ищем себестоимость сначала в costPrices
-        let costPrice = 0;
-        
-        if (costPrices[nmId] && typeof costPrices[nmId] === 'number') {
-          costPrice = costPrices[nmId];
-          console.log(`Найдена себестоимость в costPrices для nmId ${nmId}: ${costPrice}`);
-        } else {
-          // Если не нашли в costPrices, ищем в products
-          const productWithNmId = products.find((p: any) => Number(p.nmId) === nmId);
-          if (productWithNmId && productWithNmId.costPrice > 0) {
-            costPrice = productWithNmId.costPrice;
-            console.log(`Найден товар напрямую с nmId ${nmId}: costPrice = ${costPrice}`);
-            
-            // Сохраняем найденную себестоимость в costPrices для будущего использования
+        let costPrice = costPrices[nmId];
+        if (!costPrice) {
+          const product = products.find((p: any) => Number(p.nmId) === nmId);
+          if (product?.costPrice > 0) {
+            costPrice = product.costPrice;
             costPrices[nmId] = costPrice;
             localStorage.setItem(`costPrices_${selectedStore.id}`, JSON.stringify(costPrices));
           }
@@ -248,7 +235,7 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
           
           console.log(`Успешно рассчитано для "${sale.subject_name}": ${quantity} x ${costPrice} = ${categoryCost}`);
         } else {
-          console.log(`Не удалось определить себестоимость для nmId ${nmId} (категория "${sale.subject_name}")`);
+          console.log(`Не удалось определить себестоимость для nmId ${nmId}`);
           skippedCategories++;
         }
       }
@@ -264,14 +251,12 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
       setAvgCostPrice(avgCost);
       setLastUpdateDate(currentDate);
       
-      // Обновляем данные аналитики с новой себестоимостью
       if (analyticsData && analyticsData.data && analyticsData.data.currentPeriod && analyticsData.data.currentPeriod.expenses) {
         analyticsData.data.currentPeriod.expenses.costPrice = totalCost;
         localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
         console.log(`Обновлены данные аналитики с себестоимостью: ${totalCost}`);
       }
       
-      // Сохраняем рассчитанные данные в базу данных и localStorage
       const costPriceData = {
         totalCostPrice: totalCost,
         totalSoldItems: totalItems,
@@ -279,10 +264,8 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
         lastUpdateDate: currentDate
       };
       
-      // Сохраняем рассчитанные данные в базу данных
       await saveToDatabase(selectedStore.id, costPriceData);
       
-      // Сохраняем в localStorage в любом случае как резервную копию
       localStorage.setItem(`costPriceMetrics_${selectedStore.id}`, JSON.stringify({
         ...costPriceData,
         timestamp: new Date().getTime()
