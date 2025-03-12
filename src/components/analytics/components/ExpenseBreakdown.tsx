@@ -188,8 +188,14 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
     }
   };
   
-  // Учитываем себестоимость в общих расходах
-  const totalExpensesWithCostPrice = data.currentPeriod.expenses.total;
+  // Пересчитываем общие расходы, включая себестоимость
+  const totalExpensesWithCostPrice = data.currentPeriod.expenses.logistics + 
+                                    data.currentPeriod.expenses.storage + 
+                                    data.currentPeriod.expenses.penalties + 
+                                    data.currentPeriod.expenses.advertising + 
+                                    (data.currentPeriod.expenses.acceptance || 0) + 
+                                    (data.currentPeriod.expenses.deductions || 0) +
+                                    totalCostPrice;
 
   return (
     <Card className="p-4">
@@ -293,6 +299,13 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
           <span className="text-xs text-muted-foreground mt-0.5">
             {totalExpensesWithCostPrice > 0 ? ((totalCostPrice / totalExpensesWithCostPrice) * 100).toFixed(1) : '0'}%
           </span>
+        </div>
+      </div>
+      
+      <div className="flex flex-col mt-4 p-3 bg-gradient-to-br from-gray-50 to-white dark:from-gray-950/20 dark:to-background border border-gray-200 dark:border-gray-800 rounded-lg">
+        <div className="flex justify-between items-center">
+          <h4 className="text-sm font-medium">Общие удержания (включая себестоимость)</h4>
+          <p className="text-lg font-bold">{formatCurrency(totalExpensesWithCostPrice)}</p>
         </div>
       </div>
     </Card>
