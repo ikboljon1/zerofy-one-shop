@@ -59,7 +59,7 @@ const LandingPage = () => {
   }, {
     icon: <Calculator className="h-6 w-6 text-primary" />,
     title: "Расчет рентабельности",
-    description: "Мгновенно оцениваем прибыльность каждого товара с учетом всех скрытых расхо��ов маркетплейсов."
+    description: "Мгновенно оцениваем прибыльность каждого товара с учетом всех скрытых расхо����ов маркетплейсов."
   }, {
     icon: <ShieldCheck className="h-6 w-6 text-primary" />,
     title: "Защита данных",
@@ -150,7 +150,7 @@ const LandingPage = () => {
   };
   const pricingInsight = {
     title: "Оптимизация ценообразования",
-    description: "ИИ-модель рассчитала идеальную цену для максимизации прибыли:",
+    description: "ИИ-модель рассчитал�� идеальную цену для максимизации прибыли:",
     values: [{
       label: "Текущая цена",
       value: "2 490 ₽"
@@ -196,7 +196,7 @@ const LandingPage = () => {
     author: "Сергей К.",
     company: "ТехноМаркет"
   }, {
-    quote: "Благодаря интеллектуальной системе планирования поставок Zerofy, мы сократили складские издержки на 22% и полностью избавились от проблемы неликвидов. При этом доступность товаров выросла до 98%. Фантастиче��кий результат!",
+    quote: "Благодаря интеллектуальной системе планирования поставок Zerofy, мы сократили складские издержки на 22% и полностью избавились от проблемы неликвидов. При этом доступность товаров выросла до 98%. Фантасти��е��кий результат!",
     author: "Елена В.",
     company: "Детские игрушки 'Радость'"
   }];
@@ -224,11 +224,20 @@ const LandingPage = () => {
   
   const demoContent = {
     analytics: <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-        <img 
-          src="/lovable-uploads/84016c72-9b0f-4155-a959-56497d632524.png" 
-          alt="Аналитика продаж" 
-          className="w-full h-auto max-w-md rounded-md border shadow-sm" 
-        />
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4">
+            <img 
+              src="/lovable-uploads/84c90791-e402-4ebb-8d12-96df4a147c68.png" 
+              alt="Аналитика продаж - детализация" 
+              className="w-full h-auto rounded-md border shadow-sm" 
+            />
+            <img 
+              src="/lovable-uploads/8d06480a-3c65-4a7e-b374-cb67b2413f0a.png" 
+              alt="Аналитика продаж - обзор" 
+              className="w-full h-auto rounded-md border shadow-sm" 
+            />
+          </div>
+        </div>
         <div className="space-y-4">
           <h3 className="font-semibold text-xl">Всесторонняя аналитика продаж</h3>
           <p className="text-muted-foreground">
