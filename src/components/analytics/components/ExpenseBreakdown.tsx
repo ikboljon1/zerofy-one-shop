@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, Coins, ShoppingCart, Calculator } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -5,6 +6,7 @@ import { getCostPriceByNmId } from "@/services/api";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+
 interface ExpenseBreakdownProps {
   data: {
     currentPeriod: {
@@ -26,6 +28,7 @@ interface ExpenseBreakdownProps {
     search: number;
   };
 }
+
 const ExpenseBreakdown = ({
   data,
   advertisingBreakdown
@@ -36,9 +39,11 @@ const ExpenseBreakdown = ({
   const {
     toast
   } = useToast();
+
   useEffect(() => {
     setTotalCostPrice(data.currentPeriod.expenses.costPrice || 0);
   }, [data]);
+
   const calculateCostPrice = async () => {
     try {
       setIsCalculating(true);
@@ -53,13 +58,16 @@ const ExpenseBreakdown = ({
         });
         return;
       }
+
       const analyticsData = JSON.parse(localStorage.getItem(`marketplace_analytics_${selectedStore.id}`) || "{}");
       if (analyticsData?.data?.productSales) {
         const productSales = analyticsData.data.productSales;
         const productReturns = analyticsData.data.productReturns || [];
         console.log(`Найдено ${productSales.length} категорий продаж и ${productReturns.length} возвратов`);
+        
         const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore.id}`) || "{}");
         const products = JSON.parse(localStorage.getItem(`products_${selectedStore.id}`) || "[]");
+        
         const returnsMap = new Map();
         productReturns.forEach((return_item: any) => {
           const nmId = return_item.nm_id || return_item.nmId;
@@ -68,18 +76,23 @@ const ExpenseBreakdown = ({
             returnsMap.set(nmId, currentCount + (return_item.quantity || 1));
           }
         });
+        
         let totalCost = 0;
         let processedCategories = 0;
         let skippedCategories = 0;
+        
         for (const sale of productSales) {
           if (!sale.nm_id) {
             skippedCategories++;
             continue;
           }
+          
           const nmId = Number(sale.nm_id);
           const returns = returnsMap.get(nmId) || 0;
           const quantity = (sale.quantity || 0) - returns;
+          
           if (quantity <= 0) continue;
+          
           let costPrice = 0;
           if (costPrices[nmId]) {
             costPrice = costPrices[nmId];
@@ -91,6 +104,7 @@ const ExpenseBreakdown = ({
               localStorage.setItem(`costPrices_${selectedStore.id}`, JSON.stringify(costPrices));
             }
           }
+          
           if (costPrice > 0) {
             totalCost += costPrice * quantity;
             processedCategories++;
@@ -98,15 +112,31 @@ const ExpenseBreakdown = ({
             skippedCategories++;
           }
         }
+        
         if (totalCost > 0) {
           setTotalCostPrice(totalCost);
+          
           if (analyticsData.data?.currentPeriod?.expenses) {
             const previousTotal = analyticsData.data.currentPeriod.expenses.total || 0;
             const previousCostPrice = analyticsData.data.currentPeriod.expenses.costPrice || 0;
+            const currentAdvertising = analyticsData.data.currentPeriod.expenses.advertising || 0;
+            
             analyticsData.data.currentPeriod.expenses.total = previousTotal - previousCostPrice + totalCost;
             analyticsData.data.currentPeriod.expenses.costPrice = totalCost;
+            
+            // Make sure to maintain the advertising data in the cache
+            analyticsData.data.currentPeriod.expenses.advertising = currentAdvertising;
+            
+            // Update net profit calculation
             analyticsData.data.currentPeriod.netProfit = analyticsData.data.currentPeriod.transferred - analyticsData.data.currentPeriod.expenses.total - (analyticsData.data.currentPeriod.returns || 0);
+            
+            // Store advertising breakdown if available
+            if (advertisingBreakdown) {
+              analyticsData.advertisingBreakdown = advertisingBreakdown;
+            }
+            
             localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
+            
             window.dispatchEvent(new CustomEvent('costPriceUpdated', {
               detail: {
                 storeId: selectedStore.id,
@@ -114,7 +144,34 @@ const ExpenseBreakdown = ({
                 timestamp: Date.now()
               }
             }));
+            
+            // Also update the store with calculated cost price
+            try {
+              const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
+              const updatedStores = stores.map((store: any) => {
+                if (store.id === selectedStore.id && store.stats?.currentPeriod?.expenses) {
+                  return {
+                    ...store,
+                    stats: {
+                      ...store.stats,
+                      currentPeriod: {
+                        ...store.stats.currentPeriod,
+                        expenses: {
+                          ...store.stats.currentPeriod.expenses,
+                          costPrice: totalCost
+                        }
+                      }
+                    }
+                  };
+                }
+                return store;
+              });
+              localStorage.setItem('marketplace_stores', JSON.stringify(updatedStores));
+            } catch (storeError) {
+              console.error('Error updating stores with cost price:', storeError);
+            }
           }
+          
           toast({
             title: "Успешно",
             description: `Себестоимость рассчитана: ${formatCurrency(totalCost)}`
@@ -132,7 +189,15 @@ const ExpenseBreakdown = ({
       setIsCalculating(false);
     }
   };
-  const totalExpensesWithCostPrice = data.currentPeriod.expenses.logistics + data.currentPeriod.expenses.storage + data.currentPeriod.expenses.penalties + data.currentPeriod.expenses.advertising + (data.currentPeriod.expenses.acceptance || 0) + (data.currentPeriod.expenses.deductions || 0) + totalCostPrice;
+
+  const totalExpensesWithCostPrice = data.currentPeriod.expenses.logistics + 
+                                    data.currentPeriod.expenses.storage + 
+                                    data.currentPeriod.expenses.penalties + 
+                                    data.currentPeriod.expenses.advertising + 
+                                    (data.currentPeriod.expenses.acceptance || 0) + 
+                                    (data.currentPeriod.expenses.deductions || 0) + 
+                                    totalCostPrice;
+
   return <Card className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold">Структура расходов</h3>
@@ -226,8 +291,7 @@ const ExpenseBreakdown = ({
           </span>
         </div>
       </div>
-      
-      
     </Card>;
 };
+
 export default ExpenseBreakdown;
