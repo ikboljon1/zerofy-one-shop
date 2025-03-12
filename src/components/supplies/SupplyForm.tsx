@@ -76,14 +76,16 @@ const SupplyForm: React.FC = () => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <form className="space-y-4">
+        <form className="space-y-4" autoComplete="off">
           <div className="space-y-2">
             <Label htmlFor="product-name">Наименование товара</Label>
             <Input 
               id="product-name" 
+              name="product-name"
               placeholder="Введите название товара" 
               value={productName}
               onChange={handleProductNameChange}
+              autoComplete="off"
             />
           </div>
           
@@ -91,9 +93,11 @@ const SupplyForm: React.FC = () => {
             <Label htmlFor="barcode">Штрихкод (необязательно)</Label>
             <Input 
               id="barcode" 
+              name="barcode"
               placeholder="Введите штрихкод товара" 
               value={barcode}
               onChange={handleBarcodeChange}
+              autoComplete="off"
             />
           </div>
           
@@ -102,10 +106,12 @@ const SupplyForm: React.FC = () => {
               <Label htmlFor="quantity">Количество (шт.)</Label>
               <Input 
                 id="quantity" 
+                name="quantity"
                 type="number" 
                 placeholder="0" 
                 value={quantity}
                 onChange={handleQuantityChange}
+                autoComplete="off"
               />
             </div>
             
@@ -133,11 +139,13 @@ const SupplyForm: React.FC = () => {
             </Label>
             <Input 
               id="weight" 
+              name="weight"
               type="number" 
               placeholder="0.00" 
               step="0.01" 
               value={weight}
               onChange={handleWeightChange}
+              autoComplete="off"
             />
           </div>
           
@@ -148,11 +156,13 @@ const SupplyForm: React.FC = () => {
             </Label>
             <Input 
               id="volume" 
+              name="volume"
               type="number" 
               placeholder="0.00" 
               step="0.01" 
               value={volume}
               onChange={handleVolumeChange}
+              autoComplete="off"
             />
           </div>
           

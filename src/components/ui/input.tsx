@@ -8,7 +8,7 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, trackValue = false, ...props }, ref) => {
+  ({ className, type, trackValue = false, autoComplete = "off", ...props }, ref) => {
     // For inputs that need individual tracking, use local state
     const [localValue, setLocalValue] = React.useState<string>(props.value?.toString() || "");
     
@@ -39,6 +39,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           className
         )}
         ref={ref}
+        autoComplete={autoComplete}
         {...props}
         value={trackValue ? localValue : props.value}
         onChange={handleChange}
