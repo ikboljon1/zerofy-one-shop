@@ -34,7 +34,6 @@ export type WildberriesResponse = {
       acceptance: number;
       advertising: number;
       deductions?: number;
-      costPrice?: number; // Добавляем себестоимость для полноты типа
     };
     netProfit: number;
     acceptance: number;

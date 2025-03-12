@@ -58,7 +58,6 @@ interface StatsData {
     netProfit: number;
     acceptance: number;
     expenses: Expenses;
-    returnsAmount?: number;
     // other properties as needed
   };
   previousPeriod?: {
@@ -67,7 +66,6 @@ interface StatsData {
     netProfit: number;
     acceptance: number;
     expenses: Expenses;
-    returnsAmount?: number;
     // other properties as needed
   };
   dailySales?: any[];
@@ -175,23 +173,6 @@ const Stats = () => {
           }
         } else {
           console.log(`Found existing cost price: ${analyticsData.data.currentPeriod.expenses.costPrice}`);
-        }
-        
-        // Если нет суммы возвратов, подсчитываем из данных о возвратах
-        if (!analyticsData.data.currentPeriod.returnsAmount && analyticsData.data.productReturns) {
-          const returnsAmount = analyticsData.data.productReturns.reduce((sum, item) => sum + (item.value || 0), 0);
-          analyticsData.data.currentPeriod.returnsAmount = returnsAmount;
-          console.log(`Calculated returns amount: ${returnsAmount}`);
-          
-          // Обновляем netProfit с учетом возвратов
-          analyticsData.data.currentPeriod.netProfit = 
-            analyticsData.data.currentPeriod.transferred - 
-            analyticsData.data.currentPeriod.expenses.total -
-            (analyticsData.data.currentPeriod.expenses.costPrice || 0) -
-            returnsAmount;
-          
-          // Сохраняем обновленные данные
-          localStorage.setItem(`marketplace_analytics_${selectedStore.id}`, JSON.stringify(analyticsData));
         }
         
         setStatsData(analyticsData.data);
