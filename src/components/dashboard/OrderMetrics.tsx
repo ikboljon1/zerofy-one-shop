@@ -25,11 +25,13 @@ const OrderMetrics: React.FC<OrderMetricsProps> = ({ orders }) => {
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-      <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-indigo-50 to-sky-100 dark:from-indigo-950/60 dark:to-sky-900/40">
-        <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-sky-200/30 to-transparent dark:from-sky-800/20 rotate-12 transform origin-top-right"></div>
+      <Card className="relative overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-indigo-100 to-sky-200 dark:from-indigo-900/80 dark:to-sky-800/60">
+        <div className="absolute inset-0 opacity-10 bg-[url('/pattern-flowers-1.png')] bg-no-repeat bg-right-top bg-contain" />
+        <div className="absolute right-0 bottom-0 w-24 h-24 opacity-20 bg-[url('/pattern-flowers-2.png')] bg-no-repeat bg-right-bottom bg-contain transform rotate-12" />
+        <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-indigo-200/50 to-transparent dark:from-indigo-700/30 pointer-events-none" />
         <CardHeader className="pb-2 relative z-10">
           <CardTitle className="text-base font-medium flex items-center text-indigo-700 dark:text-indigo-300">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-100/90 dark:bg-indigo-800/40 mr-3">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-200 dark:bg-indigo-700/60 mr-3 shadow-md">
               <Package className="h-4 w-4" />
             </div>
             Всего заказов
@@ -39,15 +41,17 @@ const OrderMetrics: React.FC<OrderMetricsProps> = ({ orders }) => {
           </CardDescription>
         </CardHeader>
         <CardContent className="relative z-10">
-          <div className="text-3xl font-bold text-indigo-700 dark:text-indigo-300">{totalOrders}</div>
+          <div className="text-3xl font-bold text-indigo-700 dark:text-indigo-300 drop-shadow-md">{totalOrders}</div>
         </CardContent>
       </Card>
 
-      <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-teal-50 to-emerald-100 dark:from-teal-950/60 dark:to-emerald-900/40">
-        <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-emerald-200/30 to-transparent dark:from-emerald-800/20 rotate-12 transform origin-top-right"></div>
+      <Card className="relative overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-teal-100 to-emerald-200 dark:from-teal-900/80 dark:to-emerald-800/60">
+        <div className="absolute inset-0 opacity-10 bg-[url('/pattern-flowers-3.png')] bg-no-repeat bg-right-top bg-contain" />
+        <div className="absolute right-0 bottom-0 w-24 h-24 opacity-20 bg-[url('/pattern-flowers-4.png')] bg-no-repeat bg-right-bottom bg-contain transform -rotate-12" />
+        <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-teal-200/50 to-transparent dark:from-teal-700/30 pointer-events-none" />
         <CardHeader className="pb-2 relative z-10">
           <CardTitle className="text-base font-medium flex items-center text-teal-700 dark:text-teal-300">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-teal-100/90 dark:bg-teal-800/40 mr-3">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-teal-200 dark:bg-teal-700/60 mr-3 shadow-md">
               <TrendingUp className="h-4 w-4" />
             </div>
             Активные заказы
@@ -57,15 +61,17 @@ const OrderMetrics: React.FC<OrderMetricsProps> = ({ orders }) => {
           </CardDescription>
         </CardHeader>
         <CardContent className="relative z-10">
-          <div className="text-3xl font-bold text-teal-700 dark:text-teal-300">{activeOrders}</div>
+          <div className="text-3xl font-bold text-teal-700 dark:text-teal-300 drop-shadow-md">{activeOrders}</div>
         </CardContent>
       </Card>
 
-      <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-rose-50 to-amber-100 dark:from-rose-950/60 dark:to-amber-900/40">
-        <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-amber-200/30 to-transparent dark:from-amber-800/20 rotate-12 transform origin-top-right"></div>
+      <Card className="relative overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-rose-100 to-amber-200 dark:from-rose-900/80 dark:to-amber-800/60">
+        <div className="absolute inset-0 opacity-10 bg-[url('/pattern-flowers-5.png')] bg-no-repeat bg-right-top bg-contain" />
+        <div className="absolute left-0 bottom-0 w-24 h-24 opacity-20 bg-[url('/pattern-flowers-6.png')] bg-no-repeat bg-left-bottom bg-contain transform rotate-12" />
+        <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-rose-200/50 to-transparent dark:from-rose-700/30 pointer-events-none" />
         <CardHeader className="pb-2 relative z-10">
           <CardTitle className="text-base font-medium flex items-center text-rose-700 dark:text-rose-300">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-rose-100/90 dark:bg-rose-800/40 mr-3">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-rose-200 dark:bg-rose-700/60 mr-3 shadow-md">
               <PackageX className="h-4 w-4" />
             </div>
             Отмененные
@@ -75,15 +81,17 @@ const OrderMetrics: React.FC<OrderMetricsProps> = ({ orders }) => {
           </CardDescription>
         </CardHeader>
         <CardContent className="relative z-10">
-          <div className="text-3xl font-bold text-rose-700 dark:text-rose-300">{canceledOrders}</div>
+          <div className="text-3xl font-bold text-rose-700 dark:text-rose-300 drop-shadow-md">{canceledOrders}</div>
         </CardContent>
       </Card>
 
-      <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-violet-50 to-fuchsia-100 dark:from-violet-950/60 dark:to-fuchsia-900/40">
-        <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-fuchsia-200/30 to-transparent dark:from-fuchsia-800/20 rotate-12 transform origin-top-right"></div>
+      <Card className="relative overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-violet-100 to-fuchsia-200 dark:from-violet-900/80 dark:to-fuchsia-800/60">
+        <div className="absolute inset-0 opacity-10 bg-[url('/pattern-flowers-7.png')] bg-no-repeat bg-right-top bg-contain" />
+        <div className="absolute right-0 bottom-0 w-24 h-24 opacity-20 bg-[url('/pattern-flowers-8.png')] bg-no-repeat bg-right-bottom bg-contain transform -rotate-12" />
+        <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-violet-200/50 to-transparent dark:from-violet-700/30 pointer-events-none" />
         <CardHeader className="pb-2 relative z-10">
           <CardTitle className="text-base font-medium flex items-center text-violet-700 dark:text-violet-300">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-100/90 dark:bg-violet-800/40 mr-3">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-200 dark:bg-violet-700/60 mr-3 shadow-md">
               <BarChart3 className="h-4 w-4" />
             </div>
             Сумма заказов
@@ -93,7 +101,7 @@ const OrderMetrics: React.FC<OrderMetricsProps> = ({ orders }) => {
           </CardDescription>
         </CardHeader>
         <CardContent className="relative z-10">
-          <div className="text-3xl font-bold text-violet-700 dark:text-violet-300">
+          <div className="text-3xl font-bold text-violet-700 dark:text-violet-300 drop-shadow-md">
             {formatCurrency(totalAmount)} ₽
           </div>
         </CardContent>
