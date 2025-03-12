@@ -5,11 +5,13 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import AuthModal from "@/components/auth/AuthModal";
 import { motion } from "framer-motion";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 const LandingPage = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [activeScreenshot, setActiveScreenshot] = useState(0);
+  const [activeDemoTab, setActiveDemoTab] = useState("analytics");
   const navigate = useNavigate();
 
   const handleAuthClick = (mode: 'login' | 'register') => {
@@ -141,7 +143,7 @@ const LandingPage = () => {
 
   const pricingInsight = {
     title: "Оптимизация ценообразования",
-    description: "ИИ-модель рассчитала идеальную цену для максимизации приб��ли:",
+    description: "ИИ-модель рассчитала идеальную цену для максимизации прибыли:",
     values: [
       { label: "Текущая цена", value: "2 490 ₽" },
       { label: "Оптимальная цена", value: "2 190 ₽" },
@@ -190,7 +192,7 @@ const LandingPage = () => {
       features: [
         "Неограниченное количество товаров",
         "Премиум-аналитика с ИИ-рекомендациями",
-        "Неограниченное число по��ьзователей",
+        "Неограниченное число пользователей",
         "Круглосуточная поддержка 24/7",
         "Полная интеграционная экосистема",
         "Расширенный API-доступ",
@@ -222,569 +224,416 @@ const LandingPage = () => {
     }
   ];
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { 
-      opacity: 1,
-      transition: { 
-        staggerChildren: 0.1 
-      } 
+  const demoTabs = [
+    {
+      id: "analytics",
+      title: "Аналитика продаж",
+      icon: <BarChart2 className="h-5 w-5" />,
+      description: "Полная картина ваших продаж с детализацией по любому параметру"
+    },
+    {
+      id: "recommendations",
+      title: "AI-рекомендации",
+      icon: <Lightbulb className="h-5 w-5" />,
+      description: "Умные советы по оптимизации цен и управлению товарами"
+    },
+    {
+      id: "warehouses",
+      title: "Управление складами",
+      icon: <BoxSelect className="h-5 w-5" />,
+      description: "Оптимизация логистики и контроль складских запасов"
+    },
+    {
+      id: "finance",
+      title: "Финансовый контроль",
+      icon: <CircleDollarSign className="h-5 w-5" />,
+      description: "Отслеживание всех финансовых показателей вашего бизнеса"
     }
-  };
+  ];
 
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: { 
-      y: 0, 
-      opacity: 1,
-      transition: { duration: 0.5 }
-    }
-  };
-
-  return (
-    <div className="min-h-screen flex flex-col">
-      <header className="border-b bg-background/95 backdrop-blur sticky top-0 z-50">
-        <div className="container mx-auto flex justify-between items-center py-4 px-4">
-          <div className="flex items-center space-x-2">
-            <Zap className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl font-bold">Zerofy</h1>
+  const demoContent = {
+    analytics: (
+      <div className="rounded-lg overflow-hidden border bg-card p-1">
+        <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-6">
+          <div className="mb-6">
+            <h3 className="text-xl font-semibold mb-2">Аналитическая панель продаж</h3>
+            <p className="text-muted-foreground">Интерактивная визуализация данных о продажах и ключевых метриках</p>
           </div>
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" onClick={() => handleAuthClick('login')}>
-              Войти
-            </Button>
-            <Button onClick={() => handleAuthClick('register')}>
-              Начать бесплатно
-            </Button>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Card className="bg-white/80 backdrop-blur">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  <TrendingUp className="h-5 w-5 text-emerald-500 mr-2" />
+                  Продажи
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">₽1.45M</div>
+                <div className="text-sm text-emerald-600 flex items-center mt-1">
+                  <ArrowUpRight className="h-4 w-4 mr-1" />
+                  +18% к прошлому месяцу
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-white/80 backdrop-blur">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  <Users className="h-5 w-5 text-blue-500 mr-2" />
+                  Покупатели
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">3,842</div>
+                <div className="text-sm text-blue-600 flex items-center mt-1">
+                  <ArrowUpRight className="h-4 w-4 mr-1" />
+                  +12% к прошлому месяцу
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-white/80 backdrop-blur">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  <BarChart3 className="h-5 w-5 text-violet-500 mr-2" />
+                  Конверсия
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">5.8%</div>
+                <div className="text-sm text-violet-600 flex items-center mt-1">
+                  <ArrowUpRight className="h-4 w-4 mr-1" />
+                  +2.1% к прошлому месяцу
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </div>
-      </header>
-
-      <main className="flex-1">
-        <section className="py-20 px-4 bg-gradient-to-b from-background to-muted/30 relative overflow-hidden">
-          <div className="absolute inset-0 opacity-40">
-            <div className="absolute top-10 left-0 w-72 h-72 bg-primary/20 rounded-full filter blur-3xl"></div>
-            <div className="absolute bottom-10 right-0 w-80 h-80 bg-purple-500/20 rounded-full filter blur-3xl"></div>
-          </div>
-          <div className="container mx-auto max-w-6xl text-center relative z-10">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7 }}
-              className="mb-8"
-            >
-              <h1 className="text-4xl font-bold md:text-6xl mb-6 bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-500">
-                Превратите свой бизнес на маркетплейсах в финансовую империю
-              </h1>
-              <p className="text-xl mb-10 text-muted-foreground max-w-3xl mx-auto">
-                Zerofy — интеллектуальная платформа для увеличения прибыли и масштабирования продаж на Wildberries, Ozon и других маркетплейсах. 
-                Преобразите хаос данных в ясные стратегические решения и возьмите полный контроль над вашим растущим бизнесом.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button 
-                  size="lg" 
-                  onClick={() => handleAuthClick('register')} 
-                  className="group animate-pulse-slow"
-                >
-                  Начать бесплатно 
-                  <ChevronRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </div>
-            </motion.div>
-
-            <div className="relative mt-16 mb-12 max-w-5xl mx-auto rounded-xl overflow-hidden shadow-2xl group">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              
-              {screenshots.map((screenshot, index) => (
-                <motion.div 
-                  key={index}
-                  initial={{ opacity: 0 }}
-                  animate={{ 
-                    opacity: activeScreenshot === index ? 1 : 0,
-                    scale: activeScreenshot === index ? 1 : 0.95,
-                  }}
-                  transition={{ duration: 0.5 }}
-                  className="absolute inset-0"
-                  style={{ display: activeScreenshot === index ? 'block' : 'none' }}
-                >
-                  <img 
-                    src={screenshot.src} 
-                    alt={screenshot.alt} 
-                    className="w-full h-auto object-cover rounded-xl border border-muted shadow-lg"
-                  />
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-sm p-4 text-white">
-                    <h3 className="text-xl font-semibold mb-1">{screenshot.title}</h3>
-                    <p className="text-sm text-gray-300">{screenshot.description}</p>
+          <div className="rounded-lg bg-white/80 backdrop-blur p-4">
+            <div className="h-48 w-full flex items-center justify-center">
+              <div className="w-full flex space-x-2">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex-1 flex flex-col items-center justify-end"
+                  >
+                    <div 
+                      className="w-full bg-primary/80" 
+                      style={{ 
+                        height: `${20 + Math.sin(i / 2) * 60}px`,
+                        opacity: 0.7 + (i / 24)
+                      }}
+                    />
+                    <div className="text-xs mt-1">{`${i + 1}.${new Date().getMonth() + 1}`}</div>
                   </div>
-                </motion.div>
-              ))}
-              
-              <div className="absolute bottom-20 left-0 right-0 flex justify-center gap-2 z-10">
-                {screenshots.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setActiveScreenshot(index)}
-                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                      activeScreenshot === index 
-                        ? "w-8 bg-primary" 
-                        : "bg-muted-foreground/50"
-                    }`}
-                  />
                 ))}
               </div>
             </div>
-
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-8">
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                viewport={{ once: true }}
-                className="bg-card/60 backdrop-blur-sm p-6 rounded-lg shadow-sm border hover:border-primary/50 transition-all duration-300 hover:shadow-md"
-              >
-                <LineChart className="h-10 w-10 text-primary mb-3" />
-                <h3 className="text-lg font-medium mb-2">Аналитика в реальном времени</h3>
-                <p className="text-muted-foreground text-sm">Все ключевые метрики вашего бизнеса в одном месте с обновлением данных в реальном времени</p>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                viewport={{ once: true }}
-                className="bg-card/60 backdrop-blur-sm p-6 rounded-lg shadow-sm border hover:border-primary/50 transition-all duration-300 hover:shadow-md"
-              >
-                <PieChart className="h-10 w-10 text-primary mb-3" />
-                <h3 className="text-lg font-medium mb-2">Структура расходов</h3>
-                <p className="text-muted-foreground text-sm">Детализированная разбивка всех расходов для контроля рентабельности каждого товара</p>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-                viewport={{ once: true }}
-                className="bg-card/60 backdrop-blur-sm p-6 rounded-lg shadow-sm border hover:border-primary/50 transition-all duration-300 hover:shadow-md"
-              >
-                <Gauge className="h-10 w-10 text-primary mb-3" />
-                <h3 className="text-lg font-medium mb-2">Эффективность рекламы</h3>
-                <p className="text-muted-foreground text-sm">Оценка рентабельности рекламных кампаний с показателями CTR, CPC и конверсии</p>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-                viewport={{ once: true }}
-                className="bg-card/60 backdrop-blur-sm p-6 rounded-lg shadow-sm border hover:border-primary/50 transition-all duration-300 hover:shadow-md"
-              >
-                <TrendingUp className="h-10 w-10 text-primary mb-3" />
-                <h3 className="text-lg font-medium mb-2">Тренды продаж</h3>
-                <p className="text-muted-foreground text-sm">Анализ динамики продаж для своевременного выявления растущих и падающих товаров</p>
-              </motion.div>
-            </div>
-          </div>
-        </section>
-
-        <section className="py-20 px-4 bg-muted/50">
-          <div className="container mx-auto max-w-6xl">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7 }}
-              viewport={{ once: true }}
-              className="text-center mb-12"
-            >
-              <h2 className="text-3xl font-bold text-center mb-4 inline-block bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-500">Инновационные возможности платформы</h2>
-              <p className="text-center text-muted-foreground mb-8 max-w-3xl mx-auto">
-                От глубинной аналитики до интеллектуального управления поставками — весь ваш бизнес на одной платформе
-              </p>
-            </motion.div>
-            
-            <motion.div 
-              variants={containerVariants}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-            >
-              {features.map((feature, index) => (
-                <motion.div 
-                  key={index} 
-                  variants={itemVariants}
-                  className="bg-card p-6 rounded-lg shadow-sm border hover:border-primary/50 transition-all duration-300 hover:shadow-md hover:-translate-y-1"
-                >
-                  <div className="mb-4 p-3 bg-primary/10 rounded-full inline-block">{feature.icon}</div>
-                  <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                  <p className="text-muted-foreground">{feature.description}</p>
-                </motion.div>
-              ))}
-            </motion.div>
-          </div>
-        </section>
-
-        <section className="py-20 px-4 bg-gradient-to-b from-background to-muted/10 relative overflow-hidden">
-          <div className="absolute inset-0 opacity-30">
-            <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-purple-500/20 rounded-full filter blur-3xl"></div>
-            <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-primary/20 rounded-full filter blur-3xl"></div>
-          </div>
-          <div className="container mx-auto max-w-6xl relative z-10">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7 }}
-              viewport={{ once: true }}
-              className="text-center mb-16"
-            >
-              <h2 className="text-3xl font-bold text-center mb-4 inline-block bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-500">
-                Как работает Zerofy
-              </h2>
-              <p className="text-center text-muted-foreground max-w-3xl mx-auto">
-                Наша платформа интегрируется с вашими маркетплейсами и предоставляет полную картину бизнеса всего за несколько простых шагов
-              </p>
-            </motion.div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative">
-              <div className="absolute top-1/2 left-0 right-0 h-1 bg-primary/20 -translate-y-1/2 hidden md:block"></div>
-              
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5 }}
-                viewport={{ once: true }}
-                className="relative z-10"
-              >
-                <div className="bg-card p-8 rounded-lg shadow-lg border border-primary/20 relative">
-                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold shadow-lg">1</div>
-                  <h3 className="text-xl font-semibold mb-4 mt-6 text-center">Подключение аккаунта</h3>
-                  <p className="text-muted-foreground text-center">
-                    Добавьте API-ключи от ваших маркетплейсов и настройте интеграцию в несколько кликов
-                  </p>
-                </div>
-              </motion.div>
-              
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                viewport={{ once: true }}
-                className="relative z-10"
-              >
-                <div className="bg-card p-8 rounded-lg shadow-lg border border-primary/20 relative">
-                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold shadow-lg">2</div>
-                  <h3 className="text-xl font-semibold mb-4 mt-6 text-center">Мгновенная аналитика</h3>
-                  <p className="text-muted-foreground text-center">
-                    Система автоматически собирает и обрабатывает данные, представляя их в удобном ��нтерфейсе
-                  </p>
-                </div>
-              </motion.div>
-              
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-                viewport={{ once: true }}
-                className="relative z-10"
-              >
-                <div className="bg-card p-8 rounded-lg shadow-lg border border-primary/20 relative">
-                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold shadow-lg">3</div>
-                  <h3 className="text-xl font-semibold mb-4 mt-6 text-center">Принятие решений</h3>
-                  <p className="text-muted-foreground text-center">
-                    Используйте аналитические данные для стратегических решений и масштабирования продаж
-                  </p>
-                </div>
-              </motion.div>
-            </div>
-          </div>
-        </section>
-
-        <section className="py-20 px-4 bg-muted/30">
-          <div className="container mx-auto max-w-6xl">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7 }}
-              viewport={{ once: true }}
-              className="text-center mb-12"
-            >
-              <h2 className="text-3xl font-bold text-center mb-4 inline-block bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-500">Почему лидеры выбирают Zerofy</h2>
-              <p className="text-center text-muted-foreground mb-12 max-w-3xl mx-auto">
-                Мы предоставляем не просто инструменты, а полноценную экосистему для принятия стратегических решений и трансформации вашего бизнеса
-              </p>
-            </motion.div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                viewport={{ once: true }}
-                className="bg-card p-6 rounded-lg shadow-sm border flex flex-col items-center text-center hover:border-primary/50 transition-all duration-300 hover:shadow-md hover:-translate-y-1"
-              >
-                <div className="p-4 bg-primary/10 rounded-full mb-4">
-                  <HeartHandshake className="h-12 w-12 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2">Интуитивно понятный интерфейс</h3>
-                <p className="text-muted-foreground">
-                  Мы создали элегантный и простой интерфейс, в котором удобно разберется даже новичок. Забудьте о долгом обучении — начните получать резул��таты с первого дня.
-                </p>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                viewport={{ once: true }}
-                className="bg-card p-6 rounded-lg shadow-sm border flex flex-col items-center text-center hover:border-primary/50 transition-all duration-300 hover:shadow-md hover:-translate-y-1"
-              >
-                <div className="p-4 bg-primary/10 rounded-full mb-4">
-                  <MessageSquare className="h-12 w-12 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2">Экспертная поддержка 24/7</h3>
-                <p className="text-muted-foreground">
-                  За каждым клиентом закреплен персональный менеджер с опытом в e-commerce. Мы не просто решаем технические вопросы, но и помогаем выстраивать стратегию роста.
-                </p>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-                viewport={{ once: true }}
-                className="bg-card p-6 rounded-lg shadow-sm border flex flex-col items-center text-center hover:border-primary/50 transition-all duration-300 hover:shadow-md hover:-translate-y-1"
-              >
-                <div className="p-4 bg-primary/10 rounded-full mb-4">
-                  <Rocket className="h-12 w-12 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2">Постоянное развитие</h3>
-                <p className="text-muted-foreground">
-                  Мы внедряем новые функции ежемесячно, основываясь на обратной связи от клиентов и анализе рынка. С Zerofy вы всегда на шаг впереди изменений на маркетплейсах.
-                </p>
-              </motion.div>
-            </div>
-          </div>
-        </section>
-
-        <section className="py-20 px-4 bg-gradient-to-b from-background to-muted/30 relative overflow-hidden">
-          <div className="absolute inset-0 opacity-30">
-            <div className="absolute top-1/4 left-1/3 w-72 h-72 bg-primary/20 rounded-full filter blur-3xl"></div>
-            <div className="absolute bottom-1/4 right-1/3 w-80 h-80 bg-purple-500/20 rounded-full filter blur-3xl"></div>
-          </div>
-          <div className="container mx-auto max-w-6xl relative z-10">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7 }}
-              viewport={{ once: true }}
-              className="text-center mb-16"
-            >
-              <h2 className="text-3xl font-bold text-center mb-4 inline-block bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-500">Zerofy в цифрах</h2>
-              <p className="text-center text-muted-foreground max-w-3xl mx-auto">
-                Измеримые результаты, которые говорят сами за себя
-              </p>
-            </motion.div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5 }}
-                viewport={{ once: true }}
-                className="bg-card p-6 rounded-lg shadow-sm border text-center"
-              >
-                <div className="text-4xl font-bold text-primary mb-2 flex items-center justify-center">
-                  <span className="mr-2">500+</span>
-                  <CheckCircle className="h-6 w-6 text-green-500" />
-                </div>
-                <p className="text-muted-foreground">Активных клиентов</p>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                viewport={{ once: true }}
-                className="bg-card p-6 rounded-lg shadow-sm border text-center"
-              >
-                <div className="text-4xl font-bold text-primary mb-2">₽1.5 млрд+</div>
-                <p className="text-muted-foreground">Ежемесячный оборот клиентов</p>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                viewport={{ once: true }}
-                className="bg-card p-6 rounded-lg shadow-sm border text-center"
-              >
-                <div className="text-4xl font-bold text-primary mb-2">35%</div>
-                <p className="text-muted-foreground">Средний рост продаж</p>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-                viewport={{ once: true }}
-                className="bg-card p-6 rounded-lg shadow-sm border text-center"
-              >
-                <div className="text-4xl font-bold text-primary mb-2">24/7</div>
-                <p className="text-muted-foreground">Поддержка клиентов</p>
-              </motion.div>
-            </div>
-          </div>
-        </section>
-
-        <section className="py-20 px-4">
-          <div className="container mx-auto max-w-6xl">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7 }}
-              viewport={{ once: true }}
-              className="text-center mb-12"
-            >
-              <h2 className="text-3xl font-bold text-center mb-4 inline-block bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-500">Инвестиции в ваш успех</h2>
-              <p className="text-center text-muted-foreground mb-12 max-w-3xl mx-auto">
-                Выберите оптимальный план, соответствующий вашим амбициям. Начните бесплатно и масштабируйтесь вместе с ростом вашего бизнеса.
-              </p>
-            </motion.div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {pricing.map((plan, index) => (
-                <motion.div 
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  viewport={{ once: true }}
-                  className={cn(
-                    "bg-card p-6 rounded-lg shadow-sm border relative hover:transform hover:-translate-y-1 transition-all duration-300", 
-                    plan.popular && "border-primary shadow-md"
-                  )}
-                >
-                  {plan.popular && (
-                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium animate-pulse-slow">
-                      Выбор лидеров
-                    </div>
-                  )}
-                  <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
-                  <div className="flex items-baseline mb-4">
-                    <span className="text-3xl font-bold">{plan.price}</span>
-                    {plan.price !== "0" && <span className="text-muted-foreground ml-1">₽/мес</span>}
-                    {plan.price === "0" && <span className="text-muted-foreground ml-1">₽</span>}
-                  </div>
-                  <p className="text-muted-foreground mb-6">{plan.description}</p>
-                  <ul className="space-y-3 mb-8">
-                    {plan.features.map((feature, i) => (
-                      <li key={i} className="flex items-start">
-                        <CircleCheck className="h-5 w-5 text-primary mr-2 shrink-0" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Button 
-                    className={cn("w-full group", plan.popular && "animate-pulse-slow")}
-                    variant={plan.buttonVariant}
-                    onClick={() => handleAuthClick('register')}
-                  >
-                    {plan.price === "0" ? "Начать бесплатно" : "Выбрать тариф"}
-                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </Button>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="py-20 px-4 bg-gradient-to-b from-primary/5 to-purple-500/5 relative overflow-hidden">
-          <div className="absolute inset-0 opacity-30">
-            <div className="absolute top-1/3 left-1/4 w-64 h-64 bg-primary/20 rounded-full filter blur-3xl"></div>
-            <div className="absolute bottom-1/3 right-1/4 w-64 h-64 bg-purple-500/20 rounded-full filter blur-3xl"></div>
-          </div>
-          <div className="container mx-auto max-w-3xl text-center relative z-10">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.7 }}
-            >
-              <h2 className="text-3xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-500">Готовы к трансформации бизнеса?</h2>
-              <p className="text-xl mb-8 text-muted-foreground">
-                Присоединяйтесь к сообществу успешных предпринимателей, которые уже увеличили прибыльность своего бизнеса с помощью Zerofy
-              </p>
-              <Button 
-                size="lg" 
-                onClick={() => handleAuthClick('register')} 
-                className="group animate-pulse-slow bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90"
-              >
-                Начать бесплатно прямо сейчас
-                <ChevronRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-              </Button>
-            </motion.div>
-          </div>
-        </section>
-      </main>
-
-      <footer className="border-t py-8 px-4 bg-muted/30">
-        <div className="container mx-auto max-w-6xl">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <Zap className="h-6 w-6 text-primary" />
-                <span className="text-lg font-semibold">Zerofy</span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Революционная платформа для масштабирования вашего бизнеса на маркетплейсах через интеллектуальную аналитику
-              </p>
-            </div>
-            <div>
-              <h4 className="font-medium mb-4">Экосистема решений</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="hover:text-primary transition-colors cursor-pointer">Многомерная аналитика</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Интеллектуальный товарный менеджмент</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Оптимизация складской логистики</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Управление рекламными кампаниями</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-medium mb-4">О компании</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="hover:text-primary transition-colors cursor-pointer">Наша миссия</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">База знаний</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Карьера в Zerofy</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Связаться с нами</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-medium mb-4">Клиентская поддержка</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="hover:text-primary transition-colors cursor-pointer">Центр помощи 24/7</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Техническая документация</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">API для разработчиков</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Сообщество селлеров</li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t pt-8 flex flex-col md:flex-row justify-between items-center">
-            <div className="text-sm text-muted-foreground mb-4 md:mb-0">
-              © {new Date().getFullYear()} Zerofy. Все права защищены. Инвестируйте в свой успех.
-            </div>
-            <div className="space-x-4">
-              <Button variant="ghost" size="sm" className="hover:text-primary transition-colors">Политика конфиденциальности</Button>
-              <Button variant="ghost" size="sm" className="hover:text-primary transition-colors">Условия использования</Button>
+            <div className="flex justify-between items-center mt-2">
+              <div className="text-sm text-muted-foreground">Динамика продаж за текущий месяц</div>
+              <Button variant="ghost" size="sm" className="text-xs">Полный отчет</Button>
             </div>
           </div>
         </div>
-      </footer>
-
-      <AuthModal 
-        open={showAuthModal} 
-        onClose={() => setShowAuthModal(false)} 
-        initialMode={authMode}
-      />
-    </div>
-  );
-};
-
-export default LandingPage;
+      </div>
+    ),
+    recommendations: (
+      <div className="rounded-lg overflow-hidden border bg-card p-1">
+        <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg p-6">
+          <div className="mb-6">
+            <h3 className="text-xl font-semibold mb-2">Искусственный интеллект для вашего бизнеса</h3>
+            <p className="text-muted-foreground">Персонализированные рекомендации по оптимизации цен и товаров</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <Card className="bg-white/80 backdrop-blur">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  <PercentSquare className="h-5 w-5 text-amber-500 mr-2" />
+                  Ценовая оптимизация
+                </CardTitle>
+                <CardDescription>
+                  Идеальная цена для максимизации прибыли
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Текущая цена</span>
+                    <span className="font-medium">2 490 ₽</span>
+                  </div>
+                  <div className="flex justify-between items-center text-amber-600">
+                    <span className="text-sm">Оптимальная цена</span>
+                    <span className="font-medium">2 190 ₽</span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-amber-500" style={{ width: "85%" }} />
+                  </div>
+                  <div className="flex justify-between items-center text-emerald-600 text-sm">
+                    <span>Прогноз роста продаж</span>
+                    <span>+35%</span>
+                  </div>
+                  <div className="flex justify-between items-center text-emerald-600 text-sm">
+                    <span>Прогноз роста прибыли</span>
+                    <span>+18%</span>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button variant="outline" size="sm" className="w-full">Применить рекомендацию</Button>
+              </CardFooter>
+            </Card>
+            <Card className="bg-white/80 backdrop-blur">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  <BadgeDollarSign className="h-5 w-5 text-red-500 mr-2" />
+                  Товарные излишки
+                </CardTitle>
+                <CardDescription>
+                  Товары с высокими затратами на хранение
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm">Товар А</span>
+                      <span className="text-red-500 font-medium">4.0x</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-red-500" style={{ width: "80%" }} />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm">Товар Б</span>
+                      <span className="text-amber-500 font-medium">1.86x</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-amber-500" style={{ width: "65%" }} />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm">Товар В</span>
+                      <span className="text-emerald-500 font-medium">0.67x</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500" style={{ width: "40%" }} />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button variant="outline" size="sm" className="w-full">Просмотреть все товары</Button>
+              </CardFooter>
+            </Card>
+          </div>
+          <Card className="bg-white/80 backdrop-blur p-4 flex flex-col md:flex-row items-center">
+            <div className="p-2 rounded-full bg-amber-100 mr-4 mb-4 md:mb-0">
+              <Lightbulb className="h-8 w-8 text-amber-500" />
+            </div>
+            <div className="flex-1">
+              <h4 className="font-semibold mb-1">ИИ-рекомендация дня</h4>
+              <p className="text-sm text-muted-foreground">
+                Проанализировав данные, мы заметили, что снижение цены на категорию "Летняя одежда" на 10% может увеличить продажи на 28% и общую прибыль на 15%, основываясь на сезонных трендах прошлых лет.
+              </p>
+            </div>
+            <Button className="mt-4 md:mt-0 md:ml-4 whitespace-nowrap" size="sm">
+              Применить
+            </Button>
+          </Card>
+        </div>
+      </div>
+    ),
+    warehouses: (
+      <div className="rounded-lg overflow-hidden border bg-card p-1">
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6">
+          <div className="mb-6">
+            <h3 className="text-xl font-semibold mb-2">Управление складской логистикой</h3>
+            <p className="text-muted-foreground">Контроль остатков и оптимизация хранения товаров</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <Card className="bg-white/80 backdrop-blur p-4 col-span-2">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-semibold">Карта складов и остатков</h4>
+                <div className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded text-xs font-medium">
+                  12 складов
+                </div>
+              </div>
+              <div className="h-48 bg-slate-100 rounded-lg flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="absolute h-40 w-40 rounded-full bg-emerald-100 opacity-50"></div>
+                  <div className="absolute h-28 w-28 rounded-full bg-emerald-200 opacity-50"></div>
+                  <div className="absolute h-16 w-16 rounded-full bg-emerald-300 opacity-50"></div>
+                  
+                  {/* Маркеры складов */}
+                  <div className="absolute top-1/4 left-1/4 h-3 w-3 rounded-full bg-emerald-500"></div>
+                  <div className="absolute top-1/2 left-1/3 h-4 w-4 rounded-full bg-emerald-600"></div>
+                  <div className="absolute bottom-1/3 right-1/4 h-3 w-3 rounded-full bg-emerald-500"></div>
+                  <div className="absolute top-1/3 right-1/3 h-5 w-5 rounded-full bg-emerald-700"></div>
+                  <div className="absolute bottom-1/4 left-1/3 h-3 w-3 rounded-full bg-emerald-500"></div>
+                </div>
+                <div className="absolute inset-0 bg-white/10 backdrop-blur-[1px] flex items-center justify-center">
+                  <p className="text-sm">Интерактивная карта складов</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-2 mt-4">
+                <div className="text-center">
+                  <div className="text-sm font-medium">МСК</div>
+                  <div className="text-xs text-muted-foreground">4582 ед.</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-sm font-medium">СПБ</div>
+                  <div className="text-xs text-muted-foreground">2871 ед.</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-sm font-medium">КЗН</div>
+                  <div className="text-xs text-muted-foreground">1458 ед.</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-sm font-medium">РСТ</div>
+                  <div className="text-xs text-muted-foreground">1254 ед.</div>
+                </div>
+              </div>
+            </Card>
+            <Card className="bg-white/80 backdrop-blur">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  <Settings className="h-5 w-5 text-emerald-500 mr-2" />
+                  Оптимизация распределения
+                </CardTitle>
+                <CardDescription>
+                  Рекомендации по перераспределению товаров
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex items-center space-x-2 border-l-4 border-emerald-500 pl-2">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">МСК → СПБ</div>
+                    <div className="text-xs text-muted-foreground">Сократит время доставки на 38%</div>
+                  </div>
+                  <Button variant="ghost" size="sm">Подробнее</Button>
+                </div>
+                <div className="flex items-center space-x-2 border-l-4 border-amber-500 pl-2">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">КЗН → РСТ</div>
+                    <div className="text-xs text-muted-foreground">Оптимизирует загрузку складов</div>
+                  </div>
+                  <Button variant="ghost" size="sm">Подробнее</Button>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button variant="outline" size="sm" className="w-full">Просмотреть все рекомендации</Button>
+              </CardFooter>
+            </Card>
+            <Card className="bg-white/80 backdrop-blur">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  <BellRing className="h-5 w-5 text-red-500 mr-2" />
+                  Критические уровни запасов
+                </CardTitle>
+                <CardDescription>
+                  Товары, требующие срочного пополнения
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3">
+                  <li className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium">Кроссовки Nike Air Max</div>
+                      <div className="text-xs text-muted-foreground">36-40 размеры</div>
+                    </div>
+                    <div className="text-red-500 text-sm font-medium">
+                      5 дней
+                    </div>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium">Футболки базовые</div>
+                      <div className="text-xs text-muted-foreground">Белый цвет</div>
+                    </div>
+                    <div className="text-amber-500 text-sm font-medium">
+                      12 дней
+                    </div>
+                  </li>
+                </ul>
+              </CardContent>
+              <CardFooter>
+                <Button variant="outline" size="sm" className="w-full">Просмотреть все товары</Button>
+              </CardFooter>
+            </Card>
+          </div>
+        </div>
+      </div>
+    ),
+    finance: (
+      <div className="rounded-lg overflow-hidden border bg-card p-1">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6">
+          <div className="mb-6">
+            <h3 className="text-xl font-semibold mb-2">Финансовый контроль бизнеса</h3>
+            <p className="text-muted-foreground">Полная прозрачность всех финансовых потоков в одном месте</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <Card className="bg-white/80 backdrop-blur col-span-2">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  <Landmark className="h-5 w-5 text-blue-500 mr-2" />
+                  Финансовые показатели
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground">Выручка</span>
+                    <span className="text-lg font-bold">₽1.45M</span>
+                    <span className="text-xs text-emerald-600">+12.5%</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground">Прибыль</span>
+                    <span className="text-lg font-bold">₽486K</span>
+                    <span className="text-xs text-emerald-600">+9.2%</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground">Расходы</span>
+                    <span className="text-lg font-bold">₽964K</span>
+                    <span className="text-xs text-red-600">+14.1%</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground">Маржа</span>
+                    <span className="text-lg font-bold">33.5%</span>
+                    <span className="text-xs text-amber-600">-1.8%</span>
+                  </div>
+                </div>
+                <div className="mt-4 h-32 w-full flex items-end justify-between space-x-2">
+                  {[35, 42, 38, 54, 48, 62, 58, 70, 65, 75, 78, 82].map((height, i) => (
+                    <div
+                      key={i}
+                      className="flex-1 flex flex-col items-center"
+                    >
+                      <div className="w-full flex space-x-[2px]">
+                        <div
+                          className="flex-1 bg-blue-200"
+                          style={{ height: `${height * 0.5}px` }}
+                        />
+                        <div
+                          className="flex-1 bg-blue-400"
+                          style={{ height: `${height * 0.8}px` }}
+                        />
+                        <div
+                          className="flex-1 bg-blue-600"
+                          style={{ height: `${height}px` }}
+                        />
+                      </div>
+                      <div className="text-xs mt-1">{i + 1}</div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-white/80 backdrop-blur">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  <Database className="h-5 w-5 text-violet-500 mr-2" />
+                  Структура расходов
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-40 w-40 mx-auto relative">
+                  <div className="absolute inset-
