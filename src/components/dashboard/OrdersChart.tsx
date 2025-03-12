@@ -1,4 +1,3 @@
-
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WildberriesOrder, WildberriesSale } from "@/types/store";
@@ -18,7 +17,8 @@ import {
   Legend,
   BarChart,
   Bar,
-  ReferenceLine
+  ReferenceLine,
+  Line
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -39,7 +39,6 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders, sales = [] }) => {
   const shouldDisplayHourly = useMemo(() => {
     if (orders.length === 0) return false;
     
-    // Check if all orders are from today or yesterday
     const firstOrderDate = new Date(orders[0].date);
     return isToday(firstOrderDate) || isYesterday(firstOrderDate);
   }, [orders]);
@@ -48,18 +47,15 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders, sales = [] }) => {
     if (orders.length === 0) return [];
     
     if (shouldDisplayHourly) {
-      // Get the date of the first order (assuming all orders are from the same day - today or yesterday)
       const orderDate = new Date(orders[0].date);
       const dayStart = startOfDay(orderDate);
       const dayEnd = endOfDay(orderDate);
       
-      // Generate array of all hours in the day
       const hoursInterval = eachHourOfInterval({
         start: dayStart,
         end: dayEnd,
       });
       
-      // Count orders per hour
       return hoursInterval.map(hour => {
         const hourEnd = addHours(hour, 1);
         
@@ -81,17 +77,14 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders, sales = [] }) => {
         };
       });
     } else {
-      // Get date range for the last 7 days
       const today = new Date();
-      const sevenDaysAgo = subDays(today, 6); // 7 days including today
+      const sevenDaysAgo = subDays(today, 6);
       
-      // Generate array of all days
       const daysInterval = eachDayOfInterval({
         start: sevenDaysAgo,
         end: today,
       });
       
-      // Count orders per day
       return daysInterval.map(day => {
         const dayStart = startOfDay(day);
         const dayEnd = endOfDay(day);
@@ -119,10 +112,8 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders, sales = [] }) => {
   const productSalesDistribution = useMemo(() => {
     if (!sales || sales.length === 0) return [];
 
-    // Группируем продажи по названию товара и подсчитываем количество
     const productCounts: Record<string, number> = {};
     
-    // Учитываем только положительные продажи (исключаем возвраты)
     const validSales = sales.filter(sale => !sale.isReturn && sale.priceWithDisc > 0);
     let totalProducts = validSales.length;
 
@@ -131,7 +122,6 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders, sales = [] }) => {
       productCounts[productName] = (productCounts[productName] || 0) + 1;
     });
 
-    // Преобразуем в формат для диаграммы и сортируем по количеству (больше сверху)
     const productsData = Object.entries(productCounts)
       .map(([name, count]) => ({
         name,
@@ -140,7 +130,7 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders, sales = [] }) => {
       }))
       .sort((a, b) => b.value - a.value);
     
-    return productsData; // Возвращаем все товары, без ограничения топ-5
+    return productsData;
   }, [sales]);
 
   const orderConfig = {
@@ -174,11 +164,9 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders, sales = [] }) => {
     },
   };
 
-  // Calculate monthly order trends for the bar chart
   const monthlyOrderTrends = useMemo(() => {
     if (orders.length === 0) return [];
     
-    // Group orders by month
     const ordersByMonth = orders.reduce((acc, order) => {
       const date = new Date(order.date);
       const monthKey = format(date, 'MM.yyyy', { locale: ru });
@@ -205,7 +193,6 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders, sales = [] }) => {
       return acc;
     }, {} as Record<string, { month: string; active: number; cancelled: number; total: number; revenue: number }>);
     
-    // Convert to array and sort by month
     return Object.values(ordersByMonth).slice(-5);
   }, [orders]);
 
@@ -403,7 +390,6 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders, sales = [] }) => {
         </CardContent>
       </Card>
 
-      {/* New Monthly Trends Bar Chart */}
       <Card className="overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-white to-orange-50/40 dark:from-gray-900 dark:to-orange-950/30 backdrop-blur-sm lg:col-span-2">
         <CardHeader className="pb-2 border-b border-orange-100/40 dark:border-orange-800/30">
           <div className="flex items-center justify-between">
@@ -509,12 +495,18 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders, sales = [] }) => {
                     animationEasing="ease-out"
                     animationBegin={300}
                   />
-                  <ReferenceLine 
-                    yAxisId="right" 
-                    dataKey="revenue" 
-                    stroke="#F97316" 
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="revenue"
+                    name="revenue"
+                    stroke="#F97316"
                     strokeWidth={2}
-                    strokeDasharray="5 5" 
+                    dot={{ r: 4, fill: "#F97316", strokeWidth: 1, stroke: "white" }}
+                    activeDot={{ r: 6, strokeWidth: 0 }}
+                    animationDuration={1500}
+                    animationEasing="ease-out"
+                    animationBegin={600}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -534,3 +526,4 @@ const OrdersChart: React.FC<OrdersChartProps> = ({ orders, sales = [] }) => {
 };
 
 export default OrdersChart;
+
