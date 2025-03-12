@@ -19,13 +19,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { 
   BadgeDollarSign, 
-  Tag, 
   Plus, 
   Edit, 
   Trash2, 
@@ -34,93 +32,10 @@ import {
   Info,
   Store
 } from "lucide-react";
-
-interface Tariff {
-  id: string;
-  name: string;
-  price: number;
-  period: 'monthly' | 'yearly';
-  description: string;
-  features: string[];
-  isPopular: boolean;
-  isActive: boolean;
-  storeLimit: number;
-}
-
-const mockTariffs: Tariff[] = [
-  {
-    id: '1',
-    name: 'Базовый',
-    price: 990,
-    period: 'monthly',
-    description: 'Идеально для начинающих продавцов',
-    features: [
-      'Доступ к основным отчетам',
-      'Управление до 100 товаров',
-      'Базовая аналитика',
-      'Email поддержка'
-    ],
-    isPopular: false,
-    isActive: true,
-    storeLimit: 1
-  },
-  {
-    id: '2',
-    name: 'Профессиональный',
-    price: 1990,
-    period: 'monthly',
-    description: 'Для растущих магазинов',
-    features: [
-      'Все функции Базового тарифа',
-      'Управление до 1000 товаров',
-      'Расширенная аналитика',
-      'Приоритетная поддержка',
-      'API интеграции'
-    ],
-    isPopular: true,
-    isActive: true,
-    storeLimit: 3
-  },
-  {
-    id: '3',
-    name: 'Бизнес',
-    price: 4990,
-    period: 'monthly',
-    description: 'Комплексное решение для крупных продавцов',
-    features: [
-      'Все функции Профессионального тарифа',
-      'Неограниченное количество товаров',
-      'Персональный менеджер',
-      'Расширенный API доступ',
-      'Белая метка (White Label)',
-      'Приоритетные обновления'
-    ],
-    isPopular: false,
-    isActive: true,
-    storeLimit: 10
-  },
-  {
-    id: '4',
-    name: 'Корпоративный',
-    price: 9990,
-    period: 'monthly',
-    description: 'Индивидуальные решения для крупного бизнеса',
-    features: [
-      'Все функции тарифа Бизнес',
-      'Индивидуальные интеграции',
-      'Персональная команда поддержки',
-      'Консультации экспертов',
-      'Выделенные серверы',
-      'SLA гарантии'
-    ],
-    isPopular: false,
-    isActive: false,
-    storeLimit: 999
-  }
-];
+import { Tariff, initialTariffs } from "@/data/tariffs";
 
 export default function TariffSection() {
-  const [tariffs, setTariffs] = useState<Tariff[]>(mockTariffs);
+  const [tariffs, setTariffs] = useState<Tariff[]>(initialTariffs);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentTariff, setCurrentTariff] = useState<Tariff | null>(null);
   const [newFeature, setNewFeature] = useState('');

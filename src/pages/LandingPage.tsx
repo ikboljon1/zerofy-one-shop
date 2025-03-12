@@ -6,6 +6,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import AuthModal from "@/components/auth/AuthModal";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { initialTariffs } from "@/data/tariffs";
 
 const LandingPage = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -190,28 +191,17 @@ const LandingPage = () => {
     }]
   };
 
-  const pricing = [{
-    name: "Стартап",
-    price: "0",
-    description: "Идеальный выбор для амбициозных начинающих продавцов",
-    features: ["Управление до 100 SKU", "Базовая аналитика эффективности", "Один пользовательский аккаунт", "Приоритетная email-поддержка", "30-дневная история данных", "Основные аналитические отчеты"],
-    popular: false,
-    buttonVariant: "outline" as const
-  }, {
-    name: "Бизнес",
-    price: "1999",
-    description: "Оптимальное решение для растущего бизнеса",
-    features: ["Управление до 1000 SKU", "Продвинутая аналитика и прогнозирование", "До 3 пользовательских аккаунтов", "Приоритетная поддержка с гарантией ответа", "Бесшовная интеграция с 1С", "Полная история данных за 6 месяцев", "Интеллектуальное прогнозирование спроса", "Мгновенные уведомления о важных событиях"],
-    popular: true,
-    buttonVariant: "default" as const
-  }, {
-    name: "Корпоративный",
-    price: "4999",
-    description: "Максимальные возможности для серьезного бизнеса",
-    features: ["Неограниченное количество товаров", "Премиум-аналитика с ИИ-рекомендациями", "Неограниченное число пользователей", "Круглосуточная поддержка 24/7", "Полная интеграционная экосистема", "Расширенный API-доступ", "Неограниченная история данных", "Конструктор индивидуальных отчетов", "Персональный менеджер успеха клиента", "Обучение и сертификация сотрудников"],
-    popular: false,
-    buttonVariant: "outline" as const
-  }];
+  // Filter only active tariffs for the landing page
+  const activeTariffs = initialTariffs.filter(tariff => tariff.isActive);
+
+  const pricing = activeTariffs.map(tariff => ({
+    name: tariff.name,
+    price: `${tariff.price}`,
+    description: tariff.description,
+    features: tariff.features,
+    popular: tariff.isPopular,
+    buttonVariant: tariff.isPopular ? "default" : "outline" as const
+  }));
 
   const testimonials = [{
     quote: "После внедрения Zerofy наши продажи выросли на 35% всего за три месяца. Точная аналитика помогла выявить неочевидные точки роста, а автоматизация освободила команду от рутины. Это был настоящий прорыв!",
@@ -307,7 +297,7 @@ const LandingPage = () => {
     warehouses: <div className="rounded-lg overflow-hidden border bg-card">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
         <div className="rounded-md overflow-hidden border">
-          <img src="/lovable-uploads/7ba9928e-efa7-4698-b817-c86fd1469852.png" alt="Управление складами" className="w-full h-auto" />
+          <img src="/lovable-uploads/7ba9928e-efa7-4698b817-c86fd1469852.png" alt="Управление складами" className="w-full h-auto" />
         </div>
         <div className="flex flex-col justify-center">
           <h3 className="text-lg font-semibold mb-2">Эффективное управление складами</h3>
@@ -449,10 +439,13 @@ const LandingPage = () => {
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {pricing.map((plan, index) => <Card key={index} className={cn("flex flex-col", plan.popular ? "border-primary shadow-md relative" : "")}>
-                {plan.popular && <div className="absolute top-0 right-0 -translate-y-1/2 px-4 py-1 bg-primary text-primary-foreground rounded-full text-sm font-medium">
+            {pricing.map((plan, index) => (
+              <Card key={index} className={cn("flex flex-col", plan.popular ? "border-primary shadow-md relative" : "")}>
+                {plan.popular && (
+                  <div className="absolute top-0 right-0 -translate-y-1/2 px-4 py-1 bg-primary text-primary-foreground rounded-full text-sm font-medium">
                     Популярный выбор
-                  </div>}
+                  </div>
+                )}
                 <CardHeader>
                   <CardTitle>{plan.name}</CardTitle>
                   <CardDescription>{plan.description}</CardDescription>
@@ -463,10 +456,12 @@ const LandingPage = () => {
                 </CardHeader>
                 <CardContent className="flex-grow">
                   <ul className="space-y-2">
-                    {plan.features.map((feature, i) => <li key={i} className="flex items-start">
+                    {plan.features.map((feature, i) => (
+                      <li key={i} className="flex items-start">
                         <CheckCircle className="h-5 w-5 text-primary mr-2 flex-shrink-0 mt-0.5" />
                         <span>{feature}</span>
-                      </li>)}
+                      </li>
+                    ))}
                   </ul>
                 </CardContent>
                 <CardFooter>
@@ -474,7 +469,8 @@ const LandingPage = () => {
                     {plan.price === "0" ? "Начать бесплатно" : "Выбрать план"}
                   </Button>
                 </CardFooter>
-              </Card>)}
+              </Card>
+            ))}
           </div>
         </div>
       </section>
