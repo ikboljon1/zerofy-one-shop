@@ -28,6 +28,9 @@ import {
   COLORS
 } from "./data/demoData";
 
+// Import the advertisement data
+import { productAdvertisingData } from "./data/productAdvertisingData";
+
 const ANALYTICS_STORAGE_KEY = 'marketplace_analytics';
 
 interface AnalyticsData {
@@ -263,21 +266,21 @@ const AnalyticsSection = () => {
           setProductAdvertisingData(topProductsList.length > 0 ? topProductsList : []);
         } else {
           if (productAdvertisingData.length === 0) {
-            setProductAdvertisingData(advertisingData);
+            setProductAdvertisingData(emptyAdvertisingData);
           }
           
           setAdvertisingBreakdown({
-            search: roundToTwoDecimals(demoData.currentPeriod.expenses.advertising)
+            search: roundToTwoDecimals(0)
           });
-          totalAdvertisingCost = roundToTwoDecimals(demoData.currentPeriod.expenses.advertising);
+          totalAdvertisingCost = 0;
         }
       } catch (error) {
         console.error('Error fetching advertising data:', error);
-        setProductAdvertisingData(advertisingData);
+        setProductAdvertisingData(emptyAdvertisingData);
         setAdvertisingBreakdown({
-          search: roundToTwoDecimals(demoData.currentPeriod.expenses.advertising)
+          search: roundToTwoDecimals(0)
         });
-        totalAdvertisingCost = roundToTwoDecimals(demoData.currentPeriod.expenses.advertising);
+        totalAdvertisingCost = 0;
       }
       
       if (statsData) {

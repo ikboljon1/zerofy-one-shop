@@ -32,3 +32,8 @@ export const emptyAdvertisingData = [];
 export const emptyPenaltiesData = [];
 export const emptyReturnsData = [];
 export const emptyDeductionsData = [];
+
+// Минимальные данные для складского API (для обратной совместимости)
+export const warehousesData = [];
+export const logisticsRoutes = [];
+export const inventoryData = [];

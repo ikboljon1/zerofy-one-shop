@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 
 interface WarehouseData {
@@ -57,17 +56,9 @@ export const fetchWarehouses = async (apiKey: string): Promise<WarehouseData[]> 
       return JSON.parse(storedWarehouses);
     }
     
-    // Если данных нет в localStorage, импортируем из файла с демо-данными
-    const { warehousesData } = await import('@/components/analytics/data/demoData');
-    
-    // Приведение типов для coordinates, чтобы они соответствовали [number, number]
-    const typedWarehouses = warehousesData.map(warehouse => ({
-      ...warehouse,
-      coordinates: warehouse.coordinates as [number, number],
-      status: warehouse.status as 'active' | 'maintenance' | 'low-stock'
-    }));
-    
-    return typedWarehouses;
+    // Если данных нет в localStorage, возвращаем пустой массив
+    console.log("Нет данных о складах в localStorage, возвращаем пустой массив");
+    return [];
   } catch (error) {
     console.error('Error fetching warehouses:', error);
     throw error;
@@ -89,16 +80,9 @@ export const fetchLogisticsRoutes = async (apiKey: string): Promise<LogisticsRou
       return JSON.parse(storedRoutes);
     }
     
-    // Если данных нет в localStorage, импортируем из файла с демо-данными
-    const { logisticsRoutes } = await import('@/components/analytics/data/demoData');
-    
-    // Приведение типов для status, чтобы они соответствовали 'active' | 'delayed'
-    const typedRoutes = logisticsRoutes.map(route => ({
-      ...route,
-      status: route.status as 'active' | 'delayed'
-    }));
-    
-    return typedRoutes;
+    // Если данных нет в localStorage, возвращаем пустой массив
+    console.log("Нет данных о маршрутах логистики в localStorage, возвращаем пустой массив");
+    return [];
   } catch (error) {
     console.error('Error fetching logistics routes:', error);
     throw error;
@@ -120,9 +104,9 @@ export const fetchInventory = async (apiKey: string): Promise<InventoryCategory[
       return JSON.parse(storedInventory);
     }
     
-    // Если данных нет в localStorage, импортируем из файла с демо-данными
-    const { inventoryData } = await import('@/components/analytics/data/demoData');
-    return inventoryData;
+    // Если данных нет в localStorage, возвращаем пустой массив
+    console.log("Нет данных об инвентаре в localStorage, возвращаем пустой массив");
+    return [];
   } catch (error) {
     console.error('Error fetching inventory data:', error);
     throw error;
