@@ -10,13 +10,38 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from 'sonner';
 
 const SupplyForm: React.FC = () => {
-  // Using individual state variables for each field
+  // Используем отдельные состояния для каждого поля
   const [productName, setProductName] = useState('');
   const [barcode, setBarcode] = useState('');
   const [quantity, setQuantity] = useState('');
   const [weight, setWeight] = useState('');
   const [volume, setVolume] = useState('');
   const [supplyType, setSupplyType] = useState('Короба');
+  
+  // Функции обработчики для каждого поля
+  const handleProductNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setProductName(e.target.value);
+  };
+  
+  const handleBarcodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setBarcode(e.target.value);
+  };
+  
+  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuantity(e.target.value);
+  };
+  
+  const handleWeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setWeight(e.target.value);
+  };
+  
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setVolume(e.target.value);
+  };
+  
+  const handleSupplyTypeChange = (value: string) => {
+    setSupplyType(value);
+  };
   
   const handleCalculate = () => {
     if (!quantity || !weight || !volume) {
@@ -30,6 +55,16 @@ const SupplyForm: React.FC = () => {
     toast.success('Расчет выполнен успешно!', {
       duration: 3000,
     });
+  };
+  
+  const handleReset = () => {
+    // Сбросить все поля формы
+    setProductName('');
+    setBarcode('');
+    setQuantity('');
+    setWeight('');
+    setVolume('');
+    setSupplyType('Короба');
   };
   
   return (
@@ -48,7 +83,7 @@ const SupplyForm: React.FC = () => {
               id="product-name" 
               placeholder="Введите название товара" 
               value={productName}
-              onChange={(e) => setProductName(e.target.value)}
+              onChange={handleProductNameChange}
             />
           </div>
           
@@ -58,7 +93,7 @@ const SupplyForm: React.FC = () => {
               id="barcode" 
               placeholder="Введите штрихкод товара" 
               value={barcode}
-              onChange={(e) => setBarcode(e.target.value)}
+              onChange={handleBarcodeChange}
             />
           </div>
           
@@ -70,13 +105,13 @@ const SupplyForm: React.FC = () => {
                 type="number" 
                 placeholder="0" 
                 value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
+                onChange={handleQuantityChange}
               />
             </div>
             
             <div className="space-y-2">
               <Label htmlFor="supply-type">Тип поставки</Label>
-              <Select value={supplyType} onValueChange={setSupplyType}>
+              <Select value={supplyType} onValueChange={handleSupplyTypeChange}>
                 <SelectTrigger id="supply-type">
                   <SelectValue placeholder="Выберите тип" />
                 </SelectTrigger>
@@ -102,7 +137,7 @@ const SupplyForm: React.FC = () => {
               placeholder="0.00" 
               step="0.01" 
               value={weight}
-              onChange={(e) => setWeight(e.target.value)}
+              onChange={handleWeightChange}
             />
           </div>
           
@@ -117,18 +152,29 @@ const SupplyForm: React.FC = () => {
               placeholder="0.00" 
               step="0.01" 
               value={volume}
-              onChange={(e) => setVolume(e.target.value)}
+              onChange={handleVolumeChange}
             />
           </div>
           
-          <Button 
-            type="button" 
-            className="w-full flex items-center gap-2" 
-            onClick={handleCalculate}
-          >
-            <Calculator className="h-4 w-4" />
-            Рассчитать
-          </Button>
+          <div className="flex gap-3">
+            <Button 
+              type="button" 
+              className="flex-1 flex items-center gap-2" 
+              onClick={handleCalculate}
+            >
+              <Calculator className="h-4 w-4" />
+              Рассчитать
+            </Button>
+            
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="flex-1" 
+              onClick={handleReset}
+            >
+              Очистить
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>
