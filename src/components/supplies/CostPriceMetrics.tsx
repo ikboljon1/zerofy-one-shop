@@ -1,10 +1,10 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { Store } from "@/types/store";
 import { ArrowUpRight, ArrowDownRight, DollarSign, ShoppingCart, Wallet } from "lucide-react";
-import { getCostPriceByNmId } from "@/services/api";
 import { useToast } from "@/components/ui/use-toast";
 
 interface CostPriceMetricsProps {
@@ -116,16 +116,6 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
             // Сохраняем найденную себестоимость в costPrices для будущего использования
             costPrices[nmId] = costPrice;
             localStorage.setItem(`costPrices_${selectedStore.id}`, JSON.stringify(costPrices));
-          } else {
-            // Если не нашли и тут, используем API
-            costPrice = await getCostPriceByNmId(nmId, selectedStore.id);
-            console.log(`Результат getCostPriceByNmId для ${nmId}: ${costPrice}`);
-            
-            if (costPrice > 0) {
-              // Сохраняем полученную себестоимость в costPrices
-              costPrices[nmId] = costPrice;
-              localStorage.setItem(`costPrices_${selectedStore.id}`, JSON.stringify(costPrices));
-            }
           }
         }
         

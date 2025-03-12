@@ -161,29 +161,6 @@ export const getCostPriceByNmId = async (nmId: number, storeId: string): Promise
     }
     
     console.log(`Не найдена себестоимость для nmId ${nmId} в localStorage`);
-    
-    // Если не нашли в локальном хранилище, делаем запрос к API
-    try {
-      const response = await api.get(`http://localhost:3001/api/products/cost-price/${numericNmId}?storeId=${storeId}`);
-      if (response.data && response.data.costPrice) {
-        console.log(`Получена себестоимость с сервера для nmId ${nmId}: ${response.data.costPrice}`);
-        
-        // Сохраняем полученную себестоимость в costPrices
-        try {
-          const costPrices = JSON.parse(localStorage.getItem(`costPrices_${storeId}`) || "{}");
-          costPrices[numericNmId] = response.data.costPrice;
-          localStorage.setItem(`costPrices_${storeId}`, JSON.stringify(costPrices));
-          console.log(`Сохранена себестоимость для nmId ${nmId} в costPrices`);
-        } catch (e) {
-          console.error('Ошибка при сохранении в costPrices:', e);
-        }
-        
-        return response.data.costPrice;
-      }
-    } catch (error) {
-      console.error(`Ошибка при запросе себестоимости для nmId ${nmId}:`, error);
-    }
-    
     return 0; // Если себестоимость не найдена
   } catch (error) {
     console.error(`Ошибка в getCostPriceByNmId для nmId ${nmId}:`, error);
