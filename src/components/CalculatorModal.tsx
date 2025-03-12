@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -12,10 +11,13 @@ import { useToast } from "@/components/ui/use-toast";
 import { Card } from "@/components/ui/card";
 import { fetchWildberriesStats } from "@/services/wildberriesApi";
 import { subDays } from "date-fns";
+import { Lock } from "lucide-react";
+import { Tariff } from "@/data/tariffs";
 
 interface CalculatorModalProps {
   open: boolean;
   onClose: () => void;
+  hasAccess?: boolean; // Добавляем проверку доступа к функции
 }
 
 interface Expenses {
@@ -28,7 +30,7 @@ interface Expenses {
   price?: number;
 }
 
-const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
+const CalculatorModal = ({ open, onClose, hasAccess = true }: CalculatorModalProps) => {
   const [costPrice, setCostPrice] = useState("");
   const [targetProfit, setTargetProfit] = useState("");
   const [expenses, setExpenses] = useState<Expenses>({
@@ -48,6 +50,30 @@ const CalculatorModal = ({ open, onClose }: CalculatorModalProps) => {
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  // Если нет доступа к калькулятору, показываем только уведомление о необходимости обновления тарифа
+  if (!hasAccess) {
+    return (
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Калькулятор минимальной цены</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <div className="w-16 h-16 mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <Lock className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Функция недоступна</h3>
+            <p className="text-muted-foreground max-w-md mb-6">
+              Калькулятор расходов доступен на тарифе "Базовый" и выше. 
+              Обновите свой тарифный план для доступа к этой функции.
+            </p>
+            <Button onClick={onClose}>Закрыть</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   useEffect(() => {
     if (open) {
