@@ -4,7 +4,6 @@ import { DollarSign, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { ShoppingCart, TrendingDown, Percent } from "../icons";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useEffect, useState } from "react";
 
 interface KeyMetricsProps {
   data: {
@@ -12,24 +11,14 @@ interface KeyMetricsProps {
       sales: number;
       expenses: {
         total: number;
-        costPrice?: number;
       };
       netProfit: number;
     };
   };
-  costPriceUpdated?: number;
 }
 
-const KeyMetrics = ({ data, costPriceUpdated }: KeyMetricsProps) => {
+const KeyMetrics = ({ data }: KeyMetricsProps) => {
   const isMobile = useIsMobile();
-  const [netProfit, setNetProfit] = useState(data.currentPeriod.netProfit);
-  const [totalExpenses, setTotalExpenses] = useState(data.currentPeriod.expenses.total);
-  
-  useEffect(() => {
-    // Обновляем состояние при изменении входных данных
-    setTotalExpenses(data.currentPeriod.expenses.total);
-    setNetProfit(data.currentPeriod.sales - data.currentPeriod.expenses.total);
-  }, [data, costPriceUpdated]);
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -79,7 +68,7 @@ const KeyMetrics = ({ data, costPriceUpdated }: KeyMetricsProps) => {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">Общие удержания</p>
                   <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-700 to-red-900 dark:from-red-400 dark:to-red-200">
-                    {formatCurrency(totalExpenses)}
+                    {formatCurrency(data.currentPeriod.expenses.total)}
                   </h3>
                   <div className="flex items-center mt-2 text-sm text-red-600 dark:text-red-400">
                     <ArrowDownRight className="h-4 w-4 mr-1" />
@@ -97,7 +86,7 @@ const KeyMetrics = ({ data, costPriceUpdated }: KeyMetricsProps) => {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">Чистая прибыль</p>
                   <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-700 to-green-900 dark:from-green-400 dark:to-green-200">
-                    {formatCurrency(netProfit)}
+                    {formatCurrency(data.currentPeriod.netProfit)}
                   </h3>
                   <div className="flex items-center mt-2 text-sm text-green-600 dark:text-green-400">
                     <ArrowUpRight className="h-4 w-4 mr-1" />
@@ -154,7 +143,7 @@ const KeyMetrics = ({ data, costPriceUpdated }: KeyMetricsProps) => {
               <div>
                 <p className="text-sm font-medium text-muted-foreground mb-1">Общие удержания</p>
                 <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-700 to-red-900 dark:from-red-400 dark:to-red-200">
-                  {formatCurrency(totalExpenses)}
+                  {formatCurrency(data.currentPeriod.expenses.total)}
                 </h3>
                 <div className="flex items-center mt-2 text-sm text-red-600 dark:text-red-400">
                   <ArrowDownRight className="h-4 w-4 mr-1" />
@@ -172,7 +161,7 @@ const KeyMetrics = ({ data, costPriceUpdated }: KeyMetricsProps) => {
               <div>
                 <p className="text-sm font-medium text-muted-foreground mb-1">Чистая прибыль</p>
                 <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-700 to-green-900 dark:from-green-400 dark:to-green-200">
-                  {formatCurrency(netProfit)}
+                  {formatCurrency(data.currentPeriod.netProfit)}
                 </h3>
                 <div className="flex items-center mt-2 text-sm text-green-600 dark:text-green-400">
                   <ArrowUpRight className="h-4 w-4 mr-1" />

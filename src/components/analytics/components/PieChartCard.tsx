@@ -11,7 +11,7 @@ import {
 import { formatCurrency, roundToTwoDecimals } from "@/utils/formatCurrency";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-export interface PieChartCardProps {
+interface PieChartCardProps {
   title: string;
   icon: React.ReactNode;
   data: Array<{
