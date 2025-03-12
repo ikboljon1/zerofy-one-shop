@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { Store } from "@/types/store";
-import { ArrowUpRight, ArrowDownRight, DollarSign, ShoppingCart, Wallet } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, DollarSign, ShoppingCart, Wallet, RefreshCw } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
 import axios from "axios";
 
 interface CostPriceMetricsProps {
@@ -39,6 +40,7 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
   const [avgCostPrice, setAvgCostPrice] = useState<number>(0);
   const [lastUpdateDate, setLastUpdateDate] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isCalculatingCostPrice, setIsCalculatingCostPrice] = useState<boolean>(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -61,36 +63,60 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
 
     setIsLoading(true);
     
+    // Сначала проверяем данные в localStorage для быстрого отображения
+    const savedMetrics = localStorage.getItem(`costPriceMetrics_${selectedStore.id}`);
+    if (savedMetrics) {
+      try {
+        const parsedMetrics = JSON.parse(savedMetrics);
+        console.log("Используем кэшированные данные о себестоимости из localStorage:", parsedMetrics);
+        setTotalCostPrice(parsedMetrics.totalCostPrice);
+        setTotalSoldItems(parsedMetrics.totalSoldItems);
+        setAvgCostPrice(parsedMetrics.avgCostPrice);
+        setLastUpdateDate(parsedMetrics.lastUpdateDate);
+        setIsLoading(false);
+      } catch (e) {
+        console.error("Ошибка при разборе данных из localStorage:", e);
+      }
+    }
+    
+    // Параллельно запрашиваем данные из базы данных
     try {
-      // Сначала пробуем загрузить данные из базы данных
-      const dbData = await loadFromDatabase(selectedStore.id);
-      
-      if (dbData) {
-        // Если данные есть в базе данных, используем их
-        console.log("Загружены данные о себестоимости из базы данных:", dbData);
-        setTotalCostPrice(dbData.totalCostPrice);
-        setTotalSoldItems(dbData.totalSoldItems);
-        setAvgCostPrice(dbData.avgCostPrice);
-        setLastUpdateDate(dbData.lastUpdateDate);
-        toast({
-          title: "Данные загружены",
-          description: "Данные о себестоимости загружены из базы данных",
-        });
-      } else {
-        // Если данных в базе нет, рассчитываем их из localStorage
-        console.log("Данные о себестоимости в базе не найдены, расчет из localStorage");
-        await calculateFromLocalStorage();
+      const response = await axios.get(`http://localhost:3001/api/cost-price/${selectedStore.id}`);
+      if (response.data && response.status === 200) {
+        console.log("Получены данные из базы данных:", response.data);
+        
+        // Обновляем только если данные свежее или данные из localStorage не были загружены
+        const dbDataTimestamp = new Date(response.data.lastUpdateDate).getTime();
+        const localDataTimestamp = savedMetrics ? new Date(JSON.parse(savedMetrics).lastUpdateDate).getTime() : 0;
+        
+        if (!savedMetrics || dbDataTimestamp > localDataTimestamp) {
+          setTotalCostPrice(response.data.totalCostPrice);
+          setTotalSoldItems(response.data.totalSoldItems);
+          setAvgCostPrice(response.data.avgCostPrice);
+          setLastUpdateDate(response.data.lastUpdateDate);
+          
+          // Обновляем также данные в localStorage
+          localStorage.setItem(`costPriceMetrics_${selectedStore.id}`, JSON.stringify({
+            totalCostPrice: response.data.totalCostPrice,
+            totalSoldItems: response.data.totalSoldItems,
+            avgCostPrice: response.data.avgCostPrice,
+            lastUpdateDate: response.data.lastUpdateDate,
+            timestamp: new Date().getTime()
+          }));
+          
+          toast({
+            title: "Данные обновлены",
+            description: "Получены свежие данные о себестоимости из базы данных",
+          });
+        }
       }
     } catch (error) {
-      console.error("Ошибка загрузки данных о себестоимости:", error);
-      toast({
-        title: "Ошибка загрузки данных",
-        description: "Произошла ошибка при загрузке данных о себестоимости",
-        variant: "destructive",
-      });
+      console.error("Ошибка загрузки данных из базы данных:", error);
       
-      // В случае ошибки пробуем рассчитать из localStorage
-      await calculateFromLocalStorage();
+      // Если данные из localStorage не были загружены, продолжаем загрузку
+      if (!savedMetrics) {
+        calculateFromLocalStorage();
+      }
     } finally {
       setIsLoading(false);
     }
@@ -142,28 +168,9 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
   const calculateFromLocalStorage = async () => {
     if (!selectedStore) return;
 
+    setIsCalculatingCostPrice(true);
+    
     try {
-      // Попробуем сначала загрузить расчетные данные из localStorage если они там есть
-      const savedMetrics = localStorage.getItem(`costPriceMetrics_${selectedStore.id}`);
-      if (savedMetrics) {
-        const parsedMetrics = JSON.parse(savedMetrics);
-        const timestamp = parsedMetrics.timestamp || 0;
-        const oneHourAgo = new Date().getTime() - 60 * 60 * 1000;
-        
-        // Используем сохраненные метрики если они не старше 1 часа
-        if (timestamp > oneHourAgo) {
-          console.log("Используем сохраненные метрики из localStorage");
-          setTotalCostPrice(parsedMetrics.totalCostPrice);
-          setTotalSoldItems(parsedMetrics.totalSoldItems);
-          setAvgCostPrice(parsedMetrics.avgCostPrice);
-          setLastUpdateDate(parsedMetrics.lastUpdateDate);
-          
-          // Сохраняем в БД для следующих загрузок
-          await saveToDatabase(selectedStore.id, parsedMetrics);
-          return;
-        }
-      }
-      
       // Загружаем данные о себестоимости из localStorage
       const costPrices = JSON.parse(localStorage.getItem(`costPrices_${selectedStore.id}`) || "{}");
       console.log("Загруженные данные о себестоимости:", costPrices);
@@ -178,6 +185,7 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
           description: "Не найдены данные о продажах товаров в аналитике",
           variant: "default",
         });
+        setIsCalculatingCostPrice(false);
         return;
       }
       
@@ -298,19 +306,24 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
     } catch (error) {
       console.error("Ошибка расчета себестоимости из localStorage:", error);
       toast({
-        title: "Ошибка загрузки данных",
+        title: "Ошибка расчета данных",
         description: "Произошла ошибка при расчете данных о себестоимости",
         variant: "destructive",
       });
+    } finally {
+      setIsCalculatingCostPrice(false);
     }
   };
 
   const refreshData = () => {
     if (selectedStore) {
-      setIsLoading(true);
-      calculateFromLocalStorage().finally(() => {
-        setIsLoading(false);
-      });
+      loadCostPriceData();
+    }
+  };
+
+  const calculateCostPrice = () => {
+    if (selectedStore) {
+      calculateFromLocalStorage();
     }
   };
 
@@ -339,11 +352,9 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
                 onClick={refreshData}
                 className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 title="Обновить данные"
+                disabled={isLoading || isCalculatingCostPrice}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
-                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-                  <path d="M3 3v5h5"></path>
-                </svg>
+                <RefreshCw className={`h-4 w-4 text-muted-foreground ${isLoading ? 'animate-spin' : ''}`} />
               </button>
             </>
           )}
@@ -401,6 +412,24 @@ const CostPriceMetrics: React.FC<CostPriceMetricsProps> = ({ selectedStore }) =>
             </p>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="flex justify-center mt-4">
+        <Button 
+          onClick={calculateCostPrice}
+          disabled={isCalculatingCostPrice}
+          className="w-full md:w-auto"
+          variant="outline"
+        >
+          {isCalculatingCostPrice ? (
+            <>
+              <div className="h-4 w-4 mr-2 animate-spin rounded-full border-b-2 border-current"></div>
+              Расчет себестоимости...
+            </>
+          ) : (
+            <>Рассчитать себестоимость товаров</>
+          )}
+        </Button>
       </div>
     </div>
   );
