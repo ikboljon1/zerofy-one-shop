@@ -120,6 +120,29 @@ db.serialize(() => {
     last_update_date TEXT NOT NULL,
     timestamp INTEGER NOT NULL
   )`);
+
+  // Создаем новую таблицу для связи пользователей с магазинами
+  db.run(`CREATE TABLE IF NOT EXISTS user_stores (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    store_id TEXT NOT NULL,
+    marketplace TEXT NOT NULL,
+    store_name TEXT NOT NULL,
+    api_key TEXT NOT NULL,
+    is_selected BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_fetch_date DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    UNIQUE(user_id, store_id)
+  )`);
+  
+  // Создаем новую таблицу для хранения данных о рекламе товаров
+  db.run(`CREATE TABLE IF NOT EXISTS product_advertising (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    store_id TEXT NOT NULL,
+    product_advertising_data TEXT NOT NULL,
+    timestamp INTEGER NOT NULL
+  )`);
 });
 
 // Регистрация пользователя
@@ -687,6 +710,56 @@ app.get('/api/cost-price/:storeId', (req, res) => {
       avgCostPrice: row.avg_cost_price,
       lastUpdateDate: row.last_update_date
     });
+  });
+});
+
+// API для работы с данными о рекламе товаров
+app.post('/api/product-advertising', (req, res) => {
+  const { storeId, productAdvertisingData } = req.body;
+  
+  if (!storeId || !productAdvertisingData) {
+    return res.status(400).json({ error: 'Необходимо указать storeId и productAdvertisingData' });
+  }
+
+  const timestamp = Date.now();
+  const query = `INSERT INTO product_advertising (store_id, product_advertising_data, timestamp) 
+                 VALUES (?, ?, ?)`;
+  
+  db.run(query, [storeId, JSON.stringify(productAdvertisingData), timestamp], function(err) {
+    if (err) {
+      console.error('Error saving product advertising data:', err);
+      return res.status(500).json({ error: 'Ошибка при сохранении данных о рекламе товаров' });
+    }
+
+    res.json({ success: true, id: this.lastID });
+  });
+});
+
+// Получение данных о рекламе товаров
+app.get('/api/product-advertising/:storeId', (req, res) => {
+  const { storeId } = req.params;
+  
+  db.get('SELECT * FROM product_advertising WHERE store_id = ? ORDER BY timestamp DESC LIMIT 1', [storeId], (err, row) => {
+    if (err) {
+      console.error('Error getting product advertising data:', err);
+      return res.status(500).json({ error: 'Ошибка при получении данных о рекламе товаров' });
+    }
+
+    if (!row) {
+      return res.status(404).json({ error: 'Данные о рекламе товаров не найдены' });
+    }
+
+    try {
+      row.product_advertising_data = JSON.parse(row.product_advertising_data);
+      res.json({
+        storeId: row.store_id,
+        productAdvertisingData: row.product_advertising_data,
+        timestamp: row.timestamp
+      });
+    } catch (e) {
+      console.error('Error parsing JSON data:', e);
+      res.status(500).json({ error: 'Ошибка при обработке данных' });
+    }
   });
 });
 

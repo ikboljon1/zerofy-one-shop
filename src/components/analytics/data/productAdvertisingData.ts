@@ -39,3 +39,46 @@ export const getTypeString = (numericType: number): 'auction' | 'automatic' => {
   // and any other types to 'automatic'
   return [4, 5, 6, 7].includes(numericType) ? 'auction' : 'automatic';
 };
+
+// API для получения и сохранения данных о рекламе в БД
+export async function saveProductAdvertisingData(storeId: string, data: any) {
+  try {
+    const advertisingData = {
+      storeId,
+      productAdvertisingData: data
+    };
+    
+    // Сохраняем в БД через API
+    const response = await fetch('/api/product-advertising', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(advertisingData),
+    });
+    
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error saving product advertising data:', error);
+    throw error;
+  }
+}
+
+export async function getProductAdvertisingData(storeId: string) {
+  try {
+    // Получаем из БД через API
+    const response = await fetch(`/api/product-advertising/${storeId}`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch product advertising data');
+    }
+    
+    const data = await response.json();
+    return data.productAdvertisingData;
+  } catch (error) {
+    console.error('Error getting product advertising data:', error);
+    // Если данных нет в БД, возвращаем null
+    return null;
+  }
+}

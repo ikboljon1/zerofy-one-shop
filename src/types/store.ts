@@ -11,6 +11,7 @@ export interface Store {
   isSelected?: boolean;
   stats?: WildberriesResponse;
   lastFetchDate?: string;
+  userId?: string; // Добавляем ID пользователя
 }
 
 export interface NewStore extends Partial<Store> {}
@@ -19,6 +20,7 @@ export const STORES_STORAGE_KEY = 'marketplace_stores';
 export const STATS_STORAGE_KEY = 'marketplace_stats';
 export const ORDERS_STORAGE_KEY = 'marketplace_orders';
 export const SALES_STORAGE_KEY = 'marketplace_sales';
+export const ADVERTISING_DATA_KEY = 'marketplace_advertising_data'; // Добавляем ключ для рекламных данных
 
 export const marketplaces: Marketplace[] = ["Wildberries", "Ozon", "Yandexmarket", "Uzum"];
 
@@ -121,4 +123,13 @@ export interface PaymentHistoryItem {
   amount: number;
   period: number;
   date: string;
+}
+
+// Интерфейс для рекламных данных по товарам
+export interface ProductAdvertisingData {
+  nmId: number;
+  name: string;
+  advertisingCost: number;
+  salesCount: number;
+  salesAmount: number;
 }
