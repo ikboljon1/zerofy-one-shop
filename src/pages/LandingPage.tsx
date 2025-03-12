@@ -203,7 +203,7 @@ const LandingPage = () => {
     company: "Модный бутик 'Стиль'"
   }, {
     quote: "Раньше подготовка отчетности занимала у нас до 2 дней ежемесячно. С Zerofy все критически важные данные доступны в любой момент. Теперь мы принимаем решения молниеносно, опережая конкурентов.",
-    author: "Сергей К.",
+    author: "С��ргей К.",
     company: "ТехноМаркет"
   }, {
     quote: "Благодаря интеллектуальной системе планирования поставок Zerofy, мы сократили складские издержки на 22% и полностью избавились от проблемы неликвидов. При этом доступность товаров выросла до 98%. Фантастический результат!",
@@ -316,7 +316,7 @@ const LandingPage = () => {
     finance: <div className="rounded-lg overflow-hidden border bg-card">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
         <div className="rounded-md overflow-hidden border">
-          <img src="/lovable-uploads/0a0d0dd7-b54d-4163-ba50-1ddbb5b6dd7d.png" alt="Финансовый контроль" className="w-full h-auto" />
+          <img src="/lovable-uploads/8b25a70a-70de-43b2-ac53-dbda1a51bf6f.png" alt="Финансовый контроль" className="w-full h-auto" />
         </div>
         <div className="flex flex-col justify-center">
           <h3 className="text-lg font-semibold mb-2">Полный финансовый контроль</h3>
