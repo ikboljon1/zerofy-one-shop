@@ -288,12 +288,14 @@ const AnalyticsSection = () => {
         const penalties = roundToTwoDecimals(statsData.currentPeriod.expenses.penalties);
         const acceptance = roundToTwoDecimals(statsData.currentPeriod.expenses.acceptance || 0);
         const deductionsValue = roundToTwoDecimals(statsData.currentPeriod.expenses.deductions || 0);
-        const returns = statsData.productReturns ? 
+        
+        const returnsAmount = statsData.productReturns ? 
           roundToTwoDecimals(statsData.productReturns.reduce((sum, item) => sum + item.value, 0)) : 0;
         
         const forPay = roundToTwoDecimals(statsData.currentPeriod.transferred || 0);
+        
         const netProfit = roundToTwoDecimals(
-          forPay - logistics - storage - penalties - totalAdvertisingCost - acceptance - deductionsValue - returns
+          forPay - logistics - storage - penalties - totalAdvertisingCost - acceptance - deductionsValue - returnsAmount
         );
         
         const modifiedData: AnalyticsData = {
@@ -302,6 +304,8 @@ const AnalyticsSection = () => {
             sales: sales,
             transferred: roundToTwoDecimals(statsData.currentPeriod.transferred),
             netProfit: netProfit,
+            returns: statsData.productReturns ? statsData.productReturns.length : 0,
+            returnsAmount: returnsAmount,
             expenses: {
               ...statsData.currentPeriod.expenses,
               logistics: logistics,
