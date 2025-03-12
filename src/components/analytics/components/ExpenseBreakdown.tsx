@@ -1,6 +1,5 @@
-
 import { Card } from "@/components/ui/card";
-import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, Coins, ShoppingCart, Calculator, PackageX } from "lucide-react";
+import { Truck, AlertCircle, WarehouseIcon, Target, Inbox, Coins, ShoppingCart, Calculator } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { getCostPriceByNmId } from "@/services/api";
 import { useEffect, useState } from "react";
@@ -22,8 +21,6 @@ interface ExpenseBreakdownProps {
         costPrice?: number;
       };
       netProfit: number;
-      returns?: number;
-      returnsAmount?: number;
     };
   };
   advertisingBreakdown?: {
@@ -160,16 +157,13 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
     }
   };
   
-  const returnsAmount = data.currentPeriod.returnsAmount || 0;
-  
   const totalExpensesWithCostPrice = data.currentPeriod.expenses.logistics + 
                                     data.currentPeriod.expenses.storage + 
                                     data.currentPeriod.expenses.penalties + 
                                     data.currentPeriod.expenses.advertising + 
                                     (data.currentPeriod.expenses.acceptance || 0) + 
                                     (data.currentPeriod.expenses.deductions || 0) +
-                                    totalCostPrice +
-                                    returnsAmount;
+                                    totalCostPrice;
 
   return (
     <Card className="p-4">
@@ -276,25 +270,10 @@ const ExpenseBreakdown = ({ data, advertisingBreakdown }: ExpenseBreakdownProps)
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-        <div className="flex flex-col bg-gradient-to-br from-pink-50 to-white dark:from-pink-950/20 dark:to-background border border-pink-200 dark:border-pink-800 rounded-lg p-2">
-          <div className="flex justify-between items-center mb-1">
-            <h4 className="text-xs font-medium">Возвраты</h4>
-            <div className="bg-pink-100 dark:bg-pink-900/60 p-1 rounded-md">
-              <PackageX className="h-3 w-3 text-pink-600 dark:text-pink-400" />
-            </div>
-          </div>
-          <p className="text-lg font-bold">{formatCurrency(returnsAmount)}</p>
-          <span className="text-xs text-muted-foreground mt-0.5">
-            {totalExpensesWithCostPrice > 0 ? ((returnsAmount / totalExpensesWithCostPrice) * 100).toFixed(1) : '0'}%
-          </span>
-        </div>
-        
-        <div className="flex flex-col mt-0 p-3 bg-gradient-to-br from-gray-50 to-white dark:from-gray-950/20 dark:to-background border border-gray-200 dark:border-gray-800 rounded-lg">
-          <div className="flex justify-between items-center">
-            <h4 className="text-sm font-medium">Общие удержания (включая возвраты)</h4>
-            <p className="text-lg font-bold">{formatCurrency(totalExpensesWithCostPrice)}</p>
-          </div>
+      <div className="flex flex-col mt-4 p-3 bg-gradient-to-br from-gray-50 to-white dark:from-gray-950/20 dark:to-background border border-gray-200 dark:border-gray-800 rounded-lg">
+        <div className="flex justify-between items-center">
+          <h4 className="text-sm font-medium">Общие удержания (включая себестоимость)</h4>
+          <p className="text-lg font-bold">{formatCurrency(totalExpensesWithCostPrice)}</p>
         </div>
       </div>
     </Card>

@@ -1,7 +1,6 @@
-
 import { Card } from "@/components/ui/card";
 import { DollarSign, ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { ShoppingCart, TrendingDown, Percent, PackageX } from "../icons";
+import { ShoppingCart, TrendingDown, Percent } from "../icons";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useEffect, useState } from "react";
@@ -16,8 +15,6 @@ interface KeyMetricsProps {
       };
       netProfit: number;
       transferred: number;
-      returns?: number;
-      returnsAmount?: number;
     };
   };
 }
@@ -26,12 +23,10 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
   const isMobile = useIsMobile();
   const [netProfit, setNetProfit] = useState(data.currentPeriod.netProfit);
   const [totalExpenses, setTotalExpenses] = useState(data.currentPeriod.expenses.total);
-  const [returnsAmount, setReturnsAmount] = useState(data.currentPeriod.returnsAmount || 0);
   
   useEffect(() => {
     setTotalExpenses(data.currentPeriod.expenses.total);
     setNetProfit(data.currentPeriod.netProfit);
-    setReturnsAmount(data.currentPeriod.returnsAmount || 0);
     
     const handleCostPriceUpdate = () => {
       const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
@@ -42,7 +37,6 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
         if (analyticsData?.data?.currentPeriod) {
           setTotalExpenses(analyticsData.data.currentPeriod.expenses.total);
           setNetProfit(analyticsData.data.currentPeriod.netProfit);
-          setReturnsAmount(analyticsData.data.currentPeriod.returnsAmount || 0);
         }
       }
     };
@@ -55,9 +49,8 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
   }, [data]);
   
   useEffect(() => {
-    // Вычитаем возвраты из чистой прибыли
-    setNetProfit(data.currentPeriod.transferred - data.currentPeriod.expenses.total - returnsAmount);
-  }, [data, returnsAmount]);
+    setNetProfit(data.currentPeriod.transferred - data.currentPeriod.expenses.total);
+  }, [data]);
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

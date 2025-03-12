@@ -58,8 +58,6 @@ interface StatsData {
     netProfit: number;
     acceptance: number;
     expenses: Expenses;
-    returns?: number;
-    returnsAmount?: number;
     // other properties as needed
   };
   previousPeriod?: {
@@ -68,8 +66,6 @@ interface StatsData {
     netProfit: number;
     acceptance: number;
     expenses: Expenses;
-    returns?: number;
-    returnsAmount?: number;
     // other properties as needed
   };
   dailySales?: any[];
@@ -177,14 +173,6 @@ const Stats = () => {
           }
         } else {
           console.log(`Found existing cost price: ${analyticsData.data.currentPeriod.expenses.costPrice}`);
-        }
-        
-        // Обновляем расчет чистой прибыли с учетом возвратов
-        if (analyticsData.data.currentPeriod.returnsAmount) {
-          analyticsData.data.currentPeriod.netProfit = 
-            analyticsData.data.currentPeriod.transferred - 
-            analyticsData.data.currentPeriod.expenses.total - 
-            analyticsData.data.currentPeriod.returnsAmount;
         }
         
         setStatsData(analyticsData.data);
