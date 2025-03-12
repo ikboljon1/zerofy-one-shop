@@ -1,146 +1,115 @@
 
-import { Card } from "@/components/ui/card";
-import { COLORS } from "../data/demoData";
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip
-} from "recharts";
-import { formatCurrency, roundToTwoDecimals } from "@/utils/formatCurrency";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import React from 'react';
+import { Card, CardContent } from "@/components/ui/card";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { useIsMobile } from '@/hooks/use-mobile';
+import { formatCurrency } from '@/utils/formatCurrency';
+
+// Массив цветов для секторов диаграммы
+const COLORS = [
+  '#6366f1', '#8b5cf6', '#d946ef', '#f43f5e', '#f97316', 
+  '#eab308', '#84cc16', '#10b981', '#06b6d4', '#3b82f6'
+];
 
 interface PieChartCardProps {
   title: string;
-  icon: React.ReactNode;
-  data: Array<{
-    name: string;
-    value: number;
-    count?: number; // Поле для количества
-    isNegative?: boolean; // Флаг для отрицательных значений
-  }>;
-  valueLabel?: string;
-  showCount?: boolean; // Флаг для отображения количества
-  emptyMessage?: string; // Сообщение при отсутствии данных
+  icon?: React.ReactNode;
+  data: Array<{ name: string; value: number; count?: number }>;
+  showCount?: boolean;
+  emptyMessage?: string;
+  noFallbackData?: boolean; // Добавляем опцию для запрета использования fallback данных
 }
 
-const PieChartCard = ({ 
+const PieChartCard: React.FC<PieChartCardProps> = ({ 
   title, 
   icon, 
   data, 
-  valueLabel = "", 
   showCount = false,
-  emptyMessage = "Нет данных за выбранный период" 
-}: PieChartCardProps) => {
-  // Отфильтровываем данные с нулевыми значениями
-  const filteredData = data && data.filter(item => item.value !== 0);
+  emptyMessage = "Нет данных",
+  noFallbackData = true // По умолчанию не показываем fallback данные
+}) => {
+  const isMobile = useIsMobile();
   
-  // Проверяем, что данные не пустые и содержат значения
-  const hasData = filteredData && filteredData.length > 0;
-
-  // Преобразуем данные для корректного отображения в диаграмме
-  // Для диаграммы используем абсолютные значения, чтобы все сегменты были положительными
-  const chartData = hasData ? filteredData.map(item => ({
-    ...item,
-    value: Math.abs(item.value)
-  })) : [];
-
-  // Определяем, нужно ли делать список скроллируемым (если больше 5 элементов)
-  const needScroll = filteredData && filteredData.length > 5;
+  // Проверяем, есть ли данные
+  const hasData = data && data.length > 0 && data.some(item => item.value > 0);
+  
+  // Сумма всех значений для процентов
+  const total = hasData ? data.reduce((sum, item) => sum + item.value, 0) : 0;
+  
+  // Вычисляем высоту карточки в зависимости от размера экрана
+  const cardHeight = isMobile ? 'min-h-[300px]' : 'min-h-[350px]';
 
   return (
-    <Card className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold">{title}</h3>
-        <div className="bg-primary/10 dark:bg-primary/20 p-2 rounded-md">
-          {icon}
+    <Card className={`${cardHeight} shadow-md border-0 rounded-xl overflow-hidden bg-gradient-to-br from-slate-50 to-indigo-50 dark:from-gray-900 dark:to-indigo-950/30`}>
+      <CardContent className="p-4 sm:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">{title}</h3>
+          {icon && <div>{icon}</div>}
         </div>
-      </div>
-      {hasData ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
+        
+        {!hasData && (
+          <div className="flex flex-col items-center justify-center h-[200px] text-muted-foreground">
+            <p>{emptyMessage}</p>
+          </div>
+        )}
+        
+        {hasData && (
+          <div className="mt-4">
+            <ResponsiveContainer width="100%" height={200}>
               <PieChart>
                 <Pie
-                  data={chartData}
+                  data={data}
                   cx="50%"
                   cy="50%"
-                  innerRadius={40}
+                  labelLine={false}
                   outerRadius={80}
-                  paddingAngle={2}
+                  innerRadius={isMobile ? 40 : 50}
+                  fill="#8884d8"
                   dataKey="value"
+                  nameKey="name"
+                  label={({ name, percent }) => 
+                    isMobile ? `${(percent * 100).toFixed(0)}%` : `${name}: ${(percent * 100).toFixed(1)}%`
+                  }
                 >
-                  {chartData.map((entry, index) => (
+                  {data.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip
-                  formatter={(value: any) => [`${formatCurrency(value)} ${valueLabel}`, '']}
-                  contentStyle={{ background: '#ffffff', borderRadius: '4px', border: '1px solid #e5e7eb' }}
+                {!isMobile && <Legend layout="vertical" verticalAlign="middle" align="right" />}
+                <Tooltip 
+                  formatter={(value: number) => [
+                    showCount && data[0].count !== undefined
+                      ? `${formatCurrency(value)} (${Math.round(value / total * 100)}%)`
+                      : `${formatCurrency(value)} (${Math.round(value / total * 100)}%)`
+                  ]}
                 />
               </PieChart>
             </ResponsiveContainer>
-          </div>
-          <div className={needScroll ? "relative" : "space-y-4"}>
-            {needScroll ? (
-              <ScrollArea className="h-[200px] pr-4">
-                <div className="space-y-4 pr-2">
-                  {filteredData.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div 
-                          className="w-3 h-3 rounded-full mr-2" 
-                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                        ></div>
-                        <span className="text-sm">{item.name}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className={`font-medium ${item.isNegative || item.value < 0 ? 'text-red-500' : ''}`}>
-                          {item.isNegative || item.value < 0 ? '-' : ''}{formatCurrency(roundToTwoDecimals(Math.abs(item.value)))} {valueLabel}
-                        </span>
-                        {showCount && item.count !== undefined && (
-                          <div className="text-xs text-muted-foreground">
-                            Кол-во: {item.count}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            ) : (
-              <>
-                {filteredData.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div 
-                        className="w-3 h-3 rounded-full mr-2" 
-                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                      ></div>
-                      <span className="text-sm">{item.name}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className={`font-medium ${item.isNegative || item.value < 0 ? 'text-red-500' : ''}`}>
-                        {item.isNegative || item.value < 0 ? '-' : ''}{formatCurrency(roundToTwoDecimals(Math.abs(item.value)))} {valueLabel}
+            
+            {isMobile && (
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                {data.map((item, index) => (
+                  <div key={index} className="flex items-center">
+                    <div 
+                      className="w-3 h-3 rounded-full mr-2" 
+                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-xs font-medium truncate max-w-[120px]">
+                        {item.name}
                       </span>
-                      {showCount && item.count !== undefined && (
-                        <div className="text-xs text-muted-foreground">
-                          Кол-во: {item.count}
-                        </div>
-                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {formatCurrency(item.value)} 
+                        {showCount && item.count !== undefined && ` (${item.count})`}
+                      </span>
                     </div>
                   </div>
                 ))}
-              </>
+              </div>
             )}
           </div>
-        </div>
-      ) : (
-        <div className="py-8 text-center text-muted-foreground">
-          <p>{emptyMessage}</p>
-        </div>
-      )}
+        )}
+      </CardContent>
     </Card>
   );
 };
