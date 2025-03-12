@@ -9,7 +9,24 @@ export interface Store {
   name: string;
   apiKey: string;
   isSelected?: boolean;
-  stats?: WildberriesResponse;
+  stats?: {
+    currentPeriod: {
+      sales: number;
+      transferred: number;
+      expenses: {
+        total: number;
+        logistics: number;
+        storage: number;
+        penalties: number;
+        acceptance: number;
+        advertising: number;
+        deductions?: number;
+      };
+      netProfit: number;
+      acceptance: number;
+      returns?: number;
+    };
+  };
   lastFetchDate?: string;
 }
 
