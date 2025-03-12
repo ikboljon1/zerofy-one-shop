@@ -234,9 +234,12 @@ const LandingPage = () => {
   }];
 
   const demoContent = {
-    analytics: <div className="rounded-lg overflow-hidden border bg-card p-1">
-        <img src="/lovable-uploads/0470ca25-d168-4bdc-9273-eb817e91c482.png" alt="Аналитика продаж" className="w-full h-auto rounded-md" />
-        <div className="p-4">
+    analytics: <div className="rounded-lg overflow-hidden border bg-card">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+        <div className="rounded-md overflow-hidden border">
+          <img src="/lovable-uploads/0470ca25-d168-4bdc-9273-eb817e91c482.png" alt="Аналитика продаж" className="w-full h-auto" />
+        </div>
+        <div className="flex flex-col justify-center">
           <h3 className="text-lg font-semibold mb-2">Интеллектуальная аналитика продаж</h3>
           <p className="text-muted-foreground mb-3">Комплексный анализ всех показателей позволяет выявить скрытые тренды и принять верные решения</p>
           <ul className="space-y-2">
@@ -254,10 +257,14 @@ const LandingPage = () => {
             </li>
           </ul>
         </div>
-      </div>,
-    recommendations: <div className="rounded-lg overflow-hidden border bg-card p-1">
-        <img src="/lovable-uploads/73027550-3b12-417f-9974-895de2852cfe.png" alt="AI-рекомендации" className="w-full h-auto rounded-md" />
-        <div className="p-4">
+      </div>
+    </div>,
+    recommendations: <div className="rounded-lg overflow-hidden border bg-card">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+        <div className="rounded-md overflow-hidden border">
+          <img src="/lovable-uploads/73027550-3b12-417f-9974-895de2852cfe.png" alt="AI-рекомендации" className="w-full h-auto" />
+        </div>
+        <div className="flex flex-col justify-center">
           <h3 className="text-lg font-semibold mb-2">Интеллектуальные AI-рекомендации</h3>
           <p className="text-muted-foreground mb-3">Искусственный интеллект анализирует ваши данные и выдает точные рекомендации для оптимизации прибыли</p>
           <ul className="space-y-2">
@@ -273,16 +280,16 @@ const LandingPage = () => {
               <CheckCircle className="h-5 w-5 text-primary mr-2 flex-shrink-0 mt-0.5" />
               <span>Выявление неликвидных товаров и стратегии по минимизации убытков</span>
             </li>
-            <li className="flex items-start">
-              <CheckCircle className="h-5 w-5 text-primary mr-2 flex-shrink-0 mt-0.5" />
-              <span>Сравнение различных ценовых сценариев и их влияние на прибыльность</span>
-            </li>
           </ul>
         </div>
-      </div>,
-    warehouses: <div className="rounded-lg overflow-hidden border bg-card p-1">
-        <img src="/lovable-uploads/7ba9928e-efa7-4698-b817-c86fd1469852.png" alt="Управление складами" className="w-full h-auto rounded-md" />
-        <div className="p-4">
+      </div>
+    </div>,
+    warehouses: <div className="rounded-lg overflow-hidden border bg-card">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+        <div className="rounded-md overflow-hidden border">
+          <img src="/lovable-uploads/7ba9928e-efa7-4698-b817-c86fd1469852.png" alt="Управление складами" className="w-full h-auto" />
+        </div>
+        <div className="flex flex-col justify-center">
           <h3 className="text-lg font-semibold mb-2">Эффективное управление складами</h3>
           <p className="text-muted-foreground mb-3">Полный контроль над движением товаров и оптимизация складских процессов</p>
           <ul className="space-y-2">
@@ -298,16 +305,16 @@ const LandingPage = () => {
               <CheckCircle className="h-5 w-5 text-primary mr-2 flex-shrink-0 mt-0.5" />
               <span>Анализ рентабельности хранения с прогнозированием затрат</span>
             </li>
-            <li className="flex items-start">
-              <CheckCircle className="h-5 w-5 text-primary mr-2 flex-shrink-0 mt-0.5" />
-              <span>Статистика по брендам и категориям товаров на складах</span>
-            </li>
           </ul>
         </div>
-      </div>,
-    finance: <div className="rounded-lg overflow-hidden border bg-card p-1">
-        <img src="/lovable-uploads/0a0d0dd7-b54d-4163-ba50-1ddbb5b6dd7d.png" alt="Финансовый контроль" className="w-full h-auto rounded-md" />
-        <div className="p-4">
+      </div>
+    </div>,
+    finance: <div className="rounded-lg overflow-hidden border bg-card">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+        <div className="rounded-md overflow-hidden border">
+          <img src="/lovable-uploads/0a0d0dd7-b54d-4163-ba50-1ddbb5b6dd7d.png" alt="Финансовый контроль" className="w-full h-auto" />
+        </div>
+        <div className="flex flex-col justify-center">
           <h3 className="text-lg font-semibold mb-2">Полный финансовый контроль</h3>
           <p className="text-muted-foreground mb-3">Отслеживание всех финансовых потоков вашего бизнеса на маркетплейсах в одном месте</p>
           <ul className="space-y-2">
@@ -326,6 +333,7 @@ const LandingPage = () => {
           </ul>
         </div>
       </div>
+    </div>
   };
 
   return <div className="min-h-screen bg-background">
