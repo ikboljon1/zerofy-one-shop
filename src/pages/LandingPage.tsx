@@ -7,6 +7,7 @@ import AuthModal from "@/components/auth/AuthModal";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { initialTariffs } from "@/data/tariffs";
+import Footer from "@/components/layout/Footer";
 
 const LandingPage = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -511,6 +512,9 @@ const LandingPage = () => {
           </Button>
         </div>
       </section>
+
+      {/* Footer Section */}
+      <Footer />
 
       {showAuthModal && <AuthModal open={showAuthModal} onClose={() => setShowAuthModal(false)} initialMode={authMode} />}
     </div>;
