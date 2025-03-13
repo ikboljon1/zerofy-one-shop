@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ShoppingBag, Store, Package2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,7 +11,7 @@ import { getSubscriptionStatus, SubscriptionData } from "@/services/userService"
 import { Badge } from "@/components/ui/badge";
 
 interface StoresProps {
-  onStoreSelect?: (store: StoreType) => void;
+  onStoreSelect?: (store: { id: string; apiKey: string }) => void;
 }
 
 export default function Stores({ onStoreSelect }: StoresProps) {
@@ -230,7 +231,10 @@ export default function Stores({ onStoreSelect }: StoresProps) {
 
     const selectedStore = stores.find(store => store.id === storeId);
     if (selectedStore && onStoreSelect) {
-      onStoreSelect(selectedStore);
+      onStoreSelect({
+        id: selectedStore.id,
+        apiKey: selectedStore.apiKey
+      });
     }
   };
 

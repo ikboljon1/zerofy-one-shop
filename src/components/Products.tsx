@@ -1,7 +1,7 @@
 
 import { Card } from "@/components/ui/card";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ArrowUp, ArrowDown, TrendingUp, TrendingDown, DollarSign, FileText, Info, Trophy } from "lucide-react";
+import { ArrowUp, ArrowDown, TrendingUp, TrendingDown, DollarSign, FileText, Info } from "lucide-react";
 import { formatCurrency, parseCurrencyString } from "@/utils/formatCurrency";
 
 interface Product {
@@ -129,17 +129,8 @@ const Products = ({
               
               <div className="flex items-center">
                 <FileText className="h-4 w-4 mr-1 text-muted-foreground" />
-                <span className="flex items-center">
-                  {product.quantitySold !== undefined ? (
-                    <>
-                      <span>Продано: {product.quantitySold} шт.</span>
-                      {product.quantitySold > 50 && (
-                        <Trophy className="h-4 w-4 ml-1 text-amber-500" />
-                      )}
-                    </>
-                  ) : (
-                    'Продано: Н/Д'
-                  )}
+                <span>
+                  {product.quantitySold !== undefined ? `Продано: ${product.quantitySold} шт.` : 'Продано: Н/Д'}
                 </span>
               </div>
               

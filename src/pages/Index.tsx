@@ -15,13 +15,12 @@ import AnalyticsSection from "@/components/analytics/AnalyticsSection";
 import Dashboard from "@/components/dashboard/Dashboard";
 import { getProductProfitabilityData, getSelectedStore } from "@/utils/storeUtils";
 import { User } from "@/services/userService";
-import { Store as StoreType } from "@/types/store";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
   const isMobile = useIsMobile();
-  const [selectedStore, setSelectedStore] = useState<StoreType | null>(null);
+  const [selectedStore, setSelectedStore] = useState<{id: string; apiKey: string} | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -73,10 +72,6 @@ const Index = () => {
 
   const handleUserUpdated = (updatedUser: User) => {
     setUser(updatedUser);
-  };
-
-  const handleStoreSelect = (store: StoreType) => {
-    setSelectedStore(store);
   };
 
   const renderContent = () => {
