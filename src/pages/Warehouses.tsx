@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -154,6 +155,10 @@ const Warehouses: React.FC = () => {
         groupBySize: true
       });
       
+      // Логирование для отладки
+      console.log("Получены данные от API:", data);
+      
+      // Обработка данных с обеспечением наличия всех необходимых полей
       const processedData = data.map(item => ({
         ...item,
         nmId: item.nmId || 0,
@@ -162,6 +167,8 @@ const Warehouses: React.FC = () => {
         subjectName: item.subjectName || 'Неизвестная категория',
         warehouses: item.warehouses || []
       }));
+      
+      console.log("Обработанные данные для отображения:", processedData);
       
       setWarehouseRemains(processedData);
       toast.success('Отчет об остатках на складах успешно загружен');
@@ -215,6 +222,7 @@ const Warehouses: React.FC = () => {
     }
   };
 
+  // Функция для расчета средних ежедневных продаж - преобразует nmId в строковый ключ
   const calculateAverageDailySales = () => {
     const result: Record<string, number> = {};
     warehouseRemains.forEach(item => {
@@ -225,6 +233,7 @@ const Warehouses: React.FC = () => {
     return result;
   };
 
+  // Функция для расчета ежедневных затрат на хранение - преобразует nmId в строковый ключ
   const calculateDailyStorageCosts = () => {
     const result: Record<string, number> = {};
     warehouseRemains.forEach(item => {
