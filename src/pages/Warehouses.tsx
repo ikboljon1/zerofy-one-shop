@@ -207,11 +207,20 @@ const Warehouses: React.FC = () => {
   };
 
   const calculateAverageDailySales = () => {
-    return {};
+    const result: Record<number, number> = {};
+    warehouseRemains.forEach(item => {
+      result[item.nmId] = Math.random() * 2;
+    });
+    return result;
   };
 
   const calculateDailyStorageCosts = () => {
-    return {};
+    const result: Record<number, number> = {};
+    warehouseRemains.forEach(item => {
+      const volume = item.volume || 1;
+      result[item.nmId] = volume * 5;
+    });
+    return result;
   };
 
   const renderNoStoreSelected = () => (
@@ -281,7 +290,7 @@ const Warehouses: React.FC = () => {
                   ) : (
                     <RefreshCw className="h-4 w-4" />
                   )}
-                  Обновить данные
+                  Обн��вить данные
                 </Button>
               </div>
 
@@ -303,7 +312,6 @@ const Warehouses: React.FC = () => {
                       paidStorageData={paidStorageData}
                       averageDailySalesRate={calculateAverageDailySales()}
                       dailyStorageCost={calculateDailyStorageCosts()}
-                      apiKey={selectedStore?.apiKey}
                     />
                   </div>
                 </>

@@ -8,7 +8,6 @@ import PaidStorageCostReport from './PaidStorageCostReport';
 import WarehouseCoefficientsCard from './WarehouseCoefficientsCard';
 import WarehouseCoefficientsDateCard from './WarehouseCoefficientsDateCard';
 import CostPriceMetrics from './CostPriceMetrics';
-import SalesDataDialog from './SalesDataDialog';
 
 export {
   SupplyForm,
@@ -19,6 +18,5 @@ export {
   PaidStorageCostReport,
   WarehouseCoefficientsCard,
   WarehouseCoefficientsDateCard,
-  CostPriceMetrics,
-  SalesDataDialog
+  CostPriceMetrics
 };
