@@ -154,7 +154,16 @@ const Warehouses: React.FC = () => {
         groupBySize: true
       });
       
-      setWarehouseRemains(data);
+      const processedData = data.map(item => ({
+        ...item,
+        nmId: item.nmId || 0,
+        vendorCode: item.vendorCode || item.supplierArticle || 'Неизвестно',
+        brand: item.brand || 'Неизвестный бренд',
+        subjectName: item.subjectName || item.subject || 'Неизвестная категория',
+        warehouses: item.warehouses || []
+      }));
+      
+      setWarehouseRemains(processedData);
       toast.success('Отчет об остатках на складах успешно загружен');
     } catch (error: any) {
       console.error('Ошибка при загрузке остатков на складах:', error);
@@ -207,18 +216,22 @@ const Warehouses: React.FC = () => {
   };
 
   const calculateAverageDailySales = () => {
-    const result: Record<number, number> = {};
+    const result: Record<string, number> = {};
     warehouseRemains.forEach(item => {
-      result[item.nmId] = Math.random() * 2;
+      if (item.nmId) {
+        result[item.nmId.toString()] = Math.random() * 2;
+      }
     });
     return result;
   };
 
   const calculateDailyStorageCosts = () => {
-    const result: Record<number, number> = {};
+    const result: Record<string, number> = {};
     warehouseRemains.forEach(item => {
-      const volume = item.volume || 1;
-      result[item.nmId] = volume * 5;
+      if (item.nmId) {
+        const volume = item.volume || 1;
+        result[item.nmId.toString()] = volume * 5;
+      }
     });
     return result;
   };
@@ -290,7 +303,7 @@ const Warehouses: React.FC = () => {
                   ) : (
                     <RefreshCw className="h-4 w-4" />
                   )}
-                  Обн��вить данные
+                  Обновить данные
                 </Button>
               </div>
 
