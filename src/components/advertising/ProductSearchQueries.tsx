@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -106,13 +105,28 @@ const ProductSearchQueries = ({ productIds, apiKey, dateFrom, dateTo }: ProductS
     }
     
     const sortedQueries = [...filteredQueries].sort((a, b) => {
-      let valA, valB;
+      let valA: any;
+      let valB: any;
       
       // Handle nested fields
       if (field.includes('.')) {
         const [parent, child] = field.split('.');
-        valA = a[parent as keyof ProductSearchQuery]?.current;
-        valB = b[parent as keyof ProductSearchQuery]?.current;
+        const parentKeyA = parent as keyof ProductSearchQuery;
+        const parentObjA = a[parentKeyA];
+        const parentKeyB = parent as keyof ProductSearchQuery;
+        const parentObjB = b[parentKeyB];
+        
+        if (parentObjA && typeof parentObjA === 'object' && 'current' in parentObjA) {
+          valA = parentObjA.current;
+        } else {
+          valA = 0;
+        }
+        
+        if (parentObjB && typeof parentObjB === 'object' && 'current' in parentObjB) {
+          valB = parentObjB.current;
+        } else {
+          valB = 0;
+        }
       } else if (field === "text") {
         valA = a.text;
         valB = b.text;
