@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -14,10 +14,24 @@ import AuthModal from "@/components/auth/AuthModal";
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   
+  // Проверяем авторизацию при загрузке компонента
+  useEffect(() => {
+    const user = localStorage.getItem('user') || sessionStorage.getItem('user');
+    setIsAuthenticated(!!user);
+  }, []);
+  
   const handleLogin = () => {
+    // Если пользователь уже авторизован, перенаправляем на дашборд
+    if (isAuthenticated) {
+      navigate('/dashboard');
+      return;
+    }
+    
+    // Иначе показываем модальное окно авторизации
     setShowAuthModal(true);
   };
   
@@ -50,7 +64,9 @@ const Navbar = () => {
                   onClick={handleTariffClick}>
               Тарифы
             </span>
-            <Button onClick={handleLogin}>Войти</Button>
+            <Button onClick={handleLogin}>
+              {isAuthenticated ? "Мой кабинет" : "Войти"}
+            </Button>
           </div>
         )}
         
@@ -88,7 +104,9 @@ const Navbar = () => {
                 <Button onClick={() => {
                   handleLogin();
                   setIsMenuOpen(false);
-                }}>Войти</Button>
+                }}>
+                  {isAuthenticated ? "Мой кабинет" : "Войти"}
+                </Button>
               </div>
             </SheetContent>
           </Sheet>

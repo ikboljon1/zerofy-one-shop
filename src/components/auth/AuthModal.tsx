@@ -6,6 +6,7 @@ import LoginForm from "./LoginForm";
 import RegisterForm from "./RegisterForm";
 import PasswordResetRequestForm from "./PasswordResetRequestForm";
 import PasswordResetForm from "./PasswordResetForm";
+import { useNavigate } from "react-router-dom";
 
 interface AuthModalProps {
   open: boolean;
@@ -21,6 +22,19 @@ const AuthModal = ({ open, onClose, initialMode = 'login', resetToken, resetEmai
     resetToken && resetEmail ? 'reset' : null
   );
   const [emailForReset, setEmailForReset] = useState<string>(resetEmail || '');
+  const navigate = useNavigate();
+
+  // Проверяем авторизацию при открытии модального окна
+  useEffect(() => {
+    if (open) {
+      const user = localStorage.getItem('user') || sessionStorage.getItem('user');
+      if (user) {
+        // Если пользователь авторизован, закрываем модальное окно и перенаправляем на дашборд
+        onClose();
+        navigate('/dashboard');
+      }
+    }
+  }, [open, navigate, onClose]);
 
   // Detect reset parameters from URL
   useEffect(() => {
@@ -89,7 +103,13 @@ const AuthModal = ({ open, onClose, initialMode = 'login', resetToken, resetEmai
           <TabsTrigger value="register">Регистрация</TabsTrigger>
         </TabsList>
         <TabsContent value="login">
-          <LoginForm onSuccess={onClose} onForgotPassword={handleForgotPassword} />
+          <LoginForm 
+            onSuccess={() => {
+              onClose();
+              navigate('/dashboard');
+            }} 
+            onForgotPassword={handleForgotPassword} 
+          />
         </TabsContent>
         <TabsContent value="register">
           <RegisterForm onSuccess={onClose} />
