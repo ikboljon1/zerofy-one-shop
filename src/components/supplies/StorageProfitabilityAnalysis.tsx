@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
@@ -32,8 +33,8 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import SalesDataDialog from "./SalesDataDialog";
 import { fetchAverageSalesAndStorageData } from "@/services/salesStorageApi";
-
-const apiKey = "eyJhbGciOiJFUzI1NiIsImtpZCI6IjIwMjUwMjE3djEiLCJ0eXAiOiJKV1QifQ.eyJlbnQiOjEsImV4cCI6MTc1NjM0MTAyNCwiaWQiOiIwMTk1NDIzYy1hMWFmLTdkNWQtOTQzYi1mNzY2OTMxM2QzN2EiLCJpaWQiOjE1MzA0MzI1NSwib2lkIjo0MjUzNDYxLCJzIjo3OTM0LCJzaWQiOiIzNDU3ZjhlYi1mNTQxLTRiYjAtOTNlNi00MjRiNjllZGExMWEiLCJ0IjpmYWxzZSwidWlkIjoxNTMwNDMyNTV9.O29C4EkKauuAeRlbiIAH207bPps14ZFpoFhBoWCn0f5eBNuD7NADgJJgpjfpUJnJ6gWnG7kY5r1fPMEiwsQJ4Q";
+import { format } from "date-fns";
+import { PaidStorageItem } from "@/types/supplies";
 
 interface WarehouseItem {
   nmId: number;
@@ -44,6 +45,9 @@ interface WarehouseItem {
 
 interface StorageProfitabilityAnalysisProps {
   warehouseItems: WarehouseItem[];
+  paidStorageData?: PaidStorageItem[];
+  averageDailySalesRate?: Record<number, number>;
+  dailyStorageCost?: Record<number, number>;
 }
 
 interface Item {
@@ -58,7 +62,12 @@ interface Item {
   storageProfitability: number;
 }
 
-const StorageProfitabilityAnalysis = ({ warehouseItems }: StorageProfitabilityAnalysisProps) => {
+const StorageProfitabilityAnalysis = ({ 
+  warehouseItems,
+  paidStorageData,
+  averageDailySalesRate,
+  dailyStorageCost 
+}: StorageProfitabilityAnalysisProps) => {
   const [sellingPrices, setSellingPrices] = useState<Record<number, number>>({});
   const [dailySalesRates, setDailySalesRates] = useState<Record<number, number>>({});
   const [storageCostRates, setStorageCostRates] = useState<Record<number, number>>({});
@@ -68,6 +77,8 @@ const StorageProfitabilityAnalysis = ({ warehouseItems }: StorageProfitabilityAn
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingStorage, setIsLoadingStorage] = useState(false);
   const [salesDataDialogOpen, setSalesDataDialogOpen] = useState(false);
+  const [apiKey, setApiKey] = useState<string>('');
+  const [storageData, setStorageData] = useState<any[]>([]);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -77,7 +88,29 @@ const StorageProfitabilityAnalysis = ({ warehouseItems }: StorageProfitabilityAn
       initialSellingPrices[item.nmId] = item.price;
     });
     setSellingPrices(initialSellingPrices);
-  }, [warehouseItems]);
+    
+    // Initialize from props if available
+    if (averageDailySalesRate) {
+      setDailySalesRates(averageDailySalesRate);
+    }
+    
+    if (dailyStorageCost) {
+      setStorageCostRates(dailyStorageCost);
+    }
+    
+    // Try to get API key from localStorage
+    const selectedStore = localStorage.getItem('selectedStore');
+    if (selectedStore) {
+      try {
+        const storeData = JSON.parse(selectedStore);
+        if (storeData.apiKey) {
+          setApiKey(storeData.apiKey);
+        }
+      } catch (error) {
+        console.error("Error parsing selected store data:", error);
+      }
+    }
+  }, [warehouseItems, averageDailySalesRate, dailyStorageCost]);
 
   const calculateStorageProfitability = useCallback((
     sellingPrice: number,
@@ -141,6 +174,15 @@ const StorageProfitabilityAnalysis = ({ warehouseItems }: StorageProfitabilityAn
   const loadPaidStorageData = async () => {
     setIsLoadingStorage(true);
     try {
+      if (!apiKey) {
+        toast({
+          title: "Ошибка",
+          description: "API ключ не найден. Пожалуйста, выберите магазин.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       // Здесь будет логика загрузки данных о платном хранении
       toast({
         title: "Успех",
@@ -155,6 +197,52 @@ const StorageProfitabilityAnalysis = ({ warehouseItems }: StorageProfitabilityAn
       });
     } finally {
       setIsLoadingStorage(false);
+    }
+  };
+
+  const fetchSalesAndStorageData = async (startDate: Date, endDate: Date) => {
+    try {
+      setIsLoading(true);
+      
+      if (!apiKey) {
+        toast({
+          title: "Ошибка",
+          description: "API ключ не найден. Пожалуйста, выберите магазин.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Используем реальный API запрос вместо мок-данных
+      const result = await fetchAverageSalesAndStorageData(
+        apiKey,
+        startDate,
+        endDate,
+        startDate, // Используем те же даты для хранения
+        endDate
+      );
+
+      // Обновляем состояния компонента
+      setDailySalesRates(result.dailySalesRates);
+      setStorageCostRates(result.storageCostRates);
+      
+      // Закрываем диалог
+      setSalesDataDialogOpen(false);
+      
+      toast({
+        title: "Данные получены",
+        description: `Данные о продажах за период ${format(startDate, 'dd.MM.yyyy')} - ${format(endDate, 'dd.MM.yyyy')} успешно загружены`,
+      });
+      
+    } catch (error) {
+      console.error("Ошибка при получении данных:", error);
+      toast({
+        title: "Ошибка получения данных",
+        description: "Не удалось получить данные о продажах. Пожалуйста, попробуйте позже.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
