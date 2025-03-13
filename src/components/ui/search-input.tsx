@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { Input } from "./input";
 import { cn } from "@/lib/utils";
 
@@ -27,8 +27,9 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
             type="button"
             className="absolute inset-y-0 right-0 pr-3 flex items-center"
             onClick={onClear}
+            aria-label="Clear search"
           >
-            <span className="text-gray-400 hover:text-gray-600">×</span>
+            <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
           </button>
         )}
       </div>

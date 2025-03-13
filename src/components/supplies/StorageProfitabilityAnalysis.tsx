@@ -649,6 +649,54 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     });
   };
 
+  const getAnalysisStatusIndicator = (result: AnalysisResult) => {
+    const profitChange = result.profitWithDiscount - result.profitWithoutDiscount;
+    const isProfitIncrease = profitChange > 0;
+    const profitChangePercentage = result.profitWithoutDiscount !== 0 ? 
+      Math.abs((profitChange / result.profitWithoutDiscount) * 100) : 0;
+
+    if (result.action === 'keep') {
+      return (
+        <div className="flex items-center p-2 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-md border border-blue-200 dark:border-blue-800">
+          <BarChart4 className="h-5 w-5 mr-2" />
+          <div>
+            <p className="font-medium">Рекомендация: Сохранить текущую цену</p>
+            <p className="text-xs mt-1">Наиболее выгодная стратегия для этого товара</p>
+          </div>
+        </div>
+      );
+    } else if (result.action === 'discount' || result.action === 'sell') {
+      const isUrgent = result.action === 'sell';
+      const colorClass = isUrgent ? 
+        'bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800' : 
+        'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800';
+      
+      return (
+        <div className={`flex items-center p-2 rounded-md border ${colorClass}`}>
+          {isUrgent ? <TrendingDown className="h-5 w-5 mr-2" /> : <Percent className="h-5 w-5 mr-2" />}
+          <div>
+            <p className="font-medium">
+              Рекомендация: {isUrgent ? 'Срочно распродать' : 'Снизить цену'} на {result.recommendedDiscount}%
+            </p>
+            {isProfitIncrease ? (
+              <p className="text-xs mt-1 flex items-center">
+                <TrendingUp className="h-3 w-3 mr-1" />
+                Увеличит прибыль на {profitChangePercentage.toFixed(0)}% ({formatCurrency(profitChange)})
+              </p>
+            ) : (
+              <p className="text-xs mt-1 flex items-center">
+                <ArrowDown className="h-3 w-3 mr-1" />
+                Снизит убытки на {profitChangePercentage.toFixed(0)}% ({formatCurrency(Math.abs(profitChange))})
+              </p>
+            )}
+          </div>
+        </div>
+      );
+    }
+    
+    return null;
+  };
+
   const DetailedAnalysis = ({ result }: { result: AnalysisResult }) => {
     return (
       <div className="p-5 max-w-md space-y-6 text-sm">
@@ -692,60 +740,3 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                       <td className="py-1 text-muted-foreground">Текущие продажи в день</td>
                       <td className="py-1 text-right font-medium">{result.dailySales.toFixed(2)} шт</td>
                     </tr>
-                    <tr>
-                      <td className="py-1 text-muted-foreground">Продажи со скидкой</td>
-                      <td className="py-1 text-right font-medium">{result.newSalesRate.toFixed(2)} шт</td>
-                    </tr>
-                    <tr>
-                      <td className="py-1 text-muted-foreground">Текущий запас</td>
-                      <td className="py-1 text-right font-medium">{result.remainItem.quantityWarehousesFull} шт</td>
-                    </tr>
-                    <tr className="border-t">
-                      <td className="py-1 text-muted-foreground">Дней до распродажи</td>
-                      <td className="py-1 text-right font-medium">{formatDaysOfInventory(result.daysOfInventory)}</td>
-                    </tr>
-                    <tr>
-                      <td className="py-1 text-muted-foreground">Со скидкой</td>
-                      <td className="py-1 text-right font-medium">{formatDaysOfInventory(result.newDaysOfInventory)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              
-              <div>
-                <h4 className="text-xs text-muted-foreground mb-1">ЗАТРАТЫ НА ХРАНЕНИЕ</h4>
-                <table className="w-full text-xs">
-                  <tbody>
-                    <tr>
-                      <td className="py-1 text-muted-foreground">Стоимость хранения в день</td>
-                      <td className="py-1 text-right font-medium">{formatCurrency(result.dailyStorageCost)}</td>
-                    </tr>
-                    <tr>
-                      <td className="py-1 text-muted-foreground">В день на весь запас</td>
-                      <td className="py-1 text-right font-medium">{formatCurrency(result.dailyStorageCostTotal)}</td>
-                    </tr>
-                    <tr className="border-t">
-                      <td className="py-1 text-muted-foreground">Общие затраты на хранение</td>
-                      <td className="py-1 text-right font-medium">{formatCurrency(result.totalStorageCost)}</td>
-                    </tr>
-                    <tr>
-                      <td className="py-1 text-muted-foreground">Со скидкой</td>
-                      <td className="py-1 text-right font-medium">{formatCurrency(result.discountedStorageCost)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-xs text-muted-foreground mb-1">ДОПОЛНИТЕЛЬНЫЕ ЗАТРАТЫ</h4>
-              <table className="w-full text-xs">
-                <tbody>
-                  <tr>
-                    <td className="py-1 text-muted-foreground">Логистика (за единицу)</td>
-                    <td className="py-1 text-right font-medium">{formatCurrency(result.logisticsCost)}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-1 text-muted-foreground">Логистика (на весь запас)</td>
-                    <td className="py-1 text-right font-medium">{formatCurrency(result.logisticsCost * result.remainItem.quantityWarehousesFull)}</td>
-                  </tr>
