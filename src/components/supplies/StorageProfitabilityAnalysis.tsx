@@ -595,7 +595,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       console.error("Ошибка при получении данных:", error);
       toast({
         title: "Ошибка получения данных",
-        description: "Не удалось получить данные о продажах. Пожалуйста, ��опробуйте поз��е.",
+        description: "Не удалось получить данные о продажах. Пожалуйста, попробуйте поз��е.",
         variant: "destructive"
       });
     } finally {
@@ -1183,7 +1183,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                         <div>
                           <div className="font-medium">{result.remainItem.brand}</div>
                           <div className="text-xs text-muted-foreground">
-                            Арт. {result.remainItem.vendorCode || 'Н/Д'} | WB {result.remainItem.nmId.toString()}
+                            Арт. {result.remainItem.vendorCode || 'Н/Д'} | ID {result.remainItem.nmId}
                           </div>
                           <div className="text-xs text-muted-foreground truncate max-w-[220px]">
                             {result.remainItem.subjectName || 'Без категории'}
