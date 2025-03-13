@@ -23,6 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { fetchFullPaidStorageReport } from '@/services/suppliesApi';
 import { format } from 'date-fns';
+import { SearchInput } from '@/components/ui/search-input';
 
 interface StorageProfitabilityAnalysisProps {
   warehouseItems: WarehouseRemainItem[];
@@ -919,6 +920,92 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     );
   };
 
+  const renderSellingPriceInput = (nmId: number) => {
+    const value = sellingPrices[nmId] === null ? "" : sellingPrices[nmId]?.toString() || "";
+    
+    return (
+      <Input
+        key={`selling-price-${nmId}`}
+        trackValue={true}
+        type="number" 
+        value={value}
+        onChange={(e) => updateSellingPrice(nmId, e.target.value)}
+        className="h-8 w-24 text-right"
+        variant="price"
+        sizeVariant="sm"
+      />
+    );
+  };
+
+  const renderCostPriceInput = (nmId: number) => {
+    const value = costPrices[nmId] === null ? "" : costPrices[nmId]?.toString() || "";
+    
+    return (
+      <Input
+        key={`cost-price-${nmId}`}
+        trackValue={true}
+        type="number" 
+        value={value}
+        onChange={(e) => updateCostPrice(nmId, e.target.value)}
+        className="h-8 w-24 text-right"
+        variant="default"
+        sizeVariant="sm"
+      />
+    );
+  };
+
+  const renderWbCommissionInput = (nmId: number) => {
+    const value = wbCommissions[nmId] === null ? "" : wbCommissions[nmId]?.toString() || "";
+    
+    return (
+      <Input
+        key={`wb-commission-${nmId}`}
+        trackValue={true}
+        type="number" 
+        value={value}
+        onChange={(e) => updateWbCommission(nmId, e.target.value)}
+        className="h-8 w-20 text-right"
+        variant="commission"
+        sizeVariant="sm"
+      />
+    );
+  };
+
+  const renderDailySalesInput = (nmId: number) => {
+    const value = dailySalesRates[nmId] === null ? "" : dailySalesRates[nmId]?.toString() || "";
+    
+    return (
+      <Input
+        key={`daily-sales-${nmId}`}
+        trackValue={true}
+        type="number" 
+        value={value}
+        onChange={(e) => updateDailySales(nmId, e.target.value)}
+        className="h-8 w-24 text-right"
+        step="0.1"
+        variant="sales"
+        sizeVariant="sm"
+      />
+    );
+  };
+
+  const renderStorageCostInput = (nmId: number) => {
+    const value = storageCostRates[nmId] === null ? "" : storageCostRates[nmId]?.toString() || "";
+    
+    return (
+      <Input
+        key={`storage-cost-${nmId}`}
+        trackValue={true}
+        type="number" 
+        value={value}
+        onChange={(e) => updateStorageCost(nmId, e.target.value)}
+        className="h-8 w-24 text-right"
+        variant="storage"
+        sizeVariant="sm"
+      />
+    );
+  };
+
   return (
     <Card className="border-none shadow-none">
       <CardHeader className="pb-2">
@@ -996,12 +1083,11 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         <div className="pb-4">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-4 px-4">
             <div className="relative w-full md:w-64">
-              <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
-              <Input
+              <SearchInput
                 placeholder="Поиск по бренду или артикулу..."
-                className="pl-9"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                sizeVariant="default"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -1118,15 +1204,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="space-y-2">
-                          <Input
-                            trackValue={true}
-                            type="number" 
-                            value={sellingPrices[result.remainItem.nmId] === null ? "" : sellingPrices[result.remainItem.nmId]?.toString() || ""}
-                            onChange={(e) => updateSellingPrice(result.remainItem.nmId, e.target.value)}
-                            className="h-8 w-24 text-right"
-                            variant="price"
-                            sizeVariant="sm"
-                          />
+                          {renderSellingPriceInput(result.remainItem.nmId)}
                           {result.action !== 'keep' && (
                             <div className="flex items-center justify-end gap-1 text-xs">
                               <span className="text-muted-foreground">Рек.</span>
@@ -1136,52 +1214,21 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Input
-                          trackValue={true}
-                          type="number" 
-                          value={costPrices[result.remainItem.nmId] === null ? "" : costPrices[result.remainItem.nmId]?.toString() || ""}
-                          onChange={(e) => updateCostPrice(result.remainItem.nmId, e.target.value)}
-                          className="h-8 w-24 text-right"
-                          variant="default"
-                          sizeVariant="sm"
-                        />
+                        {renderCostPriceInput(result.remainItem.nmId)}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Input
-                          trackValue={true}
-                          type="number" 
-                          value={wbCommissions[result.remainItem.nmId] === null ? "" : wbCommissions[result.remainItem.nmId]?.toString() || ""}
-                          onChange={(e) => updateWbCommission(result.remainItem.nmId, e.target.value)}
-                          className="h-8 w-20 text-right"
-                          variant="commission"
-                          sizeVariant="sm"
-                        />
-                        <div className="text-xs flex justify-end items-center mt-1">
-                          <span>%</span>
+                        <div>
+                          {renderWbCommissionInput(result.remainItem.nmId)}
+                          <div className="text-xs flex justify-end items-center mt-1">
+                            <span>%</span>
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Input
-                          trackValue={true}
-                          type="number" 
-                          value={dailySalesRates[result.remainItem.nmId] === null ? "" : dailySalesRates[result.remainItem.nmId]?.toString() || ""}
-                          onChange={(e) => updateDailySales(result.remainItem.nmId, e.target.value)}
-                          className="h-8 w-24 text-right"
-                          step="0.1"
-                          variant="sales"
-                          sizeVariant="sm"
-                        />
+                        {renderDailySalesInput(result.remainItem.nmId)}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Input
-                          trackValue={true}
-                          type="number" 
-                          value={storageCostRates[result.remainItem.nmId] === null ? "" : storageCostRates[result.remainItem.nmId]?.toString() || ""}
-                          onChange={(e) => updateStorageCost(result.remainItem.nmId, e.target.value)}
-                          className="h-8 w-24 text-right"
-                          variant="storage"
-                          sizeVariant="sm"
-                        />
+                        {renderStorageCostInput(result.remainItem.nmId)}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="w-24">

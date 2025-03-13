@@ -59,7 +59,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           className
         )}
         ref={ref}
-        size={size}
+        size={size as number | undefined} // Ensure size is treated as a number as required
         {...props}
         value={trackValue ? localValue : props.value}
         onChange={handleChange}
