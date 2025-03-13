@@ -8,7 +8,6 @@ import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { initialTariffs } from "@/data/tariffs";
 import Footer from "@/components/layout/Footer";
-import Navbar from "@/components/layout/Navbar";
 
 const LandingPage = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -346,11 +345,7 @@ const LandingPage = () => {
     </div>
   };
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Navbar */}
-      <Navbar />
-      
+  return <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <section className="py-16 px-6 md:px-12 lg:px-16">
         <div className="max-w-7xl mx-auto">
@@ -522,8 +517,7 @@ const LandingPage = () => {
       <Footer />
 
       {showAuthModal && <AuthModal open={showAuthModal} onClose={() => setShowAuthModal(false)} initialMode={authMode} />}
-    </div>
-  );
+    </div>;
 };
 
 const QuoteIcon = ({
