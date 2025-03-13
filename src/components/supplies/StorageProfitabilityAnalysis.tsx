@@ -777,3 +777,270 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                 <h4 className="text-xs text-muted-foreground mb-1">ПРОДАЖИ И ОБОРАЧИВАЕМОСТЬ</h4>
                 <table className="w-full text-xs">
                   <tbody>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">Ежедневные продажи</td>
+                      <td className="py-1 text-right font-medium">{result.dailySales.toFixed(1)} шт.</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">Текущий запас</td>
+                      <td className="py-1 text-right font-medium">{result.remainItem.quantityWarehousesFull || 0} шт.</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">Дней до продажи</td>
+                      <td className="py-1 text-right font-medium">{formatDaysOfInventory(result.daysOfInventory)}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">Ускорение продаж</td>
+                      <td className="py-1 text-right font-medium">{result.newSalesRate.toFixed(1)} шт./день</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">Новый срок продажи</td>
+                      <td className="py-1 text-right font-medium">{formatDaysOfInventory(result.newDaysOfInventory)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <div>
+                <h4 className="text-xs text-muted-foreground mb-1">ХРАНЕНИЕ И ПРИБЫЛЬ</h4>
+                <table className="w-full text-xs">
+                  <tbody>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">Стоимость хранения в день</td>
+                      <td className="py-1 text-right font-medium">{formatCurrency(result.dailyStorageCostTotal)}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">Общие затраты на хранение</td>
+                      <td className="py-1 text-right font-medium">{formatCurrency(result.totalStorageCost)}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">Затраты со скидкой</td>
+                      <td className="py-1 text-right font-medium">{formatCurrency(result.discountedStorageCost)}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">Прибыль без скидки</td>
+                      <td className="py-1 text-right font-medium">{formatCurrency(result.profitWithoutDiscount)}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">Прибыль со скидкой</td>
+                      <td className="py-1 text-right font-medium">{formatCurrency(result.profitWithDiscount)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <div>
+              <h4 className="text-xs text-muted-foreground mb-1">ЭКОНОМИЯ И ЭФФЕКТИВНОСТЬ</h4>
+              <table className="w-full text-xs">
+                <tbody>
+                  <tr>
+                    <td className="py-1 text-muted-foreground">Экономия при скидке</td>
+                    <td className="py-1 text-right font-medium">
+                      {result.savingsWithDiscount > 0 ? (
+                        <span className="text-emerald-600">{formatCurrency(result.savingsWithDiscount)}</span>
+                      ) : (
+                        <span className="text-red-500">{formatCurrency(result.savingsWithDiscount)}</span>
+                      )}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-1 text-muted-foreground">Маржа без скидки</td>
+                    <td className="py-1 text-right font-medium">{result.profitMarginPercentage.toFixed(1)}%</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1 text-muted-foreground">Хранение / Выручка</td>
+                    <td className="py-1 text-right font-medium">{(result.storageCostToRevenueRatio * 100).toFixed(1)}%</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1 text-muted-foreground">Логистика (на единицу)</td>
+                    <td className="py-1 text-right font-medium">{formatCurrency(result.logisticsCost)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1 text-muted-foreground">Комиссия WB</td>
+                    <td className="py-1 text-right font-medium">{result.wbCommission.toFixed(1)}%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      <SalesDataDialog 
+        open={salesDataDialogOpen}
+        onOpenChange={setSalesDataDialogOpen}
+        onFetchData={fetchSalesAndStorageData}
+        isLoading={isLoading}
+      />
+      <div className="p-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Анализ прибыли и рентабельности хранения</h2>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setSalesDataDialogOpen(true)}>Получить данные о продажах</Button>
+            <Button onClick={savePriceData}>Сохранить цены</Button>
+          </div>
+        </div>
+        <div className="mt-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Search className="h-4 w-4" />
+              <Input
+                placeholder="Поиск по названию, коду или nmId"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Tabs>
+                <TabsList>
+                  <TabsTrigger value="all">Все</TabsTrigger>
+                  <TabsTrigger value="discount">Скидка</TabsTrigger>
+                  <TabsTrigger value="keep">Сохранить</TabsTrigger>
+                  <TabsTrigger value="low-stock">Низкий запас</TabsTrigger>
+                </TabsList>
+                <TabsContent value="all">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Button onClick={() => setSelectedTab('all')}>Все</Button>
+                      <Button onClick={() => setSelectedTab('discount')}>Скидка</Button>
+                      <Button onClick={() => setSelectedTab('keep')}>Сохранить</Button>
+                      <Button onClick={() => setSelectedTab('low-stock')}>Низкий запас</Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button onClick={() => requestSort('costPrice')}>Цена</Button>
+                      <Button onClick={() => requestSort('sellingPrice')}>Сelling Price</Button>
+                      <Button onClick={() => requestSort('dailySales')}>Дневные продажи</Button>
+                      <Button onClick={() => requestSort('dailyStorageCost')}>Стоимость хранения</Button>
+                      <Button onClick={() => requestSort('totalStorageCost')}>Общие затраты</Button>
+                      <Button onClick={() => requestSort('profitMarginPercentage')}>Маржа</Button>
+                    </div>
+                  </div>
+                </TabsContent>
+                <TabsContent value="discount">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Button onClick={() => setSelectedTab('all')}>Все</Button>
+                      <Button onClick={() => setSelectedTab('discount')}>Скидка</Button>
+                      <Button onClick={() => setSelectedTab('keep')}>Сохранить</Button>
+                      <Button onClick={() => setSelectedTab('low-stock')}>Низкий запас</Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button onClick={() => requestSort('costPrice')}>Цена</Button>
+                      <Button onClick={() => requestSort('sellingPrice')}>Сelling Price</Button>
+                      <Button onClick={() => requestSort('dailySales')}>Дневные продажи</Button>
+                      <Button onClick={() => requestSort('dailyStorageCost')}>Стоимость хранения</Button>
+                      <Button onClick={() => requestSort('totalStorageCost')}>Общие затраты</Button>
+                      <Button onClick={() => requestSort('profitMarginPercentage')}>Маржа</Button>
+                    </div>
+                  </div>
+                </TabsContent>
+                <TabsContent value="keep">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Button onClick={() => setSelectedTab('all')}>Все</Button>
+                      <Button onClick={() => setSelectedTab('discount')}>Скидка</Button>
+                      <Button onClick={() => setSelectedTab('keep')}>Сохранить</Button>
+                      <Button onClick={() => setSelectedTab('low-stock')}>Низкий запас</Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button onClick={() => requestSort('costPrice')}>Цена</Button>
+                      <Button onClick={() => requestSort('sellingPrice')}>Сelling Price</Button>
+                      <Button onClick={() => requestSort('dailySales')}>Дневные продажи</Button>
+                      <Button onClick={() => requestSort('dailyStorageCost')}>Стоимость хранения</Button>
+                      <Button onClick={() => requestSort('totalStorageCost')}>Общие затраты</Button>
+                      <Button onClick={() => requestSort('profitMarginPercentage')}>Маржа</Button>
+                    </div>
+                  </div>
+                </TabsContent>
+                <TabsContent value="low-stock">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Button onClick={() => setSelectedTab('all')}>Все</Button>
+                      <Button onClick={() => setSelectedTab('discount')}>Скидка</Button>
+                      <Button onClick={() => setSelectedTab('keep')}>Сохранить</Button>
+                      <Button onClick={() => setSelectedTab('low-stock')}>Низкий запас</Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button onClick={() => requestSort('costPrice')}>Цена</Button>
+                      <Button onClick={() => requestSort('sellingPrice')}>Сelling Price</Button>
+                      <Button onClick={() => requestSort('dailySales')}>Дневные продажи</Button>
+                      <Button onClick={() => requestSort('dailyStorageCost')}>Стоимость хранения</Button>
+                      <Button onClick={() => requestSort('totalStorageCost')}>Общие затраты</Button>
+                      <Button onClick={() => requestSort('profitMarginPercentage')}>Маржа</Button>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </div>
+          <div className="mt-4">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Название</TableHead>
+                  <TableHead>Код</TableHead>
+                  <TableHead>Цена</TableHead>
+                  <TableHead>Себестоимость</TableHead>
+                  <TableHead>Дневные продажи</TableHead>
+                  <TableHead>Стоимость хранения</TableHead>
+                  <TableHead>Общие затраты</TableHead>
+                  <TableHead>Маржа</TableHead>
+                  <TableHead>Дни до продажи</TableHead>
+                  <TableHead>Ускорение продаж</TableHead>
+                  <TableHead>Новый срок продажи</TableHead>
+                  <TableHead>Скидка</TableHead>
+                  <TableHead>Прибыль без скидки</TableHead>
+                  <TableHead>Прибыль со скидкой</TableHead>
+                  <TableHead>Экономия</TableHead>
+                  <TableHead>Логистика</TableHead>
+                  <TableHead>Комиссия WB</TableHead>
+                  <TableHead>Действие</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredResults.map(result => (
+                  <TableRow key={result.remainItem.nmId}>
+                    <TableCell>{result.remainItem.brand}</TableCell>
+                    <TableCell>{result.remainItem.subjectName}</TableCell>
+                    <TableCell>{formatCurrency(result.sellingPrice)}</TableCell>
+                    <TableCell>{formatCurrency(result.costPrice)}</TableCell>
+                    <TableCell>{result.dailySales.toFixed(1)}</TableCell>
+                    <TableCell>{formatCurrency(result.dailyStorageCostTotal)}</TableCell>
+                    <TableCell>{formatCurrency(result.totalStorageCost)}</TableCell>
+                    <TableCell>{result.profitMarginPercentage.toFixed(1)}%</TableCell>
+                    <TableCell>{formatDaysOfInventory(result.daysOfInventory)}</TableCell>
+                    <TableCell>{result.newSalesRate.toFixed(1)}</TableCell>
+                    <TableCell>{formatDaysOfInventory(result.newDaysOfInventory)}</TableCell>
+                    <TableCell>{result.recommendedDiscount}%</TableCell>
+                    <TableCell>{formatCurrency(result.profitWithoutDiscount)}</TableCell>
+                    <TableCell>{formatCurrency(result.profitWithDiscount)}</TableCell>
+                    <TableCell>
+                      {result.savingsWithDiscount > 0 ? (
+                        <span className="text-emerald-600">{formatCurrency(result.savingsWithDiscount)}</span>
+                      ) : (
+                        <span className="text-red-500">{formatCurrency(result.savingsWithDiscount)}</span>
+                      )}
+                    </TableCell>
+                    <TableCell>{formatCurrency(result.logisticsCost)}</TableCell>
+                    <TableCell>{result.wbCommission.toFixed(1)}%</TableCell>
+                    <TableCell>
+                      {getActionBadge(result.action)}
+                      {getStockLevelIndicator(result)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default StorageProfitabilityAnalysis;
