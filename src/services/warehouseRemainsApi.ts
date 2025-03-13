@@ -26,6 +26,8 @@ export const createWarehouseRemainsTask = async (
       },
       params: {
         locale: 'ru',
+        // Всегда включаем группировку по nmId, чтобы убедиться что оно всегда приходит
+        groupByNm: true,
         ...params
       }
     });
@@ -151,7 +153,21 @@ export const fetchWarehouseRemains = async (
     const report = await getWarehouseRemainsReport(apiKey, taskId);
     console.log(`Отчет загружен. Получено ${report.length} записей.`);
     
-    return report;
+    // Проверяем, что все записи имеют nmId
+    const reportWithNmId = report.map(item => {
+      if (!item.nmId) {
+        // Если nmId пустой, добавляем логирование для отладки
+        console.warn('Запись без nmId:', item);
+        // Используем значение по умолчанию или генерируем на основе других данных
+        return {
+          ...item,
+          nmId: parseInt(item.chrtId?.toString() || '0', 10)
+        };
+      }
+      return item;
+    });
+    
+    return reportWithNmId;
   } catch (error) {
     console.error('Ошибка в процессе получения отчета:', error);
     throw error;

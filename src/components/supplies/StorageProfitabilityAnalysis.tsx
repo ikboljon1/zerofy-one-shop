@@ -158,6 +158,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
   }>({ key: '', direction: 'asc' });
   const [salesDataDialogOpen, setSalesDataDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingStorage, setIsLoadingStorage] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -562,43 +563,27 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     });
   };
 
-  const fetchSalesAndStorageData = async (startDate: Date, endDate: Date) => {
+  const loadPaidStorageData = async () => {
+    if (!apiKey) {
+      toast.error('Необходима авторизация для загрузки данных о платном хранении');
+      return;
+    }
+    
     try {
-      setIsLoading(true);
+      setIsLoadingStorage(true);
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 30);
       
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const dateFrom = startDate.toISOString().split('T')[0];
+      const dateTo = new Date().toISOString().split('T')[0];
       
-      const mockSalesData: Record<number, number> = {};
-      const mockSellingPrices: Record<number, number> = {};
-      const mockStorageCosts: Record<number, number> = {};
-      
-      warehouseItems.forEach(item => {
-        mockSalesData[item.nmId] = Math.max(0.1, Number((Math.random() * 5).toFixed(2)));
-        const existingPrice = sellingPrices[item.nmId] || item.price || 0;
-        mockSellingPrices[item.nmId] = Math.max(100, existingPrice * (0.9 + Math.random() * 0.2));
-        mockStorageCosts[item.nmId] = Math.max(1, Math.random() * 10);
-      });
-      
-      setDailySalesRates(mockSalesData);
-      setSellingPrices(mockSellingPrices);
-      setStorageCostRates(mockStorageCosts);
-      
-      setSalesDataDialogOpen(false);
-      
-      toast({
-        title: "Данные получены",
-        description: `Данные о продажах за период ${format(startDate, 'dd.MM.yyyy')} - ${format(endDate, 'dd.MM.yyyy')} успешно загружены`,
-      });
-      
-    } catch (error) {
-      console.error("Ошибка при получении данных:", error);
-      toast({
-        title: "Ошибка получения данных",
-        description: "Не удалось получить данные о продажах. Пожалуйста, попробуйте поз��е.",
-        variant: "destructive"
-      });
+      const data = await fetchFullPaidStorageReport(apiKey, dateFrom, dateTo);
+      setStorageData(data);
+    } catch (error: any) {
+      console.error('Ошибка при загрузке данных о платном хранении:', error);
+      toast.error(`Не удалось загрузить данные: ${error.message}`);
     } finally {
-      setIsLoading(false);
+      setIsLoadingStorage(false);
     }
   };
 
