@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ArrowUp, ArrowDown, TrendingUp, TrendingDown, DollarSign, FileText, Info, Filter } from "lucide-react";
@@ -27,10 +26,12 @@ type FilterType = "default" | "bestSelling" | "highestMargin" | "lowestReturns";
 
 const Products = ({ 
   topProfitableProducts = [], 
-  topUnprofitableProducts = [] 
+  topUnprofitableProducts = [],
+  hideFilters = false
 }: { 
   topProfitableProducts: Product[],
-  topUnprofitableProducts: Product[] 
+  topUnprofitableProducts: Product[],
+  hideFilters?: boolean
 }) => {
   const isMobile = useIsMobile();
   const [profitableFilter, setProfitableFilter] = useState<FilterType>("default");
@@ -196,23 +197,25 @@ const Products = ({
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select 
-              value={profitableFilter} 
-              onValueChange={(value) => setProfitableFilter(value as FilterType)}
-            >
-              <SelectTrigger className="h-8 w-[200px]">
-                <SelectValue placeholder="Фильтр" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="default">По умолчанию</SelectItem>
-                <SelectItem value="bestSelling">Самые продаваемые</SelectItem>
-                <SelectItem value="highestMargin">Самая высокая маржа</SelectItem>
-                <SelectItem value="lowestReturns">Меньше всего возвратов</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {!hideFilters && (
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select 
+                value={profitableFilter} 
+                onValueChange={(value) => setProfitableFilter(value as FilterType)}
+              >
+                <SelectTrigger className="h-8 w-[200px]">
+                  <SelectValue placeholder="Фильтр" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">По умолчанию</SelectItem>
+                  <SelectItem value="bestSelling">Самые продаваемые</SelectItem>
+                  <SelectItem value="highestMargin">Самая высокая маржа</SelectItem>
+                  <SelectItem value="lowestReturns">Меньше всего возвратов</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           
           <ProductList 
             products={filterProducts(topProfitableProducts, profitableFilter).slice(0, 3)} 
@@ -232,23 +235,25 @@ const Products = ({
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select 
-              value={unprofitableFilter} 
-              onValueChange={(value) => setUnprofitableFilter(value as FilterType)}
-            >
-              <SelectTrigger className="h-8 w-[200px]">
-                <SelectValue placeholder="Фильтр" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="default">По умолчанию</SelectItem>
-                <SelectItem value="bestSelling">Самые продаваемые</SelectItem>
-                <SelectItem value="highestMargin">Самая низкая маржа</SelectItem>
-                <SelectItem value="lowestReturns">Больше всего возвратов</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {!hideFilters && (
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select 
+                value={unprofitableFilter} 
+                onValueChange={(value) => setUnprofitableFilter(value as FilterType)}
+              >
+                <SelectTrigger className="h-8 w-[200px]">
+                  <SelectValue placeholder="Фильтр" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">По умолчанию</SelectItem>
+                  <SelectItem value="bestSelling">Самые продаваемые</SelectItem>
+                  <SelectItem value="highestMargin">Самая низкая маржа</SelectItem>
+                  <SelectItem value="lowestReturns">Больше всего возвратов</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           
           <ProductList 
             products={filterProducts(topUnprofitableProducts, unprofitableFilter).slice(0, 3)} 

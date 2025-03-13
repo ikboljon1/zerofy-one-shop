@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -87,6 +86,13 @@ const Index = () => {
             className={isMobile ? 'space-y-4' : 'space-y-6'}
           >
             <Dashboard />
+            {profitable.length > 0 || unprofitable.length > 0 ? (
+              <ProductsComponent 
+                topProfitableProducts={profitable} 
+                topUnprofitableProducts={unprofitable} 
+                hideFilters={false}
+              />
+            ) : null}
           </motion.div>
         );
       case "analytics":
