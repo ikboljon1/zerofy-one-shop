@@ -44,8 +44,7 @@ type ItemAnalysis = {
   warehouseName: string;
   barcode: string;
   size: string;
-  supplierArticle: string;
-  supplierName: string;
+  vendorCode: string;
   warehouses: {
     name: string;
     quantity: number;
@@ -93,7 +92,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         // Create analysis object
         itemsMap.set(item.nmId, {
           nmId: item.nmId,
-          subject: item.subject || 'Неизвестно',
+          subject: item.subjectName || 'Неизвестно',
           brand: item.brand || 'Неизвестно',
           vendorCode: item.vendorCode || '',
           quantity: item.quantity,
@@ -109,8 +108,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
           warehouseName: item.warehouseName || '',
           barcode: item.barcode || '',
           size: item.size || '',
-          supplierArticle: item.supplierArticle || '',
-          supplierName: item.supplierName || '',
           warehouses: [{
             name: item.warehouseName || 'Неизвестно',
             quantity: item.quantity
