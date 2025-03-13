@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -29,6 +30,20 @@ interface ExtendedKeywordStat extends KeywordStat {
   position?: number;
 }
 
+const calculatePerformance = (stat: KeywordStat): 'profitable' | 'unprofitable' | 'neutral' => {
+  // Simple algorithm to determine if keyword is profitable
+  // Could be improved with more sophisticated metrics
+  if (stat.clicks > 0 && stat.sum > 0) {
+    const costPerClick = stat.sum / stat.clicks;
+    if (costPerClick < 15 && stat.ctr > 2) {
+      return 'profitable';
+    } else if (costPerClick > 30 || stat.ctr < 0.8) {
+      return 'unprofitable';
+    }
+  }
+  return 'neutral';
+};
+
 const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateFrom, dateTo: initialDateTo }: KeywordStatisticsProps) => {
   const [dateFrom, setDateFrom] = useState<Date>(() => subDays(new Date(), 6));
   const [dateTo, setDateTo] = useState<Date>(new Date());
@@ -36,7 +51,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchInputValue, setSearchInputValue] = useState("");
-  const [sortField, setSortField] = useState<keyof KeywordStat>("views");
+  const [sortField, setSortField] = useState<keyof KeywordStat | "position">("views");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const { toast } = useToast();
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
@@ -94,15 +109,19 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
 
   const sortedKeywords = useMemo(() => {
     return [...filteredKeywords].sort((a, b) => {
-      if (sortField === 'position' && a.position && b.position) {
+      if (sortField === 'position' && a.position !== undefined && b.position !== undefined) {
         return sortDirection === "asc" ? a.position - b.position : b.position - a.position;
       }
       
-      if (sortDirection === "asc") {
-        return a[sortField] > b[sortField] ? 1 : -1;
-      } else {
-        return a[sortField] < b[sortField] ? 1 : -1;
+      if (sortField !== 'position') {
+        if (sortDirection === "asc") {
+          return a[sortField] > b[sortField] ? 1 : -1;
+        } else {
+          return a[sortField] < b[sortField] ? 1 : -1;
+        }
       }
+      
+      return 0;
     });
   }, [filteredKeywords, sortField, sortDirection]);
 
@@ -180,7 +199,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
     }
   }, [campaignId, apiKey]);
 
-  const handleSort = (field: keyof KeywordStat) => {
+  const handleSort = (field: keyof KeywordStat | "position") => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
@@ -196,7 +215,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
     return `${updateDate.toLocaleDateString('ru-RU')} ${updateDate.toLocaleTimeString('ru-RU')}`;
   };
 
-  const renderSortIcon = (field: keyof KeywordStat) => {
+  const renderSortIcon = (field: keyof KeywordStat | "position") => {
     if (sortField !== field) return null;
     return (
       <span className="ml-1 inline-block">
@@ -249,11 +268,11 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
       );
     }
 
-    const totalViews = processedKeywords.reduce((sum, stat) => sum + stat.views, 0);
-    const totalClicks = processedKeywords.reduce((sum, stat) => sum + stat.clicks, 0);
-    const totalSum = processedKeywords.reduce((sum, stat) => sum + stat.sum, 0);
+    const totalViews = processedKeywordsWithPosition.reduce((sum, stat) => sum + stat.views, 0);
+    const totalClicks = processedKeywordsWithPosition.reduce((sum, stat) => sum + stat.clicks, 0);
+    const totalSum = processedKeywordsWithPosition.reduce((sum, stat) => sum + stat.sum, 0);
     const avgCtr = totalViews > 0 ? (totalClicks / totalViews) * 100 : 0;
-    const uniqueKeywords = new Set(processedKeywords.map(k => k.keyword)).size;
+    const uniqueKeywords = new Set(processedKeywordsWithPosition.map(k => k.keyword)).size;
 
     return (
       <div className="space-y-4">
@@ -333,7 +352,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
           </div>
           <CardContent className="p-4">
             <div className="space-y-4">
-              {processedKeywords
+              {processedKeywordsWithPosition
                 .filter(stat => !stat.excluded)
                 .sort((a, b) => b.views - a.views)
                 .slice(0, 5)
@@ -356,7 +375,7 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
                       <span className="text-xs text-gray-500">{stat.views.toLocaleString('ru-RU')}</span>
                     </div>
                     <Progress 
-                      value={(stat.views / (processedKeywords[0]?.views || 1)) * 100} 
+                      value={(stat.views / (processedKeywordsWithPosition[0]?.views || 1)) * 100} 
                       className={`h-1.5 ${
                         stat.performance === 'profitable' 
                           ? 'bg-green-100 dark:bg-green-900/30' 
@@ -593,6 +612,8 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
                   <ProductSearchQueries 
                     apiKey={apiKey}
                     productIds={productIds}
+                    dateFrom={dateFrom}
+                    dateTo={dateTo}
                   />
                 ) : (
                   <div className="p-4 text-center">
