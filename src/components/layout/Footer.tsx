@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Zap, Mail, Phone, MapPin, CreditCard, FileText, ScrollText } from "lucide-react";
+import { Zap, Mail, Phone, MapPin, Twitter, Instagram, Facebook, Linkedin } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Footer = () => {
@@ -19,52 +19,46 @@ const Footer = () => {
             </p>
           </div>
 
-          {/* Combined Legal and Contacts */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Legal */}
-            <div>
-              <h3 className="font-medium text-lg mb-4">Информация</h3>
-              <ul className="space-y-2">
-                <li>
-                  <Link to="/privacy-policy" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    Политика конфиденциальности
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/terms-of-use" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2">
-                    <ScrollText className="h-4 w-4 text-muted-foreground" />
-                    Условия использования
-                  </Link>
-                </li>
-              </ul>
-            </div>
+          {/* Legal */}
+          <div>
+            <h3 className="font-medium text-lg mb-4">Информация</h3>
+            <ul className="space-y-2">
+              <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Политика конфиденциальности</a></li>
+              <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Условия использования</a></li>
+            </ul>
+          </div>
 
-            {/* Contact and Payments */}
-            <div className="space-y-6">
-              {/* Contact */}
-              <div>
-                <h3 className="font-medium text-lg mb-4">Контакты</h3>
-                <ul className="space-y-3">
-                  <li className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <a href="mailto:info@zerofy.ru" className="text-muted-foreground hover:text-primary transition-colors">info@zerofy.ru</a>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <a href="tel:+78001234567" className="text-muted-foreground hover:text-primary transition-colors">+7 (800) 123-45-67</a>
-                  </li>
-                </ul>
-              </div>
+          {/* Contact */}
+          <div>
+            <h3 className="font-medium text-lg mb-4">Контакты</h3>
+            <ul className="space-y-3">
+              <li className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                <a href="mailto:info@zerofy.ru" className="text-muted-foreground hover:text-primary transition-colors">info@zerofy.ru</a>
+              </li>
+              <li className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                <a href="tel:+78001234567" className="text-muted-foreground hover:text-primary transition-colors">+7 (800) 123-45-67</a>
+              </li>
+              <li className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Москва, ул. Примерная, 123</span>
+              </li>
+            </ul>
 
-              {/* Payments */}
-              <div>
-                <h3 className="font-medium text-lg mb-4">Способы оплаты</h3>
-                <div className="flex gap-4 items-center">
-                  <CreditCard className="h-6 w-6 text-muted-foreground" />
-                  <span className="text-muted-foreground">Visa, Mastercard, Мир</span>
-                </div>
-              </div>
+            <div className="flex gap-4 mt-4">
+              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                <Twitter className="h-5 w-5" />
+              </a>
+              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                <Instagram className="h-5 w-5" />
+              </a>
+              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                <Facebook className="h-5 w-5" />
+              </a>
+              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                <Linkedin className="h-5 w-5" />
+              </a>
             </div>
           </div>
         </div>
