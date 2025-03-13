@@ -30,7 +30,7 @@ export interface StorageProfitabilityAnalysisProps {
   dailyStorageCost?: Record<number, number>;
 }
 
-export const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> = ({
+const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> = ({
   warehouseItems,
   paidStorageData,
   averageDailySalesRate: propAverageDailySalesRate,
@@ -155,7 +155,7 @@ export const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysis
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(item => 
-        item.subject?.toLowerCase().includes(searchLower) ||
+        item.subjectName?.toLowerCase().includes(searchLower) ||
         item.brand?.toLowerCase().includes(searchLower) ||
         item.nmId.toString().includes(searchLower)
       );
@@ -473,7 +473,7 @@ export const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysis
                           <TableRow key={item.nmId}>
                             <TableCell>
                               <div>
-                                <div className="font-medium">{item.subject || "Неизвестный товар"}</div>
+                                <div className="font-medium">{item.subjectName || "Неизвестный товар"}</div>
                                 <div className="text-xs text-muted-foreground">
                                   {item.brand}, ID: {item.nmId}
                                 </div>
@@ -513,3 +513,5 @@ export const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysis
     </>
   );
 };
+
+export default StorageProfitabilityAnalysis;
