@@ -1,6 +1,3 @@
 
-import ProductStatsTable from './ProductStatsTable';
-
-export {
-  ProductStatsTable
-};
+export { default as KeywordStatistics } from './KeywordStatistics';
+export { default as ProductSearchQueries } from './ProductSearchQueries';

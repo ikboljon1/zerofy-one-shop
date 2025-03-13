@@ -384,3 +384,144 @@ export interface Campaign {
   numericType?: number;
   changeTime?: string;
 }
+
+export interface ProductSearchQuery {
+  text: string;
+  nmId: number;
+  subjectName: string;
+  brandName: string;
+  vendorCode: string;
+  name: string;
+  isCardRated: boolean;
+  rating: number;
+  feedbackRating: number;
+  price: {
+    minPrice: number;
+    maxPrice: number;
+  };
+  frequency: {
+    current: number;
+    dynamics?: number;
+  };
+  weekFrequency: number;
+  medianPosition: {
+    current: number;
+    dynamics?: number;
+  };
+  avgPosition: {
+    current: number;
+    dynamics?: number;
+  };
+  openCard: {
+    current: number;
+    dynamics?: number;
+    percentile: number;
+  };
+  addToCart: {
+    current: number;
+    dynamics?: number;
+    percentile: number;
+  };
+  openToCart: {
+    current: number;
+    dynamics?: number;
+    percentile: number;
+  };
+  orders: {
+    current: number;
+    dynamics?: number;
+    percentile: number;
+  };
+  cartToOrder: {
+    current: number;
+    dynamics?: number;
+    percentile: number;
+  };
+  visibility: {
+    current: number;
+    dynamics?: number;
+  };
+}
+
+export interface ProductSearchQueryResponse {
+  data: {
+    items: ProductSearchQuery[];
+  };
+}
+
+export interface ProductSearchQueryRequest {
+  currentPeriod: {
+    start: string;
+    end: string;
+  };
+  pastPeriod?: {
+    start: string;
+    end: string;
+  };
+  nmIds: number[];
+  topOrderBy: 'openCard' | 'addToCart' | 'openToCart' | 'orders' | 'cartToOrder';
+  orderBy: {
+    field: 'avgPosition' | 'frequency' | 'openCard' | 'addToCart' | 'orders';
+    mode: 'asc' | 'desc';
+  };
+  limit: number;
+}
+
+export const getProductSearchQueries = async (
+  apiKey: string,
+  productIds: number[],
+  dateFrom: Date,
+  dateTo: Date,
+  sortBy: 'openCard' | 'addToCart' | 'openToCart' | 'orders' | 'cartToOrder' = 'openToCart',
+  limit: number = 20
+): Promise<ProductSearchQuery[]> => {
+  try {
+    const api = axios.create({
+      baseURL: 'https://seller-analytics-api.wildberries.ru',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': apiKey
+      }
+    });
+    
+    const currentPeriodDuration = Math.floor((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24));
+    const pastPeriodEnd = new Date(dateFrom);
+    pastPeriodEnd.setDate(pastPeriodEnd.getDate() - 1);
+    const pastPeriodStart = new Date(pastPeriodEnd);
+    pastPeriodStart.setDate(pastPeriodStart.getDate() - currentPeriodDuration);
+    
+    const payload: ProductSearchQueryRequest = {
+      currentPeriod: {
+        start: dateFrom.toISOString().split('T')[0],
+        end: dateTo.toISOString().split('T')[0]
+      },
+      pastPeriod: {
+        start: pastPeriodStart.toISOString().split('T')[0],
+        end: pastPeriodEnd.toISOString().split('T')[0]
+      },
+      nmIds: productIds,
+      topOrderBy: sortBy,
+      orderBy: {
+        field: 'avgPosition',
+        mode: 'asc'
+      },
+      limit
+    };
+    
+    console.log('Fetching product search queries with payload:', payload);
+    
+    const response = await api.post<ProductSearchQueryResponse>('/api/v2/search-report/product/search-texts', payload);
+    
+    console.log('Product search queries response:', response.data);
+    
+    return response.data.data.items || [];
+  } catch (error) {
+    console.error('Error fetching product search queries:', error);
+    if (error instanceof AxiosError) {
+      if (error.response?.status === 429) {
+        throw new Error('Превышен лимит запросов к API. Пожалуйста, повторите позже');
+      }
+    }
+    return [];
+  }
+};
