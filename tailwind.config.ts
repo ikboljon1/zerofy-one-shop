@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,27 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// New color variants for inputs
+				price: {
+					DEFAULT: '#10b981',
+					foreground: '#ffffff',
+					ring: '#34d399'
+				},
+				sales: {
+					DEFAULT: '#3b82f6',
+					foreground: '#ffffff',
+					ring: '#60a5fa'
+				},
+				storage: {
+					DEFAULT: '#f59e0b',
+					foreground: '#ffffff',
+					ring: '#fbbf24'
+				},
+				commission: {
+					DEFAULT: '#8b5cf6',
+					foreground: '#ffffff',
+					ring: '#a78bfa'
 				}
 			},
 			borderRadius: {

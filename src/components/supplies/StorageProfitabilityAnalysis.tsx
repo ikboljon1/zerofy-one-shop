@@ -1124,6 +1124,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                             value={sellingPrices[result.remainItem.nmId] === null ? "" : sellingPrices[result.remainItem.nmId]?.toString() || ""}
                             onChange={(e) => updateSellingPrice(result.remainItem.nmId, e.target.value)}
                             className="h-8 w-24 text-right"
+                            variant="price"
+                            size="sm"
                           />
                           {result.action !== 'keep' && (
                             <div className="flex items-center justify-end gap-1 text-xs">
@@ -1140,6 +1142,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                           value={costPrices[result.remainItem.nmId] === null ? "" : costPrices[result.remainItem.nmId]?.toString() || ""}
                           onChange={(e) => updateCostPrice(result.remainItem.nmId, e.target.value)}
                           className="h-8 w-24 text-right"
+                          variant="default"
+                          size="sm"
                         />
                       </TableCell>
                       <TableCell className="text-right">
@@ -1149,6 +1153,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                           value={wbCommissions[result.remainItem.nmId] === null ? "" : wbCommissions[result.remainItem.nmId]?.toString() || ""}
                           onChange={(e) => updateWbCommission(result.remainItem.nmId, e.target.value)}
                           className="h-8 w-20 text-right"
+                          variant="commission"
+                          size="sm"
                         />
                         <div className="text-xs flex justify-end items-center mt-1">
                           <span>%</span>
@@ -1162,6 +1168,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                           onChange={(e) => updateDailySales(result.remainItem.nmId, e.target.value)}
                           className="h-8 w-24 text-right"
                           step="0.1"
+                          variant="sales"
+                          size="sm"
                         />
                       </TableCell>
                       <TableCell className="text-right">
@@ -1171,6 +1179,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                           value={storageCostRates[result.remainItem.nmId] === null ? "" : storageCostRates[result.remainItem.nmId]?.toString() || ""}
                           onChange={(e) => updateStorageCost(result.remainItem.nmId, e.target.value)}
                           className="h-8 w-24 text-right"
+                          variant="storage"
+                          size="sm"
                         />
                       </TableCell>
                       <TableCell className="text-right">
