@@ -1,8 +1,10 @@
+
 import axios from 'axios';
 import api, { setApiKey } from './api';
 import { SupplyItem, SupplyOptionsResponse, Warehouse, WarehouseCoefficient, PaidStorageItem } from '@/types/supplies';
 
 const API_BASE_URL = 'https://supplies-api.wildberries.ru/api/v1';
+const ANALYTICS_API_BASE_URL = 'https://seller-analytics-api.wildberries.ru/api/v1';
 
 /**
  * Fetch all warehouses from Wildberries API
@@ -94,7 +96,7 @@ export const createPaidStorageReportTask = async (
   dateTo: string
 ): Promise<string> => {
   try {
-    const url = `${API_BASE_URL}/paid_storage`;
+    const url = `${ANALYTICS_API_BASE_URL}/paid_storage`;
     
     setApiKey(apiKey);
     const response = await api.get(url, {
@@ -116,7 +118,7 @@ export const checkPaidStorageReportStatus = async (
   taskId: string
 ): Promise<string> => {
   try {
-    const url = `${API_BASE_URL}/paid_storage/tasks/${taskId}/status`;
+    const url = `${ANALYTICS_API_BASE_URL}/paid_storage/tasks/${taskId}/status`;
     
     setApiKey(apiKey);
     const response = await api.get(url);
@@ -136,7 +138,7 @@ export const downloadPaidStorageReport = async (
   taskId: string
 ): Promise<PaidStorageItem[]> => {
   try {
-    const url = `${API_BASE_URL}/paid_storage/tasks/${taskId}/download`;
+    const url = `${ANALYTICS_API_BASE_URL}/paid_storage/tasks/${taskId}/download`;
     
     setApiKey(apiKey);
     const response = await api.get(url);
