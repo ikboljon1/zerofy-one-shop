@@ -920,12 +920,13 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     );
   };
 
-  const renderSellingPriceInput = (nmId: number) => {
+  const renderSellingPriceInput = (result: AnalysisResult) => {
+    const nmId = result.remainItem.nmId;
     const value = sellingPrices[nmId] === null ? "" : sellingPrices[nmId]?.toString() || "";
     
     return (
       <Input
-        key={`selling-price-${nmId}`}
+        key={createUniqueInputId(result.remainItem, 'selling-price')}
         trackValue={true}
         type="number" 
         value={value}
@@ -937,12 +938,13 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     );
   };
 
-  const renderCostPriceInput = (nmId: number) => {
+  const renderCostPriceInput = (result: AnalysisResult) => {
+    const nmId = result.remainItem.nmId;
     const value = costPrices[nmId] === null ? "" : costPrices[nmId]?.toString() || "";
     
     return (
       <Input
-        key={`cost-price-${nmId}`}
+        key={createUniqueInputId(result.remainItem, 'cost-price')}
         trackValue={true}
         type="number" 
         value={value}
@@ -954,12 +956,13 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     );
   };
 
-  const renderWbCommissionInput = (nmId: number) => {
+  const renderWbCommissionInput = (result: AnalysisResult) => {
+    const nmId = result.remainItem.nmId;
     const value = wbCommissions[nmId] === null ? "" : wbCommissions[nmId]?.toString() || "";
     
     return (
       <Input
-        key={`wb-commission-${nmId}`}
+        key={createUniqueInputId(result.remainItem, 'wb-commission')}
         trackValue={true}
         type="number" 
         value={value}
@@ -971,12 +974,13 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     );
   };
 
-  const renderDailySalesInput = (nmId: number) => {
+  const renderDailySalesInput = (result: AnalysisResult) => {
+    const nmId = result.remainItem.nmId;
     const value = dailySalesRates[nmId] === null ? "" : dailySalesRates[nmId]?.toString() || "";
     
     return (
       <Input
-        key={`daily-sales-${nmId}`}
+        key={createUniqueInputId(result.remainItem, 'daily-sales')}
         trackValue={true}
         type="number" 
         value={value}
@@ -989,12 +993,13 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     );
   };
 
-  const renderStorageCostInput = (nmId: number) => {
+  const renderStorageCostInput = (result: AnalysisResult) => {
+    const nmId = result.remainItem.nmId;
     const value = storageCostRates[nmId] === null ? "" : storageCostRates[nmId]?.toString() || "";
     
     return (
       <Input
-        key={`storage-cost-${nmId}`}
+        key={createUniqueInputId(result.remainItem, 'storage-cost')}
         trackValue={true}
         type="number" 
         value={value}
@@ -1004,6 +1009,10 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         sizeVariant="sm"
       />
     );
+  };
+
+  const createUniqueInputId = (item: WarehouseRemainItem, field: string) => {
+    return `${field}-${item.nmId}-${item.barcode}`;
   };
 
   return (
@@ -1178,12 +1187,12 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
               <TableBody>
                 {filteredResults.length > 0 ? (
                   filteredResults.map(result => (
-                    <TableRow key={result.remainItem.nmId} className="group">
+                    <TableRow key={`${result.remainItem.nmId}-${result.remainItem.barcode}`} className="group">
                       <TableCell className="font-medium">
                         <div>
                           <div className="font-medium">{result.remainItem.brand}</div>
                           <div className="text-xs text-muted-foreground">
-                            Арт. {result.remainItem.vendorCode || 'Н/Д'} | ID {result.remainItem.nmId}
+                            Арт. {result.remainItem.vendorCode || 'Н/Д'} | WB {result.remainItem.nmId.toString()}
                           </div>
                           <div className="text-xs text-muted-foreground truncate max-w-[220px]">
                             {result.remainItem.subjectName || 'Без категории'}
@@ -1204,7 +1213,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="space-y-2">
-                          {renderSellingPriceInput(result.remainItem.nmId)}
+                          {renderSellingPriceInput(result)}
                           {result.action !== 'keep' && (
                             <div className="flex items-center justify-end gap-1 text-xs">
                               <span className="text-muted-foreground">Рек.</span>
@@ -1214,21 +1223,21 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        {renderCostPriceInput(result.remainItem.nmId)}
+                        {renderCostPriceInput(result)}
                       </TableCell>
                       <TableCell className="text-right">
                         <div>
-                          {renderWbCommissionInput(result.remainItem.nmId)}
+                          {renderWbCommissionInput(result)}
                           <div className="text-xs flex justify-end items-center mt-1">
                             <span>%</span>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        {renderDailySalesInput(result.remainItem.nmId)}
+                        {renderDailySalesInput(result)}
                       </TableCell>
                       <TableCell className="text-right">
-                        {renderStorageCostInput(result.remainItem.nmId)}
+                        {renderStorageCostInput(result)}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="w-24">
