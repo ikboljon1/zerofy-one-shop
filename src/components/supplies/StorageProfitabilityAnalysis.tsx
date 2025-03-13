@@ -484,7 +484,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     const totalStorageCost = analysisResults.reduce((sum, item) => sum + item.totalStorageCost, 0);
     const potentialSavings = analysisResults.reduce((sum, item) => {
       return sum + (item.savingsWithDiscount > 0 ? item.savingsWithDiscount : 0);
-    }, 0);\
+    }, 0);
 
     const itemsStockingOutBeforeTarget = targetDate ? 
       analysisResults.filter(item => 
