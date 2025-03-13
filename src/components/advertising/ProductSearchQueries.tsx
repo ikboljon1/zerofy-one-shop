@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -9,6 +10,7 @@ import { Search, ExternalLink, TrendingUp, Layers, ArrowRightLeft, ShoppingCart,
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { subDays } from 'date-fns';
+import { getPositionColorClass, getPercentileColorClass, formatDynamics, sortProductQueries } from './utils/ProductQueryUtils';
 
 interface ProductSearchQueriesProps {
   productIds: number[];
@@ -104,49 +106,8 @@ const ProductSearchQueries = ({ productIds, apiKey, dateFrom, dateTo }: ProductS
       setSortDirection("asc");
     }
     
-    const sortedQueries = [...filteredQueries].sort((a, b) => {
-      let valA: any;
-      let valB: any;
-      
-      // Handle nested fields
-      if (field.includes('.')) {
-        const [parent, child] = field.split('.');
-        const parentKeyA = parent as keyof ProductSearchQuery;
-        const parentObjA = a[parentKeyA];
-        const parentKeyB = parent as keyof ProductSearchQuery;
-        const parentObjB = b[parentKeyB];
-        
-        if (parentObjA && typeof parentObjA === 'object' && 'current' in parentObjA) {
-          valA = parentObjA.current;
-        } else {
-          valA = 0;
-        }
-        
-        if (parentObjB && typeof parentObjB === 'object' && 'current' in parentObjB) {
-          valB = parentObjB.current;
-        } else {
-          valB = 0;
-        }
-      } else if (field === "text") {
-        valA = a.text;
-        valB = b.text;
-      } else if (field === "avgPosition") {
-        valA = a.avgPosition.current;
-        valB = b.avgPosition.current;
-      } else {
-        // @ts-ignore - dynamic access
-        valA = a[field];
-        // @ts-ignore - dynamic access
-        valB = b[field];
-      }
-      
-      if (valA === valB) return 0;
-      
-      const comparison = valA > valB ? 1 : -1;
-      return sortDirection === "asc" ? comparison : -comparison;
-    });
-    
-    setFilteredQueries(sortedQueries);
+    const sorted = sortProductQueries(filteredQueries, field, sortDirection);
+    setFilteredQueries(sorted);
   };
 
   const renderSortIcon = (field: string) => {
@@ -158,31 +119,9 @@ const ProductSearchQueries = ({ productIds, apiKey, dateFrom, dateTo }: ProductS
     );
   };
 
-  const formatDynamics = (value: number | undefined) => {
-    if (value === undefined) return <span className="text-gray-400">—</span>;
-    
-    const prefix = value > 0 ? "+" : "";
-    const colorClass = value > 0 
-      ? "text-green-600 dark:text-green-400" 
-      : value < 0 
-        ? "text-red-600 dark:text-red-400" 
-        : "text-gray-600 dark:text-gray-400";
-        
-    return <span className={colorClass}>{prefix}{value}%</span>;
-  };
-
-  const getPositionColorClass = (position: number) => {
-    if (position <= 10) return "text-green-600 dark:text-green-400 font-medium";
-    if (position <= 30) return "text-amber-600 dark:text-amber-400 font-medium";
-    if (position <= 50) return "text-orange-600 dark:text-orange-400 font-medium";
-    return "text-red-600 dark:text-red-400 font-medium";
-  };
-
-  const getPercentileColorClass = (percentile: number) => {
-    if (percentile >= 75) return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
-    if (percentile >= 50) return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300";
-    if (percentile >= 25) return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300";
-    return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300";
+  const renderDynamics = (value: number | undefined) => {
+    const formatResult = formatDynamics(value);
+    return <span className={formatResult.className}>{formatResult.formattedValue}</span>;
   };
 
   if (error) {
@@ -375,7 +314,7 @@ const ProductSearchQueries = ({ productIds, apiKey, dateFrom, dateTo }: ProductS
                           {query.avgPosition.current}
                         </span>
                         {query.avgPosition.dynamics !== undefined && (
-                          <span className="text-xs">{formatDynamics(query.avgPosition.dynamics)}</span>
+                          <span className="text-xs">{renderDynamics(query.avgPosition.dynamics)}</span>
                         )}
                       </div>
                     </TableCell>
@@ -383,7 +322,7 @@ const ProductSearchQueries = ({ productIds, apiKey, dateFrom, dateTo }: ProductS
                       <div className="flex flex-col items-end">
                         <span>{query.frequency.current.toLocaleString('ru-RU')}</span>
                         {query.frequency.dynamics !== undefined && (
-                          <span className="text-xs">{formatDynamics(query.frequency.dynamics)}</span>
+                          <span className="text-xs">{renderDynamics(query.frequency.dynamics)}</span>
                         )}
                       </div>
                     </TableCell>
@@ -391,7 +330,7 @@ const ProductSearchQueries = ({ productIds, apiKey, dateFrom, dateTo }: ProductS
                       <div className="flex flex-col items-end">
                         <span>{query.openCard.current.toLocaleString('ru-RU')}</span>
                         {query.openCard.dynamics !== undefined && (
-                          <span className="text-xs">{formatDynamics(query.openCard.dynamics)}</span>
+                          <span className="text-xs">{renderDynamics(query.openCard.dynamics)}</span>
                         )}
                       </div>
                     </TableCell>
@@ -399,7 +338,7 @@ const ProductSearchQueries = ({ productIds, apiKey, dateFrom, dateTo }: ProductS
                       <div className="flex flex-col items-end">
                         <span>{query.openToCart.current}%</span>
                         {query.openToCart.dynamics !== undefined && (
-                          <span className="text-xs">{formatDynamics(query.openToCart.dynamics)}</span>
+                          <span className="text-xs">{renderDynamics(query.openToCart.dynamics)}</span>
                         )}
                       </div>
                     </TableCell>
@@ -407,7 +346,7 @@ const ProductSearchQueries = ({ productIds, apiKey, dateFrom, dateTo }: ProductS
                       <div className="flex flex-col items-end">
                         <span>{query.orders.current.toLocaleString('ru-RU')}</span>
                         {query.orders.dynamics !== undefined && (
-                          <span className="text-xs">{formatDynamics(query.orders.dynamics)}</span>
+                          <span className="text-xs">{renderDynamics(query.orders.dynamics)}</span>
                         )}
                       </div>
                     </TableCell>

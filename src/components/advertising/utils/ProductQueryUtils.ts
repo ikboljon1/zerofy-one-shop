@@ -1,5 +1,6 @@
 
 import { ProductSearchQuery } from "@/services/advertisingApi";
+import React from 'react';
 
 /**
  * Returns a color class based on the position value
@@ -22,10 +23,11 @@ export const getPercentileColorClass = (percentile: number): string => {
 };
 
 /**
- * Formats dynamics values with proper color and prefix
+ * Formats dynamics values with proper color and prefix - returns a class name and formatted string
+ * instead of JSX element since this is a .ts file, not .tsx
  */
-export const formatDynamics = (value: number | undefined): JSX.Element => {
-  if (value === undefined) return <span className="text-gray-400">—</span>;
+export const formatDynamics = (value: number | undefined): { className: string, formattedValue: string } => {
+  if (value === undefined) return { className: "text-gray-400", formattedValue: "—" };
   
   const prefix = value > 0 ? "+" : "";
   const colorClass = value > 0 
@@ -34,7 +36,7 @@ export const formatDynamics = (value: number | undefined): JSX.Element => {
       ? "text-red-600 dark:text-red-400" 
       : "text-gray-600 dark:text-gray-400";
       
-  return <span className={colorClass}>{prefix}{value}%</span>;
+  return { className: colorClass, formattedValue: `${prefix}${value}%` };
 };
 
 /**
