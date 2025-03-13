@@ -161,11 +161,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  // Обновленная функция для получения уникального ключа элемента - всегда использует nmId в виде строки
   const getItemKey = (item: WarehouseRemainItem): string => {
-    // Убедимся, что nmId всегда существует и имеет значение
     const nmId = item?.nmId ? item.nmId.toString() : '0';
-    console.log("Получен nmId для элемента:", nmId);
     return nmId;
   };
 
@@ -212,7 +209,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         return;
       }
 
-      // Преобразуем nmId в строку для использования в качестве ключа
       const nmId = item.nmId ? item.nmId.toString() : '0';
       const itemKey = getItemKey(item);
       
@@ -226,7 +222,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         initialSellingPrices[itemKey] = item.price || 0;
       }
       
-      // Получаем стоимость хранения (используем nmId как строку)
       let itemStorageCost = dailyStorageCost[nmId] || 5;
       
       const matchingStorageItems = paidStorageData.filter(psi => psi.nmId === item.nmId);
@@ -236,7 +231,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       }
       
       if (!dailySalesRates[itemKey]) {
-        // Получаем уровень продаж (используем nmId как строку)
         initialDailySales[itemKey] = averageDailySalesRate[nmId] || 0.1;
       }
       
@@ -256,7 +250,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         initialWbCommissions[itemKey] = 15;
       }
       
-      // Получаем уровень продаж (используем nmId как строку)
       const salesRate = averageDailySalesRate[nmId] || 0.1;
       if (!lowStockThreshold[itemKey]) {
         initialLowStockThresholds[itemKey] = Math.max(3, Math.ceil(salesRate * 7));
@@ -291,7 +284,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         return null;
       }
 
-      // Получаем строковое представление nmId для использования в качестве ключа
       const nmId = item.nmId ? item.nmId.toString() : '0';
       const itemKey = getItemKey(item);
       
@@ -440,303 +432,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         logisticsCost,
         wbCommission
       };
-    }).filter(Boolean) as AnalysisResult[]; // Фильтруем null значения
-  }, [warehouseItems, costPrices, sellingPrices, dailySalesRates, storageCostRates, discountLevels, lowStockThreshold, logisticsCosts, wbCommissions]);
+    }).filter(Boolean) as AnalysisResult[];
 
-  const filteredResults = useMemo(() => {
-    let results = [...analysisResults];
-    
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      results = results.filter(result => 
-        (result.remainItem.brand && result.remainItem.brand.toLowerCase().includes(search)) ||
-        (result.remainItem.subjectName && result.remainItem.subjectName.toLowerCase().includes(search)) ||
-        (result.remainItem.vendorCode && result.remainItem.vendorCode.toLowerCase().includes(search)) ||
-        (result.remainItem.nmId && result.remainItem.nmId.toString().includes(search))
-      );
-    }
-    
-    if (selectedTab === 'discount') {
-      results = results.filter(result => result.action === 'discount' || result.action === 'sell');
-    } else if (selectedTab === 'keep') {
-      results = results.filter(result => result.action === 'keep');
-    } else if (selectedTab === 'low-stock') {
-      results = results.filter(result => result.lowStock);
-    }
-    
-    if (sortConfig.key) {
-      results.sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
-        }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
-        }
-        return 0;
-      });
-    }
-    
-    return results;
-  }, [analysisResults, searchTerm, selectedTab, sortConfig]);
 
-  const analysisSummary = useMemo(() => {
-    const totalItems = analysisResults.length;
-    const lowStockItems = analysisResults.filter(item => item.lowStock).length;
-    const discountItems = analysisResults.filter(item => item.action === 'discount').length;
-    const sellItems = analysisResults.filter(item => item.action === 'sell').length;
-    const keepItems = analysisResults.filter(item => item.action === 'keep').length;
-    
-    const totalStorageCost = analysisResults.reduce((sum, item) => sum + item.totalStorageCost, 0);
-    const potentialSavings = analysisResults.reduce((sum, item) => {
-      return sum + (item.savingsWithDiscount > 0 ? item.savingsWithDiscount : 0);
-    }, 0);
-
-    const itemsStockingOutBeforeTarget = targetDate ? 
-      analysisResults.filter(item => 
-        item.projectedStockoutDate && item.projectedStockoutDate <= targetDate
-      ).length : 0;
-    
-    return {
-      totalItems,
-      lowStockItems,
-      discountItems,
-      sellItems,
-      keepItems,
-      totalStorageCost,
-      potentialSavings,
-      itemsStockingOutBeforeTarget
-    };
-  }, [analysisResults, targetDate]);
-
-  const requestSort = (key: keyof AnalysisResult) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const savePriceData = () => {
-    localStorage.setItem('product_cost_prices', JSON.stringify(costPrices));
-    localStorage.setItem('product_selling_prices', JSON.stringify(sellingPrices));
-    localStorage.setItem('product_low_stock_thresholds', JSON.stringify(lowStockThreshold));
-    localStorage.setItem('product_logistics_costs', JSON.stringify(logisticsCosts));
-    localStorage.setItem('product_wb_commissions', JSON.stringify(wbCommissions));
-    
-    toast({
-      title: "Данные сохранены",
-      description: "Все изменения успешно сохранены в локальное хранилище",
-    });
-  };
-
-  // Обновленные функции для обновления цен и других параметров
-  const updateCostPrice = (item: WarehouseRemainItem, value: string) => {
-    if (!item) return;
-    const itemKey = getItemKey(item);
-    setCostPrices(prev => {
-      const newPrices = { ...prev };
-      newPrices[itemKey] = value === "" ? null : Number(value);
-      return newPrices;
-    });
-  };
-
-  const updateSellingPrice = (item: WarehouseRemainItem, value: string) => {
-    if (!item) return;
-    const itemKey = getItemKey(item);
-    setSellingPrices(prev => {
-      const newPrices = { ...prev };
-      newPrices[itemKey] = value === "" ? null : Number(value);
-      return newPrices;
-    });
-  };
-
-  const updateDailySales = (item: WarehouseRemainItem, value: string) => {
-    if (!item) return;
-    const itemKey = getItemKey(item);
-    setDailySalesRates(prev => {
-      const newRates = { ...prev };
-      newRates[itemKey] = value === "" ? null : Number(value);
-      return newRates;
-    });
-  };
-
-  const updateStorageCost = (item: WarehouseRemainItem, value: string) => {
-    if (!item) return;
-    const itemKey = getItemKey(item);
-    setStorageCostRates(prev => {
-      const newRates = { ...prev };
-      newRates[itemKey] = value === "" ? null : Number(value);
-      return newRates;
-    });
-  };
-
-  const updateLogisticsCost = (item: WarehouseRemainItem, value: string) => {
-    if (!item) return;
-    const itemKey = getItemKey(item);
-    setLogisticsCosts(prev => {
-      const newCosts = { ...prev };
-      newCosts[itemKey] = value === "" ? null : Number(value);
-      return newCosts;
-    });
-  };
-
-  const updateWbCommission = (item: WarehouseRemainItem, value: string) => {
-    if (!item) return;
-    const itemKey = getItemKey(item);
-    setWbCommissions(prev => {
-      const newCommissions = { ...prev };
-      newCommissions[itemKey] = value === "" ? null : Number(value);
-      return newCommissions;
-    });
-  };
-
-  const getActionBadge = (action: 'sell' | 'discount' | 'keep') => {
-    switch (action) {
-      case 'sell':
-        return <Badge variant="destructive">Быстрая продажа</Badge>;
-      case 'discount':
-        return <Badge variant="warning" className="bg-amber-500">Снизить цену</Badge>;
-      case 'keep':
-        return <Badge variant="outline">Сохранить цену</Badge>;
-      default:
-        return null;
-    }
-  };
-
-  const getStockLevelIndicator = (result: AnalysisResult) => {
-    switch (result.stockLevel) {
-      case 'low':
-        return (
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-rose-500 font-medium flex items-center">
-                <AlertTriangle className="h-3 w-3 mr-1" /> Низкий запас
-              </span>
-              <span className="text-xs">{result.stockLevelPercentage}%</span>
-            </div>
-            <Progress value={result.stockLevelPercentage} className="h-1.5 bg-rose-100" indicatorClassName="bg-rose-500" />
-          </div>
-        );
-      case 'medium':
-        return (
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-amber-500 font-medium">Средний запас</span>
-              <span className="text-xs">{result.stockLevelPercentage}%</span>
-            </div>
-            <Progress value={result.stockLevelPercentage} className="h-1.5 bg-amber-100" indicatorClassName="bg-amber-500" />
-          </div>
-        );
-      case 'high':
-        return (
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-emerald-500 font-medium">Высокий запас</span>
-              <span className="text-xs">{result.stockLevelPercentage}%</span>
-            </div>
-            <Progress value={result.stockLevelPercentage} className="h-1.5 bg-emerald-100" indicatorClassName="bg-emerald-500" />
-          </div>
-        );
-    }
-  };
-
-  const formatDate = (date?: Date) => {
-    if (!date) return "Не определено";
-    return new Date(date).toLocaleDateString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
-
-  const getAnalysisStatusIndicator = (result: AnalysisResult) => {
-    const profitChange = result.profitWithDiscount - result.profitWithoutDiscount;
-    const isProfitIncrease = profitChange > 0;
-    const profitChangePercentage = result.profitWithoutDiscount !== 0 ? 
-      Math.abs((profitChange / result.profitWithoutDiscount) * 100) : 0;
-
-    if (result.action === 'keep') {
-      return (
-        <div className="flex items-center p-2 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-md border border-blue-200 dark:border-blue-800">
-          <BarChart4 className="h-5 w-5 mr-2" />
-          <div>
-            <p className="font-medium">Рекомендация: Сохранить текущую цену</p>
-            <p className="text-xs mt-1">Наиболее выгодная стратегия для этого товара</p>
-          </div>
-        </div>
-      );
-    } else if (result.action === 'discount' || result.action === 'sell') {
-      const isUrgent = result.action === 'sell';
-      const colorClass = isUrgent ? 
-        'bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800' : 
-        'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800';
-      
-      return (
-        <div className={`flex items-center p-2 rounded-md border ${colorClass}`}>
-          {isUrgent ? <TrendingDown className="h-5 w-5 mr-2" /> : <Percent className="h-5 w-5 mr-2" />}
-          <div>
-            <p className="font-medium">
-              Рекомендация: {isUrgent ? 'Срочно распродать' : 'Снизить цену'} на {result.recommendedDiscount}%
-            </p>
-            {isProfitIncrease ? (
-              <p className="text-xs mt-1 flex items-center">
-                <TrendingUp className="h-3 w-3 mr-1" />
-                Увеличит прибыль на {profitChangePercentage.toFixed(0)}% ({formatCurrency(profitChange)})
-              </p>
-            ) : (
-              <p className="text-xs mt-1 flex items-center">
-                <ArrowDown className="h-3 w-3 mr-1" />
-                Снизит убытки на {profitChangePercentage.toFixed(0)}% ({formatCurrency(Math.abs(profitChange))})
-              </p>
-            )}
-          </div>
-        </div>
-      );
-    }
-    
-    return null;
-  };
-
-  const DetailedAnalysis = ({ result }: { result: AnalysisResult }) => {
-    return (
-      <div className="p-5 max-w-md space-y-6 text-sm">
-        <div>
-          <h3 className="font-semibold text-base mb-2 flex items-center gap-2">
-            <Calculator className="h-4 w-4 text-primary" />
-            Расчет рентабельности хранения
-          </h3>
-
-          <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 mb-4">
-            {getAnalysisStatusIndicator(result)}
-          </div>
-
-          <div className="mb-4">
-            <h4 className="font-medium mb-2 text-xs text-muted-foreground">СРАВНЕНИЕ СЦЕНАРИЕВ</h4>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="space-y-2 border rounded-lg p-3 bg-white dark:bg-slate-950">
-                <div className="text-xs text-muted-foreground">Текущая цена</div>
-                <div className="font-medium">{formatCurrency(result.sellingPrice)}</div>
-              </div>
-              
-              <div className="space-y-2 border border-amber-200 dark:border-amber-800 rounded-lg p-3 bg-amber-50 dark:bg-amber-950/30">
-                <div className="text-xs text-amber-600 dark:text-amber-400">Со скидкой {result.recommendedDiscount}%</div>
-                <div className="font-medium">{formatCurrency(result.discountedPrice)}</div>
-              </div>
-              
-              <div className="space-y-2 border rounded-lg p-3 bg-white dark:bg-slate-950">
-                <div className="text-xs text-muted-foreground">Себестоимость</div>
-                <div className="font-medium">{formatCurrency(result.costPrice)}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="text-xs text-muted-foreground mb-1">ПРОДАЖИ И ОБОРАЧИВАЕМОСТЬ</h4>
-                <table className="w-full text-xs">
-                  <tbody>
-                    <tr>
-                      <td className="py-1 text-muted-foreground">Текущие продажи в день</td>
-                      <td className="py-1 text-right font-medium">{result.dailySales.toFixed(2)} шт</td>
-                    </tr>
