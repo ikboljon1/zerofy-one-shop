@@ -85,7 +85,7 @@ const GeographySection: React.FC<GeographySectionProps> = ({
             fill="#8884d8"
             dataKey="value"
             nameKey="name"
-            label={({ name, percentage }) => `${name && name.length > 15 ? name.substring(0, 15) + '...' : name}: ${percentage}%`}
+            label={({ name, percentage }) => `${name.length > 15 ? name.substring(0, 15) + '...' : name}: ${percentage}%`}
             paddingAngle={2}
           >
             {chartData.map((entry, index) => (
@@ -113,7 +113,7 @@ const GeographySection: React.FC<GeographySectionProps> = ({
             wrapperStyle={{ paddingLeft: "10px" }}
             formatter={(value, entry) => (
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                {value && value.length > 20 ? value.substring(0, 20) + '...' : value}
+                {value.length > 20 ? value.substring(0, 20) + '...' : value}
               </span>
             )}
           />

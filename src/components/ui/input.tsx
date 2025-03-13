@@ -10,9 +10,7 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, trackValue = false, ...props }, ref) => {
     // For inputs that need individual tracking, use local state
-    const [localValue, setLocalValue] = React.useState<string>(
-      props.value !== undefined ? props.value.toString() : ""
-    );
+    const [localValue, setLocalValue] = React.useState<string>(props.value?.toString() || "");
     
     // Update local value when external value changes
     React.useEffect(() => {

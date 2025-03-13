@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -155,22 +154,7 @@ const Warehouses: React.FC = () => {
         groupBySize: true
       });
       
-      // Логирование для отладки
-      console.log("Получены данные от API:", data);
-      
-      // Обработка данных с обеспечением наличия всех необходимых полей
-      const processedData = data.map(item => ({
-        ...item,
-        nmId: item.nmId || 0,
-        vendorCode: item.vendorCode || 'Неизвестно',
-        brand: item.brand || 'Неизвестный бренд',
-        subjectName: item.subjectName || 'Неизвестная категория',
-        warehouses: item.warehouses || []
-      }));
-      
-      console.log("Обработанные данные для отображения:", processedData);
-      
-      setWarehouseRemains(processedData);
+      setWarehouseRemains(data);
       toast.success('Отчет об остатках на складах успешно загружен');
     } catch (error: any) {
       console.error('Ошибка при загрузке остатков на складах:', error);
@@ -222,25 +206,19 @@ const Warehouses: React.FC = () => {
     }
   };
 
-  // Функция для расчета средних ежедневных продаж - преобразует nmId в строковый ключ
   const calculateAverageDailySales = () => {
-    const result: Record<string, number> = {};
+    const result: Record<number, number> = {};
     warehouseRemains.forEach(item => {
-      if (item.nmId) {
-        result[item.nmId.toString()] = Math.random() * 2;
-      }
+      result[item.nmId] = Math.random() * 2;
     });
     return result;
   };
 
-  // Функция для расчета ежедневных затрат на хранение - преобразует nmId в строковый ключ
   const calculateDailyStorageCosts = () => {
-    const result: Record<string, number> = {};
+    const result: Record<number, number> = {};
     warehouseRemains.forEach(item => {
-      if (item.nmId) {
-        const volume = item.volume || 1;
-        result[item.nmId.toString()] = volume * 5;
-      }
+      const volume = item.volume || 1;
+      result[item.nmId] = volume * 5;
     });
     return result;
   };
@@ -312,7 +290,7 @@ const Warehouses: React.FC = () => {
                   ) : (
                     <RefreshCw className="h-4 w-4" />
                   )}
-                  Обновить данные
+                  Обн��вить данные
                 </Button>
               </div>
 
