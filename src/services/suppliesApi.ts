@@ -1,10 +1,10 @@
-
 import axios from 'axios';
 import api, { setApiKey } from './api';
 import { SupplyItem, SupplyOptionsResponse, Warehouse, WarehouseCoefficient, PaidStorageItem } from '@/types/supplies';
 
 const API_BASE_URL = 'https://supplies-api.wildberries.ru/api/v1';
 const ANALYTICS_API_BASE_URL = 'https://seller-analytics-api.wildberries.ru/api/v1';
+const STATISTICS_API_BASE_URL = 'https://statistics-api.wildberries.ru/api/v5/supplier';
 
 /**
  * Fetch all warehouses from Wildberries API
@@ -218,6 +218,166 @@ export const fetchFullPaidStorageReport = async (
     return report;
   } catch (error) {
     console.error('Ошибка в процессе получения отчета о платном хранении:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch daily sales report
+ */
+export const fetchDailySalesReport = async (
+  apiKey: string,
+  dateFrom: string,
+  dateTo: string,
+  rrdid: number = 0
+): Promise<any[]> => {
+  try {
+    setApiKey(apiKey);
+    const url = `${STATISTICS_API_BASE_URL}/reportDetailByPeriod`;
+    
+    const response = await api.get(url, {
+      params: {
+        dateFrom,
+        dateTo,
+        rrdid,
+        limit: 100000
+      }
+    });
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('Ошибка при получении отчета о продажах:', error);
+    throw new Error(error.detail || 'Не удалось получить отчет о продажах');
+  }
+};
+
+/**
+ * Calculate average daily sales for each product
+ */
+export const calculateAverageDailySales = (salesData: any[], dateFrom: string, dateTo: string): Record<number, number> => {
+  const salesByNmId: Record<number, number> = {};
+  
+  if (!salesData || salesData.length === 0) {
+    return salesByNmId;
+  }
+  
+  // Convert dates to Date objects
+  const fromDate = new Date(dateFrom);
+  const toDate = new Date(dateTo);
+  
+  // Calculate days difference
+  const daysDiff = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  
+  // Group sales by nmId
+  for (const record of salesData) {
+    if (record.doc_type_name === 'Продажа') {
+      const nmId = record.nm_id;
+      if (!salesByNmId[nmId]) {
+        salesByNmId[nmId] = 0;
+      }
+      salesByNmId[nmId] += record.quantity || 0;
+    }
+  }
+  
+  // Calculate average daily sales
+  const result: Record<number, number> = {};
+  for (const [nmId, totalSales] of Object.entries(salesByNmId)) {
+    result[Number(nmId)] = daysDiff > 0 ? Number(totalSales) / daysDiff : 0;
+  }
+  
+  return result;
+};
+
+/**
+ * Calculate average daily storage costs for each product
+ */
+export const calculateDailyStorageCosts = (storageData: PaidStorageItem[]): Record<number, number> => {
+  const result: Record<number, number> = {};
+  const costsByNmId: Record<number, { totalCost: number, days: number }> = {};
+  
+  // Group storage costs by nmId
+  for (const item of storageData) {
+    if (item.nmId) {
+      if (!costsByNmId[item.nmId]) {
+        costsByNmId[item.nmId] = { totalCost: 0, days: 0 };
+      }
+      costsByNmId[item.nmId].totalCost += item.warehousePrice || 0;
+      costsByNmId[item.nmId].days += 1;
+    }
+  }
+  
+  // Calculate average daily storage cost
+  for (const [nmId, data] of Object.entries(costsByNmId)) {
+    result[Number(nmId)] = data.days > 0 ? data.totalCost / data.days : 0;
+  }
+  
+  return result;
+};
+
+/**
+ * Fetch all daily sales data (handles pagination)
+ */
+export const fetchAllDailySalesData = async (
+  apiKey: string,
+  dateFrom: string,
+  dateTo: string
+): Promise<any[]> => {
+  let allSalesData: any[] = [];
+  let nextRrdid = 0;
+  let hasMoreData = true;
+  
+  while (hasMoreData) {
+    const salesData = await fetchDailySalesReport(apiKey, dateFrom, dateTo, nextRrdid);
+    
+    if (!salesData || salesData.length === 0) {
+      hasMoreData = false;
+    } else {
+      allSalesData = [...allSalesData, ...salesData];
+      
+      // Get next rrdid for pagination
+      const lastItem = salesData[salesData.length - 1];
+      nextRrdid = lastItem?.rrd_id || 0;
+      
+      // Check if we have more data to fetch
+      if (!nextRrdid) {
+        hasMoreData = false;
+      }
+    }
+  }
+  
+  return allSalesData;
+};
+
+/**
+ * Get real product profitability data (combines sales and storage data)
+ */
+export const getProductProfitabilityData = async (
+  apiKey: string,
+  salesDateFrom: string,
+  salesDateTo: string,
+  storageDateFrom: string,
+  storageDateTo: string
+): Promise<{
+  averageDailySales: Record<number, number>,
+  dailyStorageCosts: Record<number, number>,
+}> => {
+  try {
+    // Fetch sales data
+    console.log('Fetching sales data...');
+    const allSalesData = await fetchAllDailySalesData(apiKey, salesDateFrom, salesDateTo);
+    const averageDailySales = calculateAverageDailySales(allSalesData, salesDateFrom, salesDateTo);
+    
+    // Fetch storage data
+    console.log('Fetching storage data...');
+    const storageData = await fetchFullPaidStorageReport(apiKey, storageDateFrom, storageDateTo);
+    const dailyStorageCosts = calculateDailyStorageCosts(storageData);
+    
+    return {
+      averageDailySales,
+      dailyStorageCosts
+    };
+  } catch (error) {
+    console.error('Error getting product profitability data:', error);
     throw error;
   }
 };
