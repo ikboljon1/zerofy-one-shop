@@ -1186,7 +1186,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                             Арт. {result.remainItem.vendorCode || 'Н/Д'} | ID {result.remainItem.nmId}
                           </div>
                           <div className="text-xs text-muted-foreground truncate max-w-[220px]">
-                            {result.remainItem.subjectName || 'Без категории'}
+                            {result.remainItem.subjectName || 'Без категории'} (nmId: {result.remainItem.nmId})
                           </div>
                         </div>
                       </TableCell>
