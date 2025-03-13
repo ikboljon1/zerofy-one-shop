@@ -1125,7 +1125,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                             onChange={(e) => updateSellingPrice(result.remainItem.nmId, e.target.value)}
                             className="h-8 w-24 text-right"
                             variant="price"
-                            size="sm"
+                            sizeVariant="sm"
                           />
                           {result.action !== 'keep' && (
                             <div className="flex items-center justify-end gap-1 text-xs">
@@ -1143,7 +1143,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                           onChange={(e) => updateCostPrice(result.remainItem.nmId, e.target.value)}
                           className="h-8 w-24 text-right"
                           variant="default"
-                          size="sm"
+                          sizeVariant="sm"
                         />
                       </TableCell>
                       <TableCell className="text-right">
@@ -1154,7 +1154,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                           onChange={(e) => updateWbCommission(result.remainItem.nmId, e.target.value)}
                           className="h-8 w-20 text-right"
                           variant="commission"
-                          size="sm"
+                          sizeVariant="sm"
                         />
                         <div className="text-xs flex justify-end items-center mt-1">
                           <span>%</span>
@@ -1169,7 +1169,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                           className="h-8 w-24 text-right"
                           step="0.1"
                           variant="sales"
-                          size="sm"
+                          sizeVariant="sm"
                         />
                       </TableCell>
                       <TableCell className="text-right">
@@ -1180,7 +1180,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                           onChange={(e) => updateStorageCost(result.remainItem.nmId, e.target.value)}
                           className="h-8 w-24 text-right"
                           variant="storage"
-                          size="sm"
+                          sizeVariant="sm"
                         />
                       </TableCell>
                       <TableCell className="text-right">
