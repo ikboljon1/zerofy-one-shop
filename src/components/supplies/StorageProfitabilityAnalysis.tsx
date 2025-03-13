@@ -7,6 +7,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowRightIcon, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import SalesDataProvider from './SalesDataProvider';
+import { WarehouseRemainItem, PaidStorageItem } from '@/types/supplies';
+
+// Update interface to include props from Warehouses.tsx
+interface StorageProfitabilityAnalysisProps {
+  warehouseItems?: WarehouseRemainItem[];
+  paidStorageData?: PaidStorageItem[];
+  averageDailySalesRate?: Record<number, number>;
+  dailyStorageCost?: Record<number, number>;
+}
 
 interface StorageProfitabilityResult {
   daysToBreakEven: number;
@@ -15,7 +24,7 @@ interface StorageProfitabilityResult {
   profitLossPerDay: number;
 }
 
-const StorageProfitabilityAnalysis: React.FC = () => {
+const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> = (props) => {
   const { toast } = useToast();
   const [dailySales, setDailySales] = useState<number>(10);
   const [productCost, setProductCost] = useState<number>(500);
