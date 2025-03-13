@@ -6,11 +6,11 @@ import { cn } from "@/lib/utils";
 
 interface SearchInputProps extends Omit<InputProps, 'size'> {
   icon?: React.ReactNode;
-  size?: "default" | "sm" | "lg";
+  sizeVariant?: "default" | "sm" | "lg"; // Changed from 'size' to 'sizeVariant'
 }
 
 const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
-  ({ className, icon = <Search className="h-4 w-4 text-gray-400" />, size = "default", variant = "default", ...props }, ref) => {
+  ({ className, icon = <Search className="h-4 w-4 text-gray-400" />, sizeVariant = "default", variant = "default", ...props }, ref) => {
     const iconSizes = {
       default: "h-4 w-4",
       sm: "h-3.5 w-3.5",
@@ -31,17 +31,17 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
 
     return (
       <div className="relative">
-        <div className={`absolute inset-y-0 left-0 ${iconContainerSizes[size]} flex items-center pointer-events-none`}>
+        <div className={`absolute inset-y-0 left-0 ${iconContainerSizes[sizeVariant]} flex items-center pointer-events-none`}>
           {React.isValidElement(icon) 
             ? React.cloneElement(icon as React.ReactElement, { 
-                className: cn(iconSizes[size], (icon as React.ReactElement).props.className) 
+                className: cn(iconSizes[sizeVariant], (icon as React.ReactElement).props.className) 
               })
             : icon}
         </div>
         <Input
           ref={ref}
-          className={cn(paddingSizes[size], className)}
-          size={size}
+          className={cn(paddingSizes[sizeVariant], className)}
+          sizeVariant={sizeVariant}
           variant={variant}
           {...props}
         />

@@ -6,11 +6,11 @@ import { cn } from "@/lib/utils"
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   trackValue?: boolean;
   variant?: "default" | "price" | "sales" | "storage" | "commission";
-  size?: "default" | "sm" | "lg";
+  sizeVariant?: "default" | "sm" | "lg"; // Renamed from 'size' to 'sizeVariant' to avoid conflict
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, trackValue = false, variant = "default", size = "default", ...props }, ref) => {
+  ({ className, type, trackValue = false, variant = "default", sizeVariant = "default", size, ...props }, ref) => {
     // For inputs that need individual tracking, use local state
     const [localValue, setLocalValue] = React.useState<string>(props.value?.toString() || "");
     
@@ -54,11 +54,12 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         type={type}
         className={cn(
           "flex w-full rounded-md border border-input bg-background ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-          sizeStyles[size],
+          sizeStyles[sizeVariant],
           variantStyles[variant],
           className
         )}
         ref={ref}
+        size={size}
         {...props}
         value={trackValue ? localValue : props.value}
         onChange={handleChange}
