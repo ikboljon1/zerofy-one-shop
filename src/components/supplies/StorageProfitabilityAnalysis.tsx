@@ -1183,7 +1183,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                         <div>
                           <div className="font-medium">{result.remainItem.brand}</div>
                           <div className="text-xs text-muted-foreground">
-                            Арт. {result.remainItem.vendorCode || 'Н/Д'} | WB {result.remainItem.nmId}
+                            Арт. {result.remainItem.vendorCode || 'Н/Д'} | WB {result.remainItem.nmId.toString()}
                           </div>
                           <div className="text-xs text-muted-foreground truncate max-w-[220px]">
                             {result.remainItem.subjectName || 'Без категории'}
