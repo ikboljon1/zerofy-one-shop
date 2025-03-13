@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import DashboardComponent from '@/components/dashboard/Dashboard';
 
@@ -15,7 +15,7 @@ const Dashboard = () => {
     <MainLayout activeTab={activeTab} onTabChange={handleTabChange}>
       <Routes>
         <Route index element={<DashboardComponent />} />
-        {/* Add additional nested routes for the dashboard here if needed */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </MainLayout>
   );
