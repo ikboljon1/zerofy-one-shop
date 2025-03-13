@@ -8,9 +8,9 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
 import { 
-  Search, ArrowUpDown, Package, TrendingDown, Banknote, Warehouse as WarehouseIcon, AlertTriangle, 
+  Search, ArrowUpDown, Package, TrendingDown, Banknote, AlertTriangle, 
   Clock, ArrowDown, ArrowUp, BarChart4, TrendingUp, Calculator, Truck, Percent, ArrowRight,
-  RefreshCw, Download
+  RefreshCw, Download, Warehouse as WarehouseIcon
 } from 'lucide-react';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { WarehouseRemainItem, PaidStorageItem } from '@/types/supplies';
@@ -23,6 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { fetchFullPaidStorageReport, fetchSalesData, fetchProductPrices } from '@/services/suppliesApi';
 import { format } from 'date-fns';
+import { useStoreApiKey } from './StoreApiKeyProvider';
 
 interface StorageProfitabilityAnalysisProps {
   warehouseItems: WarehouseRemainItem[];
@@ -141,6 +142,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
   dailyStorageCost = {},
   apiKey = '',
 }) => {
+  const { apiKey: storeApiKey } = useStoreApiKey();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState<'all' | 'discount' | 'keep' | 'low-stock'>('all');
   const [costPrices, setCostPrices] = useState<Record<number, number | null>>({});
@@ -162,7 +164,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingStorage, setIsLoadingStorage] = useState(false);
   const [storageData, setStorageData] = useState<PaidStorageItem[]>([]);
-  const [localApiKey, setLocalApiKey] = useState<string>(() => apiKey || localStorage.getItem('wb_api_key') || '');
+  const [localApiKey, setLocalApiKey] = useState<string>(() => apiKey || storeApiKey || localStorage.getItem('wb_api_key') || '');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -254,6 +256,12 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     setLogisticsCosts(prevState => ({...prevState, ...initialLogisticsCosts}));
     setWbCommissions(prevState => ({...prevState, ...initialWbCommissions}));
   }, [warehouseItems, averageDailySalesRate, dailyStorageCost, paidStorageData]);
+
+  useEffect(() => {
+    if (storeApiKey) {
+      setLocalApiKey(storeApiKey);
+    }
+  }, [storeApiKey]);
 
   const formatDaysOfInventory = (days: number): string => {
     if (days >= 300) {
@@ -568,7 +576,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
   };
 
   const loadPaidStorageData = async () => {
-    if (!localApiKey) {
+    const keyToUse = storeApiKey || localApiKey;
+    if (!keyToUse) {
       toast({
         title: "Ошибка авторизации",
         description: 'Необходима авторизация для загрузки данных о платном хранении',
@@ -585,7 +594,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       const dateFrom = startDate.toISOString().split('T')[0];
       const dateTo = new Date().toISOString().split('T')[0];
       
-      const data = await fetchFullPaidStorageReport(localApiKey, dateFrom, dateTo);
+      const data = await fetchFullPaidStorageReport(keyToUse, dateFrom, dateTo);
       setStorageData(data);
       
       toast({
@@ -605,7 +614,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
   };
 
   const fetchSalesAndStorageData = async (startDate: Date, endDate: Date) => {
-    if (!localApiKey) {
+    const keyToUse = storeApiKey || localApiKey;
+    if (!keyToUse) {
       toast({
         title: "Ошибка авторизации",
         description: 'Необходим API-ключ Wildberries для получения данных',
@@ -628,13 +638,13 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       console.log(`Запрос данных за период: ${dateFrom} - ${dateTo}`);
       
       // Получаем данные о продажах
-      const salesData = await fetchSalesData(localApiKey, dateFrom, dateTo);
+      const salesData = await fetchSalesData(keyToUse, dateFrom, dateTo);
       
       // Получаем коды всех товаров
       const nmIds = warehouseItems.map(item => item.nmId);
       
       // Получаем актуальные цены
-      const pricesData = await fetchProductPrices(localApiKey, nmIds);
+      const pricesData = await fetchProductPrices(keyToUse, nmIds);
       
       // Обновляем состояние компонента с полученными данными
       setDailySalesRates(prevRates => {
@@ -661,7 +671,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       
       // Пробуем загрузить данные о платном хранении за тот же период
       try {
-        const storageData = await fetchFullPaidStorageReport(localApiKey, dateFrom, dateTo);
+        const storageData = await fetchFullPaidStorageReport(keyToUse, dateFrom, dateTo);
         
         // Группируем данные о хранении по nmId
         const storageByNmId: Record<number, number[]> = {};
@@ -1335,5 +1345,3 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
 };
 
 export default StorageProfitabilityAnalysis;
-
-

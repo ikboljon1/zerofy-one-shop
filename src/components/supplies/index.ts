@@ -8,6 +8,7 @@ import PaidStorageCostReport from './PaidStorageCostReport';
 import WarehouseCoefficientsCard from './WarehouseCoefficientsCard';
 import WarehouseCoefficientsDateCard from './WarehouseCoefficientsDateCard';
 import CostPriceMetrics from './CostPriceMetrics';
+import StoreApiKeyProvider from './StoreApiKeyProvider';
 
 export {
   SupplyForm,
@@ -18,5 +19,6 @@ export {
   PaidStorageCostReport,
   WarehouseCoefficientsCard,
   WarehouseCoefficientsDateCard,
-  CostPriceMetrics
+  CostPriceMetrics,
+  StoreApiKeyProvider
 };
