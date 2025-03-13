@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -61,6 +60,21 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
   const [productIds, setProductIds] = useState<number[]>([]);
   const [positionData, setPositionData] = useState<Record<string, number>>({});
 
+  const addPositionData = (keywords: ExtendedKeywordStat[]) => {
+    const posData: Record<string, number> = {};
+    
+    keywords.forEach(kw => {
+      if (!posData[kw.keyword]) {
+        const positionBase = Math.max(1, Math.min(100, Math.floor(100 / (kw.ctr + 0.1))));
+        const position = Math.max(1, Math.min(100, positionBase + Math.floor(Math.random() * 10) - 5));
+        posData[kw.keyword] = position;
+      }
+    });
+    
+    setPositionData(posData);
+    return posData;
+  };
+
   const processedKeywordsWithPosition = useMemo(() => {
     if (!keywordStats) return [];
 
@@ -85,21 +99,6 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
 
     return allKeywords;
   }, [keywordStats, excludedKeywords, positionData]);
-
-  const addPositionData = (keywords: ExtendedKeywordStat[]) => {
-    const posData: Record<string, number> = {};
-    
-    keywords.forEach(kw => {
-      if (!posData[kw.keyword]) {
-        const positionBase = Math.max(1, Math.min(100, Math.floor(100 / (kw.ctr + 0.1))));
-        const position = Math.max(1, Math.min(100, positionBase + Math.floor(Math.random() * 10) - 5));
-        posData[kw.keyword] = position;
-      }
-    });
-    
-    setPositionData(posData);
-    return posData;
-  };
 
   const filteredKeywords = useMemo(() => {
     return processedKeywordsWithPosition.filter(
@@ -439,9 +438,9 @@ const KeywordStatisticsComponent = ({ campaignId, apiKey, dateFrom: initialDateF
                   </TableHead>
                   <TableHead 
                     className="text-right cursor-pointer py-2 px-2 text-xs w-16"
-                    onClick={() => handleSort("position")}
+                    onClick={() => handleSort("position" as keyof KeywordStat)}
                   >
-                    Позиция {renderSortIcon("position")}
+                    Позиция {renderSortIcon("position" as keyof KeywordStat)}
                   </TableHead>
                   <TableHead 
                     className="text-right cursor-pointer py-2 px-2 text-xs w-16"
