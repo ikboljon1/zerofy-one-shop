@@ -7,20 +7,13 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   trackValue?: boolean;
   variant?: "default" | "price" | "sales" | "storage" | "commission";
   sizeVariant?: "default" | "sm" | "lg"; // Renamed from 'size' to 'sizeVariant' to avoid conflict
-  dataKey?: string; // Добавляем свойство dataKey для идентификации разных полей ввода
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, trackValue = false, variant = "default", sizeVariant = "default", size, dataKey, ...props }, ref) => {
+  ({ className, type, trackValue = false, variant = "default", sizeVariant = "default", size, ...props }, ref) => {
     // For inputs that need individual tracking, use local state
     const [localValue, setLocalValue] = React.useState<string>(props.value?.toString() || "");
     
-    // Generate unique ID for this input based on its value and dataKey
-    const inputId = React.useMemo(() => {
-      if (dataKey) return dataKey;
-      return `input-${Math.random().toString(36).substring(2, 11)}`;
-    }, [dataKey]);
-
     // Update local value when external value changes
     React.useEffect(() => {
       if (trackValue && props.value !== undefined) {
@@ -58,7 +51,6 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     
     return (
       <input
-        id={inputId}
         type={type}
         className={cn(
           "flex w-full rounded-md border border-input bg-background ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
@@ -71,7 +63,6 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {...props}
         value={trackValue ? localValue : props.value}
         onChange={handleChange}
-        data-key={dataKey} // Add data attribute for debugging
       />
     )
   }
