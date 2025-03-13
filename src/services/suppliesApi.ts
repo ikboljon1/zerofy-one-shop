@@ -1,10 +1,10 @@
-
 import axios from 'axios';
 import api, { setApiKey } from './api';
 import { SupplyItem, SupplyOptionsResponse, Warehouse, WarehouseCoefficient, PaidStorageItem } from '@/types/supplies';
 
 const API_BASE_URL = 'https://supplies-api.wildberries.ru/api/v1';
 const ANALYTICS_API_BASE_URL = 'https://seller-analytics-api.wildberries.ru/api/v1';
+const STATISTICS_API_BASE_URL = 'https://statistics-api.wildberries.ru/api/v1';
 
 /**
  * Fetch all warehouses from Wildberries API
@@ -219,6 +219,109 @@ export const fetchFullPaidStorageReport = async (
   } catch (error) {
     console.error('Ошибка в процессе получения отчета о платном хранении:', error);
     throw error;
+  }
+};
+
+/**
+ * Fetch real sales data from Wildberries API
+ */
+export const fetchSalesData = async (
+  apiKey: string,
+  dateFrom: string,
+  dateTo: string
+): Promise<Record<number, number>> => {
+  try {
+    console.log(`Получение данных о продажах за период с ${dateFrom} по ${dateTo}...`);
+    
+    setApiKey(apiKey);
+    const url = `${STATISTICS_API_BASE_URL}/supplier/sales`;
+    
+    const response = await api.get(url, {
+      params: {
+        dateFrom,
+        dateTo,
+        limit: 1000
+      }
+    });
+    
+    const salesData = response.data;
+    console.log(`Получено ${salesData.length} записей о продажах`);
+    
+    // Calculate average daily sales for each nmId
+    const salesByNmId: Record<number, { totalSold: number, uniqueDates: Set<string> }> = {};
+    
+    salesData.forEach((sale: any) => {
+      const nmId = sale.nmId;
+      const date = sale.date.split('T')[0]; // Extract date part
+      const quantity = sale.quantity || 1;
+      
+      if (!salesByNmId[nmId]) {
+        salesByNmId[nmId] = { totalSold: 0, uniqueDates: new Set() };
+      }
+      
+      salesByNmId[nmId].totalSold += quantity;
+      salesByNmId[nmId].uniqueDates.add(date);
+    });
+    
+    // Calculate average daily sales
+    const averageDailySales: Record<number, number> = {};
+    
+    Object.entries(salesByNmId).forEach(([nmId, data]) => {
+      const numNmId = Number(nmId);
+      const daysWithSales = data.uniqueDates.size;
+      
+      // Calculate days between dateFrom and dateTo
+      const start = new Date(dateFrom);
+      const end = new Date(dateTo);
+      const totalDaysInPeriod = Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)) + 1;
+      
+      // Use days with sales or total days, whichever is greater
+      const divisor = Math.max(daysWithSales, 1);
+      
+      averageDailySales[numNmId] = parseFloat((data.totalSold / divisor).toFixed(2));
+    });
+    
+    console.log('Рассчитаны средние ежедневные продажи:', averageDailySales);
+    return averageDailySales;
+    
+  } catch (error: any) {
+    console.error('Ошибка при получении данных о продажах:', error);
+    throw new Error(error.detail || 'Не удалось получить данные о продажах');
+  }
+};
+
+/**
+ * Fetch prices for products
+ */
+export const fetchProductPrices = async (
+  apiKey: string,
+  nmIds: number[]
+): Promise<Record<number, number>> => {
+  try {
+    console.log(`Получение цен для ${nmIds.length} товаров...`);
+    
+    setApiKey(apiKey);
+    const url = `${API_BASE_URL}/info`;
+    
+    const response = await api.post(url, {
+      nmIds: nmIds
+    });
+    
+    const pricesData = response.data;
+    const pricesByNmId: Record<number, number> = {};
+    
+    pricesData.forEach((product: any) => {
+      const nmId = product.nmId;
+      const price = product.price || 0;
+      pricesByNmId[nmId] = price;
+    });
+    
+    console.log('Получены цены товаров:', pricesByNmId);
+    return pricesByNmId;
+    
+  } catch (error: any) {
+    console.error('Ошибка при получении цен товаров:', error);
+    throw new Error(error.detail || 'Не удалось получить цены товаров');
   }
 };
 
