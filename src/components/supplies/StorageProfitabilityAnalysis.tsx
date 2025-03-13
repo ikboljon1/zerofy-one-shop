@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -446,7 +445,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     wbCommissions
   ]);
 
-  // Function to save changes to localStorage
   const saveChangesToLocalStorage = () => {
     localStorage.setItem('product_cost_prices', JSON.stringify(costPrices));
     localStorage.setItem('product_selling_prices', JSON.stringify(sellingPrices));
@@ -460,13 +458,12 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     });
   };
 
-  // Handle fetching sales data
   const handleFetchSalesData = async (startDate: Date, endDate: Date) => {
     setIsLoading(true);
     try {
-      const report = await fetchFullPaidStorageReport(startDate, endDate);
+      const apiKey = localStorage.getItem('current_api_key') || '';
+      const report = await fetchFullPaidStorageReport(apiKey, startDate, endDate);
       if (report && report.length > 0) {
-        // Process the report data here
         toast({
           title: "Данные получены",
           description: `Загружено ${report.length} записей о продажах`,
@@ -491,7 +488,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }
   };
 
-  // Function to update discount level for an item
   const handleDiscountLevelChange = (itemKey: string, level: number[]) => {
     setDiscountLevels(prev => ({
       ...prev,
@@ -499,7 +495,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
-  // Function to handle cost price changes
   const handleCostPriceChange = (itemKey: string, value: string) => {
     const numValue = value === '' ? null : parseFloat(value);
     setCostPrices(prev => ({
@@ -508,7 +503,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
-  // Function to handle selling price changes
   const handleSellingPriceChange = (itemKey: string, value: string) => {
     const numValue = value === '' ? null : parseFloat(value);
     setSellingPrices(prev => ({
@@ -517,7 +511,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
-  // Function to handle logistics cost changes
   const handleLogisticsCostChange = (itemKey: string, value: string) => {
     const numValue = value === '' ? null : parseFloat(value);
     setLogisticsCosts(prev => ({
@@ -526,7 +519,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
-  // Function to handle WB commission changes
   const handleWbCommissionChange = (itemKey: string, value: string) => {
     const numValue = value === '' ? null : parseFloat(value);
     setWbCommissions(prev => ({
@@ -535,7 +527,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
-  // Function to handle daily sales rate changes
   const handleDailySalesRateChange = (itemKey: string, value: string) => {
     const numValue = value === '' ? null : parseFloat(value);
     setDailySalesRates(prev => ({
@@ -544,7 +535,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
-  // Function to handle storage cost rate changes
   const handleStorageCostRateChange = (itemKey: string, value: string) => {
     const numValue = value === '' ? null : parseFloat(value);
     setStorageCostRates(prev => ({
@@ -553,7 +543,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }));
   };
 
-  // Function to handle low stock threshold changes
   const handleLowStockThresholdChange = (itemKey: string, value: string) => {
     const numValue = parseInt(value);
     if (!isNaN(numValue)) {
@@ -564,7 +553,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }
   };
 
-  // Function to sort results
   const requestSort = (key: keyof AnalysisResult) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -573,7 +561,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     setSortConfig({ key, direction });
   };
 
-  // Get sorted results
   const getSortedResults = () => {
     if (!sortConfig.key) {
       return analysisResults;
@@ -586,7 +573,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       let aValue = a[sortConfig.key];
       let bValue = b[sortConfig.key];
       
-      // Handle specific fields
       if (sortConfig.key === 'remainItem') {
         aValue = a.remainItem.barcode;
         bValue = b.remainItem.barcode;
@@ -602,7 +588,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     });
   };
 
-  // Filter results based on search term and selected tab
   const filteredResults = getSortedResults().filter(result => {
     const searchMatch = 
       result.remainItem.barcode.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -624,7 +609,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }
   });
   
-  // Calculate summary statistics
   const summaryStats = useMemo(() => {
     const totalItems = filteredResults.reduce((sum, item) => 
       sum + (item.remainItem.quantityWarehousesFull || 0), 0);
@@ -660,7 +644,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     };
   }, [filteredResults]);
 
-  // Detailed analysis component
   const DetailedAnalysis = ({ result }: { result: AnalysisResult }) => {
     return (
       <div className="space-y-4 p-4">
