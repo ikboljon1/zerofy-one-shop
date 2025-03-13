@@ -157,9 +157,9 @@ const Warehouses: React.FC = () => {
       const processedData = data.map(item => ({
         ...item,
         nmId: item.nmId || 0,
-        vendorCode: item.vendorCode || item.supplierArticle || 'Неизвестно',
+        vendorCode: item.vendorCode || 'Неизвестно',
         brand: item.brand || 'Неизвестный бренд',
-        subjectName: item.subjectName || item.subject || 'Неизвестная категория',
+        subjectName: item.subjectName || 'Неизвестная категория',
         warehouses: item.warehouses || []
       }));
       
