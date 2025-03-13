@@ -14,7 +14,8 @@ import MainLayout from "@/components/layout/MainLayout";
 import AnalyticsSection from "@/components/analytics/AnalyticsSection";
 import Dashboard from "@/components/dashboard/Dashboard";
 import { getProductProfitabilityData, getSelectedStore } from "@/utils/storeUtils";
-import { User, Store as StoreType } from "@/services/userService";
+import { User } from "@/services/userService";
+import { Store as StoreType } from "@/types/store";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
