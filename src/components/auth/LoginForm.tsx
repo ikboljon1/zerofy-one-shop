@@ -9,10 +9,12 @@ import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { authenticate } from "@/services/userService";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const loginSchema = z.object({
   email: z.string().min(1, { message: "Введите логин" }),
   password: z.string().min(1, { message: "Введите пароль" }),
+  rememberMe: z.boolean().optional().default(false)
 });
 
 interface LoginFormProps {
@@ -29,13 +31,18 @@ const LoginForm = ({ onSuccess, onForgotPassword }: LoginFormProps) => {
     register,
     handleSubmit,
     formState: { errors },
+    setValue,
+    watch,
   } = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
       password: "",
+      rememberMe: false
     },
   });
+
+  const rememberMe = watch("rememberMe");
 
   const onSubmit = async (data: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
@@ -44,8 +51,15 @@ const LoginForm = ({ onSuccess, onForgotPassword }: LoginFormProps) => {
       const result = await authenticate(data.email, data.password);
       
       if (result.success) {
-        // Store user info in localStorage
-        localStorage.setItem('user', JSON.stringify(result.user));
+        // Store user info in localStorage or sessionStorage based on rememberMe
+        if (data.rememberMe) {
+          localStorage.setItem('user', JSON.stringify(result.user));
+        } else {
+          // Use sessionStorage if not remember me - will be cleared when browser is closed
+          sessionStorage.setItem('user', JSON.stringify(result.user));
+          // Clear any existing localStorage value to avoid conflicts
+          localStorage.removeItem('user');
+        }
         
         toast({
           title: "Успешный вход",
@@ -116,6 +130,21 @@ const LoginForm = ({ onSuccess, onForgotPassword }: LoginFormProps) => {
         {errors.password && (
           <p className="text-sm text-destructive">{errors.password.message}</p>
         )}
+      </div>
+      <div className="flex items-center space-x-2">
+        <Checkbox 
+          id="rememberMe" 
+          checked={rememberMe}
+          onCheckedChange={(checked) => {
+            setValue("rememberMe", checked === true);
+          }}
+        />
+        <Label 
+          htmlFor="rememberMe" 
+          className="text-sm cursor-pointer"
+        >
+          Запомнить меня
+        </Label>
       </div>
       <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading ? "Вход..." : "Войти"}

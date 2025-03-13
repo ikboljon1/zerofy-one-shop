@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -25,8 +26,8 @@ const Index = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if user is authenticated
-    const storedUser = localStorage.getItem('user');
+    // Check if user is authenticated - проверяем и localStorage, и sessionStorage
+    const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
     
     if (!storedUser) {
       // User is not authenticated, redirect to landing page

@@ -42,11 +42,11 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Route to landing page or redirect to dashboard if authenticated */}
+            {/* Route to landing page, авторизованные пользователи тоже могут видеть лендинг */}
             <Route path="/" element={
               <>
                 <Navbar />
-                {isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />}
+                <LandingPage />
               </>
             } />
             
