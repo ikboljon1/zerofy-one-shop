@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { KeyRound, ArrowRight } from 'lucide-react';
+import { KeyRound, ArrowRight, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useStoreApiKey } from './StoreApiKeyProvider';
 
@@ -13,9 +13,9 @@ interface APIKeyInputProps {
 }
 
 const APIKeyInput: React.FC<APIKeyInputProps> = ({ onApiKeySubmit, isLoading = false, message }) => {
-  const { apiKey, store } = useStoreApiKey();
+  const { apiKey, store, error } = useStoreApiKey();
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (apiKey) {
       onApiKeySubmit(apiKey);
     }
@@ -34,7 +34,14 @@ const APIKeyInput: React.FC<APIKeyInputProps> = ({ onApiKeySubmit, isLoading = f
       </CardHeader>
       <CardContent>
         <div className="grid gap-4">
-          {store ? (
+          {error ? (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                {error}
+              </AlertDescription>
+            </Alert>
+          ) : store ? (
             <Alert variant="default" className="bg-green-900/20 border-green-800/30 text-green-300">
               <KeyRound className="h-4 w-4 text-green-500" />
               <AlertDescription>
