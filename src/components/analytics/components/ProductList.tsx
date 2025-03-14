@@ -70,6 +70,9 @@ const ProductList = ({ title, products = [], isProfitable }: ProductListProps) =
     }
   };
 
+  // Demo image to use as fallback
+  const demoImageUrl = "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg";
+
   return (
     <Card className={`p-2 ${isMobile ? 'p-1.5' : 'p-2'}`}>
       <div className="flex items-center justify-between mb-2">
@@ -87,21 +90,15 @@ const ProductList = ({ title, products = [], isProfitable }: ProductListProps) =
             >
               <div className="flex items-start mb-1">
                 <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 mr-2 bg-gray-100 dark:bg-gray-800">
-                  {product.image ? (
-                    <img 
-                      src={product.image} 
-                      alt={safeText(product.name)} 
-                      className="w-full h-full object-cover" 
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg";
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Image className="h-6 w-6 text-muted-foreground opacity-40" />
-                    </div>
-                  )}
+                  <img 
+                    src={product.image || demoImageUrl} 
+                    alt={safeText(product.name)} 
+                    className="w-full h-full object-cover" 
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = demoImageUrl;
+                    }}
+                  />
                 </div>
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
