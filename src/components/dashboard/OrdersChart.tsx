@@ -132,13 +132,6 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
   );
 
   const ordersConfig = {
-    orders: {
-      label: "Заказы",
-      theme: {
-        light: "#6366F1", // Indigo-500
-        dark: "#4F46E5", // Indigo-600
-      },
-    },
     amount: {
       label: "Сумма",
       theme: {
@@ -218,16 +211,6 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
               />
               <Area 
                 type="monotone" 
-                dataKey="orders" 
-                name="Заказы"
-                yAxisId="left"
-                stroke="var(--color-orders)" 
-                strokeWidth={2}
-                fill="none"
-                activeDot={{ r: 5, strokeWidth: 2 }}
-              />
-              <Area 
-                type="monotone" 
                 dataKey="amount" 
                 name="Сумма"
                 yAxisId="right"
@@ -244,9 +227,15 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
                 yAxisId="left"
                 stroke="var(--color-canceled)" 
                 strokeWidth={2}
-                fill="none"
+                fill="url(#canceledGradient)"
                 activeDot={{ r: 5, strokeWidth: 2 }}
               />
+              <defs>
+                <linearGradient id="canceledGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#9333EA" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#9333EA" stopOpacity={0.05}/>
+                </linearGradient>
+              </defs>
             </AreaChart>
           </ResponsiveContainer>
         </ChartContainer>
