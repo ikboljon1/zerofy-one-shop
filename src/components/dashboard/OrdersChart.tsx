@@ -1,3 +1,4 @@
+
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WildberriesOrder, WildberriesSale } from "@/types/store";
@@ -148,6 +149,25 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
     },
   };
 
+  // Calculate max value for the left Y-axis to define custom ticks
+  const maxCanceledValue = useMemo(() => {
+    if (dailyOrdersData.length === 0) return 4;
+    const max = Math.max(...dailyOrdersData.map(d => d.canceled || 0));
+    return Math.ceil(max) + (max < 1 ? 1 : 0); // Ensure we have enough space if max is small
+  }, [dailyOrdersData]);
+
+  // Generate custom ticks for the left Y-axis with granular steps
+  const customLeftAxisTicks = useMemo(() => {
+    const ticks = [];
+    const step = maxCanceledValue <= 4 ? 0.25 : maxCanceledValue <= 8 ? 0.5 : 1;
+    
+    for (let i = 0; i <= maxCanceledValue; i += step) {
+      ticks.push(i);
+    }
+    
+    return ticks;
+  }, [maxCanceledValue]);
+
   const chartVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 }
@@ -196,6 +216,8 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
                 tickLine={{ stroke: 'var(--border)' }}
                 axisLine={{ stroke: 'var(--border)' }}
                 stroke="#64748B"
+                ticks={customLeftAxisTicks}
+                domain={[0, 'auto']}
               />
               <YAxis 
                 yAxisId="right"
