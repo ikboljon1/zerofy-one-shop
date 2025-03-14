@@ -59,7 +59,7 @@ const ProductStatsTable = ({ products }: ProductStatsTableProps) => {
           </div>
           <div className="flex justify-between">
             <span className="text-sm text-gray-500">Стоимость клика (CPC):</span>
-            <span className="font-medium">{product.cpc.toFixed(2)} ₽</span>
+            <span className="font-medium">{product.cpc.toFixed(2)}</span>
           </div>
         </div>
         
@@ -82,7 +82,7 @@ const ProductStatsTable = ({ products }: ProductStatsTableProps) => {
           </div>
           <div className="flex justify-between">
             <span className="text-sm text-gray-500">Сумма заказов:</span>
-            <span className="font-medium">{product.sum_price.toLocaleString('ru-RU')} ₽</span>
+            <span className="font-medium">{product.sum_price.toLocaleString('ru-RU')}</span>
           </div>
         </div>
       </div>
@@ -91,7 +91,7 @@ const ProductStatsTable = ({ products }: ProductStatsTableProps) => {
         <div>
           <div className="text-sm font-semibold">Затраты на рекламу:</div>
           <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
-            {product.sum.toLocaleString('ru-RU')} ₽
+            {product.sum.toLocaleString('ru-RU')}
           </div>
         </div>
         
@@ -167,11 +167,11 @@ const ProductStatsTable = ({ products }: ProductStatsTableProps) => {
                 <TableCell className="text-right">{product.views.toLocaleString('ru-RU')}</TableCell>
                 <TableCell className="text-right">{product.clicks.toLocaleString('ru-RU')}</TableCell>
                 <TableCell className="text-right">{product.ctr.toFixed(2)}%</TableCell>
-                <TableCell className="text-right">{product.cpc.toFixed(2)} ₽</TableCell>
+                <TableCell className="text-right">{product.cpc.toFixed(2)}</TableCell>
                 <TableCell className="text-right">{product.atbs.toLocaleString('ru-RU')}</TableCell>
                 <TableCell className="text-right">{product.orders.toLocaleString('ru-RU')}</TableCell>
                 <TableCell className="text-right">{product.cr.toFixed(2)}%</TableCell>
-                <TableCell className="text-right">{product.sum.toLocaleString('ru-RU')} ₽</TableCell>
+                <TableCell className="text-right">{product.sum.toLocaleString('ru-RU')}</TableCell>
                 <TableCell className="text-center">
                   <Dialog>
                     <DialogTrigger asChild>

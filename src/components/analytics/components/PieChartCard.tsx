@@ -1,9 +1,9 @@
-
 import { Card } from "@/components/ui/card";
 import { COLORS } from "../data/demoData";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 import { formatCurrency, roundToTwoDecimals } from "@/utils/formatCurrency";
 import { ScrollArea } from "@/components/ui/scroll-area";
+
 interface PieChartCardProps {
   title: string;
   icon: React.ReactNode;
@@ -18,6 +18,7 @@ interface PieChartCardProps {
   emptyMessage?: string; // Сообщение при отсутствии данных
   noFallbackData?: boolean; // Флаг для отключения демо-данных
 }
+
 const PieChartCard = ({
   title,
   icon,
@@ -108,4 +109,5 @@ const PieChartCard = ({
         </div>}
     </Card>;
 };
+
 export default PieChartCard;
