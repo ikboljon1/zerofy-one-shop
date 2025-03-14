@@ -26,13 +26,6 @@ export function StoreCard({
   const handleSelectionChange = () => {
     if (!store.isSelected) {
       onToggleSelection(store.id);
-      window.dispatchEvent(new CustomEvent('store-selection-changed', { 
-        detail: { storeId: store.id, selected: true, timestamp: Date.now() } 
-      }));
-      localStorage.setItem('last_selected_store', JSON.stringify({
-        storeId: store.id,
-        timestamp: Date.now()
-      }));
     }
   };
 

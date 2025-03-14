@@ -13,14 +13,15 @@ import Advertising from "@/components/Advertising";
 import MainLayout from "@/components/layout/MainLayout";
 import AnalyticsSection from "@/components/analytics/AnalyticsSection";
 import Dashboard from "@/components/dashboard/Dashboard";
-import { getProductProfitabilityData, getSelectedStore } from "@/utils/storeUtils";
+import { getProductProfitabilityData, getSelectedStore, getAnalyticsData, loadStores } from "@/utils/storeUtils";
 import { User } from "@/services/userService";
 import { useToast } from "@/hooks/use-toast";
+import { Store } from "@/types/store";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
   const isMobile = useIsMobile();
-  const [selectedStore, setSelectedStore] = useState<{id: string; apiKey: string} | null>(null);
+  const [selectedStore, setSelectedStore] = useState<Store | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -50,12 +51,48 @@ const Index = () => {
     }
   }, [navigate]);
 
-  const getProductsData = () => {
-    const store = selectedStore || getSelectedStore();
-    if (!store) return { profitable: [], unprofitable: [] };
+  // Добавляем слушателя события изменения выбранного магазина
+  useEffect(() => {
+    const handleStoreSelectionChange = (event: CustomEvent) => {
+      console.log("Store selection changed event triggered:", event.detail);
+      const { storeId } = event.detail;
+      
+      if (storeId) {
+        const stores = loadStores();
+        const store = stores.find(s => s.id === storeId);
+        if (store) {
+          console.log("Setting selected store:", store);
+          setSelectedStore(store);
+        }
+      }
+    };
+
+    window.addEventListener('store-selection-changed', handleStoreSelectionChange as EventListener);
     
-    // Получаем данные о прибыльности товаров
-    const profitabilityData = getProductProfitabilityData(store.id);
+    return () => {
+      window.removeEventListener('store-selection-changed', handleStoreSelectionChange as EventListener);
+    };
+  }, []);
+
+  const getProductsData = () => {
+    if (!selectedStore) {
+      const store = getSelectedStore();
+      if (!store) return { profitable: [], unprofitable: [] };
+      
+      // Получаем данные о прибыльности товаров
+      const profitabilityData = getProductProfitabilityData(store.id);
+      if (profitabilityData && profitabilityData.profitableProducts && profitabilityData.unprofitableProducts) {
+        return {
+          profitable: profitabilityData.profitableProducts || [],
+          unprofitable: profitabilityData.unprofitableProducts || []
+        };
+      }
+      
+      return { profitable: [], unprofitable: [] };
+    }
+    
+    // Получаем данные о прибыльности товаров для выбранного магазина
+    const profitabilityData = getProductProfitabilityData(selectedStore.id);
     if (profitabilityData && profitabilityData.profitableProducts && profitabilityData.unprofitableProducts) {
       return {
         profitable: profitabilityData.profitableProducts || [],
@@ -74,6 +111,11 @@ const Index = () => {
     setUser(updatedUser);
   };
 
+  const handleStoreSelect = (store: Store) => {
+    console.log("Store selected from Stores component:", store);
+    setSelectedStore(store);
+  };
+
   const renderContent = () => {
     const { profitable, unprofitable } = getProductsData();
     
@@ -86,7 +128,7 @@ const Index = () => {
             transition={{ duration: 0.3 }}
             className={isMobile ? 'space-y-4' : 'space-y-6'}
           >
-            <Dashboard />
+            <Dashboard selectedStore={selectedStore} />
           </motion.div>
         );
       case "analytics":
@@ -96,7 +138,7 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <AnalyticsSection />
+            <AnalyticsSection selectedStore={selectedStore} />
           </motion.div>
         );
       case "products":
@@ -116,7 +158,7 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <Stores onStoreSelect={setSelectedStore} />
+            <Stores onStoreSelect={handleStoreSelect} />
           </motion.div>
         );
       case "warehouses":
@@ -126,7 +168,7 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <Warehouses />
+            <Warehouses selectedStore={selectedStore} />
           </motion.div>
         );
       case "advertising":
