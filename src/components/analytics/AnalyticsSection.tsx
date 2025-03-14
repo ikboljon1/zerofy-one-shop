@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
@@ -18,9 +19,9 @@ import {
   BarChart3,
   ShoppingBag,
   TrendingUp,
-  PercentIcon,
+  Percent as PercentIcon,
   RefreshCcw,
-} from "./icons";
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tabs,
@@ -80,7 +81,7 @@ export default function AnalyticsSection({ selectedStore }: AnalyticsSectionProp
     };
 
     loadAnalyticsData();
-  }, [refreshKey, selectedStore]);
+  }, [refreshKey, selectedStore, toast]);
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -124,7 +125,7 @@ export default function AnalyticsSection({ selectedStore }: AnalyticsSectionProp
           <h2 className="text-xl font-semibold">Аналитика</h2>
         </div>
         <Button variant="outline" onClick={handleRefreshData} disabled={isLoading}>
-          <RefreshCcw className="mr-2 h-4 w-4 animate-spin" />
+          <RefreshCcw className="mr-2 h-4 w-4" />
           Обновить данные
         </Button>
       </div>
@@ -145,17 +146,17 @@ export default function AnalyticsSection({ selectedStore }: AnalyticsSectionProp
           </TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="space-y-4">
-          <DateRangePicker dateRange={dateRange} onDateRangeChange={handleDateRangeChange} />
-          <KeyMetrics analyticsData={analyticsData} />
-          <SalesChart analyticsData={analyticsData} />
-          <ProfitabilityTips analyticsData={analyticsData} />
+          <DateRangePicker value={dateRange} onChange={handleDateRangeChange} />
+          <KeyMetrics data={analyticsData} />
+          <SalesChart data={analyticsData} />
+          <ProfitabilityTips data={analyticsData} />
         </TabsContent>
         <TabsContent value="products" className="space-y-4">
-          <ProductsAnalytics analyticsData={analyticsData} />
+          <ProductsAnalytics data={analyticsData} />
         </TabsContent>
         <TabsContent value="expenses" className="space-y-4">
-          <ExpenseBreakdown analyticsData={analyticsData} />
-          <DeductionsChart analyticsData={analyticsData} />
+          <ExpenseBreakdown data={analyticsData} />
+          <DeductionsChart data={analyticsData} />
         </TabsContent>
       </Tabs>
     </div>

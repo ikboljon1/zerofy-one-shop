@@ -49,7 +49,7 @@ const Index = () => {
     if (store) {
       setSelectedStore(store);
     }
-  }, [navigate]);
+  }, [navigate, toast]);
 
   // Добавляем слушателя события изменения выбранного магазина
   useEffect(() => {

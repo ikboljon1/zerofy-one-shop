@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AreaChart, ChartConfig, Title } from "@tremor/react";
+import { AreaChart, Title } from "@tremor/react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   ShoppingBag, Package, Calculator, TrendingUp, ArrowUp,
@@ -23,6 +24,14 @@ import { formatCurrency } from "@/utils/formatCurrency";
 
 interface DashboardProps {
   selectedStore?: Store | null;
+}
+
+// Define custom chart configuration type
+interface ChartConfigType {
+  [key: string]: {
+    name: string;
+    color: string;
+  };
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ selectedStore }) => {
@@ -107,7 +116,7 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedStore }) => {
     Удержания: item.deductions
   })) || [];
   
-  const chartConfig: ChartConfig = {
+  const chartConfig: ChartConfigType = {
     "Логистика": { name: "Логистика", color: "emerald" },
     "Хранение": { name: "Хранение", color: "violet" },
     "Штрафы": { name: "Штрафы", color: "rose" },
@@ -145,7 +154,7 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedStore }) => {
     <div className="w-full space-y-4">
       <Card className="p-3">
         <CardContent>
-          <PeriodSelector period={period} setPeriod={setPeriod} />
+          <PeriodSelector value={period} onChange={setPeriod} />
         </CardContent>
       </Card>
       
@@ -162,7 +171,7 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedStore }) => {
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <SalesChart sales={sales} />
-            <OrdersChart orders={orders} />
+            <OrdersChart orders={orders} sales={sales} />
           </div>
           
           <Card className="border-0 shadow-2xl bg-gradient-to-br from-gray-50 to-stone-100 dark:from-gray-900/70 dark:to-stone-900/60">
@@ -181,14 +190,14 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedStore }) => {
                 data={chartData}
                 index="date"
                 categories={Object.keys(chartConfig)}
-                colors={Object.values(chartConfig).map((c) => c.color)}
+                colors={Object.values(chartConfig).map((c) => c.color as any)}
                 showLegend
-                valueFormatter={(value: number) => formatCurrency(value).replace(' ', ' ')}
+                valueFormatter={(value: number) => formatCurrency(value).replace(' ', ' ')}
               />
             </CardContent>
           </Card>
           
-          <GeographySection orders={orders} />
+          <GeographySection data={orders} />
           <TipsSection />
         </TabsContent>
         
