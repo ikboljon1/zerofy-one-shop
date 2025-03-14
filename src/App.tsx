@@ -16,11 +16,26 @@ import { useEffect, useState } from "react";
 const queryClient = new QueryClient();
 
 // Protected route component that checks authentication
-const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
-  const isAuthenticated = localStorage.getItem('user') !== null;
+const ProtectedRoute = ({ children, requireAdmin = false }: { children: JSX.Element, requireAdmin?: boolean }) => {
+  const userString = localStorage.getItem('user') || sessionStorage.getItem('user');
+  const isAuthenticated = userString !== null;
   
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
+  }
+  
+  // Check if route requires admin role
+  if (requireAdmin) {
+    try {
+      const user = JSON.parse(userString || '{}');
+      if (user.role !== 'admin') {
+        // Redirect non-admin users to dashboard
+        return <Navigate to="/dashboard" replace />;
+      }
+    } catch (e) {
+      // In case of JSON parse error, redirect to dashboard
+      return <Navigate to="/dashboard" replace />;
+    }
   }
   
   return children;
@@ -72,7 +87,7 @@ const App = () => {
               </ProtectedRoute>
             } />
             <Route path="/admin" element={
-              <ProtectedRoute>
+              <ProtectedRoute requireAdmin={true}>
                 <Admin />
               </ProtectedRoute>
             } />

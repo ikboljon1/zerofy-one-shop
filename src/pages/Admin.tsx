@@ -2,6 +2,9 @@
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 import UserManagement from "@/components/admin/UserManagement";
 import AdminSettingsSection from "@/components/admin/AdminSettingsSection";
 import TariffManagement from "@/components/admin/TariffManagement";
@@ -11,11 +14,56 @@ import VerificationSettings from "@/components/admin/VerificationSettings";
 
 const Admin = () => {
   const [userData, setUserData] = useState(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Здесь можно добавить загрузку данных пользователя при необходимости
-    // Например, получение информации о текущем администраторе
-  }, []);
+    // Проверка роли пользователя при загрузке компонента
+    const userString = localStorage.getItem('user') || sessionStorage.getItem('user');
+    
+    if (userString) {
+      try {
+        const user = JSON.parse(userString);
+        setUserData(user);
+        setUserRole(user.role);
+        
+        // Если пользователь не админ, перенаправляем на дашборд
+        if (user.role !== 'admin') {
+          navigate('/dashboard');
+        }
+      } catch (e) {
+        console.error('Ошибка при парсинге данных пользователя:', e);
+        navigate('/dashboard');
+      }
+    } else {
+      // Если пользователь не авторизован, перенаправляем на главную
+      navigate('/');
+    }
+  }, [navigate]);
+
+  // Если роль пользователя еще не определена, показываем загрузку
+  if (userRole === null) {
+    return (
+      <div className="container mx-auto py-10 flex justify-center items-center h-[80vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  // Если пользователь не админ, показываем сообщение об ошибке доступа
+  if (userRole !== 'admin') {
+    return (
+      <div className="container mx-auto py-10">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Ошибка доступа</AlertTitle>
+          <AlertDescription>
+            У вас нет прав для доступа к административной панели.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-10">
