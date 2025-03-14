@@ -47,12 +47,21 @@ const AdminDashboard = () => {
   const fetchStats = async () => {
     try {
       setIsLoading(true);
-      // Replace with actual API endpoint
-      const response = await axios.get('/api/admin/dashboard/stats');
-      
-      if (response.data) {
-        setStats(response.data);
-      }
+      // In a real implementation, this would fetch from an actual API
+      // For now, we'll use mock data to ensure the UI renders properly
+      setTimeout(() => {
+        setStats({
+          totalUsers: 1250,
+          activeUsers: 780,
+          totalOrders: 5320,
+          revenue: 1250000,
+          newUsersToday: 28,
+          conversionRate: 3.5,
+          avgOrderValue: 2350,
+          userSatisfaction: 4.7
+        });
+        setIsLoading(false);
+      }, 1000);
     } catch (error) {
       console.error("Error fetching admin stats:", error);
       toast({
@@ -60,21 +69,20 @@ const AdminDashboard = () => {
         description: "Не удалось загрузить статистику панели управления",
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
     }
   };
   
   const fetchRegistrationData = async (period: "day" | "week" | "month") => {
     try {
-      // Replace with actual API endpoint
-      const response = await axios.get(`/api/admin/dashboard/registrations?period=${period}`);
+      // Mock data for different time periods
+      const mockData = {
+        day: [5, 8, 12, 10, 15, 6, 9, 11, 7, 14, 9, 6],
+        week: [28, 35, 42, 30, 45, 38, 52],
+        month: [120, 145, 160, 130, 170, 155, 140, 165, 180, 150, 172, 190, 160, 175, 165, 180, 195, 170, 185, 200, 175, 190, 165, 180, 170, 190, 210, 195, 180, 200]
+      };
       
-      if (response.data && Array.isArray(response.data)) {
-        // Transform API data to the format needed for the chart
-        const dataPoints = response.data.map((item: RegistrationData) => item.count);
-        setRegistrationData(dataPoints);
-      }
+      setRegistrationData(mockData[period]);
     } catch (error) {
       console.error("Error fetching registration data:", error);
       toast({
