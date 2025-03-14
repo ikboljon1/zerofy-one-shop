@@ -1,65 +1,33 @@
+
 import { useState } from 'react';
-import { format, subDays } from 'date-fns';
+import { format, subDays, startOfWeek, startOfMonth } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { CalendarIcon, Calendar as CalendarIcon2, ChevronDown, RefreshCw } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface DateRangePickerProps {
-  value?: { from: Date; to: Date };
-  onChange?: (newRange: { from: Date; to: Date }) => void;
-  dateFrom?: Date;
-  dateTo?: Date;
-  setDateFrom?: (date: Date) => void;
-  setDateTo?: (date: Date) => void;
+  dateFrom: Date;
+  dateTo: Date;
+  setDateFrom: (date: Date) => void;
+  setDateTo: (date: Date) => void;
   onApplyDateRange?: () => void;
   onUpdate?: () => void;
   forceRefresh?: boolean;
 }
 
 const DateRangePicker = ({ 
-  value,
-  onChange,
-  dateFrom: propDateFrom, 
-  dateTo: propDateTo, 
-  setDateFrom: propSetDateFrom, 
-  setDateTo: propSetDateTo,
+  dateFrom, 
+  dateTo, 
+  setDateFrom, 
+  setDateTo,
   onApplyDateRange,
   onUpdate,
   forceRefresh = true
 }: DateRangePickerProps) => {
-  const [localDateFrom, setLocalDateFrom] = useState<Date>(
-    value?.from || propDateFrom || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-  );
-  const [localDateTo, setLocalDateTo] = useState<Date>(
-    value?.to || propDateTo || new Date()
-  );
-
-  const dateFrom = value?.from || localDateFrom;
-  const dateTo = value?.to || localDateTo;
-
-  const setDateFrom = (date: Date) => {
-    if (value && onChange) {
-      onChange({ ...value, from: date });
-    } else if (propSetDateFrom) {
-      propSetDateFrom(date);
-    } else {
-      setLocalDateFrom(date);
-    }
-  };
-
-  const setDateTo = (date: Date) => {
-    if (value && onChange) {
-      onChange({ ...value, to: date });
-    } else if (propSetDateTo) {
-      propSetDateTo(date);
-    } else {
-      setLocalDateTo(date);
-    }
-  };
-
   const [fromOpen, setFromOpen] = useState(false);
   const [toOpen, setToOpen] = useState(false);
   const [quickSelectOpen, setQuickSelectOpen] = useState(false);
@@ -76,6 +44,7 @@ const DateRangePicker = ({
       onUpdate();
     }
     
+    // Reset loading state after a short delay to show the loading indicator
     setTimeout(() => {
       setIsLoading(false);
     }, 1000);

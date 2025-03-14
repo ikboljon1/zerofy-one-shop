@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ShoppingBag, Store, Package2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,7 +11,7 @@ import { getSubscriptionStatus, SubscriptionData } from "@/services/userService"
 import { Badge } from "@/components/ui/badge";
 
 interface StoresProps {
-  onStoreSelect?: (store: StoreType) => void;
+  onStoreSelect?: (store: { id: string; apiKey: string }) => void;
 }
 
 export default function Stores({ onStoreSelect }: StoresProps) {
@@ -228,19 +229,12 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       timestamp: Date.now()
     }));
 
-    // Находим выбранный магазин
-    const selectedStore = userStores.find(store => store.id === storeId);
-    
-    if (selectedStore) {
-      // Вызываем событие изменения выбранного магазина
-      window.dispatchEvent(new CustomEvent('store-selection-changed', { 
-        detail: { storeId: selectedStore.id, selected: true, timestamp: Date.now() } 
-      }));
-      
-      // Вызываем колбэк выбора магазина, если он есть
-      if (onStoreSelect) {
-        onStoreSelect(selectedStore);
-      }
+    const selectedStore = stores.find(store => store.id === storeId);
+    if (selectedStore && onStoreSelect) {
+      onStoreSelect({
+        id: selectedStore.id,
+        apiKey: selectedStore.apiKey
+      });
     }
   };
 

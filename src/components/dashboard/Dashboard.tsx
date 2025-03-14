@@ -1,225 +1,314 @@
-
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AreaChart, Title } from "@tremor/react";
+import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Button } from "@/components/ui/button";
 import { 
-  ShoppingBag, Package, Calculator, TrendingUp, ArrowUp,
-  BarChart3, ArrowDown, Percent, AlertCircle
-} from "lucide-react";
+  loadStores,
+  getOrdersData, 
+  getSalesData, 
+  fetchAndUpdateOrders, 
+  fetchAndUpdateSales,
+  ensureStoreSelectionPersistence,
+  getSelectedStore
+} from "@/utils/storeUtils";
+import OrdersTable from "./OrdersTable";
+import SalesTable from "./SalesTable";
+import GeographySection from "./GeographySection";
+import Stats from "@/components/Stats";
+import PeriodSelector, { Period } from "./PeriodSelector";
+import { WildberriesOrder, WildberriesSale } from "@/types/store";
+import OrderMetrics from "./OrderMetrics";
+import SalesMetrics from "./SalesMetrics";
 import OrdersChart from "./OrdersChart";
 import SalesChart from "./SalesChart";
-import SalesMetrics from "./SalesMetrics";
-import OrderMetrics from "./OrderMetrics";
-import SalesTable from "./SalesTable";
-import OrdersTable from "./OrdersTable";
-import GeographySection from "./GeographySection";
 import TipsSection from "./TipsSection";
-import PeriodSelector, { Period } from "./PeriodSelector";
-import Products from "@/components/Products";
-import { WildberriesOrder, WildberriesSale, Store } from "@/types/store";
-import { getOrdersData, getSalesData, getProductProfitabilityData, getAnalyticsData, getSelectedStore } from "@/utils/storeUtils";
-import { formatCurrency } from "@/utils/formatCurrency";
+import AIAnalysisSection from "@/components/ai/AIAnalysisSection";
 
-interface DashboardProps {
-  selectedStore?: Store | null;
-}
-
-// Define custom chart configuration type
-interface ChartConfigType {
-  [key: string]: {
-    name: string;
-    color: string;
-  };
-}
-
-const Dashboard: React.FC<DashboardProps> = ({ selectedStore }) => {
-  console.log("Dashboard render with selectedStore:", selectedStore);
+const Dashboard = () => {
+  const { toast } = useToast();
   const isMobile = useIsMobile();
-  const [period, setPeriod] = useState<Period>("30d");
+  const [activeTab, setActiveTab] = useState("overview");
+  const [period, setPeriod] = useState<Period>("today");
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
+  
   const [orders, setOrders] = useState<WildberriesOrder[]>([]);
   const [sales, setSales] = useState<WildberriesSale[]>([]);
-  const [profitableProducts, setProfitableProducts] = useState<any[]>([]);
-  const [unprofitableProducts, setUnprofitableProducts] = useState<any[]>([]);
-  const [analyticsData, setAnalyticsData] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState("overview");
-  const [isLoading, setIsLoading] = useState(true);
+  const [warehouseDistribution, setWarehouseDistribution] = useState<any[]>([]);
+  const [regionDistribution, setRegionDistribution] = useState<any[]>([]);
   
-  useEffect(() => {
-    const fetchData = async () => {
-      console.log("Fetching dashboard data...");
+  const [dateRange, setDateRange] = useState({
+    from: new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+    to: new Date()
+  });
+
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+
+  const filterDataByPeriod = useCallback((date: string, period: Period) => {
+    const now = new Date();
+    const itemDate = new Date(date);
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+
+    switch (period) {
+      case "today":
+        return itemDate >= todayStart;
+      case "yesterday":
+        return itemDate >= yesterdayStart && itemDate < todayStart;
+      case "week":
+        const weekAgo = new Date(todayStart);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return itemDate >= weekAgo;
+      case "2weeks":
+        const twoWeeksAgo = new Date(todayStart);
+        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+        return itemDate >= twoWeeksAgo;
+      case "4weeks":
+        const fourWeeksAgo = new Date(todayStart);
+        fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+        return itemDate >= fourWeeksAgo;
+      default:
+        return true;
+    }
+  }, []);
+
+  const getFilteredOrders = (orders: WildberriesOrder[]) => {
+    const filteredOrders = orders.filter(order => filterDataByPeriod(order.date, period));
+
+    const warehouseCounts: Record<string, number> = {};
+    const regionCounts: Record<string, number> = {};
+    const totalOrders = filteredOrders.length;
+
+    filteredOrders.forEach(order => {
+      if (order.warehouseName) {
+        warehouseCounts[order.warehouseName] = (warehouseCounts[order.warehouseName] || 0) + 1;
+      }
+      if (order.regionName) {
+        regionCounts[order.regionName] = (regionCounts[order.regionName] || 0) + 1;
+      }
+    });
+
+    const newWarehouseDistribution = Object.entries(warehouseCounts)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: (count / totalOrders) * 100
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    const newRegionDistribution = Object.entries(regionCounts)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: (count / totalOrders) * 100
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    return {
+      orders: filteredOrders,
+      warehouseDistribution: newWarehouseDistribution,
+      regionDistribution: newRegionDistribution
+    };
+  };
+
+  const getFilteredSales = (sales: WildberriesSale[]) => {
+    return sales.filter(sale => filterDataByPeriod(sale.date, period));
+  };
+
+  const filteredOrdersData = useMemo(() => {
+    return getFilteredOrders(orders);
+  }, [orders, period]);
+
+  const filteredSalesData = useMemo(() => {
+    return getFilteredSales(sales);
+  }, [sales, period]);
+
+  const fetchData = useCallback(async () => {
+    try {
       setIsLoading(true);
-      try {
-        // Определяем текущий магазин
-        const store = selectedStore || getSelectedStore();
-        
-        if (!store) {
-          console.error("No store selected");
-          setIsLoading(false);
-          return;
+      
+      // Получаем текущего пользователя
+      const userData = localStorage.getItem('user');
+      const currentUserId = userData ? JSON.parse(userData).id : null;
+      
+      // Получаем выбранный магазин с учетом текущего пользователя
+      const allStores = loadStores();
+      const userStores = currentUserId 
+        ? allStores.filter(store => store.userId === currentUserId)
+        : allStores;
+      
+      const selectedStore = userStores.find(store => store.isSelected) || (userStores.length > 0 ? userStores[0] : null);
+      
+      if (!selectedStore) {
+        toast({
+          title: "Внимание",
+          description: "Выберите основной магазин в разделе 'Магазины'",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (selectedStore.id !== selectedStoreId) {
+        setSelectedStoreId(selectedStore.id);
+      }
+
+      const [ordersResult, salesResult] = await Promise.all([
+        fetchAndUpdateOrders(selectedStore),
+        fetchAndUpdateSales(selectedStore)
+      ]);
+
+      if (ordersResult) {
+        setOrders(ordersResult.orders);
+        setWarehouseDistribution(ordersResult.warehouseDistribution);
+        setRegionDistribution(ordersResult.regionDistribution);
+      } else {
+        const savedOrdersData = await getOrdersData(selectedStore.id);
+        if (savedOrdersData) {
+          setOrders(savedOrdersData.orders || []);
+          setWarehouseDistribution(savedOrdersData.warehouseDistribution || []);
+          setRegionDistribution(savedOrdersData.regionDistribution || []);
         }
-        
-        console.log("Fetching data for store:", store.id);
-        
-        // Fetch orders data
-        const ordersData = await getOrdersData(store.id);
-        if (ordersData && ordersData.orders) {
-          setOrders(ordersData.orders);
-        } else {
-          setOrders([]);
+      }
+
+      if (salesResult) {
+        setSales(salesResult);
+      } else {
+        const savedSalesData = await getSalesData(selectedStore.id);
+        if (savedSalesData) {
+          setSales(savedSalesData.sales || []);
         }
-        
-        // Fetch sales data
-        const salesData = await getSalesData(store.id);
-        if (salesData && salesData.sales) {
-          setSales(salesData.sales);
-        } else {
-          setSales([]);
-        }
-        
-        // Fetch product profitability data
-        const profitabilityData = getProductProfitabilityData(store.id);
-        if (profitabilityData) {
-          setProfitableProducts(profitabilityData.profitableProducts || []);
-          setUnprofitableProducts(profitabilityData.unprofitableProducts || []);
-        } else {
-          setProfitableProducts([]);
-          setUnprofitableProducts([]);
-        }
-        
-        // Fetch analytics data
-        const analytics = getAnalyticsData(store.id);
-        setAnalyticsData(analytics);
-        
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-      } finally {
-        setIsLoading(false);
+      }
+
+      toast({
+        title: "Успех",
+        description: "Данные успешно обновлены",
+      });
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить данные",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedStoreId, toast]);
+
+  useEffect(() => {
+    const selectedStore = getSelectedStore();
+    
+    if (selectedStore && selectedStore.id !== selectedStoreId) {
+      setSelectedStoreId(selectedStore.id);
+      fetchData();
+    }
+  }, [selectedStoreId, fetchData]);
+
+  useEffect(() => {
+    let refreshInterval: NodeJS.Timeout;
+    
+    const handleStoreSelectionChange = () => {
+      console.log('Store selection changed, refreshing data...');
+      fetchData();
+    };
+
+    if (selectedStoreId) {
+      window.addEventListener('store-selection-changed', handleStoreSelectionChange);
+      refreshInterval = setInterval(fetchData, 60000);
+    }
+
+    return () => {
+      window.removeEventListener('store-selection-changed', handleStoreSelectionChange);
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
       }
     };
-    
-    fetchData();
-  }, [selectedStore, period]);
-  
-  const totalSales = analyticsData?.data?.currentPeriod?.sales || 0;
-  const totalExpenses = analyticsData?.data?.currentPeriod?.expenses?.total || 0;
-  const totalProfit = analyticsData?.data?.currentPeriod?.netProfit || 0;
-  
-  const chartData = analyticsData?.deductionsTimeline?.map((item: any) => ({
-    date: item.date,
-    Логистика: item.logistic,
-    Хранение: item.storage,
-    Штрафы: item.penalties,
-    Приемка: item.acceptance,
-    Реклама: item.advertising,
-    Удержания: item.deductions
-  })) || [];
-  
-  const chartConfig: ChartConfigType = {
-    "Логистика": { name: "Логистика", color: "emerald" },
-    "Хранение": { name: "Хранение", color: "violet" },
-    "Штрафы": { name: "Штрафы", color: "rose" },
-    "Приемка": { name: "Приемка", color: "amber" },
-    "Реклама": { name: "Реклама", color: "blue" },
-    "Удержания": { name: "Удержания", color: "orange" }
-  };
-  
-  if (isLoading) {
-    return (
-      <Card className="w-full">
-        <CardContent className="p-6 flex items-center justify-center">
-          <div className="text-xl text-muted-foreground animate-pulse">
-            Загрузка данных...
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-  
-  if (!analyticsData) {
-    return (
-      <Card className="w-full">
-        <CardContent className="p-6 flex items-center justify-center">
-          <AlertCircle className="mr-2 h-4 w-4" />
-          <div className="text-xl text-muted-foreground">
-            Нет данных для отображения.
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-  
+  }, [selectedStoreId, fetchData]);
+
   return (
-    <div className="w-full space-y-4">
-      <Card className="p-3">
-        <CardContent>
-          <PeriodSelector value={period} onChange={(newPeriod) => setPeriod(newPeriod)} />
-        </CardContent>
-      </Card>
-      
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview" onClick={() => setActiveTab("overview")}>Обзор</TabsTrigger>
-          <TabsTrigger value="products" onClick={() => setActiveTab("products")}>Товары</TabsTrigger>
-          <TabsTrigger value="orders" onClick={() => setActiveTab("orders")}>Заказы</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="overview" className="space-y-4">
-          <SalesMetrics sales={sales} storeId={selectedStore?.id} />
-          <OrderMetrics orders={orders} />
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <SalesChart sales={sales} />
-            <OrdersChart orders={orders} sales={sales} />
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className={`${isMobile ? 'text-xl' : 'text-3xl'} font-bold`}>Дашборд</h2>
+        {isLoading && (
+          <div className="flex items-center text-sm text-muted-foreground">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Обновление данных...
           </div>
-          
-          <Card className="border-0 shadow-2xl bg-gradient-to-br from-gray-50 to-stone-100 dark:from-gray-900/70 dark:to-stone-900/60">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-base font-semibold flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                <Calculator className="h-4 w-4" />
-                Расходы по категориям
-              </CardTitle>
-              <CardDescription className="text-gray-500 dark:text-gray-400">
-                Анализ расходов
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AreaChart
-                className="mt-4"
-                data={chartData}
-                index="date"
-                categories={Object.keys(chartConfig)}
-                colors={Object.values(chartConfig).map((c) => c.color)}
-                showLegend
-                valueFormatter={(value: number) => formatCurrency(value).replace(' ', ' ')}
-              />
-            </CardContent>
-          </Card>
-          
-          <GeographySection 
-            orders={orders} 
-            sales={sales}
-            warehouseDistribution={[]} 
-            regionDistribution={[]}
-          />
+        )}
+      </div>
+
+      <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className={`${isMobile ? 'w-full grid grid-cols-5 gap-1' : ''}`}>
+          <TabsTrigger value="overview" className={isMobile ? 'text-xs py-1 px-1' : ''}>Обзор</TabsTrigger>
+          <TabsTrigger value="orders" className={isMobile ? 'text-xs py-1 px-1' : ''}>Заказы</TabsTrigger>
+          <TabsTrigger value="sales" className={isMobile ? 'text-xs py-1 px-1' : ''}>Продажи</TabsTrigger>
+          <TabsTrigger value="geography" className={isMobile ? 'text-xs py-1 px-1' : ''}>География</TabsTrigger>
+          <TabsTrigger value="ai-analysis" className={isMobile ? 'text-xs py-1 px-1' : ''}>AI-анализ</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4">
+          <Stats />
           <TipsSection />
         </TabsContent>
-        
-        <TabsContent value="products" className="space-y-4">
-          <Products
-            topProfitableProducts={profitableProducts}
-            topUnprofitableProducts={unprofitableProducts}
+
+        <TabsContent value="orders" className="space-y-4">
+          <div className={`mb-4 ${isMobile ? 'w-full' : 'flex items-center gap-4'}`}>
+            <PeriodSelector value={period} onChange={setPeriod} />
+            <div className="flex-grow"></div>
+          </div>
+          
+          {orders.length > 0 && (
+            <>
+              <OrderMetrics orders={filteredOrdersData.orders} />
+              <OrdersChart 
+                orders={filteredOrdersData.orders} 
+                sales={filteredSalesData}
+              />
+            </>
+          )}
+          
+          <OrdersTable orders={filteredOrdersData.orders} />
+        </TabsContent>
+
+        <TabsContent value="sales" className="space-y-4">
+          <div className={`mb-4 ${isMobile ? 'w-full' : 'flex items-center gap-4'}`}>
+            <PeriodSelector value={period} onChange={setPeriod} />
+            <div className="flex-grow"></div>
+          </div>
+          
+          {sales.length > 0 && (
+            <>
+              <SalesMetrics sales={filteredSalesData} />
+              <SalesChart sales={filteredSalesData} />
+            </>
+          )}
+          
+          <SalesTable sales={filteredSalesData} />
+        </TabsContent>
+
+        <TabsContent value="geography" className="space-y-4">
+          <div className={`mb-4 ${isMobile ? 'w-full' : 'flex items-center gap-4'}`}>
+            <PeriodSelector value={period} onChange={setPeriod} />
+            <div className="flex-grow"></div>
+          </div>
+          <GeographySection 
+            warehouseDistribution={warehouseDistribution} 
+            regionDistribution={regionDistribution}
+            sales={filteredSalesData}
           />
         </TabsContent>
-        
-        <TabsContent value="orders" className="space-y-4">
-          <SalesTable sales={sales} />
-          <OrdersTable orders={orders} />
+
+        <TabsContent value="ai-analysis" className="space-y-4">
+          <AIAnalysisSection />
         </TabsContent>
       </Tabs>
     </div>
   );
 };
 
-export default Dashboard;
+export default React.memo(Dashboard);

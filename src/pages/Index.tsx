@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -12,23 +13,24 @@ import Advertising from "@/components/Advertising";
 import MainLayout from "@/components/layout/MainLayout";
 import AnalyticsSection from "@/components/analytics/AnalyticsSection";
 import Dashboard from "@/components/dashboard/Dashboard";
-import { getProductProfitabilityData, getSelectedStore, getAnalyticsData, loadStores } from "@/utils/storeUtils";
+import { getProductProfitabilityData, getSelectedStore } from "@/utils/storeUtils";
 import { User } from "@/services/userService";
 import { useToast } from "@/hooks/use-toast";
-import { Store } from "@/types/store";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
   const isMobile = useIsMobile();
-  const [selectedStore, setSelectedStore] = useState<Store | null>(null);
+  const [selectedStore, setSelectedStore] = useState<{id: string; apiKey: string} | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
+    // Check if user is authenticated - проверяем и localStorage, и sessionStorage
     const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
     
     if (!storedUser) {
+      // User is not authenticated, redirect to landing page
       toast({
         title: "Доступ запрещен",
         description: "Пожалуйста, войдите в систему для доступа к дашборду",
@@ -38,51 +40,22 @@ const Index = () => {
       return;
     }
     
+    // User is authenticated, set user data
     setUser(JSON.parse(storedUser));
     
+    // Initialize selected store
     const store = getSelectedStore();
     if (store) {
       setSelectedStore(store);
     }
-  }, [navigate, toast]);
-
-  useEffect(() => {
-    const handleStoreSelectionChange = (event: CustomEvent) => {
-      const { storeId } = event.detail;
-      
-      if (storeId) {
-        const stores = loadStores();
-        const store = stores.find(s => s.id === storeId);
-        if (store) {
-          setSelectedStore(store);
-        }
-      }
-    };
-
-    window.addEventListener('store-selection-changed', handleStoreSelectionChange as EventListener);
-    
-    return () => {
-      window.removeEventListener('store-selection-changed', handleStoreSelectionChange as EventListener);
-    };
-  }, []);
+  }, [navigate]);
 
   const getProductsData = () => {
-    if (!selectedStore) {
-      const store = getSelectedStore();
-      if (!store) return { profitable: [], unprofitable: [] };
-      
-      const profitabilityData = getProductProfitabilityData(store.id);
-      if (profitabilityData && profitabilityData.profitableProducts && profitabilityData.unprofitableProducts) {
-        return {
-          profitable: profitabilityData.profitableProducts || [],
-          unprofitable: profitabilityData.unprofitableProducts || []
-        };
-      }
-      
-      return { profitable: [], unprofitable: [] };
-    }
+    const store = selectedStore || getSelectedStore();
+    if (!store) return { profitable: [], unprofitable: [] };
     
-    const profitabilityData = getProductProfitabilityData(selectedStore.id);
+    // Получаем данные о прибыльности товаров
+    const profitabilityData = getProductProfitabilityData(store.id);
     if (profitabilityData && profitabilityData.profitableProducts && profitabilityData.unprofitableProducts) {
       return {
         profitable: profitabilityData.profitableProducts || [],
@@ -101,10 +74,6 @@ const Index = () => {
     setUser(updatedUser);
   };
 
-  const handleStoreSelect = (store: Store) => {
-    setSelectedStore(store);
-  };
-
   const renderContent = () => {
     const { profitable, unprofitable } = getProductsData();
     
@@ -117,7 +86,7 @@ const Index = () => {
             transition={{ duration: 0.3 }}
             className={isMobile ? 'space-y-4' : 'space-y-6'}
           >
-            <Dashboard selectedStore={selectedStore} />
+            <Dashboard />
           </motion.div>
         );
       case "analytics":
@@ -127,7 +96,7 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <AnalyticsSection selectedStore={selectedStore} />
+            <AnalyticsSection />
           </motion.div>
         );
       case "products":
@@ -147,7 +116,7 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <Stores onStoreSelect={handleStoreSelect} />
+            <Stores onStoreSelect={setSelectedStore} />
           </motion.div>
         );
       case "warehouses":
@@ -157,7 +126,7 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <Warehouses selectedStore={selectedStore} />
+            <Warehouses />
           </motion.div>
         );
       case "advertising":
