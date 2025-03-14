@@ -125,7 +125,7 @@ const OrdersAnalytics: React.FC<OrdersAnalyticsProps> = ({
                   </div>
                   <div className="bg-white/80 dark:bg-gray-800/50 rounded p-1 text-center">
                     <p className="text-xs text-muted-foreground">Доход</p>
-                    <p className="font-semibold">{formatCurrency(product.revenue)} ₽</p>
+                    <p className="font-semibold">{formatCurrency(product.revenue)}</p>
                   </div>
                 </div>
               </div>
