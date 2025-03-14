@@ -1,10 +1,9 @@
-
 import React, { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Calendar, Package, ArrowUpDown, ChevronDown, ChevronRight, Filter, Eye } from "lucide-react";
+import { Search, Calendar, Package, ArrowUpDown, ChevronDown, ChevronRight, Filter, Eye, ChevronLeft, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { WildberriesOrder } from "@/types/store";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -26,6 +25,9 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const ordersPerPage = 10;
 
   const handleSort = (field: keyof WildberriesOrder) => {
     if (sortField === field) {
@@ -40,7 +42,6 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
     setExpandedOrder(expandedOrder === srid ? null : srid);
   };
 
-  // Add status filter handling
   const handleStatusFilterChange = (status: string) => {
     setStatusFilter(prev => {
       if (prev.includes(status)) {
@@ -51,9 +52,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
     });
   };
 
-  // Filter orders based on search term and status filter
   const filteredOrders = orders.filter(order => {
-    // Search term filter
     const matchesSearch = (
       order.supplierArticle.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -62,7 +61,6 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
       order.srid.toLowerCase().includes(searchTerm.toLowerCase())
     );
     
-    // Status filter
     const matchesStatus = statusFilter.length === 0 || 
       (statusFilter.includes("active") && !order.isCancel) ||
       (statusFilter.includes("canceled") && order.isCancel);
@@ -100,6 +98,15 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
     }
   };
 
+  const indexOfLastOrder = currentPage * ordersPerPage;
+  const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
+  const currentOrders = sortedOrders.slice(indexOfFirstOrder, indexOfLastOrder);
+  const totalPages = Math.ceil(sortedOrders.length / ordersPerPage);
+
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
+
   return (
     <Card className="overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-white to-fuchsia-50/40 dark:from-gray-900 dark:to-fuchsia-950/30 backdrop-blur-sm">
       <CardHeader className="pb-3 border-b border-fuchsia-100/30 dark:border-fuchsia-800/20">
@@ -127,7 +134,6 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
             />
           </div>
           
-          {/* Status Filter */}
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" size="icon" className="relative bg-white/70 dark:bg-fuchsia-950/30 border-fuchsia-200/50 dark:border-fuchsia-800/30">
@@ -215,97 +221,98 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedOrders.length > 0 ? (
-                sortedOrders.map((order, index) => (
-                  <Collapsible
-                    key={order.srid || index}
-                    open={expandedOrder === order.srid}
-                    onOpenChange={() => toggleOrderExpand(order.srid)}
-                    className="w-full"
-                  >
-                    <TableRow 
-                      className={`
-                        ${index % 2 === 0 ? 'bg-white dark:bg-gray-900/20' : 'bg-indigo-50/30 dark:bg-indigo-950/10'} 
-                        hover:bg-indigo-100/50 dark:hover:bg-indigo-900/20 transition-colors
-                      `}
+              {currentOrders.length > 0 ? (
+                currentOrders.map((order, index) => (
+                  <React.Fragment key={order.srid || index}>
+                    <Collapsible
+                      open={expandedOrder === order.srid}
+                      onOpenChange={() => toggleOrderExpand(order.srid)}
+                      className="w-full"
                     >
-                      <TableCell>
-                        <CollapsibleTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-6 w-6">
-                            {expandedOrder === order.srid ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </CollapsibleTrigger>
-                      </TableCell>
-                      <TableCell className="font-medium text-indigo-800 dark:text-indigo-300">{formatDate(order.date)}</TableCell>
-                      <TableCell>{order.supplierArticle}</TableCell>
-                      <TableCell className="max-w-[150px] truncate" title={order.category}>{order.category}</TableCell>
-                      <TableCell className="max-w-[150px] truncate" title={order.subject}>{order.subject}</TableCell>
-                      <TableCell className="font-semibold text-indigo-700 dark:text-indigo-300">{formatCurrency(order.priceWithDisc)} ₽</TableCell>
-                      <TableCell className="max-w-[120px] truncate" title={order.warehouseName}>{order.warehouseName}</TableCell>
-                      <TableCell className="max-w-[120px] truncate" title={order.regionName}>{order.regionName}</TableCell>
-                      <TableCell>
-                        <Badge variant={order.isCancel ? "destructive" : "success"} className="font-normal">
-                          {order.isCancel ? 'Отменен' : 'Активен'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" title="Подробнее">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                    <CollapsibleContent asChild>
-                      <TableRow className="bg-indigo-50/50 dark:bg-indigo-950/20">
-                        <TableCell colSpan={10} className="p-4">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                              <h4 className="text-sm font-semibold">Общая информация</h4>
-                              <div className="grid grid-cols-2 gap-1 text-xs">
-                                <div className="text-muted-foreground">ID заказа:</div>
-                                <div className="font-medium">{order.srid}</div>
-                                <div className="text-muted-foreground">Штрих-код:</div>
-                                <div className="font-medium">{order.barcode}</div>
-                                <div className="text-muted-foreground">Бренд:</div>
-                                <div className="font-medium">{order.brand}</div>
-                                <div className="text-muted-foreground">Размер:</div>
-                                <div className="font-medium">{order.techSize || "Не указан"}</div>
+                      <CollapsibleTrigger asChild>
+                        <TableRow 
+                          className={`
+                            ${index % 2 === 0 ? 'bg-white dark:bg-gray-900/20' : 'bg-indigo-50/30 dark:bg-indigo-950/10'} 
+                            hover:bg-indigo-100/50 dark:hover:bg-indigo-900/20 transition-colors cursor-pointer
+                          `}
+                        >
+                          <TableCell>
+                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                              {expandedOrder === order.srid ? (
+                                <ChevronDown className="h-4 w-4" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </TableCell>
+                          <TableCell className="font-medium text-indigo-800 dark:text-indigo-300">{formatDate(order.date)}</TableCell>
+                          <TableCell>{order.supplierArticle}</TableCell>
+                          <TableCell className="max-w-[150px] truncate" title={order.category}>{order.category}</TableCell>
+                          <TableCell className="max-w-[150px] truncate" title={order.subject}>{order.subject}</TableCell>
+                          <TableCell className="font-semibold text-indigo-700 dark:text-indigo-300">{formatCurrency(order.priceWithDisc)} ₽</TableCell>
+                          <TableCell className="max-w-[120px] truncate" title={order.warehouseName}>{order.warehouseName}</TableCell>
+                          <TableCell className="max-w-[120px] truncate" title={order.regionName}>{order.regionName}</TableCell>
+                          <TableCell>
+                            <Badge variant={order.isCancel ? "destructive" : "success"} className="font-normal">
+                              {order.isCancel ? 'Отменен' : 'Активен'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Подробнее">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <TableRow className="bg-indigo-50/50 dark:bg-indigo-950/20">
+                          <TableCell colSpan={10} className="p-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div className="space-y-2">
+                                <h4 className="text-sm font-semibold">Общая информация</h4>
+                                <div className="grid grid-cols-2 gap-1 text-xs">
+                                  <div className="text-muted-foreground">ID заказа:</div>
+                                  <div className="font-medium">{order.srid}</div>
+                                  <div className="text-muted-foreground">Штрих-код:</div>
+                                  <div className="font-medium">{order.barcode}</div>
+                                  <div className="text-muted-foreground">Бренд:</div>
+                                  <div className="font-medium">{order.brand}</div>
+                                  <div className="text-muted-foreground">Размер:</div>
+                                  <div className="font-medium">{order.techSize || "Не указан"}</div>
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <h4 className="text-sm font-semibold">Информация о цене</h4>
+                                <div className="grid grid-cols-2 gap-1 text-xs">
+                                  <div className="text-muted-foreground">Полная цена:</div>
+                                  <div className="font-medium">{formatCurrency(order.totalPrice)} ₽</div>
+                                  <div className="text-muted-foreground">Скидка:</div>
+                                  <div className="font-medium">{order.discountPercent}%</div>
+                                  <div className="text-muted-foreground">Финальная цена:</div>
+                                  <div className="font-medium">{formatCurrency(order.finishedPrice)} ₽</div>
+                                  <div className="text-muted-foreground">С учетом скидки:</div>
+                                  <div className="font-medium">{formatCurrency(order.priceWithDisc)} ₽</div>
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <h4 className="text-sm font-semibold">Информация о доставке</h4>
+                                <div className="grid grid-cols-2 gap-1 text-xs">
+                                  <div className="text-muted-foreground">Дата изменения:</div>
+                                  <div className="font-medium">{formatDate(order.lastChangeDate)}</div>
+                                  <div className="text-muted-foreground">Страна:</div>
+                                  <div className="font-medium">{order.countryName}</div>
+                                  <div className="text-muted-foreground">Область/Округ:</div>
+                                  <div className="font-medium">{order.oblastOkrugName}</div>
+                                  <div className="text-muted-foreground">Тип склада:</div>
+                                  <div className="font-medium">{order.warehouseType}</div>
+                                </div>
                               </div>
                             </div>
-                            <div className="space-y-2">
-                              <h4 className="text-sm font-semibold">Информация о цене</h4>
-                              <div className="grid grid-cols-2 gap-1 text-xs">
-                                <div className="text-muted-foreground">Полная цена:</div>
-                                <div className="font-medium">{formatCurrency(order.totalPrice)} ₽</div>
-                                <div className="text-muted-foreground">Скидка:</div>
-                                <div className="font-medium">{order.discountPercent}%</div>
-                                <div className="text-muted-foreground">Финальная цена:</div>
-                                <div className="font-medium">{formatCurrency(order.finishedPrice)} ₽</div>
-                                <div className="text-muted-foreground">С учетом скидки:</div>
-                                <div className="font-medium">{formatCurrency(order.priceWithDisc)} ₽</div>
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <h4 className="text-sm font-semibold">Информация о доставке</h4>
-                              <div className="grid grid-cols-2 gap-1 text-xs">
-                                <div className="text-muted-foreground">Дата изменения:</div>
-                                <div className="font-medium">{formatDate(order.lastChangeDate)}</div>
-                                <div className="text-muted-foreground">Страна:</div>
-                                <div className="font-medium">{order.countryName}</div>
-                                <div className="text-muted-foreground">Область/Округ:</div>
-                                <div className="font-medium">{order.oblastOkrugName}</div>
-                                <div className="text-muted-foreground">Тип склада:</div>
-                                <div className="font-medium">{order.warehouseType}</div>
-                              </div>
-                            </div>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    </CollapsibleContent>
-                  </Collapsible>
+                          </TableCell>
+                        </TableRow>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </React.Fragment>
                 ))
               ) : (
                 <TableRow>
@@ -321,6 +328,55 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
               )}
             </TableBody>
           </Table>
+          
+          {sortedOrders.length > ordersPerPage && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-fuchsia-100/40 dark:border-fuchsia-800/30 bg-white/50 dark:bg-gray-950/30">
+              <div className="text-sm text-fuchsia-600/80 dark:text-fuchsia-300/80">
+                Показано {indexOfFirstOrder + 1}-{Math.min(indexOfLastOrder, sortedOrders.length)} из {sortedOrders.length} заказов
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={() => goToPage(1)} 
+                  disabled={currentPage === 1}
+                  className="h-8 w-8 border-fuchsia-200/50 dark:border-fuchsia-800/30"
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={() => goToPage(currentPage - 1)} 
+                  disabled={currentPage === 1}
+                  className="h-8 w-8 border-fuchsia-200/50 dark:border-fuchsia-800/30"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm font-medium px-3 py-1 rounded-md bg-fuchsia-100/50 dark:bg-fuchsia-900/30 text-fuchsia-600 dark:text-fuchsia-300">
+                  {currentPage} из {totalPages}
+                </span>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={() => goToPage(currentPage + 1)} 
+                  disabled={currentPage === totalPages}
+                  className="h-8 w-8 border-fuchsia-200/50 dark:border-fuchsia-800/30"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={() => goToPage(totalPages)} 
+                  disabled={currentPage === totalPages}
+                  className="h-8 w-8 border-fuchsia-200/50 dark:border-fuchsia-800/30"
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
