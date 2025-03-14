@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { ArrowUp, ArrowDown, TrendingUp, TrendingDown, DollarSign, FileText, Info, Image } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useState, useEffect } from "react";
 
 interface Product {
   name: string;
@@ -23,6 +24,8 @@ interface ProductListProps {
 
 const ProductList = ({ title, products = [], isProfitable }: ProductListProps) => {
   const isMobile = useIsMobile();
+  const [imagesLoaded, setImagesLoaded] = useState<Record<number, boolean>>({});
+  
   const textColorClass = isProfitable 
     ? "text-green-600 dark:text-green-400" 
     : "text-red-600 dark:text-red-400";
@@ -72,6 +75,27 @@ const ProductList = ({ title, products = [], isProfitable }: ProductListProps) =
 
   // Demo image to use as fallback
   const demoImageUrl = "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg";
+  
+  // Логирование для отладки
+  useEffect(() => {
+    if (products && products.length > 0) {
+      console.log("Список товаров:", products);
+      console.log("URL изображений:", products.map(p => p.image));
+    }
+  }, [products]);
+  
+  const handleImageLoad = (index: number) => {
+    setImagesLoaded(prev => ({ ...prev, [index]: true }));
+    console.log(`Изображение для товара #${index} успешно загружено`);
+  };
+  
+  const handleImageError = (index: number, e: React.SyntheticEvent<HTMLImageElement>) => {
+    const target = e.target as HTMLImageElement;
+    console.log(`Ошибка загрузки изображения для товара #${index}, URL: ${target.src}`);
+    console.log(`Используем демо-изображение: ${demoImageUrl}`);
+    target.src = demoImageUrl;
+    setImagesLoaded(prev => ({ ...prev, [index]: true }));
+  };
 
   return (
     <Card className={`p-2 ${isMobile ? 'p-1.5' : 'p-2'}`}>
@@ -90,15 +114,19 @@ const ProductList = ({ title, products = [], isProfitable }: ProductListProps) =
             >
               <div className="flex items-start mb-1">
                 <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 mr-2 bg-gray-100 dark:bg-gray-800">
-                  <img 
-                    src={product.image || demoImageUrl} 
-                    alt={safeText(product.name)} 
-                    className="w-full h-full object-cover" 
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = demoImageUrl;
-                    }}
-                  />
+                  {product.image ? (
+                    <img 
+                      src={product.image} 
+                      alt={safeText(product.name)} 
+                      className="w-full h-full object-cover" 
+                      onLoad={() => handleImageLoad(index)}
+                      onError={(e) => handleImageError(index, e)}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Image className="h-6 w-6 text-muted-foreground opacity-40" />
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
