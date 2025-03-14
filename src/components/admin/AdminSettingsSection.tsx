@@ -1,105 +1,67 @@
 
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import PasswordChangeForm from "@/components/PasswordChangeForm";
-import { User, updateUser } from "@/services/userService";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Settings } from "lucide-react";
 
-interface AdminSettingsSectionProps {
-  userData: User | null;
+// Добавляем определение типа для пропсов, чтобы исправить ошибку типизации
+export interface AdminSettingsSectionProps {
+  userData?: {
+    id: number;
+    email: string;
+    role: string;
+  };
 }
 
-const AdminSettingsSection: React.FC<AdminSettingsSectionProps> = ({ userData }) => {
-  const [email, setEmail] = useState(userData?.email || "");
-  const [isUpdating, setIsUpdating] = useState(false);
-
-  if (!userData) {
-    return (
-      <div className="flex justify-center items-center h-[50vh]">
-        <p className="text-gray-400">Необходимо войти в систему для доступа к настройкам</p>
-      </div>
-    );
-  }
-
-  const handleEmailUpdate = async () => {
-    if (!userData) return;
-    
-    if (!email.trim()) {
-      toast.error("Email не может быть пустым");
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      toast.error("Введите корректный email адрес");
-      return;
-    }
-
-    setIsUpdating(true);
-    try {
-      const updatedUser = await updateUser(userData.id, { email });
-      if (updatedUser) {
-        // Update local storage with new user data
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        toast.success("Email успешно обновлен");
-      }
-    } catch (error) {
-      toast.error("Не удалось обновить email");
-      console.error("Error updating email:", error);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
+const AdminSettingsSection = ({ userData }: AdminSettingsSectionProps) => {
   return (
-    <div className="grid gap-6">
-      <Card className="border border-gray-800 bg-gray-900 shadow-md">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold text-white">Настройки профиля администратора</CardTitle>
-          <CardDescription className="text-gray-400">
-            Управление учетными данными администратора
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-white">Изменение логина (email)</h3>
-            <div className="flex flex-col space-y-2">
-              <div className="flex flex-col space-y-1">
-                <label htmlFor="admin-email" className="text-sm text-gray-400">
-                  Email адрес
-                </label>
-                <Input
-                  id="admin-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="bg-gray-800 border-gray-700 text-white"
-                  placeholder="admin@example.com"
-                />
-              </div>
-              <Button 
-                onClick={handleEmailUpdate}
-                disabled={isUpdating || email === userData.email}
-                className="w-full md:w-auto"
-              >
-                {isUpdating ? "Обновление..." : "Обновить email"}
-              </Button>
+    <Card className="w-full">
+      <CardHeader>
+        <div className="flex items-center">
+          <Settings className="h-5 w-5 mr-2 text-muted-foreground" />
+          <CardTitle>Настройки администратора</CardTitle>
+        </div>
+        <CardDescription>
+          Настройте параметры системы и сервисы интеграции
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="general" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="general">Общие</TabsTrigger>
+            <TabsTrigger value="integration">Интеграции</TabsTrigger>
+            <TabsTrigger value="security">Безопасность</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="general">
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Общие настройки</h3>
+              <p className="text-sm text-muted-foreground">
+                Настройте общие параметры работы системы.
+              </p>
             </div>
-          </div>
+          </TabsContent>
           
-          <div className="my-4">
-            <div className="border-t border-gray-800"></div>
-          </div>
+          <TabsContent value="integration">
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Настройки интеграций</h3>
+              <p className="text-sm text-muted-foreground">
+                Настройте параметры интеграции с внешними сервисами.
+              </p>
+            </div>
+          </TabsContent>
           
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-white">Изменение пароля</h3>
-            <PasswordChangeForm userId={userData.id} />
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          <TabsContent value="security">
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Настройки безопасности</h3>
+              <p className="text-sm text-muted-foreground">
+                Настройте параметры безопасности и доступа.
+              </p>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 };
 
