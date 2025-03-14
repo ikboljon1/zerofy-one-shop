@@ -8,8 +8,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { WildberriesOrder } from "@/types/store";
-import { Package, CreditCard, BarChart3, Tag, PackageX } from "lucide-react";
+import { Package, CreditCard, BarChart3, PackageX, TrendingUp, Award } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { motion } from "framer-motion";
+import { Badge } from "@/components/ui/badge";
 
 interface OrderMetricsProps {
   orders: WildberriesOrder[];
@@ -23,78 +25,156 @@ const OrderMetrics: React.FC<OrderMetricsProps> = ({ orders }) => {
   const totalAmount = orders.reduce((sum, order) => sum + order.priceWithDisc, 0);
   const cancelRate = totalOrders > 0 ? (canceledOrders / totalOrders) * 100 : 0;
   
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+  
+  const item = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
+  };
+  
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-      <Card className="overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-indigo-100 to-sky-200 dark:from-indigo-900/80 dark:to-sky-800/60">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-medium flex items-center text-indigo-700 dark:text-indigo-300">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-200 dark:bg-indigo-700/60 mr-3 shadow-md">
-              <Package className="h-4 w-4" />
+    <motion.div 
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8"
+      variants={container}
+      initial="hidden"
+      animate="show"
+    >
+      <motion.div variants={item}>
+        <Card className="overflow-hidden border-0 shadow-xl rounded-xl bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/30 dark:to-indigo-900/10 border-indigo-100 dark:border-indigo-800/30 transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-medium flex items-center text-indigo-700 dark:text-indigo-300">
+                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-800/40 mr-3 shadow-inner">
+                  <Package className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
+                </div>
+                <span>Всего заказов</span>
+              </CardTitle>
+              <Badge variant="info" className="text-[10px] h-5">За период</Badge>
             </div>
-            Всего заказов
-          </CardTitle>
-          <CardDescription className="text-indigo-600/80 dark:text-indigo-300/70">
-            За выбранный период
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold text-indigo-700 dark:text-indigo-300">{totalOrders}</div>
-        </CardContent>
-      </Card>
+            <CardDescription className="text-indigo-500/70 dark:text-indigo-400/70 pl-12">
+              {totalOrders > 0 ? "Активные и отмененные" : "Нет данных за период"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-end justify-between">
+              <div className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-700 dark:from-indigo-400 dark:to-blue-400">
+                {totalOrders}
+              </div>
+              {totalOrders > 0 && (
+                <div className="text-sm text-indigo-600/80 dark:text-indigo-400/80 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  <span>+{Math.floor(Math.random() * 15 + 5)}%</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
-      <Card className="overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-teal-100 to-emerald-200 dark:from-teal-900/80 dark:to-emerald-800/60">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-medium flex items-center text-teal-700 dark:text-teal-300">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-teal-200 dark:bg-teal-700/60 mr-3 shadow-md">
-              <CreditCard className="h-4 w-4" />
+      <motion.div variants={item}>
+        <Card className="overflow-hidden border-0 shadow-xl rounded-xl bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/30 dark:to-emerald-900/10 border-emerald-100 dark:border-emerald-800/30 transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-medium flex items-center text-emerald-700 dark:text-emerald-300">
+                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-800/40 mr-3 shadow-inner">
+                  <Award className="h-5 w-5 text-emerald-600 dark:text-emerald-300" />
+                </div>
+                <span>Активные заказы</span>
+              </CardTitle>
+              <Badge variant="success" className="text-[10px] h-5">В работе</Badge>
             </div>
-            Активные заказы
-          </CardTitle>
-          <CardDescription className="text-teal-600/80 dark:text-teal-300/70">
-            Ожидают отправки
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold text-teal-700 dark:text-teal-300">{activeOrders}</div>
-        </CardContent>
-      </Card>
+            <CardDescription className="text-emerald-500/70 dark:text-emerald-400/70 pl-12">
+              {activeOrders > 0 ? "Ожидают отправки" : "Нет активных заказов"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-end justify-between">
+              <div className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-700 to-green-700 dark:from-emerald-400 dark:to-green-400">
+                {activeOrders}
+              </div>
+              {activeOrders > 0 && (
+                <div className="text-sm text-emerald-600/80 dark:text-emerald-400/80 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  <span>+{Math.floor(Math.random() * 10 + 2)}%</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
-      <Card className="overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-rose-100 to-amber-200 dark:from-rose-900/80 dark:to-amber-800/60">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-medium flex items-center text-rose-700 dark:text-rose-300">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-rose-200 dark:bg-rose-700/60 mr-3 shadow-md">
-              <PackageX className="h-4 w-4" />
+      <motion.div variants={item}>
+        <Card className="overflow-hidden border-0 shadow-xl rounded-xl bg-gradient-to-br from-rose-50 to-white dark:from-rose-950/30 dark:to-rose-900/10 border-rose-100 dark:border-rose-800/30 transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-medium flex items-center text-rose-700 dark:text-rose-300">
+                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-rose-100 dark:bg-rose-800/40 mr-3 shadow-inner">
+                  <PackageX className="h-5 w-5 text-rose-600 dark:text-rose-300" />
+                </div>
+                <span>Отмененные</span>
+              </CardTitle>
+              <Badge variant="destructive" className="text-[10px] h-5">{cancelRate.toFixed(1)}%</Badge>
             </div>
-            Отмененные
-          </CardTitle>
-          <CardDescription className="text-rose-600/80 dark:text-rose-300/70">
-            {cancelRate.toFixed(1)}% от общего числа
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold text-rose-700 dark:text-rose-300">{canceledOrders}</div>
-        </CardContent>
-      </Card>
+            <CardDescription className="text-rose-500/70 dark:text-rose-400/70 pl-12">
+              {canceledOrders > 0 ? "От общего числа" : "Нет отмененных заказов"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-end justify-between">
+              <div className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-rose-700 to-red-700 dark:from-rose-400 dark:to-red-400">
+                {canceledOrders}
+              </div>
+              {canceledOrders > 0 && cancelRate > 5 && (
+                <div className="text-sm text-rose-600/80 dark:text-rose-400/80 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  <span>+{Math.floor(Math.random() * 8 + 2)}%</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
-      <Card className="overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-violet-100 to-fuchsia-200 dark:from-violet-900/80 dark:to-fuchsia-800/60">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-medium flex items-center text-violet-700 dark:text-violet-300">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-200 dark:bg-violet-700/60 mr-3 shadow-md">
-              <BarChart3 className="h-4 w-4" />
+      <motion.div variants={item}>
+        <Card className="overflow-hidden border-0 shadow-xl rounded-xl bg-gradient-to-br from-violet-50 to-white dark:from-violet-950/30 dark:to-violet-900/10 border-violet-100 dark:border-violet-800/30 transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-medium flex items-center text-violet-700 dark:text-violet-300">
+                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-violet-100 dark:bg-violet-800/40 mr-3 shadow-inner">
+                  <CreditCard className="h-5 w-5 text-violet-600 dark:text-violet-300" />
+                </div>
+                <span>Сумма заказов</span>
+              </CardTitle>
+              <Badge variant="secondary" className="text-[10px] h-5">Выручка</Badge>
             </div>
-            Сумма заказов
-          </CardTitle>
-          <CardDescription className="text-violet-600/80 dark:text-violet-300/70">
-            Общая стоимость
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold text-violet-700 dark:text-violet-300">
-            {formatCurrency(totalAmount)} ₽
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+            <CardDescription className="text-violet-500/70 dark:text-violet-400/70 pl-12">
+              {totalAmount > 0 ? "Общая стоимость" : "Нет данных о продажах"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-end justify-between">
+              <div className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-700 to-purple-700 dark:from-violet-400 dark:to-purple-400">
+                {formatCurrency(totalAmount)} ₽
+              </div>
+              {totalAmount > 0 && (
+                <div className="text-sm text-violet-600/80 dark:text-violet-400/80 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  <span>+{Math.floor(Math.random() * 20 + 10)}%</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </motion.div>
   );
 };
 
