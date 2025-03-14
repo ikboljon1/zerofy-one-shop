@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
@@ -25,6 +24,7 @@ import SalesChart from "./SalesChart";
 import TipsSection from "./TipsSection";
 import AIAnalysisSection from "@/components/ai/AIAnalysisSection";
 import SalesTable from "./SalesTable";
+import AverageSalesTable from "./AverageSalesTable";
 
 const Dashboard = () => {
   const { toast } = useToast();
@@ -249,10 +249,11 @@ const Dashboard = () => {
       </div>
 
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className={`${isMobile ? 'w-full grid grid-cols-5 gap-1' : ''}`}>
+        <TabsList className={`${isMobile ? 'w-full grid grid-cols-6 gap-1' : ''}`}>
           <TabsTrigger value="overview" className={isMobile ? 'text-xs py-1 px-1' : ''}>Обзор</TabsTrigger>
           <TabsTrigger value="orders" className={isMobile ? 'text-xs py-1 px-1' : ''}>Заказы</TabsTrigger>
           <TabsTrigger value="sales" className={isMobile ? 'text-xs py-1 px-1' : ''}>Продажи</TabsTrigger>
+          <TabsTrigger value="averageSales" className={isMobile ? 'text-xs py-1 px-1' : ''}>Ср. продажи</TabsTrigger>
           <TabsTrigger value="geography" className={isMobile ? 'text-xs py-1 px-1' : ''}>География</TabsTrigger>
           <TabsTrigger value="ai-analysis" className={isMobile ? 'text-xs py-1 px-1' : ''}>AI-анализ</TabsTrigger>
         </TabsList>
@@ -293,6 +294,10 @@ const Dashboard = () => {
           )}
           
           <SalesTable sales={filteredSalesData} />
+        </TabsContent>
+
+        <TabsContent value="averageSales" className="space-y-4">
+          <AverageSalesTable />
         </TabsContent>
 
         <TabsContent value="geography" className="space-y-4">
