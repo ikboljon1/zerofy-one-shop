@@ -162,7 +162,7 @@ const OrderMetrics: React.FC<OrderMetricsProps> = ({ orders }) => {
           <CardContent>
             <div className="flex items-end justify-between">
               <div className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-700 to-purple-700 dark:from-violet-400 dark:to-purple-400">
-                {formatCurrency(totalAmount)} ₽
+                {formatCurrency(totalAmount)}
               </div>
               {totalAmount > 0 && (
                 <div className="text-sm text-violet-600/80 dark:text-violet-400/80 flex items-center gap-1 bg-violet-50 dark:bg-violet-900/20 px-2 py-1 rounded-full">
