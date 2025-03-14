@@ -87,15 +87,21 @@ const ProductList = ({ title, products = [], isProfitable }: ProductListProps) =
             >
               <div className="flex items-start mb-1">
                 <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 mr-2 bg-gray-100 dark:bg-gray-800">
-                  <img 
-                    src={product.image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg"} 
-                    alt={safeText(product.name)} 
-                    className="w-full h-full object-cover" 
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg";
-                    }}
-                  />
+                  {product.image ? (
+                    <img 
+                      src={product.image} 
+                      alt={safeText(product.name)} 
+                      className="w-full h-full object-cover" 
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg";
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Image className="h-6 w-6 text-muted-foreground opacity-40" />
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
