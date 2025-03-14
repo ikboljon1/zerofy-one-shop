@@ -100,12 +100,15 @@ const AverageSalesTable = () => {
         };
       });
       
-      // Сортируем данные
+      // Сортируем данные - FIX: добавляем приведение типов для обеспечения корректного сравнения
       const sortedData = processedData.sort((a, b) => {
+        const aValue = typeof a[sortField] === 'number' ? a[sortField] : 0;
+        const bValue = typeof b[sortField] === 'number' ? b[sortField] : 0;
+        
         if (sortDirection === "desc") {
-          return b[sortField] - a[sortField];
+          return Number(bValue) - Number(aValue);
         } else {
-          return a[sortField] - b[sortField];
+          return Number(aValue) - Number(bValue);
         }
       });
       
