@@ -11,7 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CalendarRange } from "lucide-react";
 
-export type Period = "today" | "yesterday" | "week" | "2weeks" | "4weeks" | "3months";
+export type Period = "today" | "yesterday" | "week" | "2weeks" | "4weeks" | "3months" | "6months";
 
 interface PeriodSelectorProps {
   value: Period;
@@ -55,6 +55,7 @@ const PeriodSelector = ({ value, onChange }: PeriodSelectorProps) => {
           <SelectItem value="2weeks">14 дней</SelectItem>
           <SelectItem value="4weeks">28 дней</SelectItem>
           <SelectItem value="3months">3 месяца</SelectItem>
+          <SelectItem value="6months">6 месяцев</SelectItem>
         </SelectContent>
       </Select>
     </div>

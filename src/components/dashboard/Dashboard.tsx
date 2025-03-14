@@ -74,6 +74,10 @@ const Dashboard = () => {
         const threeMonthsAgo = new Date(todayStart);
         threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
         return itemDate >= threeMonthsAgo;
+      case "6months":
+        const sixMonthsAgo = new Date(todayStart);
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        return itemDate >= sixMonthsAgo;
       default:
         return true;
     }
