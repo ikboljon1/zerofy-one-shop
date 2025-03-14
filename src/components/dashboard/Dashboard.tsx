@@ -13,14 +13,13 @@ import {
   getSelectedStore
 } from "@/utils/storeUtils";
 import OrdersTable from "./OrdersTable";
-import SalesTable from "./SalesTable";
+import OrdersChart from "./OrdersChart";
 import GeographySection from "./GeographySection";
 import Stats from "@/components/Stats";
 import PeriodSelector, { Period } from "./PeriodSelector";
 import { WildberriesOrder, WildberriesSale } from "@/types/store";
 import OrderMetrics from "./OrderMetrics";
 import SalesMetrics from "./SalesMetrics";
-import OrdersChart from "./OrdersChart";
 import SalesChart from "./SalesChart";
 import TipsSection from "./TipsSection";
 import AIAnalysisSection from "@/components/ai/AIAnalysisSection";
@@ -263,14 +262,14 @@ const Dashboard = () => {
             <OrderMetrics orders={filteredOrdersData.orders} />
           )}
           
-          <OrdersTable orders={filteredOrdersData.orders} />
-          
           {orders.length > 0 && (
             <OrdersChart 
               orders={filteredOrdersData.orders} 
               sales={filteredSalesData}
             />
           )}
+          
+          <OrdersTable orders={filteredOrdersData.orders} />
         </TabsContent>
 
         <TabsContent value="sales" className="space-y-4">

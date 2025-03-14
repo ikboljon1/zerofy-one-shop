@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import OrdersAnalytics from "./OrdersAnalytics";
 
 interface OrdersTableProps {
   orders: WildberriesOrder[];
@@ -110,10 +108,6 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
 
   return (
     <div className="space-y-4">
-      {/* Аналитика заказов */}
-      <OrdersAnalytics orders={filteredOrders} />
-      
-      {/* Таблица заказов */}
       <Card className="overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-white to-fuchsia-50/40 dark:from-gray-900 dark:to-fuchsia-950/30 backdrop-blur-sm">
         <CardHeader className="pb-3 border-b border-fuchsia-100/30 dark:border-fuchsia-800/20">
           <div className="flex items-center justify-between">
