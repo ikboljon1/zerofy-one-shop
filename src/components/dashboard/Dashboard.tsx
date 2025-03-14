@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
@@ -69,6 +70,10 @@ const Dashboard = () => {
         const fourWeeksAgo = new Date(todayStart);
         fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
         return itemDate >= fourWeeksAgo;
+      case "3months":
+        const threeMonthsAgo = new Date(todayStart);
+        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+        return itemDate >= threeMonthsAgo;
       default:
         return true;
     }
