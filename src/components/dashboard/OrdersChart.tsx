@@ -1,3 +1,4 @@
+
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WildberriesOrder, WildberriesSale } from "@/types/store";
@@ -149,15 +150,15 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
   };
 
   const maxCanceledValue = useMemo(() => {
-    if (dailyOrdersData.length === 0) return 9;
+    if (dailyOrdersData.length === 0) return 5;
     const max = Math.max(...dailyOrdersData.map(d => d.canceled || 0));
-    return Math.max(9, Math.ceil(max)); // Always show up to at least 9
+    return Math.max(5, Math.ceil(max)); // Always show up to at least 5
   }, [dailyOrdersData]);
 
   const customLeftAxisTicks = useMemo(() => {
     const ticks = [];
     
-    const effectiveMax = Math.max(9, maxCanceledValue);
+    const effectiveMax = Math.max(5, maxCanceledValue);
     for (let i = 0; i <= effectiveMax; i++) {
       if (i % 1 === 0) {
         ticks.push(i);
@@ -216,7 +217,7 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
                 axisLine={{ stroke: 'var(--border)' }}
                 stroke="#64748B"
                 ticks={customLeftAxisTicks}
-                domain={[0, Math.max(9, maxCanceledValue)]}
+                domain={[0, Math.max(5, maxCanceledValue)]}
               />
               <YAxis 
                 yAxisId="right"
