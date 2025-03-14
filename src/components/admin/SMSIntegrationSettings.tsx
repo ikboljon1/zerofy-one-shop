@@ -1,8 +1,6 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +12,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { testSMSIntegration } from "@/services/smsService";
 
 const smsProvidersOptions = [
   { value: "vonage", label: "Vonage (Nexmo)" },
@@ -22,7 +21,6 @@ const smsProvidersOptions = [
   { value: "custom", label: "Другой провайдер" },
 ];
 
-// Расширенная схема с учетом разных провайдеров
 const smsSettingsSchema = z.object({
   smsProvider: z.string().min(1, "Необходимо указать провайдера SMS"),
   apiKey: z.string().min(1, "Необходимо указать API ключ"),
@@ -54,7 +52,6 @@ const SMSIntegrationSettings = () => {
     },
   });
   
-  // Отслеживаем текущий провайдер для отображения соответствующих полей
   const selectedProvider = form.watch("smsProvider");
   
   useEffect(() => {
@@ -131,7 +128,6 @@ const SMSIntegrationSettings = () => {
     }
   };
   
-  // Рендеринг дополнительных полей в зависимости от провайдера
   const renderProviderSpecificFields = () => {
     switch (selectedProvider) {
       case "vonage":
@@ -290,7 +286,6 @@ const SMSIntegrationSettings = () => {
                 )}
               />
               
-              {/* Дополнительные поля в зависимости от провайдера */}
               {renderProviderSpecificFields()}
               
               <FormField
