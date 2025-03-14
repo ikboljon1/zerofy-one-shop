@@ -16,7 +16,7 @@ import SalesTable from "./SalesTable";
 import OrdersTable from "./OrdersTable";
 import GeographySection from "./GeographySection";
 import TipsSection from "./TipsSection";
-import PeriodSelector from "./PeriodSelector";
+import PeriodSelector, { Period } from "./PeriodSelector";
 import Products from "@/components/Products";
 import { WildberriesOrder, WildberriesSale, Store } from "@/types/store";
 import { getOrdersData, getSalesData, getProductProfitabilityData, getAnalyticsData, getSelectedStore } from "@/utils/storeUtils";
@@ -37,7 +37,7 @@ interface ChartConfigType {
 const Dashboard: React.FC<DashboardProps> = ({ selectedStore }) => {
   console.log("Dashboard render with selectedStore:", selectedStore);
   const isMobile = useIsMobile();
-  const [period, setPeriod] = useState<"7d" | "30d" | "90d">("30d");
+  const [period, setPeriod] = useState<Period>("30d");
   const [orders, setOrders] = useState<WildberriesOrder[]>([]);
   const [sales, setSales] = useState<WildberriesSale[]>([]);
   const [profitableProducts, setProfitableProducts] = useState<any[]>([]);
@@ -154,7 +154,7 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedStore }) => {
     <div className="w-full space-y-4">
       <Card className="p-3">
         <CardContent>
-          <PeriodSelector value={period} onChange={setPeriod} />
+          <PeriodSelector value={period} onChange={(newPeriod) => setPeriod(newPeriod)} />
         </CardContent>
       </Card>
       
@@ -190,14 +190,19 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedStore }) => {
                 data={chartData}
                 index="date"
                 categories={Object.keys(chartConfig)}
-                colors={Object.values(chartConfig).map((c) => c.color as any)}
+                colors={Object.values(chartConfig).map((c) => c.color)}
                 showLegend
                 valueFormatter={(value: number) => formatCurrency(value).replace(' ', ' ')}
               />
             </CardContent>
           </Card>
           
-          <GeographySection data={orders} />
+          <GeographySection 
+            orders={orders} 
+            sales={sales}
+            warehouseDistribution={[]} 
+            regionDistribution={[]}
+          />
           <TipsSection />
         </TabsContent>
         

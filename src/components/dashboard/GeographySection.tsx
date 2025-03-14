@@ -1,9 +1,8 @@
-
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { Package, Info, ShoppingBag, MapPin } from "lucide-react";
-import { WildberriesSale } from "@/types/store";
+import { WildberriesSale, WildberriesOrder } from "@/types/store";
 import { Period } from "./PeriodSelector";
 
 interface ProductSalesDistribution {
@@ -13,8 +12,10 @@ interface ProductSalesDistribution {
 }
 
 interface GeographySectionProps {
-  warehouseDistribution: any[];
-  regionDistribution: any[];
+  warehouseDistribution?: any[];
+  regionDistribution?: any[];
+  data?: WildberriesOrder[];
+  orders?: WildberriesOrder[];
   sales?: WildberriesSale[];
   period?: Period;
   apiKey?: string;
@@ -23,12 +24,21 @@ interface GeographySectionProps {
 const COLORS = ["#8B5CF6", "#EC4899", "#10B981", "#6366F1", "#F59E0B"];
 
 const GeographySection: React.FC<GeographySectionProps> = ({
-  warehouseDistribution,
-  regionDistribution,
+  warehouseDistribution: propWarehouseDistribution,
+  regionDistribution: propRegionDistribution,
+  data: ordersFromData,
+  orders: ordersFromProps,
   sales = [],
   period = "week",
   apiKey
 }) => {
+  // Merge all possible sources of data
+  const orders = ordersFromProps || ordersFromData || [];
+  
+  // Default empty distributions if not provided directly
+  const warehouseDistribution = propWarehouseDistribution || [];
+  const regionDistribution = propRegionDistribution || [];
+
   // Process sales data to get product quantity distribution
   const getProductSalesDistribution = (): ProductSalesDistribution[] => {
     if (!sales || sales.length === 0) return [];

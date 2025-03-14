@@ -11,7 +11,6 @@ import {
   DeductionsChart,
   ExpenseBreakdown,
   ProfitabilityTips,
-  LimitExceededMessage,
   DateRangePicker,
 } from "./components";
 import {
@@ -146,7 +145,12 @@ export default function AnalyticsSection({ selectedStore }: AnalyticsSectionProp
           </TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="space-y-4">
-          <DateRangePicker value={dateRange} onChange={handleDateRangeChange} />
+          <DateRangePicker
+            value={dateRange}
+            onChange={handleDateRangeChange}
+            dateFrom={dateRange.from}
+            dateTo={dateRange.to}
+          />
           <KeyMetrics data={analyticsData} />
           <SalesChart data={analyticsData} />
           <ProfitabilityTips data={analyticsData} />

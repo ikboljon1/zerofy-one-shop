@@ -12,7 +12,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CalendarRange } from "lucide-react";
 
-export type Period = "today" | "yesterday" | "week" | "2weeks" | "4weeks";
+// Update Period type to match the values used in Dashboard
+export type Period = "today" | "yesterday" | "week" | "2weeks" | "4weeks" | "7d" | "30d" | "90d";
 
 interface PeriodSelectorProps {
   value: Period;
@@ -22,12 +23,29 @@ interface PeriodSelectorProps {
 const PeriodSelector = ({ value, onChange }: PeriodSelectorProps) => {
   const isMobile = useIsMobile();
   
+  // Map dashboard periods to selector periods if needed
+  const getMappedValue = (val: Period): Period => {
+    // Map values if necessary (7d -> week, 30d -> 4weeks, etc.)
+    // This allows both formats to work
+    const mapping: Record<string, Period> = {
+      "7d": "week",
+      "30d": "4weeks",
+      "90d": "4weeks",
+    };
+    
+    return (mapping[val] || val) as Period;
+  };
+  
+  const handleChange = (newValue: string) => {
+    onChange(newValue as Period);
+  };
+  
   if (isMobile) {
     return (
       <div className="w-full mb-2">
         <Tabs 
-          value={value}
-          onValueChange={(val) => onChange(val as Period)} 
+          value={getMappedValue(value)}
+          onValueChange={handleChange}
           className="w-full"
         >
           <TabsList className="grid w-full grid-cols-4 h-9">
@@ -43,7 +61,7 @@ const PeriodSelector = ({ value, onChange }: PeriodSelectorProps) => {
   
   return (
     <div className="w-auto flex-shrink-0">
-      <Select value={value} onValueChange={onChange}>
+      <Select value={getMappedValue(value)} onValueChange={handleChange}>
         <SelectTrigger className="w-[180px] h-10">
           <CalendarRange className="mr-2 h-4 w-4 text-muted-foreground" />
           <SelectValue placeholder="Выберите период" />

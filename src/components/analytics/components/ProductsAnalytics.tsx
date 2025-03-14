@@ -16,12 +16,20 @@ interface Product {
 }
 
 interface ProductsAnalyticsProps {
-  profitableProducts: Product[];
-  unprofitableProducts: Product[];
+  data?: any;
+  profitableProducts?: Product[];
+  unprofitableProducts?: Product[];
 }
 
-const ProductsAnalytics = ({ profitableProducts, unprofitableProducts }: ProductsAnalyticsProps) => {
+const ProductsAnalytics = ({ data, profitableProducts: propProfitableProducts, unprofitableProducts: propUnprofitableProducts }: ProductsAnalyticsProps) => {
   const isMobile = useIsMobile();
+  
+  // Use either directly provided products or extract from data object
+  const profitableProducts = propProfitableProducts || 
+    (data?.profitableProducts || []);
+  
+  const unprofitableProducts = propUnprofitableProducts || 
+    (data?.unprofitableProducts || []);
   
   const ProductList = ({ products, isProfitable }: { products: Product[], isProfitable: boolean }) => {
     const textColorClass = isProfitable ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
@@ -48,7 +56,9 @@ const ProductsAnalytics = ({ profitableProducts, unprofitableProducts }: Product
           return (
             <div 
               key={index} 
-              className={`flex items-start p-4 rounded-lg border ${bgClass}`}
+              className={`flex items-start p-4 rounded-lg border ${isProfitable 
+                ? "bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-green-100 dark:border-green-800/30" 
+                : "bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-950/30 dark:to-rose-950/30 border-red-100 dark:border-red-800/30"}`}
             >
               <div className="w-20 h-20 rounded-lg overflow-hidden mr-4 bg-gray-100 dark:bg-gray-800 flex-shrink-0">
                 <img 
@@ -65,7 +75,7 @@ const ProductsAnalytics = ({ profitableProducts, unprofitableProducts }: Product
                 <div className="flex justify-between items-start">
                   <h4 className="font-medium text-base line-clamp-2">{product.name || "Неизвестный товар"}</h4>
                   <div className="text-right flex items-center ml-2">
-                    <span className={`${textColorClass} font-semibold mr-1 whitespace-nowrap`}>
+                    <span className={`${isProfitable ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"} font-semibold mr-1 whitespace-nowrap`}>
                       {formattedProfit}
                     </span>
                     {isProfitable ? (

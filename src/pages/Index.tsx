@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -27,11 +26,9 @@ const Index = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if user is authenticated - проверяем и localStorage, и sessionStorage
     const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
     
     if (!storedUser) {
-      // User is not authenticated, redirect to landing page
       toast({
         title: "Доступ запрещен",
         description: "Пожалуйста, войдите в систему для доступа к дашборду",
@@ -41,27 +38,22 @@ const Index = () => {
       return;
     }
     
-    // User is authenticated, set user data
     setUser(JSON.parse(storedUser));
     
-    // Initialize selected store
     const store = getSelectedStore();
     if (store) {
       setSelectedStore(store);
     }
   }, [navigate, toast]);
 
-  // Добавляем слушателя события изменения выбранного магазина
   useEffect(() => {
     const handleStoreSelectionChange = (event: CustomEvent) => {
-      console.log("Store selection changed event triggered:", event.detail);
       const { storeId } = event.detail;
       
       if (storeId) {
         const stores = loadStores();
         const store = stores.find(s => s.id === storeId);
         if (store) {
-          console.log("Setting selected store:", store);
           setSelectedStore(store);
         }
       }
@@ -79,7 +71,6 @@ const Index = () => {
       const store = getSelectedStore();
       if (!store) return { profitable: [], unprofitable: [] };
       
-      // Получаем данные о прибыльности товаров
       const profitabilityData = getProductProfitabilityData(store.id);
       if (profitabilityData && profitabilityData.profitableProducts && profitabilityData.unprofitableProducts) {
         return {
@@ -91,7 +82,6 @@ const Index = () => {
       return { profitable: [], unprofitable: [] };
     }
     
-    // Получаем данные о прибыльности товаров для выбранного магазина
     const profitabilityData = getProductProfitabilityData(selectedStore.id);
     if (profitabilityData && profitabilityData.profitableProducts && profitabilityData.unprofitableProducts) {
       return {
@@ -112,7 +102,6 @@ const Index = () => {
   };
 
   const handleStoreSelect = (store: Store) => {
-    console.log("Store selected from Stores component:", store);
     setSelectedStore(store);
   };
 
