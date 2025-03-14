@@ -243,7 +243,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
                         <TableCell>{order.supplierArticle}</TableCell>
                         <TableCell className="max-w-[150px] truncate" title={order.category}>{order.category}</TableCell>
                         <TableCell className="max-w-[150px] truncate" title={order.subject}>{order.subject}</TableCell>
-                        <TableCell className="font-semibold text-indigo-700 dark:text-indigo-300">{formatCurrency(order.priceWithDisc)} ₽</TableCell>
+                        <TableCell className="font-semibold text-indigo-700 dark:text-indigo-300">{formatCurrency(order.priceWithDisc)}</TableCell>
                         <TableCell className="max-w-[120px] truncate" title={order.warehouseName}>{order.warehouseName}</TableCell>
                         <TableCell className="max-w-[120px] truncate" title={order.regionName}>{order.regionName}</TableCell>
                         <TableCell>
@@ -279,13 +279,13 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
                                 <h4 className="text-sm font-semibold">Информация о цене</h4>
                                 <div className="grid grid-cols-2 gap-1 text-xs">
                                   <div className="text-muted-foreground">Полная цена:</div>
-                                  <div className="font-medium">{formatCurrency(order.totalPrice)} ₽</div>
+                                  <div className="font-medium">{formatCurrency(order.totalPrice)}</div>
                                   <div className="text-muted-foreground">Скидка:</div>
                                   <div className="font-medium">{order.discountPercent}%</div>
                                   <div className="text-muted-foreground">Финальная цена:</div>
-                                  <div className="font-medium">{formatCurrency(order.finishedPrice)} ₽</div>
+                                  <div className="font-medium">{formatCurrency(order.finishedPrice)}</div>
                                   <div className="text-muted-foreground">С учетом скидки:</div>
-                                  <div className="font-medium">{formatCurrency(order.priceWithDisc)} ₽</div>
+                                  <div className="font-medium">{formatCurrency(order.priceWithDisc)}</div>
                                 </div>
                               </div>
                               <div className="space-y-2">
