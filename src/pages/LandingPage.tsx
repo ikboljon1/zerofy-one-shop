@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Zap, ChevronRight, Users, ShieldCheck, BarChart2, Package, CircleCheck, Rocket, Clock, Settings, CreditCard, HeartHandshake, MessageSquare, ArrowRight, LineChart, PieChart, Gauge, AreaChart, TrendingUp, CheckCircle, Calculator, Database, BellRing, ArrowUpRight, BoxSelect, Wallet, PercentSquare, BadgeDollarSign, TrendingDown, AlertTriangle, ChevronUp, BarChart3, Lightbulb, CircleDollarSign, Landmark } from "lucide-react";
@@ -54,7 +55,7 @@ const LandingPage = () => {
     title: "Детализация расходов и прибыльных товаров",
     description: "Детальная информация о структуре расходов и самых прибыльных товарах"
   }, {
-    src: "/lovable-uploads/0a0d0dd7-b54d-4163-ba50-1ddbb5b6dd7d.png",
+    src: "/lovable-uploads/dfa6fe03-ed0d-4d26-8a79-dbf4321accfe.png",
     alt: "Детализация заказов",
     title: "Мониторинг заказов в реальном времени",
     description: "Отслеживайте статистику заказов и продаж с визуализацией по категориям товаров"
