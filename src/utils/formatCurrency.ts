@@ -26,3 +26,23 @@ export const formatWithDecimals = (value: number | string, decimals: number = 2)
     maximumFractionDigits: decimals,
   }).format(numValue);
 };
+
+/**
+ * Преобразует строку с ценой в число
+ * @param value Строка с ценой
+ * @returns Число
+ */
+export const parseCurrencyString = (value: string): number => {
+  if (!value) return 0;
+  const numericValue = value.replace(/[^\d.-]/g, '');
+  return parseFloat(numericValue) || 0;
+};
+
+/**
+ * Округляет число до двух знаков после запятой
+ * @param value Число для округления
+ * @returns Округленное число
+ */
+export const roundToTwoDecimals = (value: number): number => {
+  return Math.round(value * 100) / 100;
+};
