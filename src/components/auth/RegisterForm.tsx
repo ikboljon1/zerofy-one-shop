@@ -14,24 +14,35 @@ import { Info } from "lucide-react";
 
 // Country codes with Kyrgyzstan (+996) as default
 const countryCodes = [
-  { code: "+996", country: "Кыргызстан" },
-  { code: "+7", country: "Россия" },
-  { code: "+375", country: "Беларусь" },
-  { code: "+380", country: "Украина" },
-  { code: "+998", country: "Узбекистан" },
-  { code: "+77", country: "Казахстан" },
-  { code: "+992", country: "Таджикистан" },
-  { code: "+993", country: "Туркменистан" },
-  { code: "+994", country: "Азербайджан" },
-  { code: "+374", country: "Армения" },
+  { code: "+996", country: "Кыргызстан", pattern: /^\d{9}$/, example: "XXX XXX XXX", maxLength: 9 },
+  { code: "+7", country: "Россия", pattern: /^\d{10}$/, example: "XXX XXX XX XX", maxLength: 10 },
+  { code: "+375", country: "Беларусь", pattern: /^\d{9}$/, example: "XX XXX XX XX", maxLength: 9 },
+  { code: "+380", country: "Украина", pattern: /^\d{9}$/, example: "XX XXX XX XX", maxLength: 9 },
+  { code: "+998", country: "Узбекистан", pattern: /^\d{9}$/, example: "XX XXX XX XX", maxLength: 9 },
+  { code: "+77", country: "Казахстан", pattern: /^\d{9}$/, example: "XXX XXX XXX", maxLength: 9 },
+  { code: "+992", country: "Таджикистан", pattern: /^\d{9}$/, example: "XX XXX XXXX", maxLength: 9 },
+  { code: "+993", country: "Туркменистан", pattern: /^\d{8}$/, example: "XXX XX XX", maxLength: 8 },
+  { code: "+994", country: "Азербайджан", pattern: /^\d{9}$/, example: "XX XXX XX XX", maxLength: 9 },
+  { code: "+374", country: "Армения", pattern: /^\d{8}$/, example: "XX XXX XXX", maxLength: 8 },
 ];
+
+// Helper function to format phone number based on country pattern
+const formatPhoneNumber = (value: string, countryCode: string) => {
+  // Remove all non-digit characters
+  const digitsOnly = value.replace(/\D/g, "");
+  
+  const country = countryCodes.find(c => c.code === countryCode);
+  if (!country) return digitsOnly;
+  
+  // Truncate to max length for the country
+  return digitsOnly.slice(0, country.maxLength);
+};
 
 const registerSchema = z.object({
   name: z.string().min(2, { message: "Имя должно содержать минимум 2 символа" }),
   email: z.string().email({ message: "Введите корректный email" }),
   password: z.string().min(6, { message: "Пароль должен содержать минимум 6 символов" }),
   phone: z.string()
-    .min(9, { message: "Введите корректный номер телефона" })
     .refine(val => !val.startsWith('0'), {
       message: "Номер не должен начинаться с нуля"
     })
@@ -45,15 +56,21 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [countryCode, setCountryCode] = useState("+996"); // Kyrgyzstan as default
   const [isPhoneUnique, setIsPhoneUnique] = useState(true);
+  const [phoneFormatExample, setPhoneFormatExample] = useState("XXX XXX XXX"); // Default format example
   const { toast } = useToast();
   const navigate = useNavigate();
+  
+  // Get the current country for validation
+  const currentCountry = countryCodes.find(c => c.code === countryCode) || countryCodes[0];
 
   const {
     register,
     handleSubmit,
     formState: { errors },
     watch,
-    trigger
+    trigger,
+    setValue,
+    getValues
   } = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -66,9 +83,48 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
   
   const phoneValue = watch("phone");
   
+  // Update the phone format example when country code changes
   useEffect(() => {
-    if (phoneValue && phoneValue.length >= 9) {
+    const country = countryCodes.find(c => c.code === countryCode);
+    if (country) {
+      setPhoneFormatExample(country.example);
+      
+      // Re-format the current phone number for the new country code
+      const currentPhone = getValues("phone");
+      if (currentPhone) {
+        const formatted = formatPhoneNumber(currentPhone, countryCode);
+        setValue("phone", formatted);
+      }
+      
+      trigger("phone"); // Re-validate with new country code
+    }
+  }, [countryCode, setValue, getValues, trigger]);
+  
+  // Format phone as user types
+  useEffect(() => {
+    const subscription = watch((value, { name }) => {
+      if (name === "phone") {
+        const formattedValue = formatPhoneNumber(value.phone || "", countryCode);
+        if (formattedValue !== value.phone) {
+          setValue("phone", formattedValue);
+        }
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [watch, setValue, countryCode]);
+  
+  // Validate phone against current country pattern and check if it exists
+  useEffect(() => {
+    if (phoneValue && phoneValue.length >= currentCountry.maxLength) {
       const checkPhone = async () => {
+        // Validate against country pattern
+        const isValidForCountry = currentCountry.pattern.test(phoneValue);
+        
+        if (!isValidForCountry) {
+          return;
+        }
+        
         const fullPhoneNumber = `${countryCode}${phoneValue}`;
         const exists = await checkPhoneExists(fullPhoneNumber);
         setIsPhoneUnique(!exists);
@@ -86,9 +142,19 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
     } else {
       setIsPhoneUnique(true);
     }
-  }, [phoneValue, countryCode, toast]);
+  }, [phoneValue, countryCode, toast, currentCountry.pattern, currentCountry.maxLength]);
 
   const onSubmit = async (data: z.infer<typeof registerSchema>) => {
+    // Validate the phone format for the selected country
+    if (!currentCountry.pattern.test(data.phone)) {
+      toast({
+        title: "Ошибка",
+        description: `Неверный формат телефона для ${currentCountry.country}`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
@@ -172,7 +238,7 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
           <Label htmlFor="phone">Номер телефона</Label>
           <div className="text-xs text-muted-foreground flex items-center">
             <Info className="h-3 w-3 mr-1" />
-            Без нуля в начале
+            Формат: {phoneFormatExample}
           </div>
         </div>
         <div className="flex">
@@ -197,13 +263,17 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
           <Input
             id="phone"
             type="tel"
-            placeholder="Номер телефона"
+            placeholder={phoneFormatExample}
             className={`flex-1 ${!isPhoneUnique ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
             {...register("phone")}
+            maxLength={currentCountry.maxLength}
           />
         </div>
         {errors.phone && (
           <p className="text-sm text-destructive">{errors.phone.message}</p>
+        )}
+        {!currentCountry.pattern.test(phoneValue) && phoneValue.length > 0 && (
+          <p className="text-sm text-amber-500">Неверный формат номера для {currentCountry.country}</p>
         )}
         {!isPhoneUnique && (
           <p className="text-sm text-destructive">Этот номер уже зарегистрирован</p>
@@ -222,7 +292,15 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
         )}
       </div>
       
-      <Button type="submit" className="w-full" disabled={isLoading || !isPhoneUnique}>
+      <Button 
+        type="submit" 
+        className="w-full" 
+        disabled={
+          isLoading || 
+          !isPhoneUnique || 
+          (phoneValue && !currentCountry.pattern.test(phoneValue))
+        }
+      >
         {isLoading ? "Регистрация..." : "Зарегистрироваться"}
       </Button>
     </form>

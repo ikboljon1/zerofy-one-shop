@@ -5,10 +5,11 @@ import { cn } from "@/lib/utils"
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   trackValue?: boolean;
+  formatPhone?: boolean;
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, trackValue = false, ...props }, ref) => {
+  ({ className, type, trackValue = false, formatPhone = false, ...props }, ref) => {
     // For inputs that need individual tracking, use local state
     const [localValue, setLocalValue] = React.useState<string>(props.value?.toString() || "");
     
@@ -23,6 +24,12 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       // Update local state first
       if (trackValue) {
         setLocalValue(e.target.value);
+      }
+      
+      // For phone formatting, ensure only digits
+      if (formatPhone && type === 'tel') {
+        // Let the parent component handle the formatting
+        // This happens in the RegisterForm component
       }
       
       // Call the original onChange handler
