@@ -15,8 +15,7 @@ import {
   PieChart, 
   Pie, 
   Cell, 
-  Legend,
-  Line
+  Legend 
 } from 'recharts';
 import { formatCurrency } from "@/utils/formatCurrency";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
@@ -232,14 +231,15 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
               <ChartTooltip 
                 content={<ChartTooltipContent />}
               />
-              <Line 
+              <Area 
                 type="monotone" 
                 dataKey="amount" 
                 name="Сумма"
                 yAxisId="right"
                 stroke="var(--color-amount)" 
                 strokeWidth={2}
-                dot={false}
+                strokeDasharray="5 5"
+                fill="none"
                 activeDot={{ r: 5, strokeWidth: 2 }}
               />
               <Area 
