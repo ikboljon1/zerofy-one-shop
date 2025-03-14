@@ -174,8 +174,8 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
           <Table>
             <TableHeader>
               <TableRow className="bg-indigo-50/80 dark:bg-indigo-950/40 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/30">
-                <TableHead className="w-10 text-center"></TableHead>
-                <TableHead className="text-indigo-900/80 dark:text-indigo-200/90 font-medium">
+                <TableHead className="w-10"></TableHead>
+                <TableHead>
                   <Button 
                     variant="ghost" 
                     onClick={() => handleSort("date")}
@@ -188,7 +188,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
                     )}
                   </Button>
                 </TableHead>
-                <TableHead className="text-indigo-900/80 dark:text-indigo-200/90 font-medium">
+                <TableHead>
                   <Button 
                     variant="ghost" 
                     onClick={() => handleSort("supplierArticle")}
@@ -200,9 +200,9 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
                     )}
                   </Button>
                 </TableHead>
-                <TableHead className="text-indigo-900/80 dark:text-indigo-200/90 font-medium">Категория</TableHead>
-                <TableHead className="text-indigo-900/80 dark:text-indigo-200/90 font-medium">Предмет</TableHead>
-                <TableHead className="text-indigo-900/80 dark:text-indigo-200/90 font-medium">
+                <TableHead>Категория</TableHead>
+                <TableHead>Предмет</TableHead>
+                <TableHead>
                   <Button 
                     variant="ghost" 
                     onClick={() => handleSort("priceWithDisc")}
@@ -214,105 +214,97 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
                     )}
                   </Button>
                 </TableHead>
-                <TableHead className="text-indigo-900/80 dark:text-indigo-200/90 font-medium">Склад</TableHead>
-                <TableHead className="text-indigo-900/80 dark:text-indigo-200/90 font-medium">Регион</TableHead>
-                <TableHead className="text-indigo-900/80 dark:text-indigo-200/90 font-medium">Статус</TableHead>
-                <TableHead className="text-indigo-900/80 dark:text-indigo-200/90 font-medium w-10 text-center">Действия</TableHead>
+                <TableHead>Склад</TableHead>
+                <TableHead>Регион</TableHead>
+                <TableHead>Статус</TableHead>
+                <TableHead className="w-10">Действия</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {currentOrders.length > 0 ? (
                 currentOrders.map((order, index) => (
                   <React.Fragment key={order.srid || index}>
-                    <Collapsible
-                      open={expandedOrder === order.srid}
-                      onOpenChange={() => toggleOrderExpand(order.srid)}
-                      className="w-full"
+                    <TableRow 
+                      className={`
+                        ${index % 2 === 0 ? 'bg-white dark:bg-gray-900/20' : 'bg-indigo-50/30 dark:bg-indigo-950/10'} 
+                        hover:bg-indigo-100/50 dark:hover:bg-indigo-900/20 transition-colors cursor-pointer
+                      `}
                     >
-                      <TableRow 
-                        className={`
-                          ${index % 2 === 0 ? 'bg-white dark:bg-gray-900/20' : 'bg-indigo-50/30 dark:bg-indigo-950/10'} 
-                          hover:bg-indigo-100/50 dark:hover:bg-indigo-900/20 transition-colors cursor-pointer
-                        `}
-                      >
-                        <TableCell className="text-center">
-                          <CollapsibleTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-6 w-6">
-                              {expandedOrder === order.srid ? (
-                                <ChevronDown className="h-4 w-4" />
-                              ) : (
-                                <ChevronRight className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </CollapsibleTrigger>
-                        </TableCell>
-                        <TableCell className="font-medium text-indigo-800 dark:text-indigo-300">{formatDate(order.date)}</TableCell>
-                        <TableCell>{order.supplierArticle}</TableCell>
-                        <TableCell className="max-w-[150px] truncate" title={order.category}>{order.category}</TableCell>
-                        <TableCell className="max-w-[150px] truncate" title={order.subject}>{order.subject}</TableCell>
-                        <TableCell className="font-semibold text-indigo-700 dark:text-indigo-300">{formatCurrency(order.priceWithDisc)} ₽</TableCell>
-                        <TableCell className="max-w-[120px] truncate" title={order.warehouseName}>{order.warehouseName}</TableCell>
-                        <TableCell className="max-w-[120px] truncate" title={order.regionName}>{order.regionName}</TableCell>
-                        <TableCell>
-                          <Badge variant={order.isCancel ? "destructive" : "success"} className="font-normal">
-                            {order.isCancel ? 'Отменен' : 'Активен'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" title="Подробнее">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                      
-                      <CollapsibleContent>
-                        <tr className="bg-indigo-50/50 dark:bg-indigo-950/20">
-                          <td colSpan={10} className="p-4">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                              <div className="space-y-2">
-                                <h4 className="text-sm font-semibold">Общая информация</h4>
-                                <div className="grid grid-cols-2 gap-1 text-xs">
-                                  <div className="text-muted-foreground">ID заказа:</div>
-                                  <div className="font-medium">{order.srid}</div>
-                                  <div className="text-muted-foreground">Штрих-код:</div>
-                                  <div className="font-medium">{order.barcode}</div>
-                                  <div className="text-muted-foreground">Бренд:</div>
-                                  <div className="font-medium">{order.brand}</div>
-                                  <div className="text-muted-foreground">Размер:</div>
-                                  <div className="font-medium">{order.techSize || "Не указан"}</div>
-                                </div>
-                              </div>
-                              <div className="space-y-2">
-                                <h4 className="text-sm font-semibold">Информация о цене</h4>
-                                <div className="grid grid-cols-2 gap-1 text-xs">
-                                  <div className="text-muted-foreground">Полная цена:</div>
-                                  <div className="font-medium">{formatCurrency(order.totalPrice)} ₽</div>
-                                  <div className="text-muted-foreground">Скидка:</div>
-                                  <div className="font-medium">{order.discountPercent}%</div>
-                                  <div className="text-muted-foreground">Финальная цена:</div>
-                                  <div className="font-medium">{formatCurrency(order.finishedPrice)} ₽</div>
-                                  <div className="text-muted-foreground">С учетом скидки:</div>
-                                  <div className="font-medium">{formatCurrency(order.priceWithDisc)} ₽</div>
-                                </div>
-                              </div>
-                              <div className="space-y-2">
-                                <h4 className="text-sm font-semibold">Информация о доставке</h4>
-                                <div className="grid grid-cols-2 gap-1 text-xs">
-                                  <div className="text-muted-foreground">Дата изменения:</div>
-                                  <div className="font-medium">{formatDate(order.lastChangeDate)}</div>
-                                  <div className="text-muted-foreground">Страна:</div>
-                                  <div className="font-medium">{order.countryName}</div>
-                                  <div className="text-muted-foreground">Область/Округ:</div>
-                                  <div className="font-medium">{order.oblastOkrugName}</div>
-                                  <div className="text-muted-foreground">Тип склада:</div>
-                                  <div className="font-medium">{order.warehouseType}</div>
-                                </div>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleOrderExpand(order.srid)}>
+                          {expandedOrder === order.srid ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TableCell>
+                      <TableCell className="font-medium text-indigo-800 dark:text-indigo-300">{formatDate(order.date)}</TableCell>
+                      <TableCell>{order.supplierArticle}</TableCell>
+                      <TableCell className="max-w-[150px] truncate" title={order.category}>{order.category}</TableCell>
+                      <TableCell className="max-w-[150px] truncate" title={order.subject}>{order.subject}</TableCell>
+                      <TableCell className="font-semibold text-indigo-700 dark:text-indigo-300">{formatCurrency(order.priceWithDisc)} ₽</TableCell>
+                      <TableCell className="max-w-[120px] truncate" title={order.warehouseName}>{order.warehouseName}</TableCell>
+                      <TableCell className="max-w-[120px] truncate" title={order.regionName}>{order.regionName}</TableCell>
+                      <TableCell>
+                        <Badge variant={order.isCancel ? "destructive" : "success"} className="font-normal">
+                          {order.isCancel ? 'Отменен' : 'Активен'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" title="Подробнее">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                    
+                    {expandedOrder === order.srid && (
+                      <TableRow className="bg-indigo-50/50 dark:bg-indigo-950/20">
+                        <TableCell colSpan={10} className="p-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                              <h4 className="text-sm font-semibold">Общая информация</h4>
+                              <div className="grid grid-cols-2 gap-1 text-xs">
+                                <div className="text-muted-foreground">ID заказа:</div>
+                                <div className="font-medium">{order.srid}</div>
+                                <div className="text-muted-foreground">Штрих-код:</div>
+                                <div className="font-medium">{order.barcode}</div>
+                                <div className="text-muted-foreground">Бренд:</div>
+                                <div className="font-medium">{order.brand}</div>
+                                <div className="text-muted-foreground">Размер:</div>
+                                <div className="font-medium">{order.techSize || "Не указан"}</div>
                               </div>
                             </div>
-                          </td>
-                        </tr>
-                      </CollapsibleContent>
-                    </Collapsible>
+                            <div className="space-y-2">
+                              <h4 className="text-sm font-semibold">Информация о цене</h4>
+                              <div className="grid grid-cols-2 gap-1 text-xs">
+                                <div className="text-muted-foreground">Полная цена:</div>
+                                <div className="font-medium">{formatCurrency(order.totalPrice)} ₽</div>
+                                <div className="text-muted-foreground">Скидка:</div>
+                                <div className="font-medium">{order.discountPercent}%</div>
+                                <div className="text-muted-foreground">Финальная цена:</div>
+                                <div className="font-medium">{formatCurrency(order.finishedPrice)} ₽</div>
+                                <div className="text-muted-foreground">С учетом скидки:</div>
+                                <div className="font-medium">{formatCurrency(order.priceWithDisc)} ₽</div>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <h4 className="text-sm font-semibold">Информация о доставке</h4>
+                              <div className="grid grid-cols-2 gap-1 text-xs">
+                                <div className="text-muted-foreground">Дата изменения:</div>
+                                <div className="font-medium">{formatDate(order.lastChangeDate)}</div>
+                                <div className="text-muted-foreground">Страна:</div>
+                                <div className="font-medium">{order.countryName}</div>
+                                <div className="text-muted-foreground">Область/Округ:</div>
+                                <div className="font-medium">{order.oblastOkrugName}</div>
+                                <div className="text-muted-foreground">Тип склада:</div>
+                                <div className="font-medium">{order.warehouseType}</div>
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </React.Fragment>
                 ))
               ) : (
