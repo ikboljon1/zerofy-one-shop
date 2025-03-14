@@ -1,3 +1,4 @@
+
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WildberriesOrder, WildberriesSale } from "@/types/store";
@@ -27,8 +28,8 @@ interface OrdersChartProps {
   sales: WildberriesSale[];
 }
 
-// Updated professional color palette
-const COLORS = ['#4F46E5', '#0EA5E9', '#10B981', '#F59E0B', '#7C3AED', '#DB2777', '#064E3B', '#1E40AF', '#9333EA', '#DC2626'];
+// Updated professional color palette with softer, more elegant tones
+const COLORS = ['#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#A855F7', '#14B8A6', '#0EA5E9', '#F43F5E'];
 
 const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) => {
   const isMobile = useIsMobile();
@@ -131,20 +132,20 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
     [categoryOrdersData]
   );
 
-  // Updated color themes for better professional look
+  // Updated color themes with more elegant, professional colors
   const ordersConfig = {
     orders: {
       label: "Заказы",
       theme: {
-        light: "#4F46E5", // Indigo-600
-        dark: "#4338CA", // Indigo-700
+        light: "#6366F1", // Indigo-500
+        dark: "#4F46E5", // Indigo-600
       },
     },
     amount: {
       label: "Сумма",
       theme: {
-        light: "#0EA5E9", // Sky-500
-        dark: "#0284C7", // Sky-600
+        light: "#06B6D4", // Cyan-500
+        dark: "#0891B2", // Cyan-600
       },
     },
     canceled: {
@@ -177,24 +178,24 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
       }}
     >
       <motion.div variants={chartVariants} transition={{ duration: 0.5 }}>
-        <Card className="overflow-hidden border-0 shadow-2xl rounded-xl bg-gradient-to-br from-slate-50 to-blue-50/30 dark:from-slate-900 dark:to-indigo-950/20 border-blue-100/30 dark:border-blue-900/10">
+        <Card className="overflow-hidden rounded-xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-gradient-to-br from-slate-50 via-blue-50/10 to-indigo-50/20 dark:from-slate-900 dark:via-blue-900/5 dark:to-indigo-900/10">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-medium flex items-center gap-2.5">
-                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-100/80 dark:bg-blue-900/30 shadow-inner">
-                  <CreditCard className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-indigo-100 to-indigo-200 dark:from-indigo-900/30 dark:to-indigo-800/20 shadow-inner p-2">
+                  <CreditCard className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
                 </div>
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-600 dark:from-blue-400 dark:to-indigo-300">
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
                   {shouldDisplayHourly ? 'Заказы по часам' : 'Динамика заказов'}
                 </span>
               </CardTitle>
-              <div className="text-xs text-white bg-blue-500/90 dark:bg-blue-600/50 px-3 py-1 rounded-full shadow-md">
+              <div className="text-xs font-medium text-white px-3 py-1 rounded-full shadow-sm bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-600 dark:to-purple-600">
                 {shouldDisplayHourly ? 'Почасовая статистика' : 'Ежедневная статистика'}
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="h-[320px] mt-2">
+            <div className="h-[320px] mt-4">
               <ChartContainer
                 config={ordersConfig}
                 className="h-full"
@@ -218,10 +219,10 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
                         <stop offset="95%" stopColor="var(--color-canceled)" stopOpacity={0.1}/>
                       </linearGradient>
                       <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
-                        <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#4F46E5" floodOpacity="0.15"/>
+                        <feDropShadow dx="0" dy="3" stdDeviation="3" floodColor="#6366F1" floodOpacity="0.2"/>
                       </filter>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.15} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.1} />
                     <XAxis 
                       dataKey="date" 
                       tick={{ fontSize: 12, fontWeight: 500 }}
@@ -254,10 +255,10 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
                       name="Заказы"
                       yAxisId="left"
                       stroke="var(--color-orders)" 
-                      strokeWidth={2.5}
+                      strokeWidth={3}
                       fillOpacity={1}
                       fill="url(#colorOrders)"
-                      activeDot={{ r: 7, strokeWidth: 1, filter: "url(#shadow)" }}
+                      activeDot={{ r: 8, strokeWidth: 2, filter: "url(#shadow)" }}
                     />
                     <Area 
                       type="monotone" 
@@ -265,10 +266,10 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
                       name="Сумма"
                       yAxisId="right"
                       stroke="var(--color-amount)" 
-                      strokeWidth={2.5}
+                      strokeWidth={3}
                       fillOpacity={1}
                       fill="url(#colorAmount)"
-                      activeDot={{ r: 7, strokeWidth: 1, filter: "url(#shadow)" }}
+                      activeDot={{ r: 8, strokeWidth: 2, filter: "url(#shadow)" }}
                     />
                     <Area 
                       type="monotone" 
@@ -276,10 +277,10 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
                       name="Отмены"
                       yAxisId="left"
                       stroke="var(--color-canceled)" 
-                      strokeWidth={2.5}
+                      strokeWidth={3}
                       fillOpacity={1}
                       fill="url(#colorCanceled)"
-                      activeDot={{ r: 7, strokeWidth: 1, filter: "url(#shadow)" }}
+                      activeDot={{ r: 8, strokeWidth: 2, filter: "url(#shadow)" }}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -290,33 +291,33 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
       </motion.div>
 
       <motion.div variants={chartVariants} transition={{ duration: 0.5, delay: 0.2 }}>
-        <Card className="overflow-hidden border-0 shadow-2xl rounded-xl bg-gradient-to-br from-slate-50 to-purple-50/30 dark:from-slate-900 dark:to-purple-950/20 border-purple-100/30 dark:border-purple-900/10">
+        <Card className="overflow-hidden rounded-xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-gradient-to-br from-slate-50 via-purple-50/10 to-pink-50/20 dark:from-slate-900 dark:via-purple-900/5 dark:to-pink-900/10">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-medium flex items-center gap-2.5">
-                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-purple-100/80 dark:bg-purple-900/30 shadow-inner">
+                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/30 dark:to-purple-800/20 shadow-inner p-2">
                   <ShoppingCart className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                 </div>
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-700 to-indigo-600 dark:from-purple-400 dark:to-indigo-300">
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400">
                   Заказы по категориям
                 </span>
               </CardTitle>
             </div>
           </CardHeader>
           <CardContent className="flex justify-center">
-            <div className="h-[320px] w-full mt-2">
+            <div className="h-[320px] w-full mt-4">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <defs>
                     {categoryOrdersData.map((entry, index) => (
-                      <linearGradient key={`catGradient-${index}`} id={`catGradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                      <linearGradient key={`catGradient-${index}`} id={`catGradient-${index}`} x1="0" y1="0" x2="1" y2="1">
                         <stop offset="0%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.9}/>
-                        <stop offset="100%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.7}/>
+                        <stop offset="100%" stopColor={COLORS[(index + 1) % COLORS.length]} stopOpacity={0.7}/>
                       </linearGradient>
                     ))}
                     <filter id="dropShadow" height="130%">
-                      <feGaussianBlur in="SourceAlpha" stdDeviation="2.5"/>
-                      <feOffset dx="1" dy="1" result="offsetblur"/>
+                      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                      <feOffset dx="2" dy="2" result="offsetblur"/>
                       <feComponentTransfer>
                         <feFuncA type="linear" slope="0.2"/>
                       </feComponentTransfer>
@@ -330,8 +331,8 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
                     data={categoryOrdersData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={70}
-                    outerRadius={110}
+                    innerRadius={75}
+                    outerRadius={115}
                     paddingAngle={4}
                     dataKey="amount"
                     nameKey="name"
@@ -350,7 +351,7 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
                       <Cell 
                         key={`cell-${index}`} 
                         fill={`url(#catGradient-${index})`} 
-                        stroke="rgba(255,255,255,0.7)"
+                        stroke="rgba(255,255,255,0.8)"
                         strokeWidth={2}
                         className="hover:opacity-90 transition-opacity duration-300"
                       />
@@ -368,8 +369,11 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
                     contentStyle={{ 
                       backgroundColor: "rgba(255, 255, 255, 0.97)", 
                       borderRadius: "10px", 
-                      border: "1px solid var(--border)",
-                      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
+                      border: "none",
+                      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.08)"
+                    }}
+                    wrapperStyle={{
+                      outline: "none"
                     }}
                   />
                   <Legend 
@@ -379,7 +383,7 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
                     formatter={(value) => (
                       <span className="text-sm font-medium">{value}</span>
                     )}
-                    wrapperStyle={{ paddingTop: "10px" }}
+                    wrapperStyle={{ paddingTop: "15px" }}
                   />
                 </PieChart>
               </ResponsiveContainer>
