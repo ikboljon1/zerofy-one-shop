@@ -239,20 +239,7 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
         }
       }}
     >
-      <OrdersAnalytics orders={orders} />
-      
-      <motion.div 
-        className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"
-        variants={{
-          hidden: { opacity: 0 },
-          visible: {
-            opacity: 1,
-            transition: {
-              staggerChildren: 0.2
-            }
-          }
-        }}
-      >
+      <motion.div variants={chartVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <motion.div variants={chartVariants} className="h-full">
           <Card className="overflow-hidden border-0 shadow-xl bg-gradient-to-br from-white to-blue-50/40 dark:from-gray-900 dark:to-blue-950/30 h-full">
             <CardHeader className="pb-2">
@@ -414,6 +401,8 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
           </Card>
         </motion.div>
       </motion.div>
+      
+      <OrdersAnalytics orders={orders} />
     </motion.div>
   );
 });
