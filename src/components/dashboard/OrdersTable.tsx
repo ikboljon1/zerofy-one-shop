@@ -174,7 +174,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
           <Table>
             <TableHeader>
               <TableRow className="bg-indigo-50/80 dark:bg-indigo-950/40 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/30">
-                <TableHead className="w-10"></TableHead>
+                <TableHead className="w-10 text-center"></TableHead>
                 <TableHead className="text-indigo-900/80 dark:text-indigo-200/90 font-medium">
                   <Button 
                     variant="ghost" 
@@ -217,7 +217,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
                 <TableHead className="text-indigo-900/80 dark:text-indigo-200/90 font-medium">Склад</TableHead>
                 <TableHead className="text-indigo-900/80 dark:text-indigo-200/90 font-medium">Регион</TableHead>
                 <TableHead className="text-indigo-900/80 dark:text-indigo-200/90 font-medium">Статус</TableHead>
-                <TableHead className="text-indigo-900/80 dark:text-indigo-200/90 font-medium w-10">Действия</TableHead>
+                <TableHead className="text-indigo-900/80 dark:text-indigo-200/90 font-medium w-10 text-center">Действия</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -229,14 +229,14 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
                       onOpenChange={() => toggleOrderExpand(order.srid)}
                       className="w-full"
                     >
-                      <CollapsibleTrigger asChild>
-                        <TableRow 
-                          className={`
-                            ${index % 2 === 0 ? 'bg-white dark:bg-gray-900/20' : 'bg-indigo-50/30 dark:bg-indigo-950/10'} 
-                            hover:bg-indigo-100/50 dark:hover:bg-indigo-900/20 transition-colors cursor-pointer
-                          `}
-                        >
-                          <TableCell>
+                      <TableRow 
+                        className={`
+                          ${index % 2 === 0 ? 'bg-white dark:bg-gray-900/20' : 'bg-indigo-50/30 dark:bg-indigo-950/10'} 
+                          hover:bg-indigo-100/50 dark:hover:bg-indigo-900/20 transition-colors cursor-pointer
+                        `}
+                      >
+                        <TableCell className="text-center">
+                          <CollapsibleTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-6 w-6">
                               {expandedOrder === order.srid ? (
                                 <ChevronDown className="h-4 w-4" />
@@ -244,29 +244,30 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
                                 <ChevronRight className="h-4 w-4" />
                               )}
                             </Button>
-                          </TableCell>
-                          <TableCell className="font-medium text-indigo-800 dark:text-indigo-300">{formatDate(order.date)}</TableCell>
-                          <TableCell>{order.supplierArticle}</TableCell>
-                          <TableCell className="max-w-[150px] truncate" title={order.category}>{order.category}</TableCell>
-                          <TableCell className="max-w-[150px] truncate" title={order.subject}>{order.subject}</TableCell>
-                          <TableCell className="font-semibold text-indigo-700 dark:text-indigo-300">{formatCurrency(order.priceWithDisc)} ₽</TableCell>
-                          <TableCell className="max-w-[120px] truncate" title={order.warehouseName}>{order.warehouseName}</TableCell>
-                          <TableCell className="max-w-[120px] truncate" title={order.regionName}>{order.regionName}</TableCell>
-                          <TableCell>
-                            <Badge variant={order.isCancel ? "destructive" : "success"} className="font-normal">
-                              {order.isCancel ? 'Отменен' : 'Активен'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Подробнее">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      </CollapsibleTrigger>
+                          </CollapsibleTrigger>
+                        </TableCell>
+                        <TableCell className="font-medium text-indigo-800 dark:text-indigo-300">{formatDate(order.date)}</TableCell>
+                        <TableCell>{order.supplierArticle}</TableCell>
+                        <TableCell className="max-w-[150px] truncate" title={order.category}>{order.category}</TableCell>
+                        <TableCell className="max-w-[150px] truncate" title={order.subject}>{order.subject}</TableCell>
+                        <TableCell className="font-semibold text-indigo-700 dark:text-indigo-300">{formatCurrency(order.priceWithDisc)} ₽</TableCell>
+                        <TableCell className="max-w-[120px] truncate" title={order.warehouseName}>{order.warehouseName}</TableCell>
+                        <TableCell className="max-w-[120px] truncate" title={order.regionName}>{order.regionName}</TableCell>
+                        <TableCell>
+                          <Badge variant={order.isCancel ? "destructive" : "success"} className="font-normal">
+                            {order.isCancel ? 'Отменен' : 'Активен'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" title="Подробнее">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                      
                       <CollapsibleContent>
-                        <TableRow className="bg-indigo-50/50 dark:bg-indigo-950/20">
-                          <TableCell colSpan={10} className="p-4">
+                        <tr className="bg-indigo-50/50 dark:bg-indigo-950/20">
+                          <td colSpan={10} className="p-4">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                               <div className="space-y-2">
                                 <h4 className="text-sm font-semibold">Общая информация</h4>
@@ -308,8 +309,8 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, title = "Заказы
                                 </div>
                               </div>
                             </div>
-                          </TableCell>
-                        </TableRow>
+                          </td>
+                        </tr>
                       </CollapsibleContent>
                     </Collapsible>
                   </React.Fragment>
