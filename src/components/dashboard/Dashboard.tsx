@@ -3,7 +3,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Button } from "@/components/ui/button";
 import { 
   loadStores,
   getOrdersData, 
@@ -132,11 +131,9 @@ const Dashboard = () => {
     try {
       setIsLoading(true);
       
-      // Получаем текущего пользователя
       const userData = localStorage.getItem('user');
       const currentUserId = userData ? JSON.parse(userData).id : null;
       
-      // Получаем выбранный магазин с учетом текущего пользователя
       const allStores = loadStores();
       const userStores = currentUserId 
         ? allStores.filter(store => store.userId === currentUserId)
@@ -263,16 +260,17 @@ const Dashboard = () => {
           </div>
           
           {orders.length > 0 && (
-            <>
-              <OrderMetrics orders={filteredOrdersData.orders} />
-              <OrdersChart 
-                orders={filteredOrdersData.orders} 
-                sales={filteredSalesData}
-              />
-            </>
+            <OrderMetrics orders={filteredOrdersData.orders} />
           )}
           
           <OrdersTable orders={filteredOrdersData.orders} />
+          
+          {orders.length > 0 && (
+            <OrdersChart 
+              orders={filteredOrdersData.orders} 
+              sales={filteredSalesData}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="sales" className="space-y-4">
@@ -282,10 +280,7 @@ const Dashboard = () => {
           </div>
           
           {sales.length > 0 && (
-            <>
-              <SalesMetrics sales={filteredSalesData} />
-              <SalesChart sales={filteredSalesData} />
-            </>
+            <SalesMetrics sales={filteredSalesData} />
           )}
           
           <SalesTable sales={filteredSalesData} />
