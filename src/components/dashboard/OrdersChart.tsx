@@ -1,4 +1,3 @@
-
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WildberriesOrder, WildberriesSale } from "@/types/store";
@@ -149,21 +148,23 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
     },
   };
 
-  // Calculate max value for the left Y-axis to define custom ticks
   const maxCanceledValue = useMemo(() => {
     if (dailyOrdersData.length === 0) return 4;
     const max = Math.max(...dailyOrdersData.map(d => d.canceled || 0));
-    return Math.ceil(max) + (max < 1 ? 1 : 0); // Ensure we have enough space if max is small
+    return Math.max(1, Math.ceil(max)); // Ensure we have at least 1 as maximum
   }, [dailyOrdersData]);
 
-  // Generate custom ticks for the left Y-axis with granular steps
   const customLeftAxisTicks = useMemo(() => {
     const ticks = [];
-    const step = maxCanceledValue <= 4 ? 0.25 : maxCanceledValue <= 8 ? 0.5 : 1;
+    const maxTicks = 5; // Limit number of ticks to avoid crowding
+    const step = Math.max(1, Math.ceil(maxCanceledValue / maxTicks));
     
     for (let i = 0; i <= maxCanceledValue; i += step) {
       ticks.push(i);
     }
+    
+    if (!ticks.includes(0)) ticks.unshift(0);
+    if (!ticks.includes(maxCanceledValue)) ticks.push(maxCanceledValue);
     
     return ticks;
   }, [maxCanceledValue]);
