@@ -4,9 +4,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { UsersRound, ShoppingCart, DollarSign, BarChart3, TrendingUp, Star, Bell, UserPlus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import axios from "axios";
+import { useToast } from "@/hooks/use-toast";
+
+interface DashboardStats {
+  totalUsers: number;
+  activeUsers: number;
+  totalOrders: number;
+  revenue: number;
+  newUsersToday: number;
+  conversionRate: number;
+  avgOrderValue: number;
+  userSatisfaction: number;
+}
+
+interface RegistrationData {
+  date: string;
+  count: number;
+}
 
 const AdminDashboard = () => {
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     activeUsers: 0,
     totalOrders: 0,
@@ -20,39 +37,53 @@ const AdminDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<"day" | "week" | "month">("week");
   const [registrationData, setRegistrationData] = useState<number[]>([]);
+  const { toast } = useToast();
   
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        // В реальном приложении данные будут приходить с сервера
-        // Здесь используем задержку для имитации загрузки
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        // Демо-данные
-        setStats({
-          totalUsers: 1547,
-          activeUsers: 892,
-          totalOrders: 324,
-          revenue: 15920,
-          newUsersToday: 27,
-          conversionRate: 5.8,
-          avgOrderValue: 492,
-          userSatisfaction: 4.7
-        });
-        
-        // Генерируем данные для графика регистраций в зависимости от выбранного периода
-        const days = timeRange === "day" ? 24 : (timeRange === "week" ? 7 : 30);
-        const data = Array.from({ length: days }, () => Math.floor(Math.random() * 50) + 5);
-        setRegistrationData(data);
-      } catch (error) {
-        console.error("Error fetching admin stats:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     fetchStats();
+    fetchRegistrationData(timeRange);
   }, [timeRange]);
+  
+  const fetchStats = async () => {
+    try {
+      setIsLoading(true);
+      // Replace with actual API endpoint
+      const response = await axios.get('/api/admin/dashboard/stats');
+      
+      if (response.data) {
+        setStats(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching admin stats:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить статистику панели управления",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const fetchRegistrationData = async (period: "day" | "week" | "month") => {
+    try {
+      // Replace with actual API endpoint
+      const response = await axios.get(`/api/admin/dashboard/registrations?period=${period}`);
+      
+      if (response.data && Array.isArray(response.data)) {
+        // Transform API data to the format needed for the chart
+        const dataPoints = response.data.map((item: RegistrationData) => item.count);
+        setRegistrationData(dataPoints);
+      }
+    } catch (error) {
+      console.error("Error fetching registration data:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить данные о регистрациях",
+        variant: "destructive",
+      });
+    }
+  };
   
   const primaryStatCards = [
     {
@@ -190,10 +221,11 @@ const AdminDashboard = () => {
               <div className="h-full flex items-center justify-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
               </div>
-            ) : (
+            ) : registrationData.length > 0 ? (
               <div className="flex items-end justify-between h-full px-2">
                 {registrationData.map((value, i) => {
-                  const height = Math.floor((value / Math.max(...registrationData)) * 80);
+                  const maxValue = Math.max(...registrationData, 1); // Avoid division by zero
+                  const height = Math.floor((value / maxValue) * 80);
                   const isHighestValue = value === Math.max(...registrationData);
                   const isLowestValue = value === Math.min(...registrationData);
                   
@@ -221,6 +253,11 @@ const AdminDashboard = () => {
                     </div>
                   );
                 })}
+              </div>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center">
+                <BarChart3 className="h-16 w-16 text-muted-foreground mb-2" />
+                <p className="text-muted-foreground">Нет данных для отображения</p>
               </div>
             )}
           </div>

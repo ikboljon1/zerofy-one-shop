@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Download, RefreshCw, Clock, AlertTriangle, Info, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import axios from "axios";
 
 type LogEntry = {
   id: string;
@@ -23,11 +24,10 @@ const RealTimeLog = () => {
   useEffect(() => {
     fetchLogs();
     
-    // Set up simulated real-time updates
+    // Set up real-time updates - replace with WebSocket or polling as needed
     const interval = setInterval(() => {
-      const randomLog = generateRandomLog();
-      setLogs(prevLogs => [randomLog, ...prevLogs.slice(0, 49)]);
-    }, 5000);
+      fetchLogs();
+    }, 10000);
     
     return () => clearInterval(interval);
   }, []);
@@ -35,11 +35,20 @@ const RealTimeLog = () => {
   const fetchLogs = async () => {
     setIsLoading(true);
     try {
-      // Simulate API call with demo data
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Replace with actual API endpoint
+      const response = await axios.get('/api/system/logs');
       
-      const demoLogs: LogEntry[] = Array.from({ length: 20 }, (_, i) => generateRandomLog(i));
-      setLogs(demoLogs);
+      if (response.data && Array.isArray(response.data)) {
+        const formattedLogs = response.data.map((log: any) => ({
+          id: log.id,
+          timestamp: new Date(log.timestamp),
+          level: log.level,
+          message: log.message,
+          source: log.source
+        }));
+        
+        setLogs(formattedLogs);
+      }
     } catch (error) {
       console.error("Error fetching logs:", error);
       toast({
@@ -52,35 +61,6 @@ const RealTimeLog = () => {
     }
   };
 
-  const generateRandomLog = (seed = Date.now()): LogEntry => {
-    const levels = ["info", "warning", "error", "success"] as const;
-    const sources = ["система", "пользователь", "API", "база данных", "платежная система"];
-    const messages = [
-      "Пользователь вошел в систему",
-      "Создан новый заказ",
-      "Ошибка авторизации",
-      "Обновление статуса заказа",
-      "Пополнение баланса",
-      "Изменение настроек системы",
-      "Сброс пароля",
-      "Отправка SMS сообщения",
-      "Проверка API соединения",
-      "Регистрация нового пользователя"
-    ];
-    
-    const randomLevel = levels[Math.floor((seed * 7) % 4)];
-    const randomSource = sources[Math.floor((seed * 13) % sources.length)];
-    const randomMessage = messages[Math.floor((seed * 23) % messages.length)];
-    
-    return {
-      id: `log-${seed}`,
-      timestamp: new Date(Date.now() - Math.floor(Math.random() * 3600000)),
-      level: randomLevel,
-      message: randomMessage,
-      source: randomSource
-    };
-  };
-
   const handleRefresh = () => {
     fetchLogs();
     toast({
@@ -89,35 +69,34 @@ const RealTimeLog = () => {
     });
   };
 
-  const handleExportLogs = () => {
-    toast({
-      title: "Экспорт логов",
-      description: "Файл с логами системы скачивается...",
-    });
-    
-    // Создаем данные для экспорта
-    const exportData = logs.map(log => ({
-      time: log.timestamp.toLocaleString(),
-      level: log.level,
-      source: log.source,
-      message: log.message
-    }));
-    
-    // Создаем CSV строку
-    const csvContent = [
-      ["Время", "Уровень", "Источник", "Сообщение"].join(","),
-      ...exportData.map(row => Object.values(row).join(","))
-    ].join("\n");
-    
-    // Создаем и скачиваем файл
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `system-logs-${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleExportLogs = async () => {
+    try {
+      toast({
+        title: "Экспорт логов",
+        description: "Файл с логами системы скачивается...",
+      });
+      
+      // Replace with actual API endpoint
+      const response = await axios.get('/api/system/logs/export', {
+        responseType: 'blob'
+      });
+      
+      // Create a download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `system-logs-${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Error exporting logs:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось экспортировать логи системы",
+        variant: "destructive",
+      });
+    }
   };
 
   const getLevelIcon = (level: LogEntry["level"]) => {
@@ -185,7 +164,7 @@ const RealTimeLog = () => {
             <div className="flex items-center justify-center h-full">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
             </div>
-          ) : (
+          ) : logs.length > 0 ? (
             <div className="p-4 space-y-4">
               {logs.map((log) => (
                 <div 
@@ -216,6 +195,12 @@ const RealTimeLog = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+              <Info className="h-10 w-10 text-muted-foreground mb-2" />
+              <h3 className="text-lg font-medium">Нет доступных логов</h3>
+              <p className="text-sm text-muted-foreground mt-1">Логи системы пока отсутствуют или не загружены</p>
             </div>
           )}
         </ScrollArea>

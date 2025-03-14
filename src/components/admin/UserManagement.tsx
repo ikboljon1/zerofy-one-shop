@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   User, 
   PenSquare, 
@@ -7,7 +7,9 @@ import {
   UserPlus, 
   Check, 
   X, 
-  Search 
+  Search,
+  AlertCircle,
+  Loader2
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,6 +39,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import axios from "axios";
 
 interface UserData {
   id: string;
@@ -47,72 +50,52 @@ interface UserData {
   joinDate: string;
 }
 
-// Mock data for demonstration
-const mockUsers: UserData[] = [
-  {
-    id: "1",
-    name: "Иван Иванов",
-    email: "ivan@example.com",
-    role: "Администратор",
-    status: "Активен",
-    joinDate: "01.01.2023",
-  },
-  {
-    id: "2",
-    name: "Елена Петрова",
-    email: "elena@example.com",
-    role: "Пользователь",
-    status: "Активен",
-    joinDate: "15.02.2023",
-  },
-  {
-    id: "3",
-    name: "Александр Сидоров",
-    email: "alex@example.com",
-    role: "Пользователь",
-    status: "Неактивен",
-    joinDate: "10.03.2023",
-  },
-  {
-    id: "4",
-    name: "Ольга Смирнова",
-    email: "olga@example.com",
-    role: "Менеджер",
-    status: "Активен",
-    joinDate: "05.04.2023",
-  },
-  {
-    id: "5",
-    name: "Дмитрий Козлов",
-    email: "dmitry@example.com",
-    role: "Пользователь",
-    status: "Активен",
-    joinDate: "20.05.2023",
-  },
-];
-
 const UserManagement = () => {
-  const [users, setUsers] = useState<UserData[]>(mockUsers);
+  const [users, setUsers] = useState<UserData[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   const usersPerPage = 5;
-  const filteredUsers = users.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
-  const pageCount = Math.ceil(filteredUsers.length / usersPerPage);
-  const currentUsers = filteredUsers.slice(
-    (currentPage - 1) * usersPerPage,
-    currentPage * usersPerPage
-  );
+  useEffect(() => {
+    fetchUsers();
+  }, [currentPage, searchTerm]);
+
+  const fetchUsers = async () => {
+    setIsLoading(true);
+    try {
+      // Replace with actual API endpoint
+      const response = await axios.get('/api/users', {
+        params: {
+          page: currentPage,
+          limit: usersPerPage,
+          search: searchTerm || undefined
+        }
+      });
+      
+      if (response.data) {
+        setUsers(response.data.users || []);
+        setTotalPages(response.data.totalPages || 1);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить список пользователей",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleEditUser = (user: UserData) => {
     setSelectedUser({ ...user });
@@ -124,43 +107,87 @@ const UserManagement = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  const confirmDeleteUser = () => {
+  const confirmDeleteUser = async () => {
     if (selectedUser) {
-      setUsers(users.filter((user) => user.id !== selectedUser.id));
-      setIsDeleteDialogOpen(false);
-      toast({
-        title: "Пользователь удален",
-        description: `Пользователь ${selectedUser.name} был успешно удален.`,
-      });
+      setIsSubmitting(true);
+      try {
+        // Replace with actual API endpoint
+        await axios.delete(`/api/users/${selectedUser.id}`);
+        
+        setIsDeleteDialogOpen(false);
+        toast({
+          title: "Пользователь удален",
+          description: `Пользователь ${selectedUser.name} был успешно удален.`,
+        });
+        
+        // Refresh the user list
+        fetchUsers();
+      } catch (error) {
+        console.error("Error deleting user:", error);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось удалить пользователя",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
-  const saveUserChanges = () => {
+  const saveUserChanges = async () => {
     if (selectedUser) {
-      setUsers(
-        users.map((user) => (user.id === selectedUser.id ? selectedUser : user))
-      );
-      setIsEditDialogOpen(false);
-      toast({
-        title: "Изменения сохранены",
-        description: "Данные пользователя были успешно обновлены.",
-      });
+      setIsSubmitting(true);
+      try {
+        // Replace with actual API endpoint
+        await axios.put(`/api/users/${selectedUser.id}`, selectedUser);
+        
+        setIsEditDialogOpen(false);
+        toast({
+          title: "Изменения сохранены",
+          description: "Данные пользователя были успешно обновлены.",
+        });
+        
+        // Refresh the user list
+        fetchUsers();
+      } catch (error) {
+        console.error("Error updating user:", error);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось обновить данные пользователя",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
-  const addNewUser = () => {
+  const addNewUser = async () => {
     if (selectedUser) {
-      const newUser = {
-        ...selectedUser,
-        id: Date.now().toString(),
-        joinDate: new Date().toLocaleDateString("ru-RU"),
-      };
-      setUsers([...users, newUser]);
-      setIsAddDialogOpen(false);
-      toast({
-        title: "Пользователь добавлен",
-        description: `Пользователь ${newUser.name} был успешно добавлен.`,
-      });
+      setIsSubmitting(true);
+      try {
+        // Replace with actual API endpoint
+        await axios.post('/api/users', selectedUser);
+        
+        setIsAddDialogOpen(false);
+        toast({
+          title: "Пользователь добавлен",
+          description: `Пользователь ${selectedUser.name} был успешно добавлен.`,
+        });
+        
+        // Refresh the user list
+        fetchUsers();
+      } catch (error) {
+        console.error("Error adding user:", error);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось добавить пользователя",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -176,6 +203,11 @@ const UserManagement = () => {
     setIsAddDialogOpen(true);
   };
 
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1); // Reset to first page when searching
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -187,10 +219,7 @@ const UserManagement = () => {
                 placeholder="Поиск пользователей..."
                 className="pl-8"
                 value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
+                onChange={handleSearch}
               />
             </div>
             <Button onClick={startAddingUser}>
@@ -211,8 +240,15 @@ const UserManagement = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currentUsers.length > 0 ? (
-                  currentUsers.map((user) => (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                      <p className="mt-2 text-sm text-muted-foreground">Загрузка пользователей...</p>
+                    </TableCell>
+                  </TableRow>
+                ) : users.length > 0 ? (
+                  users.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -279,7 +315,7 @@ const UserManagement = () => {
             </Table>
           </div>
 
-          {pageCount > 1 && (
+          {totalPages > 1 && (
             <Pagination className="mt-4">
               <PaginationContent>
                 <PaginationItem>
@@ -292,7 +328,7 @@ const UserManagement = () => {
                     className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
                   />
                 </PaginationItem>
-                {Array.from({ length: pageCount }).map((_, i) => (
+                {Array.from({ length: totalPages }).map((_, i) => (
                   <PaginationItem key={i}>
                     <PaginationLink
                       href="#"
@@ -311,9 +347,9 @@ const UserManagement = () => {
                     href="#"
                     onClick={(e) => {
                       e.preventDefault();
-                      if (currentPage < pageCount) setCurrentPage(currentPage + 1);
+                      if (currentPage < totalPages) setCurrentPage(currentPage + 1);
                     }}
-                    className={currentPage === pageCount ? "pointer-events-none opacity-50" : ""}
+                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
                   />
                 </PaginationItem>
               </PaginationContent>
@@ -395,10 +431,13 @@ const UserManagement = () => {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isSubmitting}>
               Отмена
             </Button>
-            <Button onClick={saveUserChanges}>Сохранить</Button>
+            <Button onClick={saveUserChanges} disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+              Сохранить
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -431,12 +470,12 @@ const UserManagement = () => {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} disabled={isSubmitting}>
               <X className="mr-2 h-4 w-4" />
               Отмена
             </Button>
-            <Button variant="destructive" onClick={confirmDeleteUser}>
-              <Trash2 className="mr-2 h-4 w-4" />
+            <Button variant="destructive" onClick={confirmDeleteUser} disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
               Удалить
             </Button>
           </DialogFooter>
@@ -516,12 +555,12 @@ const UserManagement = () => {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={isSubmitting}>
               <X className="mr-2 h-4 w-4" />
               Отмена
             </Button>
-            <Button onClick={addNewUser}>
-              <Check className="mr-2 h-4 w-4" />
+            <Button onClick={addNewUser} disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
               Добавить
             </Button>
           </DialogFooter>
