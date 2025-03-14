@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { registerUser, checkPhoneExists } from "@/services/userService";
 import { Info } from "lucide-react";
+import axios from "axios";
 
 // Country codes with Kyrgyzstan (+996) as default
 const countryCodes = [
@@ -45,7 +46,8 @@ const registerSchema = z.object({
   phone: z.string()
     .refine(val => !val.startsWith('0'), {
       message: "Номер не должен начинаться с нуля"
-    })
+    }),
+  verificationCode: z.string().optional(),
 });
 
 interface RegisterFormProps {
@@ -57,11 +59,29 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
   const [countryCode, setCountryCode] = useState("+996"); // Kyrgyzstan as default
   const [isPhoneUnique, setIsPhoneUnique] = useState(true);
   const [phoneFormatExample, setPhoneFormatExample] = useState("XXX XXX XXX"); // Default format example
+  const [verificationMethod, setVerificationMethod] = useState<"email" | "phone">("email");
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [verificationStep, setVerificationStep] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   
   // Get the current country for validation
   const currentCountry = countryCodes.find(c => c.code === countryCode) || countryCodes[0];
+
+  useEffect(() => {
+    // Получаем текущий метод верификации из настроек
+    const fetchVerificationMethod = async () => {
+      try {
+        const response = await axios.get("http://localhost:3001/api/settings/verification-method");
+        setVerificationMethod(response.data.method);
+      } catch (error) {
+        console.error("Ошибка при получении метода верификации:", error);
+        // По умолчанию используем email
+      }
+    };
+    
+    fetchVerificationMethod();
+  }, []);
 
   const {
     register,
@@ -70,7 +90,7 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
     watch,
     trigger,
     setValue,
-    getValues
+    getValues,
   } = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -78,10 +98,13 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
       email: "",
       password: "",
       phone: "",
+      verificationCode: "",
     },
   });
   
   const phoneValue = watch("phone");
+  const emailValue = watch("email");
+  const verificationCodeValue = watch("verificationCode");
   
   // Update the phone format example when country code changes
   useEffect(() => {
@@ -144,20 +167,129 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
     }
   }, [phoneValue, countryCode, toast, currentCountry.pattern, currentCountry.maxLength]);
 
-  const onSubmit = async (data: z.infer<typeof registerSchema>) => {
-    // Validate the phone format for the selected country
-    if (!currentCountry.pattern.test(data.phone)) {
-      toast({
-        title: "Ошибка",
-        description: `Неверный формат телефона для ${currentCountry.country}`,
-        variant: "destructive",
-      });
-      return;
-    }
-    
+  const sendVerificationCode = async () => {
     setIsLoading(true);
     
     try {
+      if (verificationMethod === "phone") {
+        // Проверка формата телефона
+        if (!currentCountry.pattern.test(phoneValue)) {
+          toast({
+            title: "Ошибка",
+            description: `Неверный формат телефона для ${currentCountry.country}`,
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        const fullPhoneNumber = `${countryCode}${phoneValue}`;
+        // Проверка, уникален ли телефон
+        const exists = await checkPhoneExists(fullPhoneNumber);
+        if (exists) {
+          setIsPhoneUnique(false);
+          toast({
+            title: "Ошибка",
+            description: "Номер телефона уже зарегистрирован в системе",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        // Отправляем SMS с кодом
+        await axios.post("http://localhost:3001/api/send-verification-sms", {
+          phone: fullPhoneNumber
+        });
+        
+        toast({
+          title: "Код отправлен",
+          description: `Код верификации отправлен на номер ${fullPhoneNumber}`,
+        });
+      } else {
+        // Отправляем код на email (заглушка, реальная отправка будет реализована на бэкенде)
+        toast({
+          title: "Код отправлен",
+          description: `Код верификации отправлен на email ${emailValue}`,
+        });
+      }
+      
+      setVerificationSent(true);
+      setVerificationStep(true);
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось отправить код верификации",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onSubmit = async (data: z.infer<typeof registerSchema>) => {
+    // Если верификация включена и мы на шаге проверки кода
+    if (verificationStep) {
+      if (!verificationCodeValue) {
+        toast({
+          title: "Ошибка",
+          description: "Введите код верификации",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setIsLoading(true);
+      
+      try {
+        if (verificationMethod === "phone") {
+          const fullPhoneNumber = `${countryCode}${data.phone}`;
+          
+          // Проверяем код верификации
+          const verifyResponse = await axios.post("http://localhost:3001/api/verify-phone", {
+            phone: fullPhoneNumber,
+            code: data.verificationCode
+          });
+          
+          if (verifyResponse.data.success) {
+            // Если код верный, продолжаем регистрацию
+            await completeRegistration(data);
+          }
+        } else {
+          // Для email верификации (заглушка)
+          // В реальном приложении здесь должна быть проверка кода через API
+          await completeRegistration(data);
+        }
+      } catch (error: any) {
+        toast({
+          title: "Ошибка",
+          description: error.response?.data?.error || "Неверный код верификации",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // Отправляем код верификации
+      sendVerificationCode();
+    }
+  };
+  
+  const completeRegistration = async (data: z.infer<typeof registerSchema>) => {
+    setIsLoading(true);
+    
+    try {
+      // Validate the phone format for the selected country
+      if (!currentCountry.pattern.test(data.phone)) {
+        toast({
+          title: "Ошибка",
+          description: `Неверный формат телефона для ${currentCountry.country}`,
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+      
       // Combine country code with phone number
       const fullPhoneNumber = `${countryCode}${data.phone}`;
       
@@ -187,7 +319,7 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
         localStorage.setItem('user', JSON.stringify(result.user));
         
         onSuccess();
-        navigate("/dashboard"); // Changed from "/" to "/dashboard" for direct redirect
+        navigate("/dashboard");
       } else {
         toast({
           title: "Ошибка",
@@ -208,101 +340,154 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
-      <div className="space-y-2">
-        <Label htmlFor="name">Имя</Label>
-        <Input
-          id="name"
-          placeholder="Введите ваше имя"
-          {...register("name")}
-        />
-        {errors.name && (
-          <p className="text-sm text-destructive">{errors.name.message}</p>
-        )}
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          type="email"
-          placeholder="example@mail.com"
-          {...register("email")}
-        />
-        {errors.email && (
-          <p className="text-sm text-destructive">{errors.email.message}</p>
-        )}
-      </div>
-      
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="phone">Номер телефона</Label>
-          <div className="text-xs text-muted-foreground flex items-center">
-            <Info className="h-3 w-3 mr-1" />
-            Формат: {phoneFormatExample}
+      {!verificationStep ? (
+        // Шаг 1: Сбор информации и отправка кода
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="name">Имя</Label>
+            <Input
+              id="name"
+              placeholder="Введите ваше имя"
+              {...register("name")}
+            />
+            {errors.name && (
+              <p className="text-sm text-destructive">{errors.name.message}</p>
+            )}
           </div>
-        </div>
-        <div className="flex">
-          <Select 
-            value={countryCode} 
-            onValueChange={(value) => {
-              setCountryCode(value);
-              trigger("phone"); // Re-validate phone when country code changes
-            }}
+          
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="example@mail.com"
+              {...register("email")}
+            />
+            {errors.email && (
+              <p className="text-sm text-destructive">{errors.email.message}</p>
+            )}
+          </div>
+          
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="phone">Номер телефона</Label>
+              <div className="text-xs text-muted-foreground flex items-center">
+                <Info className="h-3 w-3 mr-1" />
+                Формат: {phoneFormatExample}
+              </div>
+            </div>
+            <div className="flex">
+              <Select 
+                value={countryCode} 
+                onValueChange={(value) => {
+                  setCountryCode(value);
+                  trigger("phone"); // Re-validate phone when country code changes
+                }}
+              >
+                <SelectTrigger className="w-[140px] mr-2">
+                  <SelectValue placeholder="Код страны" />
+                </SelectTrigger>
+                <SelectContent>
+                  {countryCodes.map((country) => (
+                    <SelectItem key={country.code} value={country.code}>
+                      {country.country} {country.code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder={phoneFormatExample}
+                className={`flex-1 ${!isPhoneUnique ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                {...register("phone")}
+                maxLength={currentCountry.maxLength}
+              />
+            </div>
+            {errors.phone && (
+              <p className="text-sm text-destructive">{errors.phone.message}</p>
+            )}
+            {!currentCountry.pattern.test(phoneValue) && phoneValue.length > 0 && (
+              <p className="text-sm text-amber-500">Неверный формат номера для {currentCountry.country}</p>
+            )}
+            {!isPhoneUnique && (
+              <p className="text-sm text-destructive">Этот номер уже зарегистрирован</p>
+            )}
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="password">Пароль</Label>
+            <Input
+              id="password"
+              type="password"
+              {...register("password")}
+            />
+            {errors.password && (
+              <p className="text-sm text-destructive">{errors.password.message}</p>
+            )}
+          </div>
+          
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={
+              isLoading || 
+              !isPhoneUnique || 
+              (phoneValue && !currentCountry.pattern.test(phoneValue))
+            }
           >
-            <SelectTrigger className="w-[140px] mr-2">
-              <SelectValue placeholder="Код страны" />
-            </SelectTrigger>
-            <SelectContent>
-              {countryCodes.map((country) => (
-                <SelectItem key={country.code} value={country.code}>
-                  {country.country} {country.code}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            id="phone"
-            type="tel"
-            placeholder={phoneFormatExample}
-            className={`flex-1 ${!isPhoneUnique ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
-            {...register("phone")}
-            maxLength={currentCountry.maxLength}
-          />
-        </div>
-        {errors.phone && (
-          <p className="text-sm text-destructive">{errors.phone.message}</p>
-        )}
-        {!currentCountry.pattern.test(phoneValue) && phoneValue.length > 0 && (
-          <p className="text-sm text-amber-500">Неверный формат номера для {currentCountry.country}</p>
-        )}
-        {!isPhoneUnique && (
-          <p className="text-sm text-destructive">Этот номер уже зарегистрирован</p>
-        )}
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="password">Пароль</Label>
-        <Input
-          id="password"
-          type="password"
-          {...register("password")}
-        />
-        {errors.password && (
-          <p className="text-sm text-destructive">{errors.password.message}</p>
-        )}
-      </div>
-      
-      <Button 
-        type="submit" 
-        className="w-full" 
-        disabled={
-          isLoading || 
-          !isPhoneUnique || 
-          (phoneValue && !currentCountry.pattern.test(phoneValue))
-        }
-      >
-        {isLoading ? "Регистрация..." : "Зарегистрироваться"}
-      </Button>
+            {isLoading ? "Отправка кода..." : "Получить код верификации"}
+          </Button>
+        </>
+      ) : (
+        // Шаг 2: Ввод кода верификации
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="verificationCode">Код верификации</Label>
+            <Input
+              id="verificationCode"
+              placeholder="Введите полученный код"
+              {...register("verificationCode")}
+            />
+            {errors.verificationCode && (
+              <p className="text-sm text-destructive">{errors.verificationCode.message}</p>
+            )}
+            <p className="text-sm text-muted-foreground">
+              Код верификации отправлен на {verificationMethod === "email" ? `email ${emailValue}` : `телефон ${countryCode}${phoneValue}`}
+            </p>
+          </div>
+          
+          <div className="flex gap-3">
+            <Button 
+              type="button" 
+              variant="outline"
+              className="flex-1" 
+              onClick={() => setVerificationStep(false)}
+              disabled={isLoading}
+            >
+              Назад
+            </Button>
+            
+            <Button 
+              type="submit" 
+              className="flex-1" 
+              disabled={isLoading || !verificationCodeValue}
+            >
+              {isLoading ? "Проверка..." : "Завершить регистрацию"}
+            </Button>
+          </div>
+          
+          <Button 
+            type="button" 
+            variant="ghost"
+            className="w-full text-sm" 
+            onClick={sendVerificationCode}
+            disabled={isLoading}
+          >
+            Отправить код повторно
+          </Button>
+        </>
+      )}
     </form>
   );
 };

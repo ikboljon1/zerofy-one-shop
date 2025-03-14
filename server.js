@@ -152,6 +152,21 @@ db.serialize(() => {
     timestamp INTEGER NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id)
   )`);
+
+  // Добавляем таблицу для настроек приложения
+  db.run(`CREATE TABLE IF NOT EXISTS app_settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    setting_name TEXT UNIQUE NOT NULL,
+    setting_value TEXT NOT NULL,
+    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  // Проверим, есть ли настройка верификации, если нет - добавим со значением по умолчанию (email)
+  db.get("SELECT * FROM app_settings WHERE setting_name = 'verification_method'", (err, row) => {
+    if (!row) {
+      db.run("INSERT INTO app_settings (setting_name, setting_value) VALUES ('verification_method', 'email')");
+    }
+  });
 });
 
 // Регистрация пользователя
@@ -793,98 +808,4 @@ app.post('/api/user-stores', (req, res) => {
   }
 
   const query = `INSERT OR REPLACE INTO user_stores 
-                (user_id, store_id, marketplace, store_name, api_key, is_selected, last_fetch_date) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)`;
-  
-  db.run(query, [
-    userId, 
-    storeId, 
-    marketplace, 
-    storeName, 
-    apiKey, 
-    isSelected ? 1 : 0, 
-    lastFetchDate || new Date().toISOString()
-  ], function(err) {
-    if (err) {
-      console.error('Error saving user store:', err);
-      return res.status(500).json({ error: 'Ошибка при сохранении магазина' });
-    }
-
-    res.json({ success: true, id: this.lastID });
-  });
-});
-
-// Получение магазинов пользователя
-app.get('/api/user-stores/:userId', (req, res) => {
-  const { userId } = req.params;
-  
-  db.all('SELECT * FROM user_stores WHERE user_id = ?', [userId], (err, rows) => {
-    if (err) {
-      console.error('Error getting user stores:', err);
-      return res.status(500).json({ error: 'Ошибка при получении магазинов пользователя' });
-    }
-
-    if (!rows || rows.length === 0) {
-      return res.json([]);
-    }
-
-    const stores = rows.map(row => ({
-      id: row.store_id,
-      userId: row.user_id,
-      marketplace: row.marketplace,
-      name: row.store_name,
-      apiKey: row.api_key,
-      isSelected: row.is_selected === 1,
-      lastFetchDate: row.last_fetch_date
-    }));
-
-    res.json(stores);
-  });
-});
-
-// Обновление выбранного магазина
-app.put('/api/user-stores/:userId/select', (req, res) => {
-  const { userId } = req.params;
-  const { storeId } = req.body;
-  
-  if (!storeId) {
-    return res.status(400).json({ error: 'Необходимо указать storeId' });
-  }
-
-  // Сначала сбрасываем выбор для всех магазинов пользователя
-  db.run('UPDATE user_stores SET is_selected = 0 WHERE user_id = ?', [userId], function(err) {
-    if (err) {
-      console.error('Error resetting store selection:', err);
-      return res.status(500).json({ error: 'Ошибка при обновлении выбранного магазина' });
-    }
-
-    // Затем устанавливаем выбранный магазин
-    db.run('UPDATE user_stores SET is_selected = 1 WHERE user_id = ? AND store_id = ?', 
-      [userId, storeId], function(updateErr) {
-      if (updateErr) {
-        console.error('Error selecting store:', updateErr);
-        return res.status(500).json({ error: 'Ошибка при выборе магазина' });
-      }
-
-      res.json({ success: true });
-    });
-  });
-});
-
-// Удаление магазина пользователя
-app.delete('/api/user-stores/:userId/:storeId', (req, res) => {
-  const { userId, storeId } = req.params;
-  
-  db.run('DELETE FROM user_stores WHERE user_id = ? AND store_id = ?', [userId, storeId], function(err) {
-    if (err) {
-      console.error('Error deleting user store:', err);
-      return res.status(500).json({ error: 'Ошибка при удалении магазина' });
-    }
-
-    res.json({ success: true, deletedCount: this.changes });
-  });
-});
-
-app.listen(port, () => {
-  console.log(`Сервер запущен на порту ${port}`);
-});
+                (user_id, store_id, marketplace, store_name, api_key, is_selected, last_fetch
