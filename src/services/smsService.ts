@@ -11,6 +11,11 @@ interface SMSSettings {
   smsTemplate?: string;
 }
 
+interface VerificationSettings {
+  method: "email" | "phone";
+  enabled: boolean;
+}
+
 export const sendVerificationSMS = async (phoneNumber: string, code: string): Promise<boolean> => {
   try {
     const response = await axios.post("http://localhost:3001/api/sms/verification", {
@@ -49,6 +54,26 @@ export const getSMSSettings = async (): Promise<SMSSettings | null> => {
   } catch (error) {
     console.error("Error getting SMS settings:", error);
     return null;
+  }
+};
+
+export const getVerificationSettings = async (): Promise<VerificationSettings | null> => {
+  try {
+    const response = await axios.get("http://localhost:3001/api/settings/verification-method");
+    return response.data;
+  } catch (error) {
+    console.error("Error getting verification settings:", error);
+    return null;
+  }
+};
+
+export const isVerificationEnabled = async (): Promise<boolean> => {
+  try {
+    const settings = await getVerificationSettings();
+    return settings?.enabled !== false; // Default to true if not specified
+  } catch (error) {
+    console.error("Error checking if verification is enabled:", error);
+    return true; // Default to true in case of error
   }
 };
 
