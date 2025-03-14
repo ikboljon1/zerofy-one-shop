@@ -13,13 +13,24 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+const smsProvidersOptions = [
+  { value: "vonage", label: "Vonage (Nexmo)" },
+  { value: "twilio", label: "Twilio" },
+  { value: "smsc", label: "SMSC" },
+  { value: "custom", label: "Другой провайдер" },
+];
+
+// Расширенная схема с учетом разных провайдеров
 const smsSettingsSchema = z.object({
   smsProvider: z.string().min(1, "Необходимо указать провайдера SMS"),
   apiKey: z.string().min(1, "Необходимо указать API ключ"),
+  apiSecret: z.string().optional(),
   senderName: z.string().min(1, "Необходимо указать имя отправителя"),
   webhookUrl: z.string().optional(),
   testPhone: z.string().optional(),
+  smsTemplate: z.string().optional(),
 });
 
 type SMSSettingsFormValues = z.infer<typeof smsSettingsSchema>;
@@ -35,11 +46,16 @@ const SMSIntegrationSettings = () => {
     defaultValues: {
       smsProvider: "",
       apiKey: "",
+      apiSecret: "",
       senderName: "",
       webhookUrl: "",
       testPhone: "",
+      smsTemplate: "Ваш код подтверждения: {{code}}",
     },
   });
+  
+  // Отслеживаем текущий провайдер для отображения соответствующих полей
+  const selectedProvider = form.watch("smsProvider");
   
   useEffect(() => {
     fetchSMSSettings();
@@ -115,6 +131,94 @@ const SMSIntegrationSettings = () => {
     }
   };
   
+  // Рендеринг дополнительных полей в зависимости от провайдера
+  const renderProviderSpecificFields = () => {
+    switch (selectedProvider) {
+      case "vonage":
+        return (
+          <>
+            <FormField
+              control={form.control}
+              name="apiSecret"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>API Secret</FormLabel>
+                  <FormControl>
+                    <Input type="password" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Секретный ключ Vonage (требуется для аутентификации)
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="smsTemplate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Шаблон SMS</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Ваш код подтверждения: {{code}}" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Шаблон SMS-сообщения для верификации. Используйте {{code}} для подстановки кода.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        );
+      case "twilio":
+        return (
+          <>
+            <FormField
+              control={form.control}
+              name="apiSecret"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Auth Token</FormLabel>
+                  <FormControl>
+                    <Input type="password" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Twilio Auth Token
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="smsTemplate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Шаблон SMS</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Ваш код подтверждения: {{code}}" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Шаблон SMS-сообщения для верификации
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        );
+      default:
+        return null;
+    }
+  };
+  
   return (
     <Card className="w-full">
       <CardHeader>
@@ -140,11 +244,25 @@ const SMSIntegrationSettings = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>SMS провайдер</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Например: Twilio, Nexmo, SMSC" {...field} />
-                    </FormControl>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите SMS провайдера" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {smsProvidersOptions.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormDescription>
-                      Укажите сервис для отправки SMS
+                      Выберите сервис для отправки SMS
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -161,12 +279,19 @@ const SMSIntegrationSettings = () => {
                       <Input type="password" {...field} />
                     </FormControl>
                     <FormDescription>
-                      API ключ вашего SMS-провайдера
+                      {selectedProvider === "vonage" 
+                        ? "API Key вашего аккаунта Vonage" 
+                        : selectedProvider === "twilio" 
+                        ? "Account SID вашего аккаунта Twilio" 
+                        : "API ключ вашего SMS-провайдера"}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              
+              {/* Дополнительные поля в зависимости от провайдера */}
+              {renderProviderSpecificFields()}
               
               <FormField
                 control={form.control}
