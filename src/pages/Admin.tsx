@@ -17,6 +17,8 @@ import VerifyPhoneNumber from "@/components/admin/VerifyPhoneNumber";
 import AdminActivityLog from "@/components/admin/AdminActivityLog";
 import { useTheme } from "@/hooks/use-theme";
 import ThemeSelector from "@/components/admin/ThemeSelector";
+import RealTimeLog from "@/components/admin/RealTimeLog";
+import LandingPageManager from "@/components/admin/LandingPageManager";
 
 const Admin = () => {
   const [userData, setUserData] = useState(null);
@@ -82,9 +84,11 @@ const Admin = () => {
       <AdminDashboard />
       
       <Tabs defaultValue="users" className="w-full mt-8">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="users">Пользователи</TabsTrigger>
           <TabsTrigger value="tariffs">Тарифы</TabsTrigger>
+          <TabsTrigger value="landing">Лендинг</TabsTrigger>
+          <TabsTrigger value="logs">Логи</TabsTrigger>
           <TabsTrigger value="settings">Настройки</TabsTrigger>
           <TabsTrigger value="verification">Верификация</TabsTrigger>
           <TabsTrigger value="system">Система</TabsTrigger>
@@ -99,6 +103,14 @@ const Admin = () => {
         
         <TabsContent value="tariffs">
           <TariffManagement />
+        </TabsContent>
+        
+        <TabsContent value="landing">
+          <LandingPageManager />
+        </TabsContent>
+        
+        <TabsContent value="logs">
+          <RealTimeLog />
         </TabsContent>
         
         <TabsContent value="settings">
