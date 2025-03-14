@@ -23,6 +23,7 @@ import SalesMetrics from "./SalesMetrics";
 import SalesChart from "./SalesChart";
 import TipsSection from "./TipsSection";
 import AIAnalysisSection from "@/components/ai/AIAnalysisSection";
+import SalesTable from "./SalesTable";
 
 const Dashboard = () => {
   const { toast } = useToast();
