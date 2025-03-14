@@ -11,11 +11,18 @@ import TariffManagement from "@/components/admin/TariffManagement";
 import SMTPSettings from "@/components/admin/SMTPSettings";
 import SMSIntegrationSettings from "@/components/admin/SMSIntegrationSettings";
 import VerificationSettings from "@/components/admin/VerificationSettings";
+import AdminDashboard from "@/components/admin/AdminDashboard";
+import SystemStatus from "@/components/admin/SystemStatus";
+import VerifyPhoneNumber from "@/components/admin/VerifyPhoneNumber";
+import AdminActivityLog from "@/components/admin/AdminActivityLog";
+import { useTheme } from "@/hooks/use-theme";
+import ThemeSelector from "@/components/admin/ThemeSelector";
 
 const Admin = () => {
   const [userData, setUserData] = useState(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     // Проверка роли пользователя при загрузке компонента
@@ -67,18 +74,27 @@ const Admin = () => {
 
   return (
     <div className="container mx-auto py-10">
-      <h1 className="text-2xl font-bold mb-6">Административная панель</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Административная панель</h1>
+        <ThemeSelector currentTheme={theme} onToggle={toggleTheme} />
+      </div>
       
-      <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+      <AdminDashboard />
+      
+      <Tabs defaultValue="users" className="w-full mt-8">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="users">Пользователи</TabsTrigger>
           <TabsTrigger value="tariffs">Тарифы</TabsTrigger>
           <TabsTrigger value="settings">Настройки</TabsTrigger>
           <TabsTrigger value="verification">Верификация</TabsTrigger>
+          <TabsTrigger value="system">Система</TabsTrigger>
         </TabsList>
         
         <TabsContent value="users">
           <UserManagement />
+          <div className="mt-8">
+            <AdminActivityLog />
+          </div>
         </TabsContent>
         
         <TabsContent value="tariffs">
@@ -96,7 +112,14 @@ const Admin = () => {
         </TabsContent>
         
         <TabsContent value="verification">
-          <VerificationSettings />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <VerificationSettings />
+            <VerifyPhoneNumber />
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="system">
+          <SystemStatus />
         </TabsContent>
       </Tabs>
     </div>
