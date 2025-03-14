@@ -21,6 +21,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CreditCard, ShoppingCart } from "lucide-react";
 import { motion } from "framer-motion";
+import BarChartCard from "@/components/analytics/components/BarChartCard";
 
 interface OrdersChartProps {
   orders: WildberriesOrder[];
@@ -174,196 +175,150 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
         }
       }}
     >
-      <motion.div variants={chartVariants} transition={{ duration: 0.5 }}>
-        <Card className="overflow-hidden rounded-xl border shadow-md bg-white dark:bg-slate-900">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-medium flex items-center gap-2.5">
-                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900/30 shadow-sm p-2">
-                  <CreditCard className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                </div>
-                <span className="text-indigo-600 dark:text-indigo-400">
-                  {shouldDisplayHourly ? 'Заказы по часам' : 'Динамика заказов'}
-                </span>
-              </CardTitle>
-              <div className="text-xs font-medium text-white px-3 py-1 rounded-full shadow-sm bg-indigo-500 dark:bg-indigo-600">
-                {shouldDisplayHourly ? 'Почасовая статистика' : 'Ежедневная статистика'}
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[320px] mt-4">
-              <ChartContainer
-                config={ordersConfig}
-                className="h-full"
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart
-                    data={dailyOrdersData}
-                    margin={{ top: 20, right: 20, left: 0, bottom: 10 }}
-                  >
-                    <defs>
-                      <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--color-orders)" stopOpacity={0.5}/>
-                        <stop offset="95%" stopColor="var(--color-orders)" stopOpacity={0.1}/>
-                      </linearGradient>
-                      <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--color-amount)" stopOpacity={0.5}/>
-                        <stop offset="95%" stopColor="var(--color-amount)" stopOpacity={0.1}/>
-                      </linearGradient>
-                      <linearGradient id="colorCanceled" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--color-canceled)" stopOpacity={0.5}/>
-                        <stop offset="95%" stopColor="var(--color-canceled)" stopOpacity={0.1}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.1} />
-                    <XAxis 
-                      dataKey="date" 
-                      tick={{ fontSize: 12, fontWeight: 500 }}
-                      tickLine={{ stroke: 'var(--border)' }}
-                      axisLine={{ stroke: 'var(--border)' }}
-                      stroke="#64748B"
-                    />
-                    <YAxis 
-                      yAxisId="left"
-                      tick={{ fontSize: 12, fontWeight: 500 }}
-                      tickLine={{ stroke: 'var(--border)' }}
-                      axisLine={{ stroke: 'var(--border)' }}
-                      stroke="#64748B"
-                    />
-                    <YAxis 
-                      yAxisId="right"
-                      orientation="right"
-                      tickFormatter={(value) => `${formatCurrency(value)}`}
-                      tick={{ fontSize: 12, fontWeight: 500 }}
-                      tickLine={{ stroke: 'var(--border)' }}
-                      axisLine={{ stroke: 'var(--border)' }}
-                      stroke="#64748B"
-                    />
-                    <ChartTooltip 
-                      content={<ChartTooltipContent />}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="orders" 
-                      name="Заказы"
-                      yAxisId="left"
-                      stroke="var(--color-orders)" 
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#colorOrders)"
-                      activeDot={{ r: 6, strokeWidth: 2 }}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="amount" 
-                      name="Сумма"
-                      yAxisId="right"
-                      stroke="var(--color-amount)" 
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#colorAmount)"
-                      activeDot={{ r: 6, strokeWidth: 2 }}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="canceled" 
-                      name="Отмены"
-                      yAxisId="left"
-                      stroke="var(--color-canceled)" 
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#colorCanceled)"
-                      activeDot={{ r: 6, strokeWidth: 2 }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <BarChartCard 
+        title={shouldDisplayHourly ? 'Заказы по часам' : 'Динамика заказов'}
+        subtitle={shouldDisplayHourly ? 'Почасовая статистика' : 'Ежедневная статистика'}
+        icon={CreditCard}
+      >
+        <ChartContainer
+          config={ordersConfig}
+          className="h-full"
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={dailyOrdersData}
+              margin={{ top: 20, right: 20, left: 0, bottom: 10 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.1} />
+              <XAxis 
+                dataKey="date" 
+                tick={{ fontSize: 12, fontWeight: 500 }}
+                tickLine={{ stroke: 'var(--border)' }}
+                axisLine={{ stroke: 'var(--border)' }}
+                stroke="#64748B"
+              />
+              <YAxis 
+                yAxisId="left"
+                tick={{ fontSize: 12, fontWeight: 500 }}
+                tickLine={{ stroke: 'var(--border)' }}
+                axisLine={{ stroke: 'var(--border)' }}
+                stroke="#64748B"
+              />
+              <YAxis 
+                yAxisId="right"
+                orientation="right"
+                tickFormatter={(value) => `${formatCurrency(value)}`}
+                tick={{ fontSize: 12, fontWeight: 500 }}
+                tickLine={{ stroke: 'var(--border)' }}
+                axisLine={{ stroke: 'var(--border)' }}
+                stroke="#64748B"
+              />
+              <ChartTooltip 
+                content={<ChartTooltipContent />}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="orders" 
+                name="Заказы"
+                yAxisId="left"
+                stroke="var(--color-orders)" 
+                strokeWidth={2}
+                fill="none"
+                activeDot={{ r: 5, strokeWidth: 2 }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="amount" 
+                name="Сумма"
+                yAxisId="right"
+                stroke="var(--color-amount)" 
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                fill="none"
+                activeDot={{ r: 5, strokeWidth: 2 }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="canceled" 
+                name="Отмены"
+                yAxisId="left"
+                stroke="var(--color-canceled)" 
+                strokeWidth={2}
+                fill="none"
+                activeDot={{ r: 5, strokeWidth: 2 }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </ChartContainer>
+      </BarChartCard>
 
-      <motion.div variants={chartVariants} transition={{ duration: 0.5, delay: 0.2 }}>
-        <Card className="overflow-hidden rounded-xl border shadow-md bg-white dark:bg-slate-900">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-medium flex items-center gap-2.5">
-                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-purple-100 dark:bg-purple-900/30 shadow-sm p-2">
-                  <ShoppingCart className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                </div>
-                <span className="text-purple-600 dark:text-purple-400">
-                  Заказы по категориям
-                </span>
-              </CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="flex justify-center">
-            <div className="h-[320px] w-full mt-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={categoryOrdersData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={75}
-                    outerRadius={115}
-                    paddingAngle={4}
-                    dataKey="amount"
-                    nameKey="name"
-                    labelLine={false}
-                    label={({ name, percent }) => {
-                      if (typeof percent === 'number' && percent > 0.10) {
-                        return name.length > 12 
-                          ? `${name.slice(0, 12)}...: ${(percent * 100).toFixed(0)}%` 
-                          : `${name}: ${(percent * 100).toFixed(0)}%`;
-                      }
-                      return '';
-                    }}
-                  >
-                    {categoryOrdersData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={COLORS[index % COLORS.length]} 
-                        stroke="#fff"
-                        strokeWidth={1}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value, name) => {
-                      const numValue = typeof value === 'number' ? value : 0;
-                      const percentage = totalOrdersAmount > 0 ? ((numValue / totalOrdersAmount) * 100).toFixed(1) : '0';
-                      return [
-                        `${formatCurrency(numValue)} ₽ (${percentage}%)`,
-                        name
-                      ];
-                    }}
-                    contentStyle={{ 
-                      backgroundColor: "rgba(255, 255, 255, 0.97)", 
-                      borderRadius: "10px", 
-                      border: "none",
-                      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)"
-                    }}
-                    wrapperStyle={{
-                      outline: "none"
-                    }}
-                  />
-                  <Legend 
-                    verticalAlign="bottom"
-                    iconType="circle"
-                    iconSize={8}
-                    formatter={(value) => (
-                      <span className="text-sm font-medium">{value}</span>
-                    )}
-                    wrapperStyle={{ paddingTop: "15px" }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <BarChartCard 
+        title="Заказы по категориям"
+        icon={ShoppingCart}
+        iconColor="text-purple-600 dark:text-purple-400"
+        iconBgColor="bg-purple-100 dark:bg-purple-900/30"
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={categoryOrdersData}
+              cx="50%"
+              cy="50%"
+              innerRadius={75}
+              outerRadius={115}
+              paddingAngle={4}
+              dataKey="amount"
+              nameKey="name"
+              labelLine={false}
+              label={({ name, percent }) => {
+                if (typeof percent === 'number' && percent > 0.10) {
+                  return name.length > 12 
+                    ? `${name.slice(0, 12)}...: ${(percent * 100).toFixed(0)}%` 
+                    : `${name}: ${(percent * 100).toFixed(0)}%`;
+                }
+                return '';
+              }}
+            >
+              {categoryOrdersData.map((entry, index) => (
+                <Cell 
+                  key={`cell-${index}`} 
+                  fill={COLORS[index % COLORS.length]} 
+                  stroke="#fff"
+                  strokeWidth={1}
+                />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value, name) => {
+                const numValue = typeof value === 'number' ? value : 0;
+                const percentage = totalOrdersAmount > 0 ? ((numValue / totalOrdersAmount) * 100).toFixed(1) : '0';
+                return [
+                  `${formatCurrency(numValue)} ₽ (${percentage}%)`,
+                  name
+                ];
+              }}
+              contentStyle={{ 
+                backgroundColor: "rgba(255, 255, 255, 0.97)", 
+                borderRadius: "10px", 
+                border: "none",
+                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)"
+              }}
+              wrapperStyle={{
+                outline: "none"
+              }}
+            />
+            <Legend 
+              verticalAlign="bottom"
+              iconType="circle"
+              iconSize={8}
+              formatter={(value) => (
+                <span className="text-sm font-medium">{value}</span>
+              )}
+              wrapperStyle={{ paddingTop: "15px" }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </BarChartCard>
     </motion.div>
   );
 });
