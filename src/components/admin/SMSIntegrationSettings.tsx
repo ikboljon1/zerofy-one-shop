@@ -166,7 +166,7 @@ const SMSIntegrationSettings = () => {
                     />
                   </FormControl>
                   <FormDescription>
-                    Шаблон SMS-сообщения для верификации. Используйте {{code}} для подстановки кода.
+                    Шаблон SMS-сообщения для верификации. Используйте {'{{code}}'} для подстановки кода.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

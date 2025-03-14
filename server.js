@@ -808,4 +808,4 @@ app.post('/api/user-stores', (req, res) => {
   }
 
   const query = `INSERT OR REPLACE INTO user_stores 
-                (user_id, store_id, marketplace, store_name, api_key, is_selected, last_fetch
+                (user_id, store_id, marketplace, store_name, api_key, is_selected, last_fetch_date)
