@@ -149,22 +149,20 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
   };
 
   const maxCanceledValue = useMemo(() => {
-    if (dailyOrdersData.length === 0) return 4;
+    if (dailyOrdersData.length === 0) return 9;
     const max = Math.max(...dailyOrdersData.map(d => d.canceled || 0));
-    return Math.max(1, Math.ceil(max)); // Ensure we have at least 1 as maximum
+    return Math.max(9, Math.ceil(max)); // Always show up to at least 9
   }, [dailyOrdersData]);
 
   const customLeftAxisTicks = useMemo(() => {
     const ticks = [];
-    const maxTicks = 5; // Limit number of ticks to avoid crowding
-    const step = Math.max(1, Math.ceil(maxCanceledValue / maxTicks));
     
-    for (let i = 0; i <= maxCanceledValue; i += step) {
-      ticks.push(i);
+    const effectiveMax = Math.max(9, maxCanceledValue);
+    for (let i = 0; i <= effectiveMax; i++) {
+      if (i % 1 === 0) {
+        ticks.push(i);
+      }
     }
-    
-    if (!ticks.includes(0)) ticks.unshift(0);
-    if (!ticks.includes(maxCanceledValue)) ticks.push(maxCanceledValue);
     
     return ticks;
   }, [maxCanceledValue]);
@@ -218,7 +216,7 @@ const OrdersChart: React.FC<OrdersChartProps> = React.memo(({ orders, sales }) =
                 axisLine={{ stroke: 'var(--border)' }}
                 stroke="#64748B"
                 ticks={customLeftAxisTicks}
-                domain={[0, 'auto']}
+                domain={[0, Math.max(9, maxCanceledValue)]}
               />
               <YAxis 
                 yAxisId="right"
