@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import { Warehouse, WarehouseCoefficient, PaidStorageItem } from '@/types/supplies';
 
@@ -127,4 +126,51 @@ export const togglePreferredWarehouse = async (apiKey: string, warehouseId: numb
   }
 };
 
-// Add more API functions as needed for other functionality
+// Add the missing fetchProductDataByNmId function
+interface ProductDetailProps {
+  nmId: number;
+  vendorCode: string;
+  brand: string;
+  subject: string;
+  averageStorageCost: number;
+  averageDailySales: number;
+  productName: string;
+}
+
+export const fetchProductDataByNmId = async (
+  apiKey: string, 
+  nmId: number, 
+  dateFrom: Date, 
+  dateTo: Date
+): Promise<ProductDetailProps> => {
+  try {
+    console.log(`Fetching product data for nmId: ${nmId} with API key: ${apiKey}`);
+    
+    // Format dates for API requests
+    const formattedDateFrom = dateFrom.toISOString().split('T')[0];
+    const formattedDateTo = dateTo.toISOString().split('T')[0];
+    
+    // In a real implementation, this would:
+    // 1. Call the Wildberries API to get storage costs for the nmId
+    // 2. Call the Wildberries API to get sales data for the nmId
+    
+    // For now, we'll simulate with mock data (this would be replaced with actual API calls)
+    // Simulate API request delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Return a mock product detail object
+    return {
+      nmId: nmId,
+      vendorCode: `WB-${nmId}`, 
+      brand: "Test Brand",
+      subject: "Test Product Category",
+      averageStorageCost: 12.5,
+      averageDailySales: 2.3,
+      productName: `Product ${nmId}`
+    };
+    
+  } catch (error) {
+    console.error(`Error fetching product data for nmId ${nmId}:`, error);
+    throw new Error(`Failed to fetch product data for nmId ${nmId}`);
+  }
+};
