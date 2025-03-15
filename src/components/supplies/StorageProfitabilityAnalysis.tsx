@@ -19,12 +19,14 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { fetchFullPaidStorageReport } from '@/services/suppliesApi';
 import { format } from 'date-fns';
+
 interface StorageProfitabilityAnalysisProps {
   warehouseItems: WarehouseRemainItem[];
   paidStorageData?: PaidStorageItem[];
   averageDailySalesRate?: Record<number, number>;
   dailyStorageCost?: Record<number, number>;
 }
+
 interface AnalysisResult {
   remainItem: WarehouseRemainItem;
   costPrice: number;
@@ -53,12 +55,14 @@ interface AnalysisResult {
   logisticsCost: number;
   wbCommission: number;
 }
+
 interface SalesDataDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onFetchData: (startDate: Date, endDate: Date) => Promise<void>;
   isLoading: boolean;
 }
+
 const SalesDataDialog: React.FC<SalesDataDialogProps> = ({
   open,
   onOpenChange,
@@ -106,6 +110,7 @@ const SalesDataDialog: React.FC<SalesDataDialogProps> = ({
       </DialogContent>
     </Dialog>;
 };
+
 const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> = ({
   warehouseItems,
   paidStorageData = [],
@@ -138,6 +143,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
   const {
     toast
   } = useToast();
+
   useEffect(() => {
     const storedCostPrices = localStorage.getItem('product_cost_prices');
     if (storedCostPrices) {
@@ -234,6 +240,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       ...initialWbCommissions
     }));
   }, [warehouseItems, averageDailySalesRate, dailyStorageCost, paidStorageData]);
+
   const formatDaysOfInventory = (days: number): string => {
     if (days >= 300) {
       return `${Math.round(days / 30)} мес.`;
@@ -243,6 +250,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       return `${days} дн.`;
     }
   };
+
   const analysisResults = useMemo(() => {
     return warehouseItems.map(item => {
       const nmId = item.nmId;
@@ -370,6 +378,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       };
     });
   }, [warehouseItems, costPrices, sellingPrices, dailySalesRates, storageCostRates, discountLevels, lowStockThreshold, logisticsCosts, wbCommissions]);
+
   const filteredResults = useMemo(() => {
     let results = [...analysisResults];
     if (searchTerm) {
@@ -396,6 +405,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }
     return results;
   }, [analysisResults, searchTerm, selectedTab, sortConfig]);
+
   const analysisSummary = useMemo(() => {
     const totalItems = analysisResults.length;
     const lowStockItems = analysisResults.filter(item => item.lowStock).length;
@@ -418,6 +428,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       itemsStockingOutBeforeTarget
     };
   }, [analysisResults, targetDate]);
+
   const requestSort = (key: keyof AnalysisResult) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -428,6 +439,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       direction
     });
   };
+
   const savePriceData = () => {
     localStorage.setItem('product_cost_prices', JSON.stringify(costPrices));
     localStorage.setItem('product_selling_prices', JSON.stringify(sellingPrices));
@@ -439,6 +451,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       description: "Все изменения успешно сохранены в локальное хранилище"
     });
   };
+
   const updateCostPrice = (nmId: number, value: string) => {
     setCostPrices(prev => {
       const newPrices = {
@@ -448,6 +461,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       return newPrices;
     });
   };
+
   const updateSellingPrice = (nmId: number, value: string) => {
     setSellingPrices(prev => {
       const newPrices = {
@@ -457,6 +471,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       return newPrices;
     });
   };
+
   const updateDailySales = (nmId: number, value: string) => {
     setDailySalesRates(prev => {
       const newRates = {
@@ -466,6 +481,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       return newRates;
     });
   };
+
   const updateStorageCost = (nmId: number, value: string) => {
     setStorageCostRates(prev => {
       const newRates = {
@@ -475,6 +491,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       return newRates;
     });
   };
+
   const updateLogisticsCost = (nmId: number, value: string) => {
     setLogisticsCosts(prev => {
       const newCosts = {
@@ -484,6 +501,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       return newCosts;
     });
   };
+
   const updateWbCommission = (nmId: number, value: string) => {
     setWbCommissions(prev => {
       const newCommissions = {
@@ -493,70 +511,154 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       return newCommissions;
     });
   };
-  const loadPaidStorageData = async () => {
+
+  const fetchSalesAndStorageData = async (startDate: Date, endDate: Date) => {
     if (!apiKey) {
       toast({
         title: "Ошибка авторизации",
-        description: 'Необходима авторизация для загрузки данных о платном хранении',
+        description: 'Необходим API-ключ для загрузки данных о продажах',
         variant: "destructive"
       });
       return;
     }
-    try {
-      setIsLoadingStorage(true);
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - 30);
-      const dateFrom = startDate.toISOString().split('T')[0];
-      const dateTo = new Date().toISOString().split('T')[0];
-      const data = await fetchFullPaidStorageReport(apiKey, dateFrom, dateTo);
-      setStorageData(data);
-      toast({
-        title: "Данные загружены",
-        description: `Загружено ${data.length} записей о платном хранении`
-      });
-    } catch (error: any) {
-      console.error('Ошибка при загрузке данных о платном хранении:', error);
-      toast({
-        title: "Ошибка загрузки",
-        description: `Не удалось загрузить данные: ${error.message}`,
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoadingStorage(false);
-    }
-  };
-  const fetchSalesAndStorageData = async (startDate: Date, endDate: Date) => {
+
     try {
       setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      const mockSalesData: Record<number, number> = {};
-      const mockSellingPrices: Record<number, number> = {};
-      const mockStorageCosts: Record<number, number> = {};
-      warehouseItems.forEach(item => {
-        mockSalesData[item.nmId] = Math.max(0.1, Number((Math.random() * 5).toFixed(2)));
-        const existingPrice = sellingPrices[item.nmId] || item.price || 0;
-        mockSellingPrices[item.nmId] = Math.max(100, existingPrice * (0.9 + Math.random() * 0.2));
-        mockStorageCosts[item.nmId] = Math.max(1, Math.random() * 10);
+      
+      const dateFrom = format(startDate, 'yyyy-MM-dd');
+      const dateTo = format(endDate, 'yyyy-MM-dd');
+      
+      const response = await fetch(`https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod?dateFrom=${dateFrom}&dateTo=${dateTo}&limit=10000`, {
+        headers: {
+          'Authorization': apiKey
+        }
       });
-      setDailySalesRates(mockSalesData);
-      setSellingPrices(mockSellingPrices);
-      setStorageCostRates(mockStorageCosts);
+      
+      if (!response.ok) {
+        throw new Error(`Ошибка получения данных: ${response.status} ${response.statusText}`);
+      }
+      
+      const salesData = await response.json();
+      console.log('Получены данные о продажах:', salesData.length);
+      
+      const salesByProduct: Record<number, { totalSales: number, uniqueDays: Set<string> }> = {};
+      
+      salesData.forEach((sale: any) => {
+        if (sale.nm_id && sale.doc_type_name === "Продажа" && sale.quantity > 0) {
+          const nmId = sale.nm_id;
+          const saleDate = sale.sale_dt.split('T')[0];
+          
+          if (!salesByProduct[nmId]) {
+            salesByProduct[nmId] = { totalSales: 0, uniqueDays: new Set() };
+          }
+          
+          salesByProduct[nmId].totalSales += sale.quantity;
+          salesByProduct[nmId].uniqueDays.add(saleDate);
+        }
+      });
+      
+      const averageDailySales: Record<number, number> = {};
+      const sellingPricesData: Record<number, number> = {};
+      
+      Object.entries(salesByProduct).forEach(([nmIdStr, data]) => {
+        const nmId = parseInt(nmIdStr);
+        const daysCount = Math.max(1, data.uniqueDays.size);
+        const averageSales = data.totalSales / daysCount;
+        
+        averageDailySales[nmId] = parseFloat(averageSales.toFixed(2));
+        
+        const productSales = salesData.filter((s: any) => s.nm_id === nmId && s.doc_type_name === "Продажа");
+        if (productSales.length > 0) {
+          const totalPrice = productSales.reduce((sum: number, sale: any) => sum + (sale.retail_price || 0), 0);
+          sellingPricesData[nmId] = Math.round(totalPrice / productSales.length);
+        }
+      });
+      
+      try {
+        const storageData = await loadPaidStorageData();
+        
+        const storageCostsData: Record<number, number> = {};
+        
+        if (storageData && storageData.length > 0) {
+          const storageByProduct: Record<number, { totalCost: number, uniqueDays: Set<string> }> = {};
+          
+          storageData.forEach((storage: any) => {
+            if (storage.nmId) {
+              const nmId = storage.nmId;
+              const storageDate = storage.date_from || new Date().toISOString().split('T')[0];
+              
+              if (!storageByProduct[nmId]) {
+                storageByProduct[nmId] = { totalCost: 0, uniqueDays: new Set() };
+              }
+              
+              storageByProduct[nmId].totalCost += storage.warehousePrice || 0;
+              storageByProduct[nmId].uniqueDays.add(storageDate);
+            }
+          });
+          
+          Object.entries(storageByProduct).forEach(([nmIdStr, data]) => {
+            const nmId = parseInt(nmIdStr);
+            const daysCount = Math.max(1, data.uniqueDays.size);
+            const averageStorageCost = data.totalCost / daysCount;
+            
+            storageCostsData[nmId] = parseFloat(averageStorageCost.toFixed(2));
+          });
+        }
+        
+        setStorageCostRates(storageCostsData);
+      } catch (storageError) {
+        console.error("Ошибка при загрузке данных о хранении:", storageError);
+        toast({
+          title: "Предупреждение",
+          description: "Не удалось загрузить данные о платном хранении. Используются приблизительные значения.",
+        });
+      }
+      
+      setDailySalesRates(averageDailySales);
+      setSellingPrices({...sellingPrices, ...sellingPricesData});
+      
       setSalesDataDialogOpen(false);
+      
       toast({
         title: "Данные получены",
-        description: `Данные о продажах за период ${format(startDate, 'dd.MM.yyyy')} - ${format(endDate, 'dd.MM.yyyy')} успешно загружены`
+        description: `Данные о продажах за период ${format(startDate, 'dd.MM.yyyy')} - ${format(endDate, 'dd.MM.yyyy')} успешно загружены`,
       });
-    } catch (error) {
+      
+    } catch (error: any) {
       console.error("Ошибка при получении данных:", error);
       toast({
         title: "Ошибка получения данных",
-        description: "Не удалось получить данные о продажах. Пожалуйста, попробуйте позже.",
+        description: error.message || "Не удалось получить данные о продажах. Пожалуйста, проверьте API-ключ и попробуйте снова.",
         variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
+
+  const loadPaidStorageData = async (): Promise<PaidStorageItem[]> => {
+    if (!apiKey) {
+      return [];
+    }
+    
+    try {
+      setIsLoadingStorage(true);
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 30);
+      const dateFrom = startDate.toISOString().split('T')[0];
+      const dateTo = new Date().toISOString().split('T')[0];
+      
+      const data = await fetchFullPaidStorageReport(apiKey, dateFrom, dateTo);
+      setStorageData(data);
+      return data;
+    } catch (error: any) {
+      console.error('Ошибка при загрузке данных о платном хранении:', error);
+      return [];
+    } finally {
+      setIsLoadingStorage(false);
+    }
+  };
+
   const getActionBadge = (action: 'sell' | 'discount' | 'keep') => {
     switch (action) {
       case 'sell':
@@ -569,6 +671,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         return null;
     }
   };
+
   const getStockLevelIndicator = (result: AnalysisResult) => {
     switch (result.stockLevel) {
       case 'low':
@@ -599,6 +702,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
           </div>;
     }
   };
+
   const formatDate = (date?: Date) => {
     if (!date) return "Не определено";
     return new Date(date).toLocaleDateString('ru-RU', {
@@ -607,6 +711,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       year: 'numeric'
     });
   };
+
   const getAnalysisStatusIndicator = (result: AnalysisResult) => {
     const factors = [];
     if (result.profitMarginPercentage < 15) {
@@ -674,6 +779,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
           </div>)}
       </div>;
   };
+
   const DetailedAnalysis = ({
     result
   }: {
@@ -849,6 +955,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         </div>
       </div>;
   };
+
   return <Card className="border-none shadow-none">
       <CardHeader className="pb-2">
         <CardTitle className="text-lg flex items-center">
@@ -1083,4 +1190,5 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       </CardContent>
     </Card>;
 };
+
 export default StorageProfitabilityAnalysis;

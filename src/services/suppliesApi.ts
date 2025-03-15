@@ -562,7 +562,7 @@ export const calculateAverageDailySales = (
   }>();
   
   if (!salesData || salesData.length === 0) {
-    console.log('Нет данных о продажах для расчета среднего количества');
+    console.log('Нет д��нных о продажах для расчета среднего количества');
     return salesByNmId;
   }
   
@@ -651,107 +651,114 @@ export const fetchProductSalesData = async (
  * Получить данные о продажах за последний месяц
  * @param apiKey Ключ API
  */
-export const fetchLastMonthSalesData = async (
-  apiKey: string
-): Promise<Map<number, {
-  name: string;
-  totalSales: number;
-  averageDailySales: number;
-  periodDays: number;
-  revenue: number;
-}>> => {
+export const fetchLastMonthSalesData = async (apiKey: string): Promise<Map<number, number>> => {
   try {
-    console.log('Получение данных о продажах за последний месяц...');
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 30); // Последние 30 дней
     
-    // Проверяем, что API ключ предоставлен
-    if (!apiKey || apiKey.trim() === '') {
-      console.error('API ключ не предоставлен для получения данных о продажах');
-      return new Map(); // Вместо демо-данных возвращаем пустую карту
-    }
+    const dateFrom = startDate.toISOString().split('T')[0];
+    const dateTo = endDate.toISOString().split('T')[0];
     
-    // Вычисляем даты за последний месяц
-    const today = new Date();
-    const lastMonth = new Date(today);
-    lastMonth.setMonth(today.getMonth() - 1);
+    // Создаем Map для хранения данных о продажах по nmId
+    const salesRateMap = new Map<number, { totalSales: number, uniqueDays: Set<string> }>();
     
-    const dateFrom = lastMonth.toISOString().split('T')[0]; // формат YYYY-MM-DD
-    const dateTo = today.toISOString().split('T')[0];
+    // Функция для загрузки частей отчета с использованием пагинации
+    const loadReportPart = async (rrdid = 0): Promise<void> => {
+      const url = `https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod?dateFrom=${dateFrom}&dateTo=${dateTo}&limit=100000&rrdid=${rrdid}`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': apiKey
+        }
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Ошибка API: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+      
+      const data = await response.json();
+      
+      // Если получили пустой массив, значит закончили загрузку
+      if (!Array.isArray(data) || data.length === 0) {
+        return;
+      }
+      
+      // Обработка полученных данных
+      for (const sale of data) {
+        if (sale.doc_type_name === "Продажа" && sale.nm_id && sale.quantity > 0) {
+          const nmId = sale.nm_id;
+          const saleDate = sale.sale_dt.split('T')[0];
+          
+          if (!salesRateMap.has(nmId)) {
+            salesRateMap.set(nmId, { totalSales: 0, uniqueDays: new Set() });
+          }
+          
+          const productData = salesRateMap.get(nmId)!;
+          productData.totalSales += sale.quantity;
+          productData.uniqueDays.add(saleDate);
+        }
+      }
+      
+      // Если получили максимальное количество записей, загружаем следующую часть
+      if (data.length === 100000) {
+        const lastItem = data[data.length - 1];
+        const nextRrdid = lastItem.rrd_id;
+        
+        // Рекурсивно загружаем следующую часть
+        await loadReportPart(nextRrdid);
+      }
+    };
     
-    console.log(`Период для отчета о продажах: ${dateFrom} - ${dateTo}`);
+    // Начинаем загрузку с первой части
+    await loadReportPart();
     
-    // Используем существующую функцию для получения данных
-    return await fetchProductSalesData(apiKey, dateFrom, dateTo);
+    // Рассчитываем средние продажи в день для каждого товара
+    const result = new Map<number, number>();
+    
+    salesRateMap.forEach((data, nmId) => {
+      // Количество уникальных дней, когда были продажи
+      const daysCount = Math.max(1, data.uniqueDays.size);
+      
+      // Средние продажи в день
+      const averageSales = data.totalSales / daysCount;
+      
+      // Округляем до одного десятичного знака
+      result.set(nmId, parseFloat(averageSales.toFixed(1)));
+    });
+    
+    console.log(`Получены данные о средних продажах для ${result.size} товаров`);
+    return result;
+    
   } catch (error) {
-    console.error('Ошибка при получении данных о продажах за последний месяц:', error);
-    
-    // В случае ошибки возвращаем пустую карту вместо демо-данных
-    console.log('Возвращаем пустую карту данных вместо демо-данных');
-    return new Map();
+    console.error('Ошибка при получении данных о продажах:', error);
+    throw error;
   }
 };
 
 /**
- * Обновляет продукты данными о продажах в день
- * @param products Список продуктов
- * @param salesData Данные о продажах
+ * Обогащает продукты данными о продажах
  */
-export const enrichProductsWithSalesData = (
-  products: Product[],
-  salesData: Map<number, {
-    name: string;
-    totalSales: number;
-    averageDailySales: number;
-    periodDays: number;
-    revenue: number;
-  }>
-): Product[] => {
-  if (!salesData || salesData.size === 0) {
-    console.log('Нет данных о продажах для обогащения продуктов, устанавливаем 0 для всех товаров');
-    
-    // Если нет данных о продажах, устанавливаем 0 для всех продуктов
-    return products.map(product => {
-      return {
-        ...product,
-        salesData: {
-          averageDailySales: 0,
-          totalSales: 0,
-          periodDays: 30, // Используем стандартный период в 30 дней
-          revenue: 0
-        }
-      };
-    });
-  }
-  
-  console.log(`Обогащение ${products.length} продуктов данными о продажах в день`);
-  
+export const enrichProductsWithSalesData = (products: any[], salesData: Map<number, number>) => {
   return products.map(product => {
-    const nmId = product.nmID;
-    const productSalesData = salesData.get(nmId);
+    const nmId = product.nmId || product.nmID;
     
-    if (productSalesData) {
-      console.log(`Найдены данные о продажах для товара nmId=${nmId}: средние продажи в день ${productSalesData.averageDailySales.toFixed(2)} шт.`);
+    if (nmId) {
+      const salesPerDay = salesData.get(nmId) || 0;
       
       return {
         ...product,
         salesData: {
-          averageDailySales: productSalesData.averageDailySales,
-          totalSales: productSalesData.totalSales,
-          periodDays: productSalesData.periodDays,
-          revenue: productSalesData.revenue
-        }
-      };
-    } else {
-      // Для товаров без данных о продажах устанавливаем нулевые значения
-      return {
-        ...product,
-        salesData: {
-          averageDailySales: 0,
-          totalSales: 0,
-          periodDays: 30, // Используем стандартный период в 30 дней
-          revenue: 0
+          averageDailySales: salesPerDay,
+          totalSales: 0, // Здесь можно рассчитать общие продажи если нужно
+          periodDays: 30,
+          revenue: 0 // Можно рассчитать выручку если нужно
         }
       };
     }
+    
+    return product;
   });
 };
 
