@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import React from "react";
 import FetchProductDataDialog from "./supplies/FetchProductDataDialog";
+import { Store } from "@/types/store";
 
 interface Product {
   nmID: number;
@@ -22,6 +23,7 @@ interface Product {
   discountedPrice?: number;
   clubPrice?: number;
   quantity?: number;
+  subject?: string; // Add this line to include subject
   expenses?: {
     logistics: number;
     storage: number;
@@ -39,10 +41,7 @@ interface Product {
 }
 
 interface ProductsListProps {
-  selectedStore: {
-    id: string;
-    apiKey: string;
-  } | null;
+  selectedStore: Store | null;
 }
 
 interface WBPriceResponse {
