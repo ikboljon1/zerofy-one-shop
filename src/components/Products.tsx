@@ -148,9 +148,7 @@ const Products = ({
               <div className="flex items-center">
                 <ShoppingBag className="h-4 w-4 mr-1 text-muted-foreground" />
                 <span>
-                  {product.salesPerDay !== undefined 
-                    ? `Продажи/день: ${product.salesPerDay.toFixed(1)} шт.` 
-                    : 'Продажи/день: 0 шт.'}
+                  {`Продажи/день: ${product.salesPerDay !== undefined ? product.salesPerDay.toFixed(1) : '0'} шт.`}
                 </span>
               </div>
               
