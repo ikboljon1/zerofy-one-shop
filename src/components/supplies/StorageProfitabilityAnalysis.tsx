@@ -7,11 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
-import { 
-  Search, ArrowUpDown, Package, TrendingDown, Banknote, WarehouseIcon, AlertTriangle, 
-  Clock, ArrowDown, ArrowUp, BarChart4, TrendingUp, Calculator, Truck, Percent, ArrowRight,
-  RefreshCw, Download
-} from 'lucide-react';
+import { Search, ArrowUpDown, Package, TrendingDown, Banknote, WarehouseIcon, AlertTriangle, Clock, ArrowDown, ArrowUp, BarChart4, TrendingUp, Calculator, Truck, Percent, ArrowRight, RefreshCw, Download } from 'lucide-react';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { WarehouseRemainItem, PaidStorageItem } from '@/types/supplies';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -23,14 +19,12 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { fetchFullPaidStorageReport } from '@/services/suppliesApi';
 import { format } from 'date-fns';
-
 interface StorageProfitabilityAnalysisProps {
   warehouseItems: WarehouseRemainItem[];
   paidStorageData?: PaidStorageItem[];
   averageDailySalesRate?: Record<number, number>;
   dailyStorageCost?: Record<number, number>;
 }
-
 interface AnalysisResult {
   remainItem: WarehouseRemainItem;
   costPrice: number;
@@ -59,33 +53,26 @@ interface AnalysisResult {
   logisticsCost: number;
   wbCommission: number;
 }
-
 interface SalesDataDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onFetchData: (startDate: Date, endDate: Date) => Promise<void>;
   isLoading: boolean;
 }
-
-const SalesDataDialog: React.FC<SalesDataDialogProps> = ({ 
-  open, 
-  onOpenChange, 
+const SalesDataDialog: React.FC<SalesDataDialogProps> = ({
+  open,
+  onOpenChange,
   onFetchData,
-  isLoading 
+  isLoading
 }) => {
-  const [startDate, setStartDate] = useState<Date | undefined>(
-    new Date(new Date().setDate(new Date().getDate() - 7))
-  );
+  const [startDate, setStartDate] = useState<Date | undefined>(new Date(new Date().setDate(new Date().getDate() - 7)));
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
-  
   const handleFetchData = async () => {
     if (startDate && endDate) {
       await onFetchData(startDate, endDate);
     }
   };
-  
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+  return <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Получение данных о продажах</DialogTitle>
@@ -97,47 +84,33 @@ const SalesDataDialog: React.FC<SalesDataDialogProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col space-y-1.5">
               <Label htmlFor="startDate">Дата начала</Label>
-              <DatePicker 
-                value={startDate}
-                onValueChange={setStartDate}
-                placeholder="Выберите дату начала"
-              />
+              <DatePicker value={startDate} onValueChange={setStartDate} placeholder="Выберите дату начала" />
             </div>
             <div className="flex flex-col space-y-1.5">
               <Label htmlFor="endDate">Дата окончания</Label>
-              <DatePicker 
-                value={endDate}
-                onValueChange={setEndDate}
-                placeholder="Выберите дату окончания"
-              />
+              <DatePicker value={endDate} onValueChange={setEndDate} placeholder="Выберите дату окончания" />
             </div>
           </div>
         </div>
         <DialogFooter>
           <Button onClick={handleFetchData} disabled={isLoading || !startDate || !endDate}>
-            {isLoading ? (
-              <>
+            {isLoading ? <>
                 <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                 Загрузка...
-              </>
-            ) : (
-              <>
+              </> : <>
                 <Download className="mr-2 h-4 w-4" />
                 Получить данные
-              </>
-            )}
+              </>}
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>;
 };
-
 const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> = ({
   warehouseItems,
   paidStorageData = [],
   averageDailySalesRate = {},
-  dailyStorageCost = {},
+  dailyStorageCost = {}
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState<'all' | 'discount' | 'keep' | 'low-stock'>('all');
@@ -149,46 +122,43 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
   const [lowStockThreshold, setLowStockThreshold] = useState<Record<number, number>>({});
   const [logisticsCosts, setLogisticsCosts] = useState<Record<number, number | null>>({});
   const [wbCommissions, setWbCommissions] = useState<Record<number, number | null>>({});
-  const [targetDate, setTargetDate] = useState<Date | undefined>(
-    new Date(new Date().setDate(new Date().getDate() + 30))
-  );
+  const [targetDate, setTargetDate] = useState<Date | undefined>(new Date(new Date().setDate(new Date().getDate() + 30)));
   const [sortConfig, setSortConfig] = useState<{
-    key: keyof AnalysisResult | '',
-    direction: 'asc' | 'desc'
-  }>({ key: '', direction: 'asc' });
+    key: keyof AnalysisResult | '';
+    direction: 'asc' | 'desc';
+  }>({
+    key: '',
+    direction: 'asc'
+  });
   const [salesDataDialogOpen, setSalesDataDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingStorage, setIsLoadingStorage] = useState(false);
   const [storageData, setStorageData] = useState<PaidStorageItem[]>([]);
   const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('wb_api_key') || '');
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   useEffect(() => {
     const storedCostPrices = localStorage.getItem('product_cost_prices');
     if (storedCostPrices) {
       setCostPrices(JSON.parse(storedCostPrices));
     }
-
     const storedSellingPrices = localStorage.getItem('product_selling_prices');
     if (storedSellingPrices) {
       setSellingPrices(JSON.parse(storedSellingPrices));
     }
-
     const storedLowStockThresholds = localStorage.getItem('product_low_stock_thresholds');
     if (storedLowStockThresholds) {
       setLowStockThreshold(JSON.parse(storedLowStockThresholds));
     }
-
     const storedLogisticsCosts = localStorage.getItem('product_logistics_costs');
     if (storedLogisticsCosts) {
       setLogisticsCosts(JSON.parse(storedLogisticsCosts));
     }
-
     const storedWbCommissions = localStorage.getItem('product_wb_commissions');
     if (storedWbCommissions) {
       setWbCommissions(JSON.parse(storedWbCommissions));
     }
-
     const initialDailySales: Record<number, number | null> = {};
     const initialStorageCosts: Record<number, number | null> = {};
     const initialDiscountLevels: Record<number, number> = {};
@@ -197,62 +167,73 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     const initialSellingPrices: Record<number, number | null> = {};
     const initialLogisticsCosts: Record<number, number | null> = {};
     const initialWbCommissions: Record<number, number | null> = {};
-
     warehouseItems.forEach(item => {
       const nmId = item.nmId;
-      
       if (!costPrices[nmId]) {
         initialCostPrices[nmId] = 0;
       }
-      
       if (!sellingPrices[nmId]) {
         initialSellingPrices[nmId] = item.price || 0;
       }
-      
       let itemStorageCost = dailyStorageCost[nmId] || 5;
-      
       const matchingStorageItems = paidStorageData.filter(psi => psi.nmId === nmId);
       if (matchingStorageItems.length > 0) {
         const totalCost = matchingStorageItems.reduce((sum, psi) => sum + psi.warehousePrice, 0);
         itemStorageCost = totalCost / matchingStorageItems.length;
       }
-      
       if (!dailySalesRates[nmId]) {
         initialDailySales[nmId] = averageDailySalesRate[nmId] || 0.1;
       }
-      
       if (!storageCostRates[nmId]) {
         initialStorageCosts[nmId] = itemStorageCost;
       }
-      
       if (!discountLevels[nmId]) {
         initialDiscountLevels[nmId] = 30;
       }
-      
       if (!logisticsCosts[nmId]) {
         initialLogisticsCosts[nmId] = 150;
       }
-      
       if (!wbCommissions[nmId]) {
         initialWbCommissions[nmId] = 15;
       }
-      
       const salesRate = averageDailySalesRate[nmId] || 0.1;
       if (!lowStockThreshold[nmId]) {
         initialLowStockThresholds[nmId] = Math.max(3, Math.ceil(salesRate * 7));
       }
     });
-
-    setCostPrices(prevState => ({...prevState, ...initialCostPrices}));
-    setSellingPrices(prevState => ({...prevState, ...initialSellingPrices}));
-    setDailySalesRates(prevState => ({...prevState, ...initialDailySales}));
-    setStorageCostRates(prevState => ({...prevState, ...initialStorageCosts}));
-    setDiscountLevels(prevState => ({...prevState, ...initialDiscountLevels}));
-    setLowStockThreshold(prevState => ({...prevState, ...initialLowStockThresholds}));
-    setLogisticsCosts(prevState => ({...prevState, ...initialLogisticsCosts}));
-    setWbCommissions(prevState => ({...prevState, ...initialWbCommissions}));
+    setCostPrices(prevState => ({
+      ...prevState,
+      ...initialCostPrices
+    }));
+    setSellingPrices(prevState => ({
+      ...prevState,
+      ...initialSellingPrices
+    }));
+    setDailySalesRates(prevState => ({
+      ...prevState,
+      ...initialDailySales
+    }));
+    setStorageCostRates(prevState => ({
+      ...prevState,
+      ...initialStorageCosts
+    }));
+    setDiscountLevels(prevState => ({
+      ...prevState,
+      ...initialDiscountLevels
+    }));
+    setLowStockThreshold(prevState => ({
+      ...prevState,
+      ...initialLowStockThresholds
+    }));
+    setLogisticsCosts(prevState => ({
+      ...prevState,
+      ...initialLogisticsCosts
+    }));
+    setWbCommissions(prevState => ({
+      ...prevState,
+      ...initialWbCommissions
+    }));
   }, [warehouseItems, averageDailySalesRate, dailyStorageCost, paidStorageData]);
-
   const formatDaysOfInventory = (days: number): string => {
     if (days >= 300) {
       return `${Math.round(days / 30)} мес.`;
@@ -262,93 +243,62 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       return `${days} дн.`;
     }
   };
-
   const analysisResults = useMemo(() => {
     return warehouseItems.map(item => {
       const nmId = item.nmId;
       const costPrice = costPrices[nmId] || 0;
-      const sellingPrice = sellingPrices[nmId] || (item.price || 0);
+      const sellingPrice = sellingPrices[nmId] || item.price || 0;
       const dailySales = dailySalesRates[nmId] || 0.1;
       const storageCost = storageCostRates[nmId] || 5;
       const currentStock = item.quantityWarehousesFull || 0;
       const threshold = lowStockThreshold[nmId] || Math.ceil(dailySales * 7);
       const logisticsCost = logisticsCosts[nmId] || 150;
       const wbCommission = wbCommissions[nmId] || 15;
-      
       const dailyStorageCostTotal = storageCost * currentStock;
-      
       const daysOfInventory = dailySales > 0 ? Math.round(currentStock / dailySales) : 999;
-      
       const averageStock = currentStock / 2;
       const totalStorageCost = averageStock * daysOfInventory * storageCost;
-      
       const commissionAmount = sellingPrice * (wbCommission / 100);
-      
       const totalLogisticsCost = logisticsCost * currentStock;
-      
-      const profitPerItem = sellingPrice - costPrice - commissionAmount - (logisticsCost);
-      const profitMarginPercentage = sellingPrice > 0 ? (profitPerItem / sellingPrice) * 100 : 0;
-      
+      const profitPerItem = sellingPrice - costPrice - commissionAmount - logisticsCost;
+      const profitMarginPercentage = sellingPrice > 0 ? profitPerItem / sellingPrice * 100 : 0;
       const grossProfit = profitPerItem * currentStock;
-      
       const netProfit = grossProfit - totalStorageCost;
-      
       const stockTurnoverDays = daysOfInventory;
-      
       const storageROI = totalStorageCost > 0 ? netProfit / totalStorageCost : 0;
-      
-      const storageCostToRevenueRatio = (sellingPrice * currentStock) > 0 ? 
-        totalStorageCost / (sellingPrice * currentStock) : 0;
-      
+      const storageCostToRevenueRatio = sellingPrice * currentStock > 0 ? totalStorageCost / (sellingPrice * currentStock) : 0;
       let recommendedDiscount = 0;
       let action: 'sell' | 'discount' | 'keep' = 'keep';
-      
       const isLowMargin = profitMarginPercentage < 15;
       const isHighStorageCost = storageCostToRevenueRatio > 0.1;
       const isSlowMoving = stockTurnoverDays > 60;
-      
       if (isSlowMoving && isHighStorageCost) {
         recommendedDiscount = 40;
         action = 'sell';
-      } 
-      else if (isLowMargin && isHighStorageCost) {
+      } else if (isLowMargin && isHighStorageCost) {
         recommendedDiscount = discountLevels[nmId] || 25;
         action = 'discount';
-      }
-      else if (isSlowMoving && !isLowMargin) {
+      } else if (isSlowMoving && !isLowMargin) {
         recommendedDiscount = discountLevels[nmId] || 15;
         action = 'discount';
-      }
-      else {
+      } else {
         recommendedDiscount = 0;
         action = 'keep';
       }
-      
       const discountedPrice = sellingPrice * (1 - recommendedDiscount / 100);
-      
       const discountedCommissionAmount = discountedPrice * (wbCommission / 100);
-      
-      const profitWithDiscountPerItem = discountedPrice - costPrice - discountedCommissionAmount - (logisticsCost);
-      
-      const salesAccelerationFactor = 1 + (recommendedDiscount / 100);
-      
+      const profitWithDiscountPerItem = discountedPrice - costPrice - discountedCommissionAmount - logisticsCost;
+      const salesAccelerationFactor = 1 + recommendedDiscount / 100;
       const newSalesRate = dailySales * salesAccelerationFactor;
-      
       const newDaysOfInventory = Math.round(daysOfInventory / salesAccelerationFactor);
-      
       const discountedStorageCost = averageStock * newDaysOfInventory * storageCost;
-      
       const profitWithoutDiscount = profitPerItem * currentStock - totalStorageCost;
-      
-      const profitWithDiscount = (profitWithDiscountPerItem * currentStock) - discountedStorageCost;
-      
+      const profitWithDiscount = profitWithDiscountPerItem * currentStock - discountedStorageCost;
       const savingsWithDiscount = profitWithDiscount - profitWithoutDiscount;
-      
       if (profitWithDiscount < 0 && profitWithoutDiscount < 0 && profitWithDiscount < profitWithoutDiscount) {
         action = 'keep';
         recommendedDiscount = 0;
       }
-      
       if (savingsWithDiscount < 0) {
         if (isSlowMoving && daysOfInventory > 180) {
           action = 'discount';
@@ -358,11 +308,9 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
           recommendedDiscount = 0;
         }
       }
-      
       if (profitWithoutDiscount < 0 && profitWithDiscount > 0) {
         action = 'discount';
       }
-      
       if (profitWithDiscount < 0 && recommendedDiscount > 0) {
         if (Math.abs(profitWithDiscount) > profitWithDiscountPerItem * currentStock * 0.5) {
           if (profitWithDiscount > profitWithoutDiscount) {
@@ -374,20 +322,16 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
           }
         }
       }
-      
       if (savingsWithDiscount > 0 && action === 'keep') {
         action = 'discount';
         recommendedDiscount = discountLevels[nmId] || 15;
       }
-      
       const lowStock = currentStock <= threshold;
       if (lowStock && stockTurnoverDays < 90) {
         action = 'keep';
         recommendedDiscount = 0;
       }
-      
-      const stockLevelPercentage = Math.min(100, Math.max(0, Math.round((currentStock / (threshold * 2)) * 100)));
-      
+      const stockLevelPercentage = Math.min(100, Math.max(0, Math.round(currentStock / (threshold * 2) * 100)));
       let stockLevel: 'low' | 'medium' | 'high';
       if (currentStock <= threshold) {
         stockLevel = 'low';
@@ -396,11 +340,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       } else {
         stockLevel = 'high';
       }
-      
-      const projectedStockoutDate = dailySales > 0 
-        ? new Date(Date.now() + (daysOfInventory * 24 * 60 * 60 * 1000))
-        : undefined;
-
+      const projectedStockoutDate = dailySales > 0 ? new Date(Date.now() + daysOfInventory * 24 * 60 * 60 * 1000) : undefined;
       return {
         remainItem: item,
         costPrice,
@@ -430,20 +370,12 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       };
     });
   }, [warehouseItems, costPrices, sellingPrices, dailySalesRates, storageCostRates, discountLevels, lowStockThreshold, logisticsCosts, wbCommissions]);
-
   const filteredResults = useMemo(() => {
     let results = [...analysisResults];
-    
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
-      results = results.filter(result => 
-        result.remainItem.brand.toLowerCase().includes(search) ||
-        (result.remainItem.subjectName && result.remainItem.subjectName.toLowerCase().includes(search)) ||
-        (result.remainItem.vendorCode && result.remainItem.vendorCode.toLowerCase().includes(search)) ||
-        result.remainItem.nmId.toString().includes(search)
-      );
+      results = results.filter(result => result.remainItem.brand.toLowerCase().includes(search) || result.remainItem.subjectName && result.remainItem.subjectName.toLowerCase().includes(search) || result.remainItem.vendorCode && result.remainItem.vendorCode.toLowerCase().includes(search) || result.remainItem.nmId.toString().includes(search));
     }
-    
     if (selectedTab === 'discount') {
       results = results.filter(result => result.action === 'discount' || result.action === 'sell');
     } else if (selectedTab === 'keep') {
@@ -451,7 +383,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     } else if (selectedTab === 'low-stock') {
       results = results.filter(result => result.lowStock);
     }
-    
     if (sortConfig.key) {
       results.sort((a, b) => {
         if (a[sortConfig.key] < b[sortConfig.key]) {
@@ -463,27 +394,19 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         return 0;
       });
     }
-    
     return results;
   }, [analysisResults, searchTerm, selectedTab, sortConfig]);
-
   const analysisSummary = useMemo(() => {
     const totalItems = analysisResults.length;
     const lowStockItems = analysisResults.filter(item => item.lowStock).length;
     const discountItems = analysisResults.filter(item => item.action === 'discount').length;
     const sellItems = analysisResults.filter(item => item.action === 'sell').length;
     const keepItems = analysisResults.filter(item => item.action === 'keep').length;
-    
     const totalStorageCost = analysisResults.reduce((sum, item) => sum + item.totalStorageCost, 0);
     const potentialSavings = analysisResults.reduce((sum, item) => {
       return sum + (item.savingsWithDiscount > 0 ? item.savingsWithDiscount : 0);
     }, 0);
-
-    const itemsStockingOutBeforeTarget = targetDate ? 
-      analysisResults.filter(item => 
-        item.projectedStockoutDate && item.projectedStockoutDate <= targetDate
-      ).length : 0;
-    
+    const itemsStockingOutBeforeTarget = targetDate ? analysisResults.filter(item => item.projectedStockoutDate && item.projectedStockoutDate <= targetDate).length : 0;
     return {
       totalItems,
       lowStockItems,
@@ -495,76 +418,81 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       itemsStockingOutBeforeTarget
     };
   }, [analysisResults, targetDate]);
-
   const requestSort = (key: keyof AnalysisResult) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
     }
-    setSortConfig({ key, direction });
+    setSortConfig({
+      key,
+      direction
+    });
   };
-
   const savePriceData = () => {
     localStorage.setItem('product_cost_prices', JSON.stringify(costPrices));
     localStorage.setItem('product_selling_prices', JSON.stringify(sellingPrices));
     localStorage.setItem('product_low_stock_thresholds', JSON.stringify(lowStockThreshold));
     localStorage.setItem('product_logistics_costs', JSON.stringify(logisticsCosts));
     localStorage.setItem('product_wb_commissions', JSON.stringify(wbCommissions));
-    
     toast({
       title: "Данные сохранены",
-      description: "Все изменения успешно сохранены в локальное хранилище",
+      description: "Все изменения успешно сохранены в локальное хранилище"
     });
   };
-
   const updateCostPrice = (nmId: number, value: string) => {
     setCostPrices(prev => {
-      const newPrices = { ...prev };
+      const newPrices = {
+        ...prev
+      };
       newPrices[nmId] = value === "" ? null : Number(value);
       return newPrices;
     });
   };
-
   const updateSellingPrice = (nmId: number, value: string) => {
     setSellingPrices(prev => {
-      const newPrices = { ...prev };
+      const newPrices = {
+        ...prev
+      };
       newPrices[nmId] = value === "" ? null : Number(value);
       return newPrices;
     });
   };
-
   const updateDailySales = (nmId: number, value: string) => {
     setDailySalesRates(prev => {
-      const newRates = { ...prev };
+      const newRates = {
+        ...prev
+      };
       newRates[nmId] = value === "" ? null : Number(value);
       return newRates;
     });
   };
-
   const updateStorageCost = (nmId: number, value: string) => {
     setStorageCostRates(prev => {
-      const newRates = { ...prev };
+      const newRates = {
+        ...prev
+      };
       newRates[nmId] = value === "" ? null : Number(value);
       return newRates;
     });
   };
-
   const updateLogisticsCost = (nmId: number, value: string) => {
     setLogisticsCosts(prev => {
-      const newCosts = { ...prev };
+      const newCosts = {
+        ...prev
+      };
       newCosts[nmId] = value === "" ? null : Number(value);
       return newCosts;
     });
   };
-
   const updateWbCommission = (nmId: number, value: string) => {
     setWbCommissions(prev => {
-      const newCommissions = { ...prev };
+      const newCommissions = {
+        ...prev
+      };
       newCommissions[nmId] = value === "" ? null : Number(value);
       return newCommissions;
     });
   };
-
   const loadPaidStorageData = async () => {
     if (!apiKey) {
       toast({
@@ -574,18 +502,14 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       });
       return;
     }
-    
     try {
       setIsLoadingStorage(true);
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - 30);
-      
       const dateFrom = startDate.toISOString().split('T')[0];
       const dateTo = new Date().toISOString().split('T')[0];
-      
       const data = await fetchFullPaidStorageReport(apiKey, dateFrom, dateTo);
       setStorageData(data);
-      
       toast({
         title: "Данные загружены",
         description: `Загружено ${data.length} записей о платном хранении`
@@ -601,35 +525,27 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       setIsLoadingStorage(false);
     }
   };
-
   const fetchSalesAndStorageData = async (startDate: Date, endDate: Date) => {
     try {
       setIsLoading(true);
-      
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
       const mockSalesData: Record<number, number> = {};
       const mockSellingPrices: Record<number, number> = {};
       const mockStorageCosts: Record<number, number> = {};
-      
       warehouseItems.forEach(item => {
         mockSalesData[item.nmId] = Math.max(0.1, Number((Math.random() * 5).toFixed(2)));
         const existingPrice = sellingPrices[item.nmId] || item.price || 0;
         mockSellingPrices[item.nmId] = Math.max(100, existingPrice * (0.9 + Math.random() * 0.2));
         mockStorageCosts[item.nmId] = Math.max(1, Math.random() * 10);
       });
-      
       setDailySalesRates(mockSalesData);
       setSellingPrices(mockSellingPrices);
       setStorageCostRates(mockStorageCosts);
-      
       setSalesDataDialogOpen(false);
-      
       toast({
         title: "Данные получены",
-        description: `Данные о продажах за период ${format(startDate, 'dd.MM.yyyy')} - ${format(endDate, 'dd.MM.yyyy')} успешно загружены`,
+        description: `Данные о продажах за период ${format(startDate, 'dd.MM.yyyy')} - ${format(endDate, 'dd.MM.yyyy')} успешно загружены`
       });
-      
     } catch (error) {
       console.error("Ошибка при получении данных:", error);
       toast({
@@ -641,7 +557,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       setIsLoading(false);
     }
   };
-
   const getActionBadge = (action: 'sell' | 'discount' | 'keep') => {
     switch (action) {
       case 'sell':
@@ -654,12 +569,10 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         return null;
     }
   };
-
   const getStockLevelIndicator = (result: AnalysisResult) => {
     switch (result.stockLevel) {
       case 'low':
-        return (
-          <div className="space-y-1">
+        return <div className="space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-xs text-rose-500 font-medium flex items-center">
                 <AlertTriangle className="h-3 w-3 mr-1" /> Низкий запас
@@ -667,31 +580,25 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
               <span className="text-xs">{result.stockLevelPercentage}%</span>
             </div>
             <Progress value={result.stockLevelPercentage} className="h-1.5 bg-rose-100" indicatorClassName="bg-rose-500" />
-          </div>
-        );
+          </div>;
       case 'medium':
-        return (
-          <div className="space-y-1">
+        return <div className="space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-xs text-amber-500 font-medium">Средний запас</span>
               <span className="text-xs">{result.stockLevelPercentage}%</span>
             </div>
             <Progress value={result.stockLevelPercentage} className="h-1.5 bg-amber-100" indicatorClassName="bg-amber-500" />
-          </div>
-        );
+          </div>;
       case 'high':
-        return (
-          <div className="space-y-1">
+        return <div className="space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-xs text-emerald-500 font-medium">Высокий запас</span>
               <span className="text-xs">{result.stockLevelPercentage}%</span>
             </div>
             <Progress value={result.stockLevelPercentage} className="h-1.5 bg-emerald-100" indicatorClassName="bg-emerald-500" />
-          </div>
-        );
+          </div>;
     }
   };
-
   const formatDate = (date?: Date) => {
     if (!date) return "Не определено";
     return new Date(date).toLocaleDateString('ru-RU', {
@@ -700,10 +607,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       year: 'numeric'
     });
   };
-
   const getAnalysisStatusIndicator = (result: AnalysisResult) => {
     const factors = [];
-    
     if (result.profitMarginPercentage < 15) {
       factors.push({
         label: "Низкая маржа",
@@ -721,7 +626,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         icon: <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
       });
     }
-    
     if (result.storageCostToRevenueRatio > 0.1) {
       factors.push({
         label: "Высокие затраты на хранение",
@@ -739,7 +643,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         icon: <WarehouseIcon className="h-3.5 w-3.5 text-emerald-500" />
       });
     }
-    
     if (result.daysOfInventory > 60) {
       factors.push({
         label: "Медленные продажи",
@@ -757,11 +660,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         icon: <Clock className="h-3.5 w-3.5 text-emerald-500" />
       });
     }
-    
-    return (
-      <div className="space-y-2">
-        {factors.map((factor, index) => (
-          <div key={index} className="flex items-center justify-between text-xs">
+    return <div className="space-y-2">
+        {factors.map((factor, index) => <div key={index} className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-1.5">
               {factor.icon}
               <span className={`font-medium ${factor.status === 'warning' ? 'text-amber-600' : 'text-emerald-600'}`}>
@@ -771,15 +671,15 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
             <span className={`${factor.status === 'warning' ? 'text-amber-600' : 'text-emerald-600'} font-medium`}>
               {factor.value}
             </span>
-          </div>
-        ))}
-      </div>
-    );
+          </div>)}
+      </div>;
   };
-
-  const DetailedAnalysis = ({ result }: { result: AnalysisResult }) => {
-    return (
-      <div className="p-5 max-w-md space-y-6 text-sm">
+  const DetailedAnalysis = ({
+    result
+  }: {
+    result: AnalysisResult;
+  }) => {
+    return <div className="p-5 max-w-md space-y-6 text-sm">
         <div>
           <h3 className="font-semibold text-base mb-2 flex items-center gap-2">
             <Calculator className="h-4 w-4 text-primary" />
@@ -925,42 +825,31 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
             {getActionBadge(result.action)}
           </div>
           
-          {result.action === 'discount' && (
-            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 mb-3">
+          {result.action === 'discount' && <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 mb-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-medium text-amber-700 dark:text-amber-400">Рекомендуемая скидка</span>
                 <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">{result.recommendedDiscount}%</span>
               </div>
               <div className="text-xs text-amber-700 dark:text-amber-400">
                 Снижение цены с {formatCurrency(result.sellingPrice)} до {formatCurrency(result.discountedPrice)} позволит ускорить продажи и сократить затраты на хранение.
-                {result.savingsWithDiscount > 0 && (
-                  <span className="block mt-1">Ожидаемая дополнительная прибыль: +{formatCurrency(result.savingsWithDiscount)}</span>
-                )}
+                {result.savingsWithDiscount > 0 && <span className="block mt-1">Ожидаемая дополнительная прибыль: +{formatCurrency(result.savingsWithDiscount)}</span>}
               </div>
-            </div>
-          )}
+            </div>}
           
-          {result.action === 'sell' && (
-            <div className="bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded-lg p-3 mb-3">
+          {result.action === 'sell' && <div className="bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded-lg p-3 mb-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-medium text-rose-700 dark:text-rose-400">Рекомендация по распродаже</span>
                 <span className="text-xs font-semibold text-rose-700 dark:text-rose-400">{result.recommendedDiscount}%</span>
               </div>
               <div className="text-xs text-rose-700 dark:text-rose-400">
                 Рекомендуется быстрая распродажа товара со скидкой до {result.recommendedDiscount}%, так как затраты на хранение превышают потенциальную прибыль.
-                {result.savingsWithDiscount > 0 && (
-                  <span className="block mt-1">Это уменьшит убытки на {formatCurrency(result.savingsWithDiscount)}</span>
-                )}
+                {result.savingsWithDiscount > 0 && <span className="block mt-1">Это уменьшит убытки на {formatCurrency(result.savingsWithDiscount)}</span>}
               </div>
-            </div>
-          )}
+            </div>}
         </div>
-      </div>
-    );
+      </div>;
   };
-
-  return (
-    <Card className="border-none shadow-none">
+  return <Card className="border-none shadow-none">
       <CardHeader className="pb-2">
         <CardTitle className="text-lg flex items-center">
           <BarChart4 className="h-5 w-5 mr-2" />
@@ -988,10 +877,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
             <div className="space-y-1">
               <div className="flex items-center space-x-1">
                 <p className="text-xs text-muted-foreground">Прогноз окончания запасов</p>
-                <DatePicker 
-                  value={targetDate}
-                  onValueChange={setTargetDate}
-                />
+                <DatePicker value={targetDate} onValueChange={setTargetDate} />
               </div>
               <p className="text-2xl font-semibold text-amber-500">{analysisSummary.itemsStockingOutBeforeTarget}</p>
             </div>
@@ -1037,35 +923,13 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
           <div className="flex flex-wrap items-center justify-between gap-2 mb-4 px-4">
             <div className="relative w-full md:w-64">
               <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Поиск по бренду или артикулу..."
-                className="pl-9"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+              <Input placeholder="Поиск по бренду или артикулу..." className="pl-9" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
             </div>
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline"
-                size="sm"
-                onClick={() => setSalesDataDialogOpen(true)}
-                className="whitespace-nowrap"
-              >
-                <Download className="mr-2 h-4 w-4" /> 
-                Получить данные о продажах
-              </Button>
-              <SalesDataDialog
-                open={salesDataDialogOpen}
-                onOpenChange={setSalesDataDialogOpen}
-                onFetchData={fetchSalesAndStorageData}
-                isLoading={isLoading}
-              />
+              
+              <SalesDataDialog open={salesDataDialogOpen} onOpenChange={setSalesDataDialogOpen} onFetchData={fetchSalesAndStorageData} isLoading={isLoading} />
             </div>
-            <Tabs 
-              value={selectedTab} 
-              onValueChange={(value) => setSelectedTab(value as any)} 
-              className="w-full md:w-auto"
-            >
+            <Tabs value={selectedTab} onValueChange={value => setSelectedTab(value as any)} className="w-full md:w-auto">
               <TabsList>
                 <TabsTrigger value="all" className="text-xs">Все товары</TabsTrigger>
                 <TabsTrigger value="discount" className="text-xs">Скидки ({analysisSummary.discountItems + analysisSummary.sellItems})</TabsTrigger>
@@ -1073,11 +937,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                 <TabsTrigger value="low-stock" className="text-xs">Низкий запас ({analysisSummary.lowStockItems})</TabsTrigger>
               </TabsList>
             </Tabs>
-            <Button 
-              onClick={savePriceData} 
-              size="sm" 
-              className="w-full md:w-auto"
-            >
+            <Button onClick={savePriceData} size="sm" className="w-full md:w-auto">
               Сохранить изменения
             </Button>
           </div>
@@ -1130,9 +990,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredResults.length > 0 ? (
-                  filteredResults.map(result => (
-                    <TableRow key={result.remainItem.nmId} className="group">
+                {filteredResults.length > 0 ? filteredResults.map(result => <TableRow key={result.remainItem.nmId} className="group">
                       <TableCell className="font-medium">
                         <div>
                           <div className="font-medium">{result.remainItem.brand}</div>
@@ -1158,96 +1016,53 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="space-y-2">
-                          <Input
-                            trackValue={true}
-                            type="number" 
-                            value={sellingPrices[result.remainItem.nmId] === null ? "" : sellingPrices[result.remainItem.nmId]?.toString() || ""}
-                            onChange={(e) => updateSellingPrice(result.remainItem.nmId, e.target.value)}
-                            className="h-8 w-24 text-right"
-                          />
-                          {result.action !== 'keep' && (
-                            <div className="flex items-center justify-end gap-1 text-xs">
+                          <Input trackValue={true} type="number" value={sellingPrices[result.remainItem.nmId] === null ? "" : sellingPrices[result.remainItem.nmId]?.toString() || ""} onChange={e => updateSellingPrice(result.remainItem.nmId, e.target.value)} className="h-8 w-24 text-right" />
+                          {result.action !== 'keep' && <div className="flex items-center justify-end gap-1 text-xs">
                               <span className="text-muted-foreground">Рек.</span>
                               <span className="font-medium">{formatCurrency(result.discountedPrice)}</span>
-                            </div>
-                          )}
+                            </div>}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Input
-                          trackValue={true}
-                          type="number" 
-                          value={costPrices[result.remainItem.nmId] === null ? "" : costPrices[result.remainItem.nmId]?.toString() || ""}
-                          onChange={(e) => updateCostPrice(result.remainItem.nmId, e.target.value)}
-                          className="h-8 w-24 text-right"
-                        />
+                        <Input trackValue={true} type="number" value={costPrices[result.remainItem.nmId] === null ? "" : costPrices[result.remainItem.nmId]?.toString() || ""} onChange={e => updateCostPrice(result.remainItem.nmId, e.target.value)} className="h-8 w-24 text-right" />
                       </TableCell>
                       <TableCell className="text-right">
-                        <Input
-                          trackValue={true}
-                          type="number" 
-                          value={wbCommissions[result.remainItem.nmId] === null ? "" : wbCommissions[result.remainItem.nmId]?.toString() || ""}
-                          onChange={(e) => updateWbCommission(result.remainItem.nmId, e.target.value)}
-                          className="h-8 w-20 text-right"
-                        />
+                        <Input trackValue={true} type="number" value={wbCommissions[result.remainItem.nmId] === null ? "" : wbCommissions[result.remainItem.nmId]?.toString() || ""} onChange={e => updateWbCommission(result.remainItem.nmId, e.target.value)} className="h-8 w-20 text-right" />
                         <div className="text-xs flex justify-end items-center mt-1">
                           <span>%</span>
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Input
-                          trackValue={true}
-                          type="number" 
-                          value={dailySalesRates[result.remainItem.nmId] === null ? "" : dailySalesRates[result.remainItem.nmId]?.toString() || ""}
-                          onChange={(e) => updateDailySales(result.remainItem.nmId, e.target.value)}
-                          className="h-8 w-24 text-right"
-                          step="0.1"
-                        />
+                        <Input trackValue={true} type="number" value={dailySalesRates[result.remainItem.nmId] === null ? "" : dailySalesRates[result.remainItem.nmId]?.toString() || ""} onChange={e => updateDailySales(result.remainItem.nmId, e.target.value)} className="h-8 w-24 text-right" step="0.1" />
                       </TableCell>
                       <TableCell className="text-right">
-                        <Input
-                          trackValue={true}
-                          type="number" 
-                          value={storageCostRates[result.remainItem.nmId] === null ? "" : storageCostRates[result.remainItem.nmId]?.toString() || ""}
-                          onChange={(e) => updateStorageCost(result.remainItem.nmId, e.target.value)}
-                          className="h-8 w-24 text-right"
-                        />
+                        <Input trackValue={true} type="number" value={storageCostRates[result.remainItem.nmId] === null ? "" : storageCostRates[result.remainItem.nmId]?.toString() || ""} onChange={e => updateStorageCost(result.remainItem.nmId, e.target.value)} className="h-8 w-24 text-right" />
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="w-24">
                           <div className="text-center font-medium">
                             {formatDaysOfInventory(result.daysOfInventory)}
                           </div>
-                          {result.action !== 'keep' && (
-                            <div className="flex items-center justify-center gap-1 text-xs">
+                          {result.action !== 'keep' && <div className="flex items-center justify-center gap-1 text-xs">
                               <ArrowDown className="h-3 w-3 text-amber-500" />
                               <span className="text-amber-600">{formatDaysOfInventory(result.newDaysOfInventory)}</span>
-                            </div>
-                          )}
+                            </div>}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end space-x-1">
-                          {result.action === 'discount' && (
-                            <Badge variant="warning" className="bg-amber-500">
+                          {result.action === 'discount' && <Badge variant="warning" className="bg-amber-500">
                               -{result.recommendedDiscount}%
-                            </Badge>
-                          )}
-                          {result.action === 'sell' && (
-                            <Badge variant="destructive">
+                            </Badge>}
+                          {result.action === 'sell' && <Badge variant="destructive">
                               -{result.recommendedDiscount}%
-                            </Badge>
-                          )}
+                            </Badge>}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <Popover>
                           <PopoverTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-8 w-8 p-0 opacity-50 group-hover:opacity-100"
-                            >
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-50 group-hover:opacity-100">
                               <Calculator className="h-4 w-4" />
                             </Button>
                           </PopoverTrigger>
@@ -1256,25 +1071,16 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
                           </PopoverContent>
                         </Popover>
                       </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
+                    </TableRow>) : <TableRow>
                     <TableCell colSpan={9} className="text-center py-6 text-muted-foreground">
-                      {searchTerm ? 
-                        `Товары по запросу "${searchTerm}" не найдены` : 
-                        "Нет товаров для отображения"
-                      }
+                      {searchTerm ? `Товары по запросу "${searchTerm}" не найдены` : "Нет товаров для отображения"}
                     </TableCell>
-                  </TableRow>
-                )}
+                  </TableRow>}
               </TableBody>
             </Table>
           </div>
         </div>
       </CardContent>
-    </Card>
-  );
+    </Card>;
 };
-
 export default StorageProfitabilityAnalysis;
