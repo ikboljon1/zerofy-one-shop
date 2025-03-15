@@ -842,7 +842,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         toast({
           title: "Нет данных о продажах",
           description: "За выбранный период не найдено данных о продажах",
-          variant: "warning"
+          variant: "default"
         });
       }
       
@@ -857,7 +857,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         toast({
           title: "Нет данных о хранении",
           description: "За выбранный период не найдено данных о хранении",
-          variant: "warning"
+          variant: "default"
         });
       }
       
