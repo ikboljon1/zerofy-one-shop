@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Package, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -139,6 +138,9 @@ const Products = ({ selectedStore }: ProductsProps) => {
       // Получаем данные о продажах за последний месяц
       try {
         console.log('Получение данных о продажах для обогащения продуктов...');
+        console.log('Используем API-ключ выбранного магазина:', selectedStore.id);
+        
+        // Явно передаем API-ключ выбранного магазина
         const salesData = await fetchLastMonthSalesData(selectedStore.apiKey);
         
         console.log(`Получены данные о продажах для ${salesData.size} товаров`);
@@ -180,33 +182,35 @@ const Products = ({ selectedStore }: ProductsProps) => {
       } catch (salesError) {
         console.error("Error fetching sales data:", salesError);
         
-        // Сохраняем продукты без данных о продажах
+        // Обогащаем продукты с нулевыми данными о продажах
+        const enrichedProducts = enrichProductsWithSalesData(normalizedProducts, new Map());
+        
         try {
           await axios.post('http://localhost:3001/api/products', {
             storeId: selectedStore.id,
-            products: normalizedProducts
+            products: enrichedProducts
           });
           
           // Также сохраняем локально для кэширования
-          localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(normalizedProducts));
+          localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(enrichedProducts));
           
-          console.log(`Saved ${normalizedProducts.length} products to database without sales data`);
+          console.log(`Saved ${enrichedProducts.length} products to database with zero sales data`);
           
           toast({
             title: "Частично успешно",
-            description: "Товары синхронизированы, но без данных о продажах",
+            description: "Товары синхронизированы, но без данных о продажах (установлены нулевые значения)",
           });
         } catch (dbError) {
           console.error("Error saving products to DB:", dbError);
           
           // Если не удалось сохранить в БД, используем localStorage
-          localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(normalizedProducts));
+          localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(enrichedProducts));
           
-          console.log(`Saved ${normalizedProducts.length} products to localStorage without sales data`);
+          console.log(`Saved ${enrichedProducts.length} products to localStorage with zero sales data`);
           
           toast({
             title: "Частично успешно",
-            description: "Товары синхронизированы, но без данных о продажах и сохранены локально (нет соединения с БД)",
+            description: "Товары синхронизированы, но без данных о продажах (установлены нулевые значения) и сохранены локально (нет соединения с БД)",
           });
         }
       }

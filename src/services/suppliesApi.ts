@@ -648,7 +648,7 @@ export const fetchProductSalesData = async (
 };
 
 /**
- * Получает данные о продажах за последний месяц
+ * Получить данные о продажах за последний месяц
  * @param apiKey Ключ API
  */
 export const fetchLastMonthSalesData = async (
@@ -662,6 +662,12 @@ export const fetchLastMonthSalesData = async (
 }>> => {
   try {
     console.log('Получение данных о продажах за последний месяц...');
+    
+    // Проверяем, что API ключ предоставлен
+    if (!apiKey || apiKey.trim() === '') {
+      console.error('API ключ не предоставлен для получения данных о продажах');
+      return new Map(); // Вместо демо-данных возвращаем пустую карту
+    }
     
     // Вычисляем даты за последний месяц
     const today = new Date();
@@ -678,7 +684,8 @@ export const fetchLastMonthSalesData = async (
   } catch (error) {
     console.error('Ошибка при получении данных о продажах за последний месяц:', error);
     
-    // В случае ошибки возвращаем пустой результат
+    // В случае ошибки возвращаем пустую карту вместо демо-данных
+    console.log('Возвращаем пустую карту данных вместо демо-данных');
     return new Map();
   }
 };
@@ -699,8 +706,20 @@ export const enrichProductsWithSalesData = (
   }>
 ): Product[] => {
   if (!salesData || salesData.size === 0) {
-    console.log('Нет данных о продажах для обогащения продуктов');
-    return products;
+    console.log('Нет данных о продажах для обогащения продуктов, устанавливаем 0 для всех товаров');
+    
+    // Если нет данных о продажах, устанавливаем 0 для всех продуктов
+    return products.map(product => {
+      return {
+        ...product,
+        salesData: {
+          averageDailySales: 0,
+          totalSales: 0,
+          periodDays: 30, // Используем стандартный период в 30 дней
+          revenue: 0
+        }
+      };
+    });
   }
   
   console.log(`Обогащение ${products.length} продуктов данными о продажах в день`);
@@ -721,9 +740,18 @@ export const enrichProductsWithSalesData = (
           revenue: productSalesData.revenue
         }
       };
+    } else {
+      // Для товаров без данных о продажах устанавливаем нулевые значения
+      return {
+        ...product,
+        salesData: {
+          averageDailySales: 0,
+          totalSales: 0,
+          periodDays: 30, // Используем стандартный период в 30 дней
+          revenue: 0
+        }
+      };
     }
-    
-    return product;
   });
 };
 

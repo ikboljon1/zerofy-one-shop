@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ArrowUp, ArrowDown, TrendingUp, TrendingDown, DollarSign, FileText, Info, ShoppingBag } from "lucide-react";
@@ -13,7 +12,7 @@ interface Product {
   margin?: number;
   returnCount?: number;
   category?: string;
-  salesPerDay?: number; // Добавляем поле для отображения продаж в день
+  salesPerDay?: number;
 }
 
 interface ProductListProps {
@@ -151,7 +150,7 @@ const Products = ({
                 <span>
                   {product.salesPerDay !== undefined 
                     ? `Продажи/день: ${product.salesPerDay.toFixed(1)} шт.` 
-                    : 'Продажи/день: Н/Д'}
+                    : 'Продажи/день: 0 шт.'}
                 </span>
               </div>
               
