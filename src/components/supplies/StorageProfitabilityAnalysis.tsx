@@ -357,8 +357,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         } else {
           action = 'keep';
           recommendedDiscount = 0;
-        }
-      }
+        }\n      }
       
       if (profitWithoutDiscount < 0 && profitWithDiscount > 0) {
         action = 'discount';
