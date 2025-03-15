@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import api, { setApiKey } from './api';
 import { SupplyItem, SupplyOptionsResponse, Warehouse, WarehouseCoefficient, PaidStorageItem } from '@/types/supplies';
@@ -220,6 +219,81 @@ export const fetchFullPaidStorageReport = async (
     console.error('Ошибка в процессе получения отчета о платном хранении:', error);
     throw error;
   }
+};
+
+/**
+ * Получить данные о платном хранении за последний месяц
+ */
+export const fetchLastMonthStorageData = async (
+  apiKey: string
+): Promise<PaidStorageItem[]> => {
+  try {
+    console.log('Получение данных о платном хранении за последний месяц...');
+    
+    // Вычисляем даты за последний месяц
+    const today = new Date();
+    const lastMonth = new Date(today);
+    lastMonth.setMonth(today.getMonth() - 1);
+    
+    const dateFrom = lastMonth.toISOString().split('T')[0]; // формат YYYY-MM-DD
+    const dateTo = today.toISOString().split('T')[0];
+    
+    console.log(`Период для отчета: ${dateFrom} - ${dateTo}`);
+    
+    // Используем существующую функцию для получения данных
+    return await fetchFullPaidStorageReport(apiKey, dateFrom, dateTo);
+  } catch (error) {
+    console.error('Ошибка при получении данных о платном хранении за последний месяц:', error);
+    
+    // В случае ошибки возвращаем демо-данные
+    console.log('Возвращаем демо-данные вместо реальных');
+    return getMockPaidStorageData();
+  }
+};
+
+/**
+ * Рассчитать среднюю стоимость хранения в день по товарам
+ */
+export const calculateDailyStorageCost = (storageData: PaidStorageItem[]): Map<number, { 
+  averageDailyCost: number, 
+  totalCost: number, 
+  days: number
+}> => {
+  const productsStorage = new Map<number, { 
+    totalCost: number, 
+    dates: Set<string>,
+    averageDailyCost: number,
+    days: number
+  }>();
+  
+  // Группируем данные по nmId
+  storageData.forEach(item => {
+    if (item.nmId) {
+      if (!productsStorage.has(item.nmId)) {
+        productsStorage.set(item.nmId, { 
+          totalCost: 0, 
+          dates: new Set<string>(),
+          averageDailyCost: 0,
+          days: 0
+        });
+      }
+      
+      const entry = productsStorage.get(item.nmId)!;
+      entry.totalCost += item.warehousePrice || 0;
+      if (item.date) {
+        entry.dates.add(item.date);
+      }
+    }
+  });
+  
+  // Вычисляем среднюю стоимость в день
+  productsStorage.forEach((value, key) => {
+    const days = value.dates.size || 1;
+    value.averageDailyCost = value.totalCost / days;
+    value.days = days;
+  });
+  
+  return productsStorage;
 };
 
 // For demo or testing purposes

@@ -1,4 +1,5 @@
 
+
 interface Product {
   nmID: number;
   vendorCode: string;
@@ -23,4 +24,12 @@ interface Product {
     deductions?: number;
     ppvz_for_pay?: number;
   };
+  
+  // Данные о платном хранении
+  storageData?: {
+    averageDailyCost: number; // Среднее хранение в день
+    totalStorageCost: number; // Общая стоимость хранения за период
+    periodDays: number;       // Количество дней в периоде
+  };
 }
+

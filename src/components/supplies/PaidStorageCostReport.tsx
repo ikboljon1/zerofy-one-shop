@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -7,10 +8,12 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, ArrowUpDown, Package, DollarSign, Calendar, RefreshCw, Truck, Warehouse, CalendarDays } from 'lucide-react';
+import { Search, ArrowUpDown, Package, DollarSign, Calendar, RefreshCw, Truck, Warehouse, CalendarDays, Info } from 'lucide-react';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { PaidStorageItem } from '@/types/supplies';
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parseISO, isValid, subMonths } from 'date-fns';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { fetchLastMonthStorageData } from '@/services/suppliesApi';
 
 interface PaidStorageCostReportProps {
   apiKey: string;
@@ -32,11 +35,24 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
   }>({ key: 'date', direction: 'desc' });
   const [selectedTab, setSelectedTab] = useState<'nmId' | 'warehouse' | 'detail'>('nmId');
   
-  // Convert to Date objects rather than strings for better handling
+  // Устанавливаем диапазон дат за последний месяц по умолчанию
   const [dateFrom, setDateFrom] = useState<Date>(
-    new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    subMonths(new Date(), 1)
   );
   const [dateTo, setDateTo] = useState<Date>(new Date());
+  
+  // Запрашиваем данные за последний месяц при первой загрузке компонента
+  useEffect(() => {
+    if (apiKey) {
+      const fetchData = async () => {
+        const dateFromStr = format(dateFrom, 'yyyy-MM-dd');
+        const dateToStr = format(dateTo, 'yyyy-MM-dd');
+        onRefresh(dateFromStr, dateToStr);
+      };
+      
+      fetchData();
+    }
+  }, [apiKey]);
 
   // Filter and sort data based on user input
   const filteredData = React.useMemo(() => {
@@ -137,19 +153,25 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
       }
     });
     
-    // Calculate average daily costs
+    // Calculate average daily costs for the actual date period
+    // Этот расчет учитывает фактическое количество дней в периоде,
+    // а не просто количество уникальных дат в отчете
+    
+    // Вычисляем разницу в днях между датами from и to
+    const daysDiff = Math.max(1, Math.round((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24)));
+    
     result.byNmId.forEach(entry => {
-      const days = entry.dates.size || 1;
-      entry.avgDailyCost = entry.totalCost / days;
+      // Используем количество дней в выбранном периоде вместо количества уникальных дат
+      entry.avgDailyCost = entry.totalCost / daysDiff;
     });
     
     result.byWarehouse.forEach(entry => {
-      const days = entry.dates.size || 1;
-      entry.avgDailyCost = entry.totalCost / days;
+      // Используем количество дней в выбранном периоде вместо количества уникальных дат
+      entry.avgDailyCost = entry.totalCost / daysDiff;
     });
     
     return result;
-  }, [storageData]);
+  }, [storageData, dateFrom, dateTo]);
   
   // Request sort on column header click
   const handleSort = (key: keyof PaidStorageItem) => {
@@ -279,7 +301,22 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
             <TableRow>
               <TableHead className="w-[250px]">Товар</TableHead>
               <TableHead>Общая стоимость</TableHead>
-              <TableHead>Стоимость в день</TableHead>
+              <TableHead>
+                <div className="flex items-center gap-1.5">
+                  Стоимость в день
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-4 w-4 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        Средняя стоимость хранения в день, рассчитанная как общая стоимость, 
+                        разделенная на количество дней в выбранном периоде ({Math.round((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24))} дн.)
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </TableHead>
               <TableHead>Количество</TableHead>
               <TableHead>Период</TableHead>
             </TableRow>
@@ -363,7 +400,22 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
             <TableRow>
               <TableHead>Склад</TableHead>
               <TableHead>Общая стоимость</TableHead>
-              <TableHead>Стоимость в день</TableHead>
+              <TableHead>
+                <div className="flex items-center gap-1.5">
+                  Стоимость в день
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-4 w-4 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        Средняя стоимость хранения в день, рассчитанная как общая стоимость, 
+                        разделенная на количество дней в выбранном периоде ({Math.round((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24))} дн.)
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </TableHead>
               <TableHead>Количество товаров</TableHead>
               <TableHead>Период</TableHead>
             </TableRow>
@@ -432,6 +484,12 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
 
   // Calculate total storage cost
   const totalStorageCost = storageData.reduce((sum, item) => sum + (item.warehousePrice || 0), 0);
+  
+  // Вычисляем количество дней в выбранном периоде
+  const daysDiff = Math.max(1, Math.round((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24)));
+  
+  // Средняя стоимость хранения в день для всех товаров
+  const averageDailyStorageCost = totalStorageCost / daysDiff;
 
   return (
     <Card className="shadow-lg border-0">
@@ -446,7 +504,7 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
       </CardHeader>
       <CardContent className="p-6 space-y-6">
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-0 shadow-sm">
             <CardContent className="p-4 flex flex-col items-center justify-center">
               <div className="p-3 bg-blue-100 dark:bg-blue-800/30 rounded-full mb-3">
@@ -454,6 +512,16 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
               </div>
               <div className="text-2xl font-bold text-primary">{formatCurrency(totalStorageCost)}</div>
               <div className="text-sm text-muted-foreground">Общая стоимость хранения</div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-0 shadow-sm">
+            <CardContent className="p-4 flex flex-col items-center justify-center">
+              <div className="p-3 bg-green-100 dark:bg-green-800/30 rounded-full mb-3">
+                <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+              <div className="text-2xl font-bold text-primary">{formatCurrency(averageDailyStorageCost)}</div>
+              <div className="text-sm text-muted-foreground">Средняя стоимость в день</div>
             </CardContent>
           </Card>
           
@@ -473,9 +541,8 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
                 <CalendarDays className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
               </div>
               <div className="text-2xl font-bold text-primary">
-                {dateFrom && dateTo ? (
-                  `${format(dateFrom, 'dd.MM')} - ${format(dateTo, 'dd.MM.yyyy')}`
-                ) : 'Не выбран'}
+                {daysDiff} {daysDiff === 1 ? 'день' : 
+                 (daysDiff > 1 && daysDiff < 5) ? 'дня' : 'дней'}
               </div>
               <div className="text-sm text-muted-foreground">Период отчета</div>
             </CardContent>
