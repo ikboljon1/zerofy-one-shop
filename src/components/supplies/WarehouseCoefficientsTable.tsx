@@ -19,17 +19,22 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Store } from '@/types/store';
 
-interface WarehouseCoefficientsTableProps {
+export interface WarehouseCoefficientsTableProps {
   coefficients: WarehouseCoefficient[];
   selectedWarehouseId?: number;
   title?: string;
+  isLoading?: boolean;
+  selectedStore?: Store | null;
 }
 
 const WarehouseCoefficientsTable: React.FC<WarehouseCoefficientsTableProps> = ({ 
   coefficients, 
   selectedWarehouseId,
-  title = "Коэффициенты приемки"
+  title = "Коэффициенты приемки",
+  isLoading = false,
+  selectedStore
 }) => {
   const [showLogistics, setShowLogistics] = useState(true);
   const [boxTypeFilter, setBoxTypeFilter] = useState<string | null>(null);

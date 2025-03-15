@@ -1,13 +1,13 @@
 
 import { useEffect, useState } from "react";
-import { Box, BoxOpen, PackageCheck, Package2, TruckIcon } from "lucide-react";
+import { Box, PackageOpen, PackageCheck, Package2, TruckIcon } from "lucide-react";
 import { 
   Tabs, TabsContent, TabsList, TabsTrigger 
 } from "@/components/ui/tabs";
 import { 
   Card, CardContent, CardDescription, CardHeader, CardTitle 
 } from "@/components/ui/card";
-import { WarehouseMap } from "@/components/WarehouseMap";
+import WarehouseMap from "@/components/WarehouseMap";
 import { getSelectedStore } from "@/utils/storeUtils";
 import StorageProfitabilityAnalysis from "@/components/supplies/StorageProfitabilityAnalysis";
 import WarehouseCoefficientsTable from "@/components/supplies/WarehouseCoefficientsTable";
@@ -96,17 +96,16 @@ const Warehouses = () => {
         warehouseName: `Склад ${index + 1}`,
         allowUnload: true,
         boxTypeName: "Короб",
+        boxTypeID: 1,
         date: new Date().toISOString().split('T')[0],
-        deliveryTime: 1 + (index % 3),
-        isActive: true,
-        isBoxFitting: true,
-        limits: null,
-        trafficLight: index % 3,
-        year: new Date().getFullYear(),
         coefficient: 1 + (index % 3) / 10,
-        warehouseWorkingHours: "09:00-18:00",
-        isBoxTypeAvailable: true,
-        defaultWhGateId: 1,
+        storageCoef: "1.0",
+        deliveryCoef: "1.0",
+        deliveryBaseLiter: "10.0",
+        deliveryAdditionalLiter: "5.0",
+        storageBaseLiter: "8.0",
+        storageAdditionalLiter: "4.0",
+        isSortingCenter: false
       }));
       
       setWarehouses(mockWarehouses);
@@ -172,7 +171,7 @@ const Warehouses = () => {
             <span className="sm:hidden">Коэф.</span>
           </TabsTrigger>
           <TabsTrigger value="storage">
-            <BoxOpen className="h-4 w-4 mr-2" />
+            <PackageOpen className="h-4 w-4 mr-2" />
             <span className="hidden sm:inline-block">Хранение</span>
             <span className="sm:hidden">Хранение</span>
           </TabsTrigger>
@@ -204,8 +203,6 @@ const Warehouses = () => {
         <TabsContent value="coefficients">
           <WarehouseCoefficientsTable 
             coefficients={acceptanceCoefficients}
-            isLoading={isLoading}
-            selectedStore={selectedStore}
           />
         </TabsContent>
         
@@ -216,10 +213,13 @@ const Warehouses = () => {
         <TabsContent value="supply">
           <div className="grid gap-6 md:grid-cols-3">
             <div className="md:col-span-2">
-              <SupplyForm selectedStore={selectedStore} warehouses={warehouses} />
+              <SupplyForm warehouses={warehouses} />
             </div>
             <div>
-              <WarehouseRemains selectedStore={selectedStore} />
+              <WarehouseRemains 
+                data={[]} 
+                isLoading={isLoading} 
+              />
             </div>
           </div>
         </TabsContent>
