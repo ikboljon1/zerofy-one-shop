@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ArrowUp, ArrowDown, TrendingUp, TrendingDown, DollarSign, FileText, Info, ShoppingBag } from "lucide-react";
