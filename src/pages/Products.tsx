@@ -12,7 +12,6 @@ import ProductsComponent from "@/components/Products";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CostPriceMetrics } from "@/components/supplies";
 import axios from "axios";
-import { getSalesDataForProducts } from "@/services/suppliesApi";
 
 interface ProductsProps {
   selectedStore?: Store | null;
@@ -127,36 +126,13 @@ const Products = ({ selectedStore }: ProductsProps) => {
       }
       
       // Нормализуем данные, чтобы все продукты имели поле nmId (а не nmID)
-      let normalizedProducts = data.cards.map((product: any) => {
+      const normalizedProducts = data.cards.map((product: any) => {
         // Убедимся, что nmId существует (используем nmID если nmId не существует)
         if (!product.nmId && product.nmID) {
           product.nmId = product.nmID;
         }
         return product;
       });
-      
-      try {
-        // Получаем данные о продажах для продуктов
-        console.log("Получаем данные о продажах для продуктов...");
-        // Используем реальные данные, если useMockData=false
-        normalizedProducts = await getSalesDataForProducts(selectedStore.apiKey, normalizedProducts, false);
-        console.log("Данные о продажах получены и добавлены к продуктам");
-        
-        // Выводим пример данных о продажах для первых продуктов
-        if (normalizedProducts.length > 0) {
-          normalizedProducts.slice(0, 3).forEach((product: any) => {
-            if (product.salesData) {
-              console.log(`Продукт ${product.nmId}: средние продажи в день = ${product.salesData.averageDailySales}`);
-            }
-          });
-        }
-      } catch (salesError) {
-        console.error("Ошибка при получении данных о продажах:", salesError);
-        toast({
-          title: "Предупреждение",
-          description: "Не удалось получить данные о продажах. Используются демо-данные.",
-        });
-      }
       
       // Сохраняем полученные товары в БД
       try {
