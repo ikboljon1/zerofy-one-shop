@@ -23,4 +23,18 @@ interface Product {
     deductions?: number;
     ppvz_for_pay?: number;
   };
+  // Новые поля для анализа рентабельности хранения
+  averageDailySales?: number;
+  warehousePrice?: number;
+  salesData?: {
+    totalSalesQuantity: number;
+    averageDailySalesQuantity: number;
+  };
+  storageData?: {
+    totalCost: number;
+    dayCount: number;
+    averageDailyStorageCost: number;
+  };
+  commissionPercent?: number;
+  logisticsCost?: number;
 }

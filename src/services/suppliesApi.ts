@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import api, { setApiKey } from './api';
 import { SupplyItem, SupplyOptionsResponse, Warehouse, WarehouseCoefficient, PaidStorageItem } from '@/types/supplies';
@@ -249,6 +248,64 @@ export const getMockPaidStorageData = (): PaidStorageItem[] => {
     tariffFixDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     tariffLowerDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   }));
+};
+
+// Функция для получения данных о платном хранении
+export const fetchPaidStorageItemData = async (
+  apiKey: string,
+  nmId: number,
+  dateFrom: string,
+  dateTo: string
+) => {
+  // В реальном приложении здесь будет запрос к API Wildberries
+  try {
+    // Имитация запроса к API Wildberries
+    // В реальности здесь должен быть код, который использует логику из вашего Python скрипта
+    
+    // 1. Создание отчета
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // 2. Проверка статуса
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // 3. Получение данных отчета
+    return {
+      total_cost: Math.random() * 1000,
+      day_count: Math.ceil(Math.random() * 30),
+      average_cost: Math.random() * 100,
+      vendor_code: `A${Math.floor(Math.random() * 10000)}`,
+      brand: "Товар из API",
+      subject: "Категория из API"
+    };
+  } catch (error) {
+    console.error('Ошибка при получении данных о платном хранении:', error);
+    throw error;
+  }
+};
+
+// Функция для получения данных о продажах
+export const fetchSalesDataByNmId = async (
+  apiKey: string,
+  nmId: number,
+  dateFrom: string,
+  dateTo: string
+) => {
+  // В реальном приложении здесь будет запрос к API Wildberries
+  try {
+    // Имитация запроса к API Wildberries
+    // В реальности здесь должен быть код, который использует логику из вашего Python скрипта
+    
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    return {
+      total_sales_quantity: Math.ceil(Math.random() * 100),
+      average_daily_sales_quantity: Math.random() * 5,
+      sa_name: `Арт-${Math.floor(Math.random() * 10000)}`
+    };
+  } catch (error) {
+    console.error('Ошибка при получении данных о продажах:', error);
+    throw error;
+  }
 };
 
 // Adding a method to create an actual FBW supply
