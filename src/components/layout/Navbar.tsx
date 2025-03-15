@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import AuthModal from "@/components/auth/AuthModal";
+import { toast } from "@/components/ui/use-toast";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -33,6 +34,24 @@ const Navbar = () => {
     
     // Иначе показываем модальное окно авторизации
     setShowAuthModal(true);
+  };
+  
+  const handleLogout = () => {
+    // Удаляем данные пользователя из хранилища
+    localStorage.removeItem('user');
+    sessionStorage.removeItem('user');
+    
+    // Обновляем состояние авторизации
+    setIsAuthenticated(false);
+    
+    // Показываем уведомление пользователю
+    toast({
+      title: "Выход выполнен",
+      description: "Вы успешно вышли из системы",
+    });
+    
+    // Перенаправляем на главную страницу
+    navigate('/');
   };
   
   const handleTariffClick = () => {
@@ -64,9 +83,15 @@ const Navbar = () => {
                   onClick={handleTariffClick}>
               Тарифы
             </span>
-            <Button onClick={handleLogin}>
-              {isAuthenticated ? "Мой кабинет" : "Войти"}
-            </Button>
+            {isAuthenticated ? (
+              <Button onClick={handleLogout} variant="outline">
+                Выйти
+              </Button>
+            ) : (
+              <Button onClick={handleLogin}>
+                Войти
+              </Button>
+            )}
           </div>
         )}
         
@@ -101,12 +126,21 @@ const Navbar = () => {
                       }}>
                   Тарифы
                 </span>
-                <Button onClick={() => {
-                  handleLogin();
-                  setIsMenuOpen(false);
-                }}>
-                  {isAuthenticated ? "Мой кабинет" : "Войти"}
-                </Button>
+                {isAuthenticated ? (
+                  <Button onClick={() => {
+                    handleLogout();
+                    setIsMenuOpen(false);
+                  }} variant="outline">
+                    Выйти
+                  </Button>
+                ) : (
+                  <Button onClick={() => {
+                    handleLogin();
+                    setIsMenuOpen(false);
+                  }}>
+                    Войти
+                  </Button>
+                )}
               </div>
             </SheetContent>
           </Sheet>
