@@ -1,4 +1,5 @@
 
+
 interface Product {
   nmID: number;
   vendorCode: string;
@@ -23,18 +24,23 @@ interface Product {
     deductions?: number;
     ppvz_for_pay?: number;
   };
-  // Новые поля для анализа рентабельности хранения
+  // Поля для анализа рентабельности хранения
   averageDailySales?: number;
   warehousePrice?: number;
   salesData?: {
     totalSalesQuantity: number;
     averageDailySalesQuantity: number;
+    sa_name?: string;
   };
   storageData?: {
     totalCost: number;
     dayCount: number;
     averageDailyStorageCost: number;
+    vendor_code?: string;
+    brand?: string;
+    subject?: string;
   };
   commissionPercent?: number;
   logisticsCost?: number;
 }
+
