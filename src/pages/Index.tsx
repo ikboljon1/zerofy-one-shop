@@ -16,12 +16,11 @@ import Dashboard from "@/components/dashboard/Dashboard";
 import { getProductProfitabilityData, getSelectedStore } from "@/utils/storeUtils";
 import { User } from "@/services/userService";
 import { useToast } from "@/hooks/use-toast";
-import { Store } from "@/types/store";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
   const isMobile = useIsMobile();
-  const [selectedStore, setSelectedStore] = useState<Store | null>(null);
+  const [selectedStore, setSelectedStore] = useState<{id: string; apiKey: string} | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -47,13 +46,7 @@ const Index = () => {
     // Initialize selected store
     const store = getSelectedStore();
     if (store) {
-      const storeData: Store = {
-        id: store.id,
-        apiKey: store.apiKey,
-        name: store.name || "Магазин",
-        marketplace: store.marketplace || "Wildberries"
-      };
-      setSelectedStore(storeData);
+      setSelectedStore(store);
     }
   }, [navigate]);
 
@@ -79,10 +72,6 @@ const Index = () => {
 
   const handleUserUpdated = (updatedUser: User) => {
     setUser(updatedUser);
-  };
-
-  const handleStoreSelect = (store: Store) => {
-    setSelectedStore(store);
   };
 
   const renderContent = () => {
@@ -127,7 +116,7 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <Stores onStoreSelect={handleStoreSelect} />
+            <Stores onStoreSelect={setSelectedStore} />
           </motion.div>
         );
       case "warehouses":

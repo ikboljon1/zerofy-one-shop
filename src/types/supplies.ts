@@ -1,3 +1,4 @@
+
 export interface WarehouseCoefficient {
   date: string;
   coefficient: number;
@@ -54,13 +55,6 @@ export interface Warehouse {
   address: string;
   workTime: string;
   acceptsQR: boolean;
-  geoPoint: {
-    lat: number;
-    lon: number;
-  };
-  isWB?: boolean;
-  isWithinFitCargo?: boolean;
-  isBoxOnly?: boolean;
 }
 
 export interface WildberriesStock {

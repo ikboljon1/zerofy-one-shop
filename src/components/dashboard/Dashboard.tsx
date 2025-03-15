@@ -25,13 +25,12 @@ import SalesChart from "./SalesChart";
 import TipsSection from "./TipsSection";
 import AIAnalysisSection from "@/components/ai/AIAnalysisSection";
 import SalesTable from "./SalesTable";
-import OrdersAnalytics from "./OrdersAnalytics";
 
 const Dashboard = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState("overview");
-  const [period, setPeriod] = useState<Period>("week"); // Changed default to week to show more data
+  const [period, setPeriod] = useState<Period>("today");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   
@@ -137,101 +136,6 @@ const Dashboard = () => {
     return getFilteredSales(sales);
   }, [sales, period]);
 
-  // Генерируем демо-данные для отладки, если нет реальных данных
-  const generateDemoData = useCallback(() => {
-    if (orders.length === 0) {
-      const demoOrders: WildberriesOrder[] = Array(20).fill(null).map((_, index) => {
-        const date = new Date();
-        date.setDate(date.getDate() - Math.floor(Math.random() * 14)); // Случайные даты за последние 2 недели
-        
-        return {
-          date: date.toISOString().split('T')[0],
-          lastChangeDate: date.toISOString(),
-          warehouseName: ['Коледино', 'Подольск', 'Электросталь', 'Казань', 'Екатеринбург'][Math.floor(Math.random() * 5)],
-          countryName: 'Россия',
-          oblastOkrugName: ['Центральный', 'Приволжский', 'Уральский'][Math.floor(Math.random() * 3)],
-          regionName: ['Москва', 'Казань', 'Екатеринбург', 'Санкт-Петербург'][Math.floor(Math.random() * 4)],
-          supplierArticle: `A${1000 + index}`,
-          nmId: 2000000 + index,
-          barcode: `46000000${index}`,
-          category: ['Одежда', 'Обувь', 'Аксессуары'][Math.floor(Math.random() * 3)],
-          subject: ['Футболка', 'Джинсы', 'Куртка', 'Кроссовки', 'Часы'][Math.floor(Math.random() * 5)],
-          brand: ['Nike', 'Adidas', 'Puma', 'Reebok', 'New Balance'][Math.floor(Math.random() * 5)],
-          techSize: ['S', 'M', 'L', 'XL', 'XXL'][Math.floor(Math.random() * 5)],
-          incomeID: 3000000 + index,
-          isSupply: false,
-          isRealization: true,
-          totalPrice: 2500 + Math.floor(Math.random() * 5000),
-          discountPercent: Math.floor(Math.random() * 30),
-          spp: Math.floor(Math.random() * 10),
-          price: 2000 + Math.floor(Math.random() * 5000),
-          priceWithDisc: 1500 + Math.floor(Math.random() * 4000),
-          finishedPrice: 1400 + Math.floor(Math.random() * 4000),
-          isCancel: Math.random() > 0.9, // 10% отмененных заказов
-          cancelDate: Math.random() > 0.9 ? date.toISOString() : "",
-          orderType: 'Клиентский',
-          warehouseType: "Склад",
-          sticker: `sticker-${index}`,
-          gNumber: `g${10000000 + index}`,
-          srid: `${2000000 + index}`,
-          orderUID: `order-${index}`
-        };
-      });
-      
-      setOrders(demoOrders);
-      
-      const demoSales: WildberriesSale[] = Array(15).fill(null).map((_, index) => {
-        const date = new Date();
-        date.setDate(date.getDate() - Math.floor(Math.random() * 14)); // Случайные даты за последние 2 недели
-        
-        const price = 2000 + Math.floor(Math.random() * 5000);
-        const isReturn = Math.random() > 0.9; // 10% возвратов
-        
-        return {
-          date: date.toISOString().split('T')[0],
-          lastChangeDate: date.toISOString(),
-          warehouseName: ['Коледино', 'Подольск', 'Электросталь', 'Казань', 'Екатеринбург'][Math.floor(Math.random() * 5)],
-          warehouseType: "Склад",
-          countryName: 'Россия',
-          oblastOkrugName: ['Центральный', 'Приволжский', 'Уральский'][Math.floor(Math.random() * 3)],
-          regionName: ['Москва', 'Казань', 'Екатеринбург', 'Санкт-Петербург'][Math.floor(Math.random() * 4)],
-          supplierArticle: `A${1000 + index}`,
-          nmId: 2000000 + index,
-          barcode: `46000000${index}`,
-          category: ['Одежда', 'Обувь', 'Аксессуары'][Math.floor(Math.random() * 3)],
-          subject: ['Футболка', 'Джинсы', 'Куртка', 'Кроссовки', 'Часы'][Math.floor(Math.random() * 5)],
-          brand: ['Nike', 'Adidas', 'Puma', 'Reebok', 'New Balance'][Math.floor(Math.random() * 5)],
-          techSize: ['S', 'M', 'L', 'XL', 'XXL'][Math.floor(Math.random() * 5)],
-          incomeID: 3000000 + index,
-          isSupply: false,
-          isRealization: true,
-          totalPrice: price,
-          discountPercent: Math.floor(Math.random() * 30),
-          spp: Math.floor(Math.random() * 10),
-          price: price,
-          priceWithDisc: isReturn ? -price * 0.9 : price * 0.9,
-          paymentSaleAmount: isReturn ? -price * 0.85 : price * 0.85,
-          isReturnSubmit: isReturn,
-          isReturn: isReturn,
-          promoCode: '',
-          orderType: 'Клиентский',
-          saleID: `sale-${index}`,
-          sticker: `sticker-${index}`,
-          gNumber: `g${10000000 + index}`,
-          srid: `srid-${index}`,
-          forPay: isReturn ? -price * 0.7 : price * 0.7,
-          finishedPrice: isReturn ? -price * 0.9 : price * 0.9,
-        };
-      });
-      
-      setSales(demoSales);
-      
-      const filteredDemo = getFilteredOrders(demoOrders);
-      setWarehouseDistribution(filteredDemo.warehouseDistribution);
-      setRegionDistribution(filteredDemo.regionDistribution);
-    }
-  }, [orders.length, getFilteredOrders]);
-
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -252,8 +156,6 @@ const Dashboard = () => {
           description: "Выберите основной магазин в разделе 'Магазины'",
           variant: "destructive"
         });
-        generateDemoData(); // Генерируем демо-данные, если магазин не выбран
-        setIsLoading(false);
         return;
       }
 
@@ -276,8 +178,6 @@ const Dashboard = () => {
           setOrders(savedOrdersData.orders || []);
           setWarehouseDistribution(savedOrdersData.warehouseDistribution || []);
           setRegionDistribution(savedOrdersData.regionDistribution || []);
-        } else {
-          generateDemoData(); // Генерируем демо-данные, если нет сохраненных данных
         }
       }
 
@@ -298,23 +198,21 @@ const Dashboard = () => {
       console.error('Error fetching data:', error);
       toast({
         title: "Ошибка",
-        description: "Не удалось загрузить данные, используются демо-данные",
+        description: "Не удалось загрузить данные",
         variant: "destructive"
       });
-      generateDemoData(); // Генерируем демо-данные в случае ошибки
     } finally {
       setIsLoading(false);
     }
-  }, [selectedStoreId, toast, generateDemoData]);
+  }, [selectedStoreId, toast]);
 
   useEffect(() => {
     const selectedStore = getSelectedStore();
     
     if (selectedStore && selectedStore.id !== selectedStoreId) {
       setSelectedStoreId(selectedStore.id);
+      fetchData();
     }
-    
-    fetchData();
   }, [selectedStoreId, fetchData]);
 
   useEffect(() => {
@@ -337,14 +235,6 @@ const Dashboard = () => {
       }
     };
   }, [selectedStoreId, fetchData]);
-
-  // Если данные пустые, генерируем демо-данные
-  useEffect(() => {
-    if (orders.length === 0 && sales.length === 0 && !isLoading) {
-      console.log('No data available, generating demo data...');
-      generateDemoData();
-    }
-  }, [orders.length, sales.length, isLoading, generateDemoData]);
 
   return (
     <div className="space-y-4">
@@ -369,7 +259,6 @@ const Dashboard = () => {
 
         <TabsContent value="overview" className="space-y-4">
           <Stats />
-          <OrdersAnalytics orders={filteredOrdersData.orders} />
           <TipsSection />
         </TabsContent>
 
