@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Search, ArrowUpDown, Package, TrendingDown, Banknote, WarehouseIcon, AlertTriangle, Clock, ArrowDown, ArrowUp, BarChart4, TrendingUp, Calculator, Truck, Percent, ArrowRight, RefreshCw, Download, Database } from 'lucide-react';
+import { Search, ArrowUpDown, Package, TrendingDown, Banknote, WarehouseIcon, AlertTriangle, Clock, ArrowDown, ArrowUp, BarChart4, TrendingUp, Calculator, Truck, Percent, ArrowRight, RefreshCw, Download } from 'lucide-react';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { WarehouseRemainItem, PaidStorageItem } from '@/types/supplies';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,15 +19,12 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { fetchFullPaidStorageReport } from '@/services/suppliesApi';
 import { format } from 'date-fns';
-import axios from 'axios';
-
 interface StorageProfitabilityAnalysisProps {
   warehouseItems: WarehouseRemainItem[];
   paidStorageData?: PaidStorageItem[];
   averageDailySalesRate?: Record<number, number>;
   dailyStorageCost?: Record<number, number>;
 }
-
 interface AnalysisResult {
   remainItem: WarehouseRemainItem;
   costPrice: number;
@@ -56,21 +53,12 @@ interface AnalysisResult {
   logisticsCost: number;
   wbCommission: number;
 }
-
 interface SalesDataDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onFetchData: (startDate: Date, endDate: Date) => Promise<void>;
   isLoading: boolean;
 }
-
-interface FetchDataByNmIdDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onFetchData: (apiKey: string, nmId: number, dateFrom: Date, dateTo: Date) => Promise<void>;
-  isLoading: boolean;
-}
-
 const SalesDataDialog: React.FC<SalesDataDialogProps> = ({
   open,
   onOpenChange,
@@ -118,116 +106,6 @@ const SalesDataDialog: React.FC<SalesDataDialogProps> = ({
       </DialogContent>
     </Dialog>;
 };
-
-const FetchDataByNmIdDialog: React.FC<FetchDataByNmIdDialogProps> = ({
-  open,
-  onOpenChange,
-  onFetchData,
-  isLoading
-}) => {
-  const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('wb_api_key') || '');
-  const [nmId, setNmId] = useState<string>('');
-  const [startDate, setStartDate] = useState<Date | undefined>(new Date(new Date().setDate(new Date().getDate() - 30)));
-  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
-  const { toast } = useToast();
-
-  const handleFetchData = async () => {
-    if (!apiKey) {
-      toast({
-        title: "Отсутствует API ключ",
-        description: "Пожалуйста, введите API ключ Wildberries",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!nmId || isNaN(Number(nmId))) {
-      toast({
-        title: "Некорректный nmId",
-        description: "Пожалуйста, введите корректный nmId товара",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (startDate && endDate) {
-      await onFetchData(apiKey, Number(nmId), startDate, endDate);
-    }
-  };
-
-  const handleSaveApiKey = () => {
-    localStorage.setItem('wb_api_key', apiKey);
-    toast({
-      title: "API ключ сохранен",
-      description: "API ключ успешно сохранен в локальное хранилище"
-    });
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Получение данных о товаре</DialogTitle>
-          <DialogDescription>
-            Введите данные для получения информации о продажах и хранении товара
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="flex flex-col space-y-1.5">
-            <Label htmlFor="apiKey">API ключ Wildberries</Label>
-            <div className="flex gap-2">
-              <Input
-                id="apiKey"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Введите API ключ Wildberries"
-              />
-              <Button variant="outline" onClick={handleSaveApiKey} size="sm">
-                Сохранить
-              </Button>
-            </div>
-          </div>
-          <div className="flex flex-col space-y-1.5">
-            <Label htmlFor="nmId">nmId товара</Label>
-            <Input
-              id="nmId"
-              value={nmId}
-              onChange={(e) => setNmId(e.target.value)}
-              placeholder="Введите nmId товара"
-              type="number"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col space-y-1.5">
-              <Label htmlFor="startDate">Дата начала</Label>
-              <DatePicker value={startDate} onValueChange={setStartDate} placeholder="Выберите дату начала" />
-            </div>
-            <div className="flex flex-col space-y-1.5">
-              <Label htmlFor="endDate">Дата окончания</Label>
-              <DatePicker value={endDate} onValueChange={setEndDate} placeholder="Выберите дату окончания" />
-            </div>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button onClick={handleFetchData} disabled={isLoading || !startDate || !endDate || !nmId || !apiKey}>
-            {isLoading ? (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Загрузка...
-              </>
-            ) : (
-              <>
-                <Database className="mr-2 h-4 w-4" />
-                Получить данные
-              </>
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
 const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> = ({
   warehouseItems,
   paidStorageData = [],
@@ -257,12 +135,9 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
   const [isLoadingStorage, setIsLoadingStorage] = useState(false);
   const [storageData, setStorageData] = useState<PaidStorageItem[]>([]);
   const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('wb_api_key') || '');
-  const [fetchDataByNmIdDialogOpen, setFetchDataByNmIdDialogOpen] = useState(false);
-  const [isLoadingItemData, setIsLoadingItemData] = useState(false);
   const {
     toast
   } = useToast();
-
   useEffect(() => {
     const storedCostPrices = localStorage.getItem('product_cost_prices');
     if (storedCostPrices) {
@@ -359,7 +234,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       ...initialWbCommissions
     }));
   }, [warehouseItems, averageDailySalesRate, dailyStorageCost, paidStorageData]);
-
   const formatDaysOfInventory = (days: number): string => {
     if (days >= 300) {
       return `${Math.round(days / 30)} мес.`;
@@ -369,7 +243,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       return `${days} дн.`;
     }
   };
-
   const analysisResults = useMemo(() => {
     return warehouseItems.map(item => {
       const nmId = item.nmId;
@@ -497,7 +370,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       };
     });
   }, [warehouseItems, costPrices, sellingPrices, dailySalesRates, storageCostRates, discountLevels, lowStockThreshold, logisticsCosts, wbCommissions]);
-
   const filteredResults = useMemo(() => {
     let results = [...analysisResults];
     if (searchTerm) {
@@ -524,7 +396,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     }
     return results;
   }, [analysisResults, searchTerm, selectedTab, sortConfig]);
-
   const analysisSummary = useMemo(() => {
     const totalItems = analysisResults.length;
     const lowStockItems = analysisResults.filter(item => item.lowStock).length;
@@ -547,7 +418,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       itemsStockingOutBeforeTarget
     };
   }, [analysisResults, targetDate]);
-
   const requestSort = (key: keyof AnalysisResult) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -558,7 +428,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       direction
     });
   };
-
   const savePriceData = () => {
     localStorage.setItem('product_cost_prices', JSON.stringify(costPrices));
     localStorage.setItem('product_selling_prices', JSON.stringify(sellingPrices));
@@ -570,7 +439,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       description: "Все изменения успешно сохранены в локальное хранилище"
     });
   };
-
   const updateCostPrice = (nmId: number, value: string) => {
     setCostPrices(prev => {
       const newPrices = {
@@ -580,7 +448,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       return newPrices;
     });
   };
-
   const updateSellingPrice = (nmId: number, value: string) => {
     setSellingPrices(prev => {
       const newPrices = {
@@ -590,7 +457,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       return newPrices;
     });
   };
-
   const updateDailySales = (nmId: number, value: string) => {
     setDailySalesRates(prev => {
       const newRates = {
@@ -600,7 +466,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       return newRates;
     });
   };
-
   const updateStorageCost = (nmId: number, value: string) => {
     setStorageCostRates(prev => {
       const newRates = {
@@ -610,7 +475,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       return newRates;
     });
   };
-
   const updateLogisticsCost = (nmId: number, value: string) => {
     setLogisticsCosts(prev => {
       const newCosts = {
@@ -620,7 +484,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       return newCosts;
     });
   };
-
   const updateWbCommission = (nmId: number, value: string) => {
     setWbCommissions(prev => {
       const newCommissions = {
@@ -630,7 +493,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       return newCommissions;
     });
   };
-
   const loadPaidStorageData = async () => {
     if (!apiKey) {
       toast({
@@ -663,7 +525,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       setIsLoadingStorage(false);
     }
   };
-
   const fetchSalesAndStorageData = async (startDate: Date, endDate: Date) => {
     try {
       setIsLoading(true);
@@ -696,7 +557,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       setIsLoading(false);
     }
   };
-
   const getActionBadge = (action: 'sell' | 'discount' | 'keep') => {
     switch (action) {
       case 'sell':
@@ -709,7 +569,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         return null;
     }
   };
-
   const getStockLevelIndicator = (result: AnalysisResult) => {
     switch (result.stockLevel) {
       case 'low':
@@ -740,7 +599,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
           </div>;
     }
   };
-
   const formatDate = (date?: Date) => {
     if (!date) return "Не определено";
     return new Date(date).toLocaleDateString('ru-RU', {
@@ -749,7 +607,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       year: 'numeric'
     });
   };
-
   const getAnalysisStatusIndicator = (result: AnalysisResult) => {
     const factors = [];
     if (result.profitMarginPercentage < 15) {
@@ -817,7 +674,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
           </div>)}
       </div>;
   };
-
   const DetailedAnalysis = ({
     result
   }: {
@@ -993,99 +849,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         </div>
       </div>;
   };
-
-  const fetchProductDataByNmId = async (apiKey: string, nmId: number, startDate: Date, endDate: Date) => {
-    try {
-      setIsLoadingItemData(true);
-      
-      const formatDateForPaidStorage = (date: Date) => {
-        return date.toISOString().split('T')[0] + 'T00:00:00';
-      };
-      
-      const formatDateForSales = (date: Date) => {
-        return date.toISOString().split('T')[0];
-      };
-      
-      toast({
-        title: "Запрос выполняется",
-        description: `Получение данных для товара с nmId ${nmId}...`
-      });
-      
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const storageData = {
-        total_cost: Math.random() * 1000,
-        day_count: Math.ceil(Math.random() * 30),
-        vendor_code: `A${Math.floor(Math.random() * 10000)}`,
-        brand: "Товар из API",
-        subject: "Категория из API"
-      };
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const salesData = {
-        total_sales_quantity: Math.ceil(Math.random() * 100),
-        average_daily_sales_quantity: Math.random() * 5
-      };
-      
-      setDailySalesRates(prev => ({
-        ...prev,
-        [nmId]: salesData.average_daily_sales_quantity
-      }));
-      
-      const averageStorageCost = storageData.total_cost / storageData.day_count;
-      setStorageCostRates(prev => ({
-        ...prev,
-        [nmId]: averageStorageCost
-      }));
-      
-      if (!costPrices[nmId]) {
-        setCostPrices(prev => ({
-          ...prev,
-          [nmId]: Math.random() * 1000
-        }));
-      }
-      
-      if (!sellingPrices[nmId]) {
-        setSellingPrices(prev => ({
-          ...prev,
-          [nmId]: Math.random() * 2000
-        }));
-      }
-      
-      if (!wbCommissions[nmId]) {
-        setWbCommissions(prev => ({
-          ...prev,
-          [nmId]: 15
-        }));
-      }
-      
-      if (!logisticsCosts[nmId]) {
-        setLogisticsCosts(prev => ({
-          ...prev,
-          [nmId]: 150
-        }));
-      }
-      
-      toast({
-        title: "Данные успешно получены",
-        description: `Средние продажи: ${salesData.average_daily_sales_quantity.toFixed(2)} шт/день, стоимость хранения: ${averageStorageCost.toFixed(2)} ₽`
-      });
-      
-      setFetchDataByNmIdDialogOpen(false);
-      
-    } catch (error: any) {
-      console.error("Ошибка при получении данных:", error);
-      toast({
-        title: "Ошибка получения данных",
-        description: `Не удалось получить данные: ${error.message || 'Неизвестная ошибка'}`,
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoadingItemData(false);
-    }
-  };
-
   return <Card className="border-none shadow-none">
       <CardHeader className="pb-2">
         <CardTitle className="text-lg flex items-center">
@@ -1163,24 +926,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
               <Input placeholder="Поиск по бренду или артикулу..." className="pl-9" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
             </div>
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setFetchDataByNmIdDialogOpen(true)}
-                className="flex items-center gap-2"
-              >
-                <Database className="h-4 w-4" />
-                Получить данные по nmId
-              </Button>
               
               <SalesDataDialog open={salesDataDialogOpen} onOpenChange={setSalesDataDialogOpen} onFetchData={fetchSalesAndStorageData} isLoading={isLoading} />
-              
-              <FetchDataByNmIdDialog
-                open={fetchDataByNmIdDialogOpen}
-                onOpenChange={setFetchDataByNmIdDialogOpen}
-                onFetchData={fetchProductDataByNmId}
-                isLoading={isLoadingItemData}
-              />
             </div>
             <Tabs value={selectedTab} onValueChange={value => setSelectedTab(value as any)} className="w-full md:w-auto">
               <TabsList>
@@ -1336,5 +1083,4 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       </CardContent>
     </Card>;
 };
-
 export default StorageProfitabilityAnalysis;
