@@ -38,7 +38,7 @@ const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales, storeId }) => {
       setRefreshKey(prev => prev + 1);
     };
     
-    const handleSalesDataUpdate = (event: CustomEvent) => {
+    const handleSalesDataUpdate = (event: CustomEvent<any>) => {
       console.log('Получено событие обновления данных о продажах:', event.detail);
       setRefreshKey(prev => prev + 1);
     };

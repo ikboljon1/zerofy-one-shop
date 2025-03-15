@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { fetchFullPaidStorageReport } from '@/services/suppliesApi';
 import { format } from 'date-fns';
+import { fetchAverageDailySalesFromAPI } from '@/components/analytics/data/demoData';
 
 interface StorageProfitabilityAnalysisProps {
   warehouseItems: WarehouseRemainItem[];
@@ -240,6 +241,41 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       ...initialWbCommissions
     }));
   }, [warehouseItems, averageDailySalesRate, dailyStorageCost, paidStorageData]);
+
+  useEffect(() => {
+    const loadInitialSalesData = async () => {
+      if (apiKey && Object.keys(averageDailySalesRate).length === 0) {
+        try {
+          setIsLoading(true);
+          const endDate = new Date();
+          const startDate = new Date();
+          startDate.setDate(endDate.getDate() - 30);
+          
+          await fetchSalesAndStorageData(startDate, endDate);
+        } catch (error) {
+          console.error("Ошибка при автоматической загрузке данных о продажах:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    if (apiKey) {
+      loadInitialSalesData();
+    }
+    
+    const handleSalesDataUpdate = (event: CustomEvent<any>) => {
+      if (event.detail?.averageSalesPerDay) {
+        setDailySalesRates(event.detail.averageSalesPerDay);
+      }
+    };
+    
+    window.addEventListener('salesDataUpdated', handleSalesDataUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('salesDataUpdated', handleSalesDataUpdate as EventListener);
+    };
+  }, [warehouseItems, averageDailySalesRate, dailyStorageCost, paidStorageData, apiKey]);
 
   const formatDaysOfInventory = (days: number): string => {
     if (days >= 300) {
@@ -528,101 +564,70 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
       const dateFrom = format(startDate, 'yyyy-MM-dd');
       const dateTo = format(endDate, 'yyyy-MM-dd');
       
-      const response = await fetch(`https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod?dateFrom=${dateFrom}&dateTo=${dateTo}&limit=10000`, {
-        headers: {
-          'Authorization': apiKey
-        }
-      });
+      const { fetchAverageDailySalesFromAPI } = await import('@/components/analytics/data/demoData');
       
-      if (!response.ok) {
-        throw new Error(`Ошибка получения данных: ${response.status} ${response.statusText}`);
-      }
+      const salesData = await fetchAverageDailySalesFromAPI(apiKey, dateFrom, dateTo);
       
-      const salesData = await response.json();
-      console.log('Получены данные о продажах:', salesData.length);
-      
-      const salesByProduct: Record<number, { totalSales: number, uniqueDays: Set<string> }> = {};
-      
-      salesData.forEach((sale: any) => {
-        if (sale.nm_id && sale.doc_type_name === "Продажа" && sale.quantity > 0) {
-          const nmId = sale.nm_id;
-          const saleDate = sale.sale_dt.split('T')[0];
-          
-          if (!salesByProduct[nmId]) {
-            salesByProduct[nmId] = { totalSales: 0, uniqueDays: new Set() };
-          }
-          
-          salesByProduct[nmId].totalSales += sale.quantity;
-          salesByProduct[nmId].uniqueDays.add(saleDate);
-        }
-      });
-      
-      const averageDailySales: Record<number, number> = {};
-      const sellingPricesData: Record<number, number> = {};
-      
-      Object.entries(salesByProduct).forEach(([nmIdStr, data]) => {
-        const nmId = parseInt(nmIdStr);
-        const daysCount = Math.max(1, data.uniqueDays.size);
-        const averageSales = data.totalSales / daysCount;
+      if (Object.keys(salesData).length > 0) {
+        setDailySalesRates(prevRates => ({
+          ...prevRates,
+          ...salesData
+        }));
         
-        averageDailySales[nmId] = parseFloat(averageSales.toFixed(2));
+        console.log('Обновлены данные о средних продажах:', Object.keys(salesData).length);
         
-        const productSales = salesData.filter((s: any) => s.nm_id === nmId && s.doc_type_name === "Продажа");
-        if (productSales.length > 0) {
-          const totalPrice = productSales.reduce((sum: number, sale: any) => sum + (sale.retail_price || 0), 0);
-          sellingPricesData[nmId] = Math.round(totalPrice / productSales.length);
-        }
-      });
-      
-      try {
-        const storageData = await loadPaidStorageData();
-        
-        const storageCostsData: Record<number, number> = {};
-        
-        if (storageData && storageData.length > 0) {
-          const storageByProduct: Record<number, { totalCost: number, uniqueDays: Set<string> }> = {};
+        try {
+          const storageData = await loadPaidStorageData();
           
-          storageData.forEach((storage: any) => {
-            if (storage.nmId) {
-              const nmId = storage.nmId;
-              const storageDate = storage.date_from || new Date().toISOString().split('T')[0];
-              
-              if (!storageByProduct[nmId]) {
-                storageByProduct[nmId] = { totalCost: 0, uniqueDays: new Set() };
-              }
-              
-              storageByProduct[nmId].totalCost += storage.warehousePrice || 0;
-              storageByProduct[nmId].uniqueDays.add(storageDate);
-            }
-          });
-          
-          Object.entries(storageByProduct).forEach(([nmIdStr, data]) => {
-            const nmId = parseInt(nmIdStr);
-            const daysCount = Math.max(1, data.uniqueDays.size);
-            const averageStorageCost = data.totalCost / daysCount;
+          if (storageData && storageData.length > 0) {
+            const storageCostsData: Record<number, number> = {};
             
-            storageCostsData[nmId] = parseFloat(averageStorageCost.toFixed(2));
-          });
+            const storageByProduct: Record<number, { totalCost: number, uniqueDays: Set<string> }> = {};
+            
+            storageData.forEach((storage: any) => {
+              if (storage.nmId) {
+                const nmId = storage.nmId;
+                const storageDate = storage.date_from || new Date().toISOString().split('T')[0];
+                
+                if (!storageByProduct[nmId]) {
+                  storageByProduct[nmId] = { totalCost: 0, uniqueDays: new Set() };
+                }
+                
+                storageByProduct[nmId].totalCost += storage.warehousePrice || 0;
+                storageByProduct[nmId].uniqueDays.add(storageDate);
+              }
+            });
+            
+            Object.entries(storageByProduct).forEach(([nmIdStr, data]) => {
+              const nmId = parseInt(nmIdStr);
+              const daysCount = Math.max(1, data.uniqueDays.size);
+              const averageStorageCost = data.totalCost / daysCount;
+              
+              storageCostsData[nmId] = parseFloat(averageStorageCost.toFixed(2));
+            });
+            
+            setStorageCostRates(prevCosts => ({
+              ...prevCosts,
+              ...storageCostsData
+            }));
+          }
+        } catch (storageError) {
+          console.error("Ошибка при загрузке данных о хранении:", storageError);
         }
         
-        setStorageCostRates(storageCostsData);
-      } catch (storageError) {
-        console.error("Ошибка при загрузке данных о хранении:", storageError);
+        setSalesDataDialogOpen(false);
+        
         toast({
-          title: "Предупреждение",
-          description: "Не удалось загрузить данные о платном хранении. Используются приблизительные значения.",
+          title: "Данные получены",
+          description: `Данные о продажах за период ${format(startDate, 'dd.MM.yyyy')} - ${format(endDate, 'dd.MM.yyyy')} успешно загружены`,
+        });
+      } else {
+        toast({
+          title: "Нет данных",
+          description: "За выбранный период не найдено данных о продажах",
+          variant: "destructive"
         });
       }
-      
-      setDailySalesRates(averageDailySales);
-      setSellingPrices({...sellingPrices, ...sellingPricesData});
-      
-      setSalesDataDialogOpen(false);
-      
-      toast({
-        title: "Данные получены",
-        description: `Данные о продажах за период ${format(startDate, 'dd.MM.yyyy')} - ${format(endDate, 'dd.MM.yyyy')} успешно загружены`,
-      });
       
     } catch (error: any) {
       console.error("Ошибка при получении данных:", error);
