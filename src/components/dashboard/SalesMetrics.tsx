@@ -10,13 +10,14 @@ import {
 import { WildberriesSale } from "@/types/store";
 import { ShoppingCart, CreditCard, BarChart3, Tag, PackageX } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { getSalesRateByNmId, getCostPriceByNmId } from "@/services/productStatsService";
 
 interface SalesMetricsProps {
   sales: WildberriesSale[];
   storeId?: string;
 }
 
-const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales, storeId }) => {
+const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales, storeId = 'default' }) => {
   // Calculate metrics
   const totalSales = sales.length;
   const totalAmount = sales.reduce((sum, sale) => sum + sale.priceWithDisc, 0);
@@ -29,9 +30,38 @@ const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales, storeId }) => {
     .filter(sale => sale.priceWithDisc < 0 || sale.isReturn === true)
     .reduce((sum, sale) => sum + Math.abs(sale.priceWithDisc), 0);
   
-  // Добавляем состояние для прослушивания событий обновления себестоимости
+  // Состояние для хранения расчетной себестоимости и обновления компонента
+  const [costPriceTotal, setCostPriceTotal] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
   
+  // Получаем данные о себестоимости из productStatsService
+  useEffect(() => {
+    const calculateCostPrice = async () => {
+      if (!sales.length || !storeId) return;
+      
+      let total = 0;
+      let calculatedItems = 0;
+      
+      for (const sale of sales) {
+        const nmId = sale.nmId || sale.nm_id;
+        if (nmId) {
+          // Используем функцию из productStatsService
+          const costPrice = await getCostPriceByNmId(nmId, storeId);
+          if (costPrice && costPrice > 0) {
+            total += costPrice * Math.abs(sale.quantity || 1);
+            calculatedItems++;
+          }
+        }
+      }
+      
+      setCostPriceTotal(total);
+      console.log(`Рассчитана себестоимость для ${calculatedItems} из ${sales.length} продаж. Итого: ${total}`);
+    };
+    
+    calculateCostPrice();
+  }, [sales, storeId, refreshKey]);
+  
+  // Прослушиваем событие обновления себестоимости
   useEffect(() => {
     const handleCostPriceUpdate = () => {
       // Просто вызываем ререндер компонента
@@ -44,6 +74,9 @@ const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales, storeId }) => {
       window.removeEventListener('costPriceUpdated', handleCostPriceUpdate);
     };
   }, []);
+  
+  // Расчет чистой прибыли (выручка минус себестоимость)
+  const netProfit = totalProfit - costPriceTotal - returnedAmount;
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
@@ -93,6 +126,11 @@ const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales, storeId }) => {
           <div className="text-2xl font-bold text-green-700 dark:text-green-300">
             {formatCurrency(totalProfit - returnedAmount)}
           </div>
+          {costPriceTotal > 0 && (
+            <div className="text-sm text-green-600 dark:text-green-400 mt-1">
+              Чистая прибыль: {formatCurrency(netProfit)}
+            </div>
+          )}
         </CardContent>
       </Card>
 
