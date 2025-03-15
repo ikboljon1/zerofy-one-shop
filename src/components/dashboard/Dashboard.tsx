@@ -25,6 +25,8 @@ import SalesChart from "./SalesChart";
 import TipsSection from "./TipsSection";
 import AIAnalysisSection from "@/components/ai/AIAnalysisSection";
 import SalesTable from "./SalesTable";
+import { fetchAverageDailySalesFromAPI } from "@/components/analytics/data/demoData";
+import { format } from 'date-fns';
 
 const Dashboard = () => {
   const { toast } = useToast();
@@ -167,6 +169,28 @@ const Dashboard = () => {
         fetchAndUpdateOrders(selectedStore),
         fetchAndUpdateSales(selectedStore)
       ]);
+      
+      // Запрашиваем данные о средних продажах, если есть API ключ
+      if (selectedStore.apiKey) {
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now);
+        thirtyDaysAgo.setDate(now.getDate() - 30);
+        
+        // Форматируем даты для API
+        const dateFrom = format(thirtyDaysAgo, 'yyyy-MM-dd');
+        const dateTo = format(now, 'yyyy-MM-dd');
+        
+        console.log(`Запрашиваем данные о средних продажах с ${dateFrom} по ${dateTo}`);
+        
+        // Запускаем запрос в фоне
+        fetchAverageDailySalesFromAPI(selectedStore.apiKey, dateFrom, dateTo)
+          .then(data => {
+            console.log('Получены данные о средних продажах:', data);
+          })
+          .catch(error => {
+            console.error('Ошибка при получении данных о средних продажах:', error);
+          });
+      }
 
       if (ordersResult) {
         setOrders(ordersResult.orders);
