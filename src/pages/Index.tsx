@@ -16,11 +16,12 @@ import Dashboard from "@/components/dashboard/Dashboard";
 import { getProductProfitabilityData, getSelectedStore } from "@/utils/storeUtils";
 import { User } from "@/services/userService";
 import { useToast } from "@/hooks/use-toast";
+import { Store } from "@/types/store";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
   const isMobile = useIsMobile();
-  const [selectedStore, setSelectedStore] = useState<{id: string; apiKey: string} | null>(null);
+  const [selectedStore, setSelectedStore] = useState<Store | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
