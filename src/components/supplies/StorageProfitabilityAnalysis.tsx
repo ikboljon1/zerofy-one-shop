@@ -818,4 +818,71 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
           const warehousePrice = record.warehousePrice;
           
           if (nmId && warehousePrice !== undefined && warehousePrice !== null) {
-            storageCostsByNmId[nmId] = storageCostsByNmId[nmId] || { totalCost: 0, dayCount:
+            storageCostsByNmId[nmId] = storageCostsByNmId[nmId] || { totalCost: 0, dayCount: 0 };
+            storageCostsByNmId[nmId].totalCost += warehousePrice;
+            storageCostsByNmId[nmId].dayCount += 1;
+          }
+        }
+        
+        for (const nmId in storageCostsByNmId) {
+          const { totalCost, dayCount } = storageCostsByNmId[nmId];
+          processedStorageCosts[Number(nmId)] = dayCount > 0 ? totalCost / dayCount : 0;
+        }
+      }
+      
+      // Обновление состояния с новыми данными
+      if (Object.keys(processedSalesData).length > 0) {
+        setDailySalesRates(prev => ({...prev, ...processedSalesData}));
+        
+        toast({
+          title: "Данные о продажах обновлены",
+          description: `Обновлены данные по ${Object.keys(processedSalesData).length} товарам`,
+        });
+      } else {
+        toast({
+          title: "Нет данных о продажах",
+          description: "За выбранный период не найдено данных о продажах",
+          variant: "warning"
+        });
+      }
+      
+      if (Object.keys(processedStorageCosts).length > 0) {
+        setStorageCostRates(prev => ({...prev, ...processedStorageCosts}));
+        
+        toast({
+          title: "Данные о хранении обновлены",
+          description: `Обновлены данные по ${Object.keys(processedStorageCosts).length} товарам`,
+        });
+      } else {
+        toast({
+          title: "Нет данных о хранении",
+          description: "За выбранный период не найдено данных о хранении",
+          variant: "warning"
+        });
+      }
+      
+      // Сохранение данных в localStorage
+      localStorage.setItem('product_daily_sales_rates', JSON.stringify(processedSalesData));
+      localStorage.setItem('product_storage_costs', JSON.stringify(processedStorageCosts));
+      
+    } catch (error) {
+      console.error("Ошибка при обработке данных:", error);
+      toast({
+        title: "Ошибка обработки данных",
+        description: "При обработке полученных данных произошла ошибка",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+      setSalesDataDialogOpen(false);
+    }
+  };
+
+  return (
+    <div>
+      {/* Component rendering */}
+    </div>
+  );
+};
+
+export default StorageProfitabilityAnalysis;
