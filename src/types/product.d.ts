@@ -1,5 +1,5 @@
 
-interface Product {
+export interface Product {
   nmID: number;
   vendorCode: string;
   brand: string;
