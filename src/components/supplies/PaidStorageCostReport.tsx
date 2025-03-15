@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -14,6 +13,7 @@ import { PaidStorageItem } from '@/types/supplies';
 import { format, parseISO, isValid, subMonths } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { fetchLastMonthStorageData } from '@/services/suppliesApi';
+import { getAverageDailySales } from '@/components/analytics/data/demoData';
 
 interface PaidStorageCostReportProps {
   apiKey: string;
@@ -35,30 +35,36 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
   }>({ key: 'date', direction: 'desc' });
   const [selectedTab, setSelectedTab] = useState<'nmId' | 'warehouse' | 'detail'>('nmId');
   
-  // Устанавливаем диапазон дат за последний месяц по умолчанию
   const [dateFrom, setDateFrom] = useState<Date>(
     subMonths(new Date(), 1)
   );
   const [dateTo, setDateTo] = useState<Date>(new Date());
   
-  // Запрашиваем данные за последний месяц при первой загрузке компонента
+  const [averageDailySales, setAverageDailySales] = useState<Record<number, number> | null>(null);
+  
   useEffect(() => {
-    if (apiKey) {
-      const fetchData = async () => {
-        const dateFromStr = format(dateFrom, 'yyyy-MM-dd');
-        const dateToStr = format(dateTo, 'yyyy-MM-dd');
-        onRefresh(dateFromStr, dateToStr);
-      };
-      
-      fetchData();
+    const savedSalesData = getAverageDailySales();
+    if (savedSalesData) {
+      setAverageDailySales(savedSalesData);
+      console.log('Загружены сохраненные данные о средних продажах:', savedSalesData);
     }
-  }, [apiKey]);
-
-  // Filter and sort data based on user input
+    
+    const handleSalesDataUpdate = (event: CustomEvent) => {
+      const { averageSalesPerDay } = event.detail;
+      console.log('Получено событие обновления данных о продажах:', averageSalesPerDay);
+      setAverageDailySales(averageSalesPerDay);
+    };
+    
+    window.addEventListener('salesDataUpdated', handleSalesDataUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('salesDataUpdated', handleSalesDataUpdate as EventListener);
+    };
+  }, []);
+  
   const filteredData = React.useMemo(() => {
     let results = [...storageData];
     
-    // Apply search filter
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       results = results.filter(item => 
@@ -70,7 +76,6 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
       );
     }
     
-    // Apply sorting
     if (sortConfig.key) {
       results.sort((a, b) => {
         if (a[sortConfig.key] === undefined || b[sortConfig.key] === undefined) {
@@ -90,7 +95,6 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
     return results;
   }, [storageData, searchTerm, sortConfig]);
   
-  // Group data by nmId or warehouse for the summary views
   const groupedData = React.useMemo(() => {
     const result = {
       byNmId: new Map<number, { 
@@ -98,7 +102,8 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
         avgDailyCost: number, 
         item: PaidStorageItem, 
         totalItems: number,
-        dates: Set<string>
+        dates: Set<string>,
+        avgDailySales: number | null,
       }>(),
       byWarehouse: new Map<string, { 
         totalCost: number, 
@@ -109,9 +114,7 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
       }>()
     };
     
-    // Group by nmId
     storageData.forEach(item => {
-      // Group by nmId
       if (item.nmId) {
         if (!result.byNmId.has(item.nmId)) {
           result.byNmId.set(item.nmId, { 
@@ -119,7 +122,8 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
             avgDailyCost: 0, 
             item, 
             totalItems: 0,
-            dates: new Set<string>()
+            dates: new Set<string>(),
+            avgDailySales: null
           });
         }
         
@@ -129,9 +133,12 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
         if (item.date) {
           entry.dates.add(item.date);
         }
+        
+        if (averageDailySales && averageDailySales[item.nmId]) {
+          entry.avgDailySales = averageDailySales[item.nmId];
+        }
       }
       
-      // Group by warehouse
       if (item.warehouse) {
         if (!result.byWarehouse.has(item.warehouse)) {
           result.byWarehouse.set(item.warehouse, { 
@@ -153,27 +160,19 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
       }
     });
     
-    // Calculate average daily costs for the actual date period
-    // Этот расчет учитывает фактическое количество дней в периоде,
-    // а не просто количество уникальных дат в отчете
-    
-    // Вычисляем разницу в днях между датами from и to
     const daysDiff = Math.max(1, Math.round((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24)));
     
     result.byNmId.forEach(entry => {
-      // Используем количество дней в выбранном периоде вместо количества уникальных дат
       entry.avgDailyCost = entry.totalCost / daysDiff;
     });
     
     result.byWarehouse.forEach(entry => {
-      // Используем количество дней в выбранном периоде вместо количества уникальных дат
       entry.avgDailyCost = entry.totalCost / daysDiff;
     });
     
     return result;
-  }, [storageData, dateFrom, dateTo]);
+  }, [storageData, dateFrom, dateTo, averageDailySales]);
   
-  // Request sort on column header click
   const handleSort = (key: keyof PaidStorageItem) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -182,15 +181,12 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
     setSortConfig({ key, direction });
   };
   
-  // Handle refresh button click - request new data
   const handleRefresh = () => {
-    // Convert Date objects to strings in the format required by the API
     const dateFromStr = format(dateFrom, 'yyyy-MM-dd');
     const dateToStr = format(dateTo, 'yyyy-MM-dd');
     onRefresh(dateFromStr, dateToStr);
   };
   
-  // For detail view of a single item
   const renderDetailView = () => (
     <div className="bg-white dark:bg-gray-900 rounded-lg overflow-hidden">
       <div className="overflow-x-auto">
@@ -292,7 +288,6 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
     </div>
   );
   
-  // Summary view by product (nmId)
   const renderProductSummary = () => (
     <div className="bg-white dark:bg-gray-900 rounded-lg overflow-hidden">
       <div className="overflow-x-auto">
@@ -317,6 +312,22 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
                   </TooltipProvider>
                 </div>
               </TableHead>
+              <TableHead>
+                <div className="flex items-center gap-1.5">
+                  Продажи/день
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-4 w-4 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        Среднее количество продаж товара в день по данным API Wildberries 
+                        за последние 30 дней
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </TableHead>
               <TableHead>Количество</TableHead>
               <TableHead>Период</TableHead>
             </TableRow>
@@ -324,7 +335,7 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
           <TableBody>
             {groupedData.byNmId.size === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-6">
+                <TableCell colSpan={6} className="text-center py-6">
                   <div className="flex flex-col items-center justify-center gap-2">
                     <Package className="h-8 w-8 text-muted-foreground" />
                     <p className="text-muted-foreground">Нет данных для отображения</p>
@@ -347,7 +358,6 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
                   );
                 })
                 .sort((a, b) => {
-                  // Sort by total cost descending by default
                   return b[1].totalCost - a[1].totalCost;
                 })
                 .map(([nmId, data]) => (
@@ -372,6 +382,13 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
                       </div>
                     </TableCell>
                     <TableCell>
+                      <div className="font-medium text-primary">
+                        {data.avgDailySales !== null 
+                          ? `${data.avgDailySales.toFixed(2)} шт.` 
+                          : "Нет данных"}
+                      </div>
+                    </TableCell>
+                    <TableCell>
                       <Badge variant="outline" className="px-2 py-1">
                         {data.totalItems} шт.
                       </Badge>
@@ -391,7 +408,6 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
     </div>
   );
   
-  // Summary view by warehouse
   const renderWarehouseSummary = () => (
     <div className="bg-white dark:bg-gray-900 rounded-lg overflow-hidden">
       <div className="overflow-x-auto">
@@ -437,7 +453,6 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
                   return warehouse.toLowerCase().includes(searchTerm.toLowerCase());
                 })
                 .sort((a, b) => {
-                  // Sort by total cost descending by default
                   return b[1].totalCost - a[1].totalCost;
                 })
                 .map(([warehouse, data]) => (
@@ -482,13 +497,10 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
     </div>
   );
 
-  // Calculate total storage cost
   const totalStorageCost = storageData.reduce((sum, item) => sum + (item.warehousePrice || 0), 0);
   
-  // Вычисляем количество дней в выбранном периоде
   const daysDiff = Math.max(1, Math.round((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24)));
   
-  // Средняя стоимость хранения в день для всех товаров
   const averageDailyStorageCost = totalStorageCost / daysDiff;
 
   return (
@@ -503,7 +515,6 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
         </CardDescription>
       </CardHeader>
       <CardContent className="p-6 space-y-6">
-        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-0 shadow-sm">
             <CardContent className="p-4 flex flex-col items-center justify-center">
@@ -549,7 +560,6 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
           </Card>
         </div>
         
-        {/* Filters and controls */}
         <div className="rounded-lg bg-muted/30 p-4 border border-border/50">
           <div className="flex flex-col md:flex-row gap-4 justify-between">
             <div className="relative w-full md:w-96">
@@ -595,7 +605,6 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
           </div>
         </div>
 
-        {/* Tabs for different views */}
         <Tabs 
           defaultValue="nmId" 
           value={selectedTab} 

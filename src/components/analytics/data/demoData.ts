@@ -40,6 +40,39 @@ export const logisticsRoutes = [];
 export const inventoryData = [];
 
 /**
+ * Ключ для хранения данных о средних продажах в localStorage
+ */
+const AVERAGE_SALES_STORAGE_KEY = 'wb_average_daily_sales';
+
+/**
+ * Сохраняет данные о средних продажах в localStorage
+ * @param salesData Объект с данными о средних продажах
+ */
+export const saveAverageDailySales = (salesData: Record<number, number>) => {
+  try {
+    localStorage.setItem(AVERAGE_SALES_STORAGE_KEY, JSON.stringify(salesData));
+    console.log('Данные о средних продажах сохранены в localStorage');
+  } catch (error) {
+    console.error('Ошибка при сохранении данных о продажах:', error);
+  }
+};
+
+/**
+ * Получает данные о средних продажах из localStorage
+ * @returns Объект с данными о средних продажах или null, если данных нет
+ */
+export const getAverageDailySales = (): Record<number, number> | null => {
+  try {
+    const data = localStorage.getItem(AVERAGE_SALES_STORAGE_KEY);
+    if (!data) return null;
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Ошибка при получении данных о продажах:', error);
+    return null;
+  }
+};
+
+/**
  * Получает средние продажи по продуктам из API Wildberries
  * @param apiKey API ключ Wildberries
  * @param dateFrom Дата начала в формате YYYY-MM-DD
@@ -66,6 +99,9 @@ export const fetchAverageDailySalesFromAPI = async (
     
     // Рассчитываем среднее количество продаж в день для каждого товара
     const averageSalesPerDay = calculateAverageDailySalesPerProduct(allData, dateFrom, dateTo);
+    
+    // Сохраняем данные в localStorage для использования в других компонентах
+    saveAverageDailySales(averageSalesPerDay);
     
     // Отправка события для уведомления компонентов об обновлении данных
     const event = new CustomEvent('salesDataUpdated', { 
