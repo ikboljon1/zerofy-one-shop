@@ -12,6 +12,7 @@ import ProductsComponent from "@/components/Products";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CostPriceMetrics } from "@/components/supplies";
 import axios from "axios";
+import { fetchLastMonthSalesData, enrichProductsWithSalesData } from "@/services/suppliesApi";
 
 interface ProductsProps {
   selectedStore?: Store | null;
@@ -85,6 +86,7 @@ const Products = ({ selectedStore }: ProductsProps) => {
 
     setIsLoading(true);
     try {
+      // Получаем список товаров с Wildberries API
       const response = await fetch("https://content-api.wildberries.ru/content/v2/get/cards/list", {
         method: "POST",
         headers: {
@@ -134,34 +136,79 @@ const Products = ({ selectedStore }: ProductsProps) => {
         return product;
       });
       
-      // Сохраняем полученные товары в БД
+      // Получаем данные о продажах за последний месяц
       try {
-        await axios.post('http://localhost:3001/api/products', {
-          storeId: selectedStore.id,
-          products: normalizedProducts
-        });
+        console.log('Получение данных о продажах для обогащения продуктов...');
+        const salesData = await fetchLastMonthSalesData(selectedStore.apiKey);
         
-        // Также сохраняем локально для кэширования
-        localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(normalizedProducts));
+        console.log(`Получены данные о продажах для ${salesData.size} товаров`);
         
-        console.log(`Saved ${normalizedProducts.length} products to database`);
+        // Обогащаем продукты данными о продажах
+        const enrichedProducts = enrichProductsWithSalesData(normalizedProducts, salesData);
         
-        toast({
-          title: "Успешно",
-          description: "Товары успешно синхронизированы и сохранены в базе данных",
-        });
-      } catch (dbError) {
-        console.error("Error saving products to DB:", dbError);
+        console.log('Продукты обогащены данными о продажах');
         
-        // Если не удалось сохранить в БД, используем localStorage
-        localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(normalizedProducts));
+        // Сохраняем обогащенные продукты
+        try {
+          await axios.post('http://localhost:3001/api/products', {
+            storeId: selectedStore.id,
+            products: enrichedProducts
+          });
+          
+          // Также сохраняем локально для кэширования
+          localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(enrichedProducts));
+          
+          console.log(`Saved ${enrichedProducts.length} products to database with sales data`);
+          
+          toast({
+            title: "Успешно",
+            description: "Товары успешно синхронизированы с данными о продажах и сохранены в базе данных",
+          });
+        } catch (dbError) {
+          console.error("Error saving products to DB:", dbError);
+          
+          // Если не удалось сохранить в БД, используем localStorage
+          localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(enrichedProducts));
+          
+          console.log(`Saved ${enrichedProducts.length} products to localStorage with sales data`);
+          
+          toast({
+            title: "Частично успешно",
+            description: "Товары синхронизированы с данными о продажах, но сохранены локально (нет соединения с БД)",
+          });
+        }
+      } catch (salesError) {
+        console.error("Error fetching sales data:", salesError);
         
-        console.log(`Saved ${normalizedProducts.length} products to localStorage`);
-        
-        toast({
-          title: "Частично успешно",
-          description: "Товары синхронизированы, но сохранены локально (нет соединения с БД)",
-        });
+        // Сохраняем продукты без данных о продажах
+        try {
+          await axios.post('http://localhost:3001/api/products', {
+            storeId: selectedStore.id,
+            products: normalizedProducts
+          });
+          
+          // Также сохраняем локально для кэширования
+          localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(normalizedProducts));
+          
+          console.log(`Saved ${normalizedProducts.length} products to database without sales data`);
+          
+          toast({
+            title: "Частично успешно",
+            description: "Товары синхронизированы, но без данных о продажах",
+          });
+        } catch (dbError) {
+          console.error("Error saving products to DB:", dbError);
+          
+          // Если не удалось сохранить в БД, используем localStorage
+          localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(normalizedProducts));
+          
+          console.log(`Saved ${normalizedProducts.length} products to localStorage without sales data`);
+          
+          toast({
+            title: "Частично успешно",
+            description: "Товары синхронизированы, но без данных о продажах и сохранены локально (нет соединения с БД)",
+          });
+        }
       }
       
       // Повторно загружаем данные о прибыльности

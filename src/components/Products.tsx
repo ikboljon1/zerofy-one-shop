@@ -1,7 +1,7 @@
 
 import { Card } from "@/components/ui/card";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ArrowUp, ArrowDown, TrendingUp, TrendingDown, DollarSign, FileText, Info } from "lucide-react";
+import { ArrowUp, ArrowDown, TrendingUp, TrendingDown, DollarSign, FileText, Info, ShoppingBag } from "lucide-react";
 import { formatCurrency, parseCurrencyString } from "@/utils/formatCurrency";
 
 interface Product {
@@ -11,8 +11,9 @@ interface Product {
   image: string;
   quantitySold?: number;
   margin?: number;
-  returnCount?: number; // Changed from returnRate to returnCount
+  returnCount?: number;
   category?: string;
+  salesPerDay?: number; // Добавляем поле для отображения продаж в день
 }
 
 interface ProductListProps {
@@ -37,6 +38,8 @@ const Products = ({
         return "Высокие объемы продаж";
       } else if (product.returnCount !== undefined && product.returnCount < 3) {
         return "Низкое количество возвратов";
+      } else if (product.salesPerDay && product.salesPerDay > 5) {
+        return "Высокие продажи в день";
       }
       return "Стабильные продажи";
     } else {
@@ -46,6 +49,8 @@ const Products = ({
         return "Высокое количество возвратов";
       } else if (product.quantitySold && product.quantitySold < 5) {
         return "Низкие объемы продаж";
+      } else if (product.salesPerDay !== undefined && product.salesPerDay < 0.5) {
+        return "Низкие продажи в день";
       }
       return "Нестабильные продажи";
     }
@@ -142,6 +147,15 @@ const Products = ({
               </div>
               
               <div className="flex items-center">
+                <ShoppingBag className="h-4 w-4 mr-1 text-muted-foreground" />
+                <span>
+                  {product.salesPerDay !== undefined 
+                    ? `Продажи/день: ${product.salesPerDay.toFixed(1)} шт.` 
+                    : 'Продажи/день: Н/Д'}
+                </span>
+              </div>
+              
+              <div className="flex items-center col-span-2">
                 <Info className="h-4 w-4 mr-1 text-muted-foreground" />
                 <span className={`font-medium ${isMobile ? 'text-xs' : 'text-sm'}`}>
                   {getProfitabilityReason(product, isProfitable)}
