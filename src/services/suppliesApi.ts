@@ -537,6 +537,146 @@ export const fetchAllSalesReport = async (
 };
 
 /**
+ * Получить данные о продажах за последний месяц
+ * @param apiKey Ключ API
+ */
+export const fetchLastMonthSalesData = async (apiKey: string): Promise<Map<number, number>> => {
+  try {
+    console.log('Получение данных о продажах за последний месяц...');
+    
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 30); // Последние 30 дней
+    
+    const dateFrom = startDate.toISOString().split('T')[0];
+    const dateTo = endDate.toISOString().split('T')[0];
+    
+    console.log(`Запрос данных продаж за период: ${dateFrom} - ${dateTo}`);
+    
+    // Создаем кеш в локальном хранилище для избежания частых запросов к API
+    const cacheKey = `sales_data_${dateFrom}_${dateTo}_${apiKey.substring(0, 10)}`;
+    const cacheExpiryKey = `${cacheKey}_expires`;
+    
+    // Проверяем наличие кеша и его актуальность
+    const cachedData = localStorage.getItem(cacheKey);
+    const cacheExpiry = localStorage.getItem(cacheExpiryKey);
+    const now = Date.now();
+    
+    // Используем кеш, если он существует и не истек срок его действия
+    if (cachedData && cacheExpiry && now < parseInt(cacheExpiry)) {
+      try {
+        console.log('Использование кешированных данных о продажах');
+        const parsedCache = JSON.parse(cachedData);
+        return new Map(parsedCache);
+      } catch (e) {
+        console.error('Ошибка при разборе кешированных данных:', e);
+        // Если возникла ошибка при разборе кеша, удаляем его
+        localStorage.removeItem(cacheKey);
+        localStorage.removeItem(cacheExpiryKey);
+      }
+    }
+    
+    // Если нет кеша или он устарел, делаем новый запрос к API
+    console.log('Кеш отсутствует или устарел, запрашиваем свежие данные от API');
+    
+    // Получаем данные продаж с API
+    const salesData = await fetchAllSalesReport(apiKey, dateFrom, dateTo);
+    
+    if (!salesData || salesData.length === 0) {
+      console.log('API не вернул данных о продажах');
+      // Ищем устаревший кеш для использования в качестве запасного варианта
+      if (cachedData) {
+        console.log('Используем устаревший кеш в качестве запасного варианта');
+        try {
+          const parsedCache = JSON.parse(cachedData);
+          return new Map(parsedCache);
+        } catch (e) {
+          console.error('Ошибка при разборе устаревшего кеша:', e);
+        }
+      }
+      return new Map();
+    }
+    
+    console.log(`Получены данные о продажах: ${salesData.length} записей`);
+    
+    // Рассчитываем средние продажи в день для каждого товара
+    const result = new Map<number, number>();
+    
+    // Группируем данные по nmId
+    const salesByNmId = new Map<number, { totalSales: number; uniqueDays: Set<string> }>();
+    
+    // Обрабатываем только записи с типом "Продажа"
+    for (const record of salesData) {
+      if (record.doc_type_name === 'Продажа') {
+        const nmId = record.nm_id;
+        if (!nmId) continue;
+        
+        const saleDate = record.sale_dt ? record.sale_dt.split('T')[0] : new Date().toISOString().split('T')[0];
+        const quantity = record.quantity || 0;
+        
+        if (!salesByNmId.has(nmId)) {
+          salesByNmId.set(nmId, { totalSales: 0, uniqueDays: new Set() });
+        }
+        
+        const productData = salesByNmId.get(nmId)!;
+        productData.totalSales += quantity;
+        productData.uniqueDays.add(saleDate);
+      }
+    }
+    
+    // Рассчитываем средние продажи для каждого товара
+    salesByNmId.forEach((data, nmId) => {
+      // Определяем количество дней с продажами или общее количество дней в периоде
+      const daysCount = Math.max(1, data.uniqueDays.size || 30);
+      
+      // Средние продажи в день
+      const averageSales = data.totalSales / daysCount;
+      
+      // Округляем до одного десятичного знака
+      result.set(nmId, parseFloat(averageSales.toFixed(1)));
+    });
+    
+    console.log(`Рассчитаны средние продажи для ${result.size} товаров`);
+    
+    // Кешируем результат в localStorage для уменьшения количества запросов к API
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify([...result]));
+      // Устанавливаем время жизни кеша на 1 час
+      localStorage.setItem(cacheExpiryKey, (now + 60 * 60 * 1000).toString());
+      console.log('Данные о продажах сохранены в кеш до', new Date(now + 60 * 60 * 1000).toLocaleString());
+    } catch (e) {
+      console.error('Ошибка при кешировании данных продаж:', e);
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Ошибка при получении данных о продажах за последний месяц:', error);
+    
+    // В случае ошибки пытаемся использовать кешированные данные
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 30);
+    const dateFrom = startDate.toISOString().split('T')[0];
+    const dateTo = endDate.toISOString().split('T')[0];
+    const cacheKey = `sales_data_${dateFrom}_${dateTo}_${apiKey.substring(0, 10)}`;
+    
+    const cachedData = localStorage.getItem(cacheKey);
+    if (cachedData) {
+      console.log('Ошибка API. Используем кешированные данные в качестве запасного варианта');
+      try {
+        const parsedCache = JSON.parse(cachedData);
+        return new Map(parsedCache);
+      } catch (e) {
+        console.error('Ошибка при разборе кешированных данных:', e);
+      }
+    }
+    
+    console.log('Невозможно получить реальные данные о продажах. Возвращаем пустой результат.');
+    return new Map();
+  }
+};
+
+/**
  * Рассчитывает среднее количество продаж в день для каждого товара
  * @param salesData Данные о продажах
  * @param dateFrom Начальная дата периода (формат YYYY-MM-DD)
@@ -648,105 +788,6 @@ export const fetchProductSalesData = async (
 };
 
 /**
- * Получить данные о продажах за последний месяц
- * @param apiKey Ключ API
- */
-export const fetchLastMonthSalesData = async (apiKey: string): Promise<Map<number, number>> => {
-  try {
-    console.log('Получение данных о продажах за последний месяц...');
-    
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(endDate.getDate() - 30); // Последние 30 дней
-    
-    const dateFrom = startDate.toISOString().split('T')[0];
-    const dateTo = endDate.toISOString().split('T')[0];
-    
-    console.log(`Запрос данных продаж за период: ${dateFrom} - ${dateTo}`);
-    
-    // Создаем кеш в локальном хранилище для избежания частых запросов к API
-    const cacheKey = `sales_data_${dateFrom}_${dateTo}_${apiKey.substring(0, 10)}`;
-    const cachedData = localStorage.getItem(cacheKey);
-    
-    if (cachedData) {
-      try {
-        console.log('Использование кешированных данных о продажах');
-        const parsedCache = JSON.parse(cachedData);
-        return new Map(parsedCache);
-      } catch (e) {
-        console.error('Ошибка при разборе кешированных данных:', e);
-        // Продолжаем выполнение и пытаемся получить новые данные
-      }
-    }
-    
-    // Получаем данные продаж с API
-    const salesData = await fetchAllSalesReport(apiKey, dateFrom, dateTo);
-    
-    if (!salesData || salesData.length === 0) {
-      console.log('API не вернул данных о продажах');
-      return new Map();
-    }
-    
-    console.log(`Получены данные о продажах: ${salesData.length} записей`);
-    
-    // Рассчитываем средние продажи в день для каждого товара
-    const result = new Map<number, number>();
-    
-    // Группируем данные по nmId
-    const salesByNmId = new Map<number, { totalSales: number; uniqueDays: Set<string> }>();
-    
-    // Обрабатываем только записи с типом "Продажа"
-    for (const record of salesData) {
-      if (record.doc_type_name === 'Продажа') {
-        const nmId = record.nm_id;
-        if (!nmId) continue;
-        
-        const saleDate = record.sale_dt.split('T')[0];
-        const quantity = record.quantity || 0;
-        
-        if (!salesByNmId.has(nmId)) {
-          salesByNmId.set(nmId, { totalSales: 0, uniqueDays: new Set() });
-        }
-        
-        const productData = salesByNmId.get(nmId)!;
-        productData.totalSales += quantity;
-        productData.uniqueDays.add(saleDate);
-      }
-    }
-    
-    // Рассчитываем средние продажи для каждого товара
-    salesByNmId.forEach((data, nmId) => {
-      // Определяем количество дней с продажами или общее количество дней в периоде
-      const daysCount = Math.max(1, data.uniqueDays.size || 30);
-      
-      // Средние продажи в день
-      const averageSales = data.totalSales / daysCount;
-      
-      // Округляем до одного десятичного знака
-      result.set(nmId, parseFloat(averageSales.toFixed(1)));
-    });
-    
-    console.log(`Рассчитаны средние продажи для ${result.size} товаров`);
-    
-    // Кешируем результат в localStorage для уменьшения количества запросов к API
-    try {
-      localStorage.setItem(cacheKey, JSON.stringify([...result]));
-      // Устанавливаем время жизни кеша на 1 час
-      localStorage.setItem(`${cacheKey}_expires`, (Date.now() + 60 * 60 * 1000).toString());
-    } catch (e) {
-      console.error('Ошибка при кешировании данных продаж:', e);
-    }
-    
-    return result;
-  } catch (error) {
-    console.error('Ошибка при получении данных о продажах за последний месяц:', error);
-    
-    // В случае ошибки возвращаем пустой Map
-    return new Map();
-  }
-};
-
-/**
  * Обогащает продукты данными о продажах
  */
 export const enrichProductsWithSalesData = (products: any[], salesData: Map<number, number>) => {
@@ -806,4 +847,3 @@ export const getMockSalesData = (productIds: number[], days: number = 30): any[]
   
   return salesData;
 };
-
