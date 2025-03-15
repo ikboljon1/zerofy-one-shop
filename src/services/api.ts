@@ -1,5 +1,11 @@
 import axios from 'axios';
-import { getCostPriceByNmId as getCostPrice } from './productStatsService';
+import { 
+  getCostPriceByNmId as getCostPrice,
+  getDailySalesRateByNmId,
+  getStorageCostByNmId,
+  getSellingPriceByNmId,
+  updateProductStats
+} from './productStatsService';
 
 // Create an axios instance with default config
 export const api = axios.create({
@@ -104,8 +110,12 @@ export const setApiKey = (apiKey: string) => {
   api.defaults.headers.common['Authorization'] = apiKey;
 };
 
-// Используем функции из отдельного сервиса
+// Экспортируем функции из productStatsService
 export const getCostPriceByNmId = getCostPrice;
+export const getSalesRateByNmId = getDailySalesRateByNmId;
+export const getStorageCostByProductId = getStorageCostByNmId;
+export const getProductSellingPrice = getSellingPriceByNmId;
+export const updateProductStatistics = updateProductStats;
 
 // Function to get cost price by subject name
 export const getCostPriceBySubjectName = async (subjectName: string, storeId: string): Promise<number> => {

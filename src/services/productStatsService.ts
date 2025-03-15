@@ -532,3 +532,139 @@ export const fetchSalesAndStorageData = async (
     throw error;
   }
 };
+
+/**
+ * Сохраняет данные о средних продажах в день в localStorage
+ * @param salesData - Данные о средних продажах в день
+ * @param storeId - ID магазина
+ */
+export const saveDailySalesRates = (salesData: Record<number, number>, storeId: string = 'default'): void => {
+  try {
+    const salesRatesKey = `product_sales_rates_${storeId}`;
+    const existingData = localStorage.getItem(salesRatesKey) || '{}';
+    const existingSalesRates = JSON.parse(existingData);
+    
+    const updatedSalesRates = { ...existingSalesRates, ...salesData };
+    localStorage.setItem(salesRatesKey, JSON.stringify(updatedSalesRates));
+    
+    console.log(`Сохранены данные о средних продажах для ${Object.keys(salesData).length} товаров`);
+  } catch (error) {
+    console.error("Ошибка при сохранении данных о средних продажах:", error);
+  }
+};
+
+/**
+ * Сохраняет данные о стоимости хранения в localStorage
+ * @param storageData - Данные о стоимости хранения
+ * @param storeId - ID магазина
+ */
+export const saveStorageCosts = (storageData: Record<number, number>, storeId: string = 'default'): void => {
+  try {
+    const storageCostsKey = `product_storage_costs_${storeId}`;
+    const existingData = localStorage.getItem(storageCostsKey) || '{}';
+    const existingStorageCosts = JSON.parse(existingData);
+    
+    const updatedStorageCosts = { ...existingStorageCosts, ...storageData };
+    localStorage.setItem(storageCostsKey, JSON.stringify(updatedStorageCosts));
+    
+    console.log(`Сохранены данные о стоимости хранения для ${Object.keys(storageData).length} товаров`);
+  } catch (error) {
+    console.error("Ошибка при сохранении данных о стоимости хранения:", error);
+  }
+};
+
+/**
+ * Обновляет статистику продаж и хранения из Wildberries API
+ * @param apiKey - API ключ Wildberries
+ * @param dateFrom - Начальная дата периода
+ * @param dateTo - Конечная дата периода
+ * @param storeId - ID магазина
+ */
+export const updateProductStats = async (
+  apiKey: string,
+  dateFrom: Date,
+  dateTo: Date,
+  storeId: string = 'default'
+): Promise<void> => {
+  try {
+    console.log(`Обновление статистики продаж и хранения за период ${format(dateFrom, 'yyyy-MM-dd')} - ${format(dateTo, 'yyyy-MM-dd')}`);
+    
+    // Получаем данные о продажах и хранении
+    const { sales, storage } = await fetchSalesAndStorageData(apiKey, dateFrom, dateTo);
+    
+    // Сохраняем данные в localStorage
+    saveDailySalesRates(sales, storeId);
+    saveStorageCosts(storage, storeId);
+    
+    console.log(`Обновление статистики завершено. Обработано: ${Object.keys(sales).length} товаров с продажами, ${Object.keys(storage).length} товаров с данными хранения`);
+    
+    // Обновляем метку времени последнего обновления
+    localStorage.setItem(`last_stats_update_${storeId}`, new Date().toISOString());
+  } catch (error) {
+    console.error("Ошибка при обновлении статистики:", error);
+    throw error;
+  }
+};
+
+/**
+ * Получает отчет о средних продажах в день для всех товаров
+ * @param storeId - ID магазина
+ * @returns Объект с данными о средних продажах
+ */
+export const getDailySalesReport = (storeId: string = 'default'): Record<number, number> => {
+  try {
+    const salesRatesKey = `product_sales_rates_${storeId}`;
+    const salesRatesData = localStorage.getItem(salesRatesKey);
+    
+    if (salesRatesData) {
+      return JSON.parse(salesRatesData);
+    }
+    
+    return {};
+  } catch (error) {
+    console.error("Ошибка при получении отчета о средних продажах:", error);
+    return {};
+  }
+};
+
+/**
+ * Получает отчет о стоимости хранения для всех товаров
+ * @param storeId - ID магазина
+ * @returns Объект с данными о стоимости хранения
+ */
+export const getStorageCostsReport = (storeId: string = 'default'): Record<number, number> => {
+  try {
+    const storageCostsKey = `product_storage_costs_${storeId}`;
+    const storageCostsData = localStorage.getItem(storageCostsKey);
+    
+    if (storageCostsData) {
+      return JSON.parse(storageCostsData);
+    }
+    
+    return {};
+  } catch (error) {
+    console.error("Ошибка при получении отчета о стоимости хранения:", error);
+    return {};
+  }
+};
+
+/**
+ * Получает дату последнего обновления статистики
+ * @param storeId - ID магазина
+ * @returns Дата последнего обновления или null
+ */
+export const getLastStatsUpdateDate = (storeId: string = 'default'): Date | null => {
+  try {
+    const lastUpdateKey = `last_stats_update_${storeId}`;
+    const lastUpdateData = localStorage.getItem(lastUpdateKey);
+    
+    if (lastUpdateData) {
+      return new Date(lastUpdateData);
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("Ошибка при получении даты последнего обновления:", error);
+    return null;
+  }
+};
