@@ -23,4 +23,7 @@ interface Product {
     deductions?: number;
     ppvz_for_pay?: number;
   };
+  dailySales?: number;
+  averageStorageCost?: number;
 }
+

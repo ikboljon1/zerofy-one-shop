@@ -5,6 +5,7 @@ import { SupplyItem, SupplyOptionsResponse, Warehouse, WarehouseCoefficient, Pai
 
 const API_BASE_URL = 'https://supplies-api.wildberries.ru/api/v1';
 const ANALYTICS_API_BASE_URL = 'https://seller-analytics-api.wildberries.ru/api/v1';
+const STATISTICS_API_BASE_URL = 'https://statistics-api.wildberries.ru/api/v5';
 
 /**
  * Fetch all warehouses from Wildberries API
@@ -234,7 +235,7 @@ export const getMockPaidStorageData = (): PaidStorageItem[] => {
     chrtId: 200000 + index,
     size: ['S', 'M', 'L', 'XL', 'XXL'][index % 5],
     barcode: `2000000${index}`,
-    subject: ['Футболка', 'Джинсы', 'Куртка', 'Обувь', 'Аксессу��ры'][index % 5],
+    subject: ['Футболка', 'Джинсы', 'Куртка', 'Обувь', 'Аксессуары'][index % 5],
     brand: ['Nike', 'Adidas', 'Puma', 'Reebok', 'New Balance'][index % 5],
     vendorCode: `A${1000 + index}`,
     nmId: 300000 + index,
@@ -317,5 +318,188 @@ export const togglePreferredWarehouse = (userId: string, warehouseId: number): n
   } catch (error) {
     console.error('Ошибка при обновлении предпочтительных складов:', error);
     return getPreferredWarehouses(userId);
+  }
+};
+
+/**
+ * Функция для форматирования даты в нужный формат для API
+ */
+export const formatDateForStorageAPI = (date: Date): string => {
+  return date.toISOString().split('.')[0]; // YYYY-MM-DDTHH:MM:SS
+};
+
+/**
+ * Функция для форматирования даты в формат YYYY-MM-DD для API продаж
+ */
+export const formatDateForSalesAPI = (date: Date): string => {
+  return date.toISOString().split('T')[0]; // YYYY-MM-DD
+};
+
+/**
+ * Получить данные о стоимости хранения для конкретного nmId
+ */
+export const fetchStorageCostByNmId = async (
+  apiKey: string,
+  nmId: number,
+  dateFrom: Date,
+  dateTo: Date
+): Promise<{ averageCost: number; vendorCode: string; brand: string; subject: string }> => {
+  try {
+    const formattedDateFrom = formatDateForStorageAPI(dateFrom);
+    const formattedDateTo = formatDateForStorageAPI(dateTo);
+    
+    console.log(`Получение данных о стоимости хранения для nmId ${nmId}`);
+    console.log(`Период: с ${formattedDateFrom} по ${formattedDateTo}`);
+    
+    // Получение полного отчета
+    const report = await fetchFullPaidStorageReport(apiKey, formattedDateFrom, formattedDateTo);
+    
+    // Фильтрация данных для указанного nmId
+    const filteredData = report.filter(item => item.nmId === nmId);
+    
+    if (filteredData.length === 0) {
+      throw new Error(`Данные о стоимости хранения для nmId ${nmId} не найдены`);
+    }
+    
+    // Расчет средней стоимости хранения
+    let totalCost = 0;
+    let vendorCode = '';
+    let brand = '';
+    let subject = '';
+    
+    filteredData.forEach(item => {
+      totalCost += item.warehousePrice;
+      vendorCode = item.vendorCode || vendorCode;
+      brand = item.brand || brand;
+      subject = item.subject || subject;
+    });
+    
+    const averageCost = totalCost / filteredData.length;
+    
+    return {
+      averageCost,
+      vendorCode,
+      brand,
+      subject
+    };
+  } catch (error: any) {
+    console.error('Ошибка при получении данных о стоимости хранения:', error);
+    throw new Error(error.message || 'Не удалось получить данные о стоимости хранения');
+  }
+};
+
+/**
+ * Получить данные о средних продажах для конкретного nmId
+ */
+export const fetchAverageDailySalesByNmId = async (
+  apiKey: string,
+  nmId: number,
+  dateFrom: Date,
+  dateTo: Date
+): Promise<{ averageSales: number; productName: string }> => {
+  try {
+    const formattedDateFrom = formatDateForSalesAPI(dateFrom);
+    const formattedDateTo = formatDateForSalesAPI(dateTo);
+    
+    console.log(`Получение данных о продажах для nmId ${nmId}`);
+    console.log(`Период: с ${formattedDateFrom} по ${formattedDateTo}`);
+    
+    // Получение данных о продажах
+    let allSalesData: any[] = [];
+    let nextRrdId = 0;
+    
+    do {
+      setApiKey(apiKey);
+      const response = await api.get(`${STATISTICS_API_BASE_URL}/supplier/reportDetailByPeriod`, {
+        params: {
+          dateFrom: formattedDateFrom,
+          dateTo: formattedDateTo,
+          rrdid: nextRrdId,
+          limit: 1000
+        }
+      });
+      
+      const data = response.data;
+      if (!data || data.length === 0) break;
+      
+      allSalesData = [...allSalesData, ...data];
+      
+      // Получение rrd_id для следующего запроса
+      nextRrdId = data[data.length - 1].rrd_id || 0;
+    } while (nextRrdId > 0);
+    
+    // Фильтрация данных для указанного nmId и подсчет продаж
+    let totalSales = 0;
+    let productName = '';
+    
+    const filteredData = allSalesData.filter(item => item.nm_id === nmId);
+    
+    if (filteredData.length === 0) {
+      throw new Error(`Данные о продажах для nmId ${nmId} не найдены`);
+    }
+    
+    filteredData.forEach(item => {
+      if (item.doc_type_name === 'Продажа') {
+        totalSales += item.quantity || 0;
+      }
+      
+      if (!productName && item.sa_name) {
+        productName = item.sa_name;
+      }
+    });
+    
+    // Расчет среднего количества продаж в день
+    const startDate = new Date(formattedDateFrom);
+    const endDate = new Date(formattedDateTo);
+    const daysInPeriod = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    
+    const averageSales = daysInPeriod > 0 ? totalSales / daysInPeriod : 0;
+    
+    return {
+      averageSales,
+      productName
+    };
+  } catch (error: any) {
+    console.error('Ошибка при получении данных о продажах:', error);
+    throw new Error(error.message || 'Не удалось получить данные о продажах');
+  }
+};
+
+/**
+ * Получить комбинированные данные о товаре по nmId
+ */
+export const fetchProductDataByNmId = async (
+  apiKey: string,
+  nmId: number,
+  dateFrom: Date,
+  dateTo: Date
+): Promise<{
+  nmId: number;
+  vendorCode: string;
+  brand: string;
+  subject: string;
+  averageStorageCost: number;
+  averageDailySales: number;
+  productName: string;
+}> => {
+  try {
+    // Получение данных о стоимости хранения
+    const storageData = await fetchStorageCostByNmId(apiKey, nmId, dateFrom, dateTo);
+    
+    // Получение данных о продажах
+    const salesData = await fetchAverageDailySalesByNmId(apiKey, nmId, dateFrom, dateTo);
+    
+    return {
+      nmId,
+      vendorCode: storageData.vendorCode,
+      brand: storageData.brand,
+      subject: storageData.subject,
+      averageStorageCost: storageData.averageCost,
+      averageDailySales: salesData.averageSales,
+      productName: salesData.productName
+    };
+  } catch (error: any) {
+    console.error('Ошибка при получении данных о товаре:', error);
+    throw new Error(error.message || 'Не удалось получить данные о товаре');
   }
 };
