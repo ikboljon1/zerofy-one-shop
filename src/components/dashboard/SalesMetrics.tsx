@@ -10,7 +10,7 @@ import {
 import { WildberriesSale } from "@/types/store";
 import { ShoppingCart, CreditCard, BarChart3, Tag, PackageX } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
-import { getSalesRateByNmId, getCostPriceByNmId } from "@/services/productStatsService";
+import { getDailySalesRateByNmId, getCostPriceByNmId } from "@/services/productStatsService";
 
 interface SalesMetricsProps {
   sales: WildberriesSale[];
@@ -43,12 +43,14 @@ const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales, storeId = 'default' 
       let calculatedItems = 0;
       
       for (const sale of sales) {
-        const nmId = sale.nmId || sale.nm_id;
+        const nmId = sale.nmId;
         if (nmId) {
           // Используем функцию из productStatsService
           const costPrice = await getCostPriceByNmId(nmId, storeId);
           if (costPrice && costPrice > 0) {
-            total += costPrice * Math.abs(sale.quantity || 1);
+            // Если quantity не определено в типе, используем 1 как значение по умолчанию
+            const quantity = 1; // По умолчанию 1, так как в типе WildberriesSale нет свойства quantity
+            total += costPrice * Math.abs(quantity);
             calculatedItems++;
           }
         }
