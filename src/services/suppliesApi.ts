@@ -1,6 +1,7 @@
 import axios from 'axios';
 import api, { setApiKey } from './api';
-import { SupplyItem, SupplyOptionsResponse, Warehouse, WarehouseCoefficient, PaidStorageItem, Product } from '@/types/supplies';
+import { SupplyItem, SupplyOptionsResponse, Warehouse, WarehouseCoefficient, PaidStorageItem } from '@/types/supplies';
+import { Product } from '@/types/product';
 
 const API_BASE_URL = 'https://supplies-api.wildberries.ru/api/v1';
 const ANALYTICS_API_BASE_URL = 'https://seller-analytics-api.wildberries.ru/api/v1';
@@ -707,4 +708,3 @@ export default {
   getSalesDataForProducts,
   fetchLastPeriodSalesData
 };
-
