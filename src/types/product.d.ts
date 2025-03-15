@@ -23,9 +23,4 @@ interface Product {
     deductions?: number;
     ppvz_for_pay?: number;
   };
-  // Storage data
-  averageStorageCost?: number;
-  // Sales data
-  averageDailySales?: number;
-  sa_name?: string; // Product article name from seller
 }

@@ -1,13 +1,8 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowUp, ArrowDown, TrendingUp, TrendingDown, Zap, Search } from "lucide-react";
+import { ArrowUp, ArrowDown, TrendingUp, TrendingDown, Zap } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useState } from "react";
-import { Store } from "@/types/store";
-import { Button } from "@/components/ui/button";
-import FetchProductDataDialog from "@/components/supplies/FetchProductDataDialog";
-import { useToast } from "@/hooks/use-toast";
 
 interface Product {
   name: string;
@@ -18,52 +13,15 @@ interface Product {
   margin?: number;
   returnCount?: number;
   category?: string;
-  nmId?: number; // Add nmId for identification
-  averageStorageCost?: number; // Add storage cost
-  averageDailySales?: number; // Add average daily sales
 }
 
 interface ProductsAnalyticsProps {
   profitableProducts: Product[];
   unprofitableProducts: Product[];
-  selectedStore?: Store | null;
 }
 
-const ProductsAnalytics = ({ profitableProducts, unprofitableProducts, selectedStore }: ProductsAnalyticsProps) => {
+const ProductsAnalytics = ({ profitableProducts, unprofitableProducts }: ProductsAnalyticsProps) => {
   const isMobile = useIsMobile();
-  const [isDataDialogOpen, setIsDataDialogOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const { toast } = useToast();
-  
-  const handleFetchData = (product: Product) => {
-    if (!product.nmId) {
-      toast({
-        title: "Ошибка",
-        description: "У этого товара нет nmId",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setSelectedProduct(product);
-    setIsDataDialogOpen(true);
-  };
-  
-  const handleDataFetched = (data: {
-    nmId: number;
-    averageStorageCost: number;
-    averageDailySales: number;
-    brand: string;
-    vendorCode: string;
-    subject: string;
-    sa_name: string;
-  }) => {
-    // No need to update anything as this component doesn't manage the state of the products
-    toast({
-      title: "Данные получены",
-      description: `Получены данные для nmId: ${data.nmId}`,
-    });
-  };
   
   const ProductList = ({ products, isProfitable }: { products: Product[], isProfitable: boolean }) => {
     const textColorClass = isProfitable ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
@@ -149,34 +107,7 @@ const ProductsAnalytics = ({ profitableProducts, unprofitableProducts, selectedS
                       <span>Возвраты: {product.returnCount} шт.</span>
                     </div>
                   )}
-                  
-                  {/* Display additional data if we have it */}
-                  {product.averageStorageCost !== undefined && (
-                    <div className="flex items-center">
-                      <span>Хранение: {product.averageStorageCost.toFixed(2)} ₽/день</span>
-                    </div>
-                  )}
-                  
-                  {product.averageDailySales !== undefined && (
-                    <div className="flex items-center">
-                      <span>Продажи: {product.averageDailySales.toFixed(2)} шт/день</span>
-                    </div>
-                  )}
                 </div>
-                
-                {product.nmId && selectedStore && (
-                  <div className="mt-2">
-                    <Button
-                      variant="outline" 
-                      size="sm"
-                      className="w-full text-xs" 
-                      onClick={() => handleFetchData(product)}
-                    >
-                      <Search className="h-3 w-3 mr-1" />
-                      Получить данные
-                    </Button>
-                  </div>
-                )}
               </div>
             </div>
           );
@@ -214,16 +145,6 @@ const ProductsAnalytics = ({ profitableProducts, unprofitableProducts, selectedS
           <ProductList products={unprofitableProducts} isProfitable={false} />
         </CardContent>
       </Card>
-      
-      {/* Dialog for fetching product data by nmId */}
-      {selectedStore && (
-        <FetchProductDataDialog
-          open={isDataDialogOpen}
-          onOpenChange={setIsDataDialogOpen}
-          onDataFetched={handleDataFetched}
-          selectedStore={selectedStore}
-        />
-      )}
     </div>
   );
 };
