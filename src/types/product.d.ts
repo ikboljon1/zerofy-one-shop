@@ -1,5 +1,4 @@
 
-
 interface Product {
   nmID: number;
   vendorCode: string;
@@ -31,5 +30,12 @@ interface Product {
     totalStorageCost: number; // Общая стоимость хранения за период
     periodDays: number;       // Количество дней в периоде
   };
-}
 
+  // Данные о продажах
+  salesData?: {
+    averageDailySales: number; // Среднее количество продаж в день
+    totalSales: number;        // Общее количество продаж за период
+    periodDays: number;        // Количество дней в периоде
+    revenue: number;           // Общая выручка за период
+  };
+}

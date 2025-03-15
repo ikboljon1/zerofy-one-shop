@@ -296,6 +296,54 @@ export const calculateDailyStorageCost = (storageData: PaidStorageItem[]): Map<n
   return productsStorage;
 };
 
+/**
+ * Рассчитать средние продажи в день по товарам
+ * @param salesData массив данных о продажах
+ * @param period количество дней в периоде
+ */
+export const calculateDailySalesMetrics = (
+  salesData: any[], 
+  period: number = 30
+): Map<number, { 
+  averageDailySales: number, 
+  totalSales: number, 
+  revenue: number, 
+  days: number 
+}> => {
+  const productSales = new Map<number, { 
+    totalSales: number, 
+    revenue: number,
+    averageDailySales: number,
+    days: number
+  }>();
+  
+  // Группируем данные по nmId
+  salesData.forEach(item => {
+    if (item.nmId) {
+      if (!productSales.has(item.nmId)) {
+        productSales.set(item.nmId, { 
+          totalSales: 0, 
+          revenue: 0,
+          averageDailySales: 0,
+          days: period
+        });
+      }
+      
+      const entry = productSales.get(item.nmId)!;
+      entry.totalSales += 1; // Увеличиваем количество продаж
+      entry.revenue += item.priceWithDisc || 0; // Добавляем выручку от продажи
+    }
+  });
+  
+  // Вычисляем средние продажи в день
+  productSales.forEach((value, key) => {
+    const days = period || 30; // По умолчанию 30 дней, если период не указан
+    value.averageDailySales = value.totalSales / days;
+  });
+  
+  return productSales;
+};
+
 // For demo or testing purposes
 export const getMockPaidStorageData = (): PaidStorageItem[] => {
   return Array(20).fill(null).map((_, index) => ({
@@ -308,7 +356,7 @@ export const getMockPaidStorageData = (): PaidStorageItem[] => {
     chrtId: 200000 + index,
     size: ['S', 'M', 'L', 'XL', 'XXL'][index % 5],
     barcode: `2000000${index}`,
-    subject: ['Футболка', 'Джинсы', 'Куртка', 'Обувь', 'Аксессу��ры'][index % 5],
+    subject: ['Футболка', 'Джинсы', 'Куртка', 'Обувь', 'Аксессуары'][index % 5],
     brand: ['Nike', 'Adidas', 'Puma', 'Reebok', 'New Balance'][index % 5],
     vendorCode: `A${1000 + index}`,
     nmId: 300000 + index,
@@ -392,4 +440,40 @@ export const togglePreferredWarehouse = (userId: string, warehouseId: number): n
     console.error('Ошибка при обновлении предпочтительных складов:', error);
     return getPreferredWarehouses(userId);
   }
+};
+
+/**
+ * Генерирует демо-данные о продажах товаров
+ * @param productIds массив идентификаторов товаров
+ * @param days количество дней
+ */
+export const getMockSalesData = (productIds: number[], days: number = 30): any[] => {
+  const salesData: any[] = [];
+  
+  // Создаем демо-данные продаж для каждого товара
+  productIds.forEach(productId => {
+    // Для каждого товара генерируем разное количество продаж
+    const salesCount = Math.floor(Math.random() * 5) + 1; // от 1 до 5 продаж в день
+    
+    // Создаем продажи за указанный период
+    for (let day = 0; day < days; day++) {
+      const date = new Date();
+      date.setDate(date.getDate() - day);
+      
+      // Случайное количество продаж для этого дня
+      const dailySales = Math.floor(Math.random() * salesCount) + 1;
+      
+      for (let i = 0; i < dailySales; i++) {
+        salesData.push({
+          date: date.toISOString().split('T')[0],
+          nmId: productId,
+          priceWithDisc: Math.floor(Math.random() * 5000) + 1000, // Цена от 1000 до 6000
+          forPay: Math.floor(Math.random() * 4000) + 800, // Сумма к получению
+          isReturn: Math.random() > 0.95 // 5% вероятность что это возврат
+        });
+      }
+    }
+  });
+  
+  return salesData;
 };
