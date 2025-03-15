@@ -478,7 +478,10 @@ export const fetchSalesReport = async (
     return response.data;
   } catch (error: any) {
     console.error('Ошибка при получении отчета о продажах:', error);
-    throw new Error(error.detail || 'Не удалось получить отчет о продажах');
+    if (error.response) {
+      console.error('Ответ API:', error.response.status, error.response.data);
+    }
+    throw new Error(error.detail || error.message || 'Не удалось получить отчет о продажах');
   }
 };
 
@@ -519,7 +522,7 @@ export const fetchAllSalesReport = async (
       const prevRrdid = nextRrdid;
       nextRrdid = data[data.length - 1]?.rrd_id || 0;
       
-      console.log(`Страница ${pageCount}: получено ${data.length} записей, последний rrdid: ${nextRrdid}`);
+      console.log(`Страница ${pageCount}: п��лучено ${data.length} записей, последний rrdid: ${nextRrdid}`);
       
       // Если вернулось меньше записей, чем размер страницы, или если rrdid не изменился, значит данных больше нет
       if (data.length < 100000 || nextRrdid === 0 || nextRrdid === prevRrdid) {
@@ -544,6 +547,12 @@ export const fetchLastMonthSalesData = async (apiKey: string): Promise<Map<numbe
   try {
     console.log('Получение данных о продажах за последний месяц...');
     
+    // Проверка API ключа
+    if (!apiKey || apiKey.trim() === '') {
+      console.error('API ключ отсутствует или пустой');
+      return new Map();
+    }
+    
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(endDate.getDate() - 30); // Последние 30 дней
@@ -551,53 +560,21 @@ export const fetchLastMonthSalesData = async (apiKey: string): Promise<Map<numbe
     const dateFrom = startDate.toISOString().split('T')[0];
     const dateTo = endDate.toISOString().split('T')[0];
     
-    console.log(`Запрос данных продаж за период: ${dateFrom} - ${dateTo}`);
+    console.log(`ЗАПРОС РЕАЛЬНЫХ ДАННЫХ ПРОДАЖ за период: ${dateFrom} - ${dateTo}`);
     
-    // Создаем кеш в локальном хранилище для избежания частых запросов к API
-    const cacheKey = `sales_data_${dateFrom}_${dateTo}_${apiKey.substring(0, 10)}`;
-    const cacheExpiryKey = `${cacheKey}_expires`;
-    
-    // Проверяем наличие кеша и его актуальность
-    const cachedData = localStorage.getItem(cacheKey);
-    const cacheExpiry = localStorage.getItem(cacheExpiryKey);
-    const now = Date.now();
-    
-    // Используем кеш, если он существует и не истек срок его действия
-    if (cachedData && cacheExpiry && now < parseInt(cacheExpiry)) {
-      try {
-        console.log('Использование кешированных данных о продажах');
-        const parsedCache = JSON.parse(cachedData);
-        return new Map(parsedCache);
-      } catch (e) {
-        console.error('Ошибка при разборе кешированных данных:', e);
-        // Если возникла ошибка при разборе кеша, удаляем его
-        localStorage.removeItem(cacheKey);
-        localStorage.removeItem(cacheExpiryKey);
-      }
-    }
-    
-    // Если нет кеша или он устарел, делаем новый запрос к API
-    console.log('Кеш отсутствует или устарел, запрашиваем свежие данные от API');
+    // Создаем идентификатор запроса для логирования
+    const requestId = Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
+    console.log(`[${requestId}] Начало запроса данных о продажах`);
     
     // Получаем данные продаж с API
     const salesData = await fetchAllSalesReport(apiKey, dateFrom, dateTo);
     
     if (!salesData || salesData.length === 0) {
-      console.log('API не вернул данных о продажах');
-      // Ищем устаревший кеш для использования в качестве запасного варианта
-      if (cachedData) {
-        console.log('Используем устаревший кеш в качестве запасного варианта');
-        try {
-          const parsedCache = JSON.parse(cachedData);
-          return new Map(parsedCache);
-        } catch (e) {
-          console.error('Ошибка при разборе устаревшего кеша:', e);
-        }
-      }
+      console.log(`[${requestId}] API не вернул данных о продажах`);
       return new Map();
     }
     
-    console.log(`Получены данные о продажах: ${salesData.length} записей`);
+    console.log(`[${requestId}] Получены данные о продажах: ${salesData.length} записей`);
     
     // Рассчитываем средние продажи в день для каждого товара
     const result = new Map<number, number>();
@@ -606,8 +583,10 @@ export const fetchLastMonthSalesData = async (apiKey: string): Promise<Map<numbe
     const salesByNmId = new Map<number, { totalSales: number; uniqueDays: Set<string> }>();
     
     // Обрабатываем только записи с типом "Продажа"
+    let salesCount = 0;
     for (const record of salesData) {
       if (record.doc_type_name === 'Продажа') {
+        salesCount++;
         const nmId = record.nm_id;
         if (!nmId) continue;
         
@@ -624,6 +603,8 @@ export const fetchLastMonthSalesData = async (apiKey: string): Promise<Map<numbe
       }
     }
     
+    console.log(`[${requestId}] Найдено ${salesCount} записей с типом "Продажа"`);
+    
     // Рассчитываем средние продажи для каждого товара
     salesByNmId.forEach((data, nmId) => {
       // Определяем количество дней с продажами или общее количество дней в периоде
@@ -636,41 +617,18 @@ export const fetchLastMonthSalesData = async (apiKey: string): Promise<Map<numbe
       result.set(nmId, parseFloat(averageSales.toFixed(1)));
     });
     
-    console.log(`Рассчитаны средние продажи для ${result.size} товаров`);
+    console.log(`[${requestId}] Рассчитаны средние продажи для ${result.size} товаров`);
+    console.log(`[${requestId}] Пример данных:`, Array.from(result.entries()).slice(0, 5));
     
-    // Кешируем результат в localStorage для уменьшения количества запросов к API
-    try {
-      localStorage.setItem(cacheKey, JSON.stringify([...result]));
-      // Устанавливаем время жизни кеша на 1 час
-      localStorage.setItem(cacheExpiryKey, (now + 60 * 60 * 1000).toString());
-      console.log('Данные о продажах сохранены в кеш до', new Date(now + 60 * 60 * 1000).toLocaleString());
-    } catch (e) {
-      console.error('Ошибка при кешировании данных продаж:', e);
-    }
+    // Отправляем событие об обновлении данных о продажах
+    const salesDataUpdatedEvent = new CustomEvent('salesDataUpdated', { 
+      detail: { timestamp: new Date(), count: result.size } 
+    });
+    window.dispatchEvent(salesDataUpdatedEvent);
     
     return result;
   } catch (error) {
     console.error('Ошибка при получении данных о продажах за последний месяц:', error);
-    
-    // В случае ошибки пытаемся использовать кешированные данные
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(endDate.getDate() - 30);
-    const dateFrom = startDate.toISOString().split('T')[0];
-    const dateTo = endDate.toISOString().split('T')[0];
-    const cacheKey = `sales_data_${dateFrom}_${dateTo}_${apiKey.substring(0, 10)}`;
-    
-    const cachedData = localStorage.getItem(cacheKey);
-    if (cachedData) {
-      console.log('Ошибка API. Используем кешированные данные в качестве запасного варианта');
-      try {
-        const parsedCache = JSON.parse(cachedData);
-        return new Map(parsedCache);
-      } catch (e) {
-        console.error('Ошибка при разборе кешированных данных:', e);
-      }
-    }
-    
     console.log('Невозможно получить реальные данные о продажах. Возвращаем пустой результат.');
     return new Map();
   }
@@ -830,7 +788,7 @@ export const getMockSalesData = (productIds: number[], days: number = 30): any[]
       const date = new Date();
       date.setDate(date.getDate() - day);
       
-      // Случайное количество продаж для этого дня
+      // Сл��чайное количество продаж для этого дня
       const dailySales = Math.floor(Math.random() * salesCount) + 1;
       
       for (let i = 0; i < dailySales; i++) {

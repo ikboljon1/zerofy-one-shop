@@ -29,7 +29,7 @@ const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales, storeId }) => {
     .filter(sale => sale.priceWithDisc < 0 || sale.isReturn === true)
     .reduce((sum, sale) => sum + Math.abs(sale.priceWithDisc), 0);
   
-  // Добавляем состояние для прослушивания событий обновления себестоимости
+  // Добавляем состояние для прослушивания событий обновления данных
   const [refreshKey, setRefreshKey] = useState(0);
   
   useEffect(() => {
@@ -38,10 +38,17 @@ const SalesMetrics: React.FC<SalesMetricsProps> = ({ sales, storeId }) => {
       setRefreshKey(prev => prev + 1);
     };
     
+    const handleSalesDataUpdate = (event: CustomEvent) => {
+      console.log('Получено событие обновления данных о продажах:', event.detail);
+      setRefreshKey(prev => prev + 1);
+    };
+    
     window.addEventListener('costPriceUpdated', handleCostPriceUpdate);
+    window.addEventListener('salesDataUpdated', handleSalesDataUpdate as EventListener);
     
     return () => {
       window.removeEventListener('costPriceUpdated', handleCostPriceUpdate);
+      window.removeEventListener('salesDataUpdated', handleSalesDataUpdate as EventListener);
     };
   }, []);
   
