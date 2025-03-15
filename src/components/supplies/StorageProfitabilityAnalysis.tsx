@@ -99,7 +99,7 @@ const SalesDataDialog: React.FC<SalesDataDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Получение данных о продажах</DialogTitle>
           <DialogDescription>
-            Выберите период для получения средних показателей продаж
+            Выберите период для получения ср��дних показателей продаж
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -617,7 +617,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         commissions
       } = await fetchAllProductData(apiKey, nmIds, dateFrom, dateTo);
 
-      // Обновляем состояния с полученными данными
       setSellingPrices(prev => {
         const newPrices = { ...prev };
         for (const [nmId, price] of Object.entries(prices)) {
@@ -658,7 +657,6 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         return newCommissions;
       });
 
-      // Сохраняем данные в localStorage
       localStorage.setItem('product_cost_prices', JSON.stringify(costPrices));
       localStorage.setItem('product_selling_prices', JSON.stringify(prices));
       localStorage.setItem('product_wb_commissions', JSON.stringify(commissions));
@@ -820,3 +818,65 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     
     if (result.profitMarginPercentage < 15) {
       factors.push({
+        title: "Низкая маржа",
+        icon: <TrendingDown className="h-4 w-4 text-rose-500" />,
+        description: "Низкая маржинальность товара",
+        value: `${Math.round(result.profitMarginPercentage)}%`
+      });
+    }
+    
+    if (result.storageCostToRevenueRatio > 0.1) {
+      factors.push({
+        title: "Высокая стоимость хранения",
+        icon: <WarehouseIcon className="h-4 w-4 text-amber-500" />,
+        description: "Затраты на хранение превышают 10% от стоимости товара",
+        value: `${Math.round(result.storageCostToRevenueRatio * 100)}%`
+      });
+    }
+    
+    if (result.daysOfInventory > 60) {
+      factors.push({
+        title: "Медленная оборачиваемость",
+        icon: <Clock className="h-4 w-4 text-amber-500" />,
+        description: "Товар продается слишком медленно",
+        value: formatDaysOfInventory(result.daysOfInventory)
+      });
+    }
+    
+    return (
+      <div className="space-y-2">
+        {factors.map((factor, index) => (
+          <div key={index} className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-1">
+              {factor.icon}
+              <span>{factor.title}</span>
+            </div>
+            <span className="font-medium">{factor.value}</span>
+          </div>
+        ))}
+        {factors.length === 0 && (
+          <div className="text-xs text-muted-foreground">
+            Нет критических факторов
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      <AnalysisPeriodSelector
+        startDate={analysisStartDate}
+        endDate={analysisEndDate}
+        onStartDateChange={setAnalysisStartDate}
+        onEndDateChange={setAnalysisEndDate}
+        onApply={loadDataFromWildberriesApi}
+        isLoading={isApiDataLoading}
+      />
+      
+      {/* Остальные компоненты интерфейса */}
+    </div>
+  );
+};
+
+export default StorageProfitabilityAnalysis;
