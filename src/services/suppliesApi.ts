@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import api, { setApiKey } from './api';
 import { SupplyItem, SupplyOptionsResponse, Warehouse, WarehouseCoefficient, PaidStorageItem } from '@/types/supplies';
@@ -317,5 +316,189 @@ export const togglePreferredWarehouse = (userId: string, warehouseId: number): n
   } catch (error) {
     console.error('Ошибка при обновлении предпочтительных складов:', error);
     return getPreferredWarehouses(userId);
+  }
+};
+
+/**
+ * Fetches the average storage cost for a specific nmId
+ */
+export const fetchAverageStorageCost = async (
+  apiKey: string,
+  nmId: number,
+  dateFrom: string,
+  dateTo: string
+): Promise<{ averageStorageCost: number; brand: string; vendorCode: string; subject: string } | null> => {
+  try {
+    console.log(`Fetching average storage cost for nmId: ${nmId}`);
+    
+    // Step 1: Create the report task
+    const taskId = await createPaidStorageReportTask(apiKey, dateFrom, dateTo);
+    console.log(`Created paid storage report task: ${taskId}`);
+    
+    if (!taskId) {
+      throw new Error("Failed to create storage report task");
+    }
+    
+    // Step 2: Wait for the task to complete
+    const isCompleted = await waitForPaidStorageReportCompletion(apiKey, taskId);
+    if (!isCompleted) {
+      throw new Error("Storage report task did not complete successfully");
+    }
+    
+    // Step 3: Download the report
+    const reportData = await downloadPaidStorageReport(apiKey, taskId);
+    
+    // Step 4: Process the data for the specific nmId
+    if (!reportData || reportData.length === 0) {
+      return null;
+    }
+    
+    // Filter and extract data for the specified nmId
+    const nmIdData = reportData.filter(item => Number(item.nmId) === nmId);
+    
+    if (nmIdData.length === 0) {
+      console.log(`No storage data found for nmId: ${nmId}`);
+      return null;
+    }
+    
+    // Calculate the average storage cost
+    let totalCost = 0;
+    for (const item of nmIdData) {
+      totalCost += item.warehousePrice || 0;
+    }
+    
+    const averageStorageCost = totalCost / nmIdData.length;
+    const firstItem = nmIdData[0];
+    
+    return {
+      averageStorageCost,
+      brand: firstItem.brand || "",
+      vendorCode: firstItem.vendorCode || "",
+      subject: firstItem.subject || ""
+    };
+  } catch (error) {
+    console.error("Error fetching average storage cost:", error);
+    return null;
+  }
+};
+
+/**
+ * Fetches the average daily sales for a specific nmId
+ */
+export const fetchAverageDailySales = async (
+  apiKey: string,
+  nmId: number,
+  dateFrom: string,
+  dateTo: string
+): Promise<{ averageDailySales: number; sa_name: string } | null> => {
+  try {
+    console.log(`Fetching average daily sales for nmId: ${nmId}`);
+    
+    // Format dates
+    const formattedDateFrom = dateFrom.split('T')[0];
+    const formattedDateTo = dateTo.split('T')[0];
+    
+    const url = "https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod";
+    
+    // We'll use pagination to get all data
+    let allData: any[] = [];
+    let nextRrdId = 0;
+    
+    while (true) {
+      setApiKey(apiKey);
+      const params = {
+        dateFrom: formattedDateFrom,
+        dateTo: formattedDateTo,
+        rrdid: nextRrdId,
+        limit: 100000
+      };
+      
+      const response = await api.get(url, { params });
+      const data = response.data;
+      
+      if (!data || data.length === 0) {
+        break;
+      }
+      
+      allData = allData.concat(data);
+      
+      if (data.length > 0) {
+        nextRrdId = data[data.length - 1].rrd_id || 0;
+        if (nextRrdId === 0) break;
+      } else {
+        break;
+      }
+    }
+    
+    // Filter data for the specific nmId
+    const nmIdData = allData.filter(item => 
+      Number(item.nm_id) === nmId && item.doc_type_name === 'Продажа'
+    );
+    
+    if (nmIdData.length === 0) {
+      console.log(`No sales data found for nmId: ${nmId}`);
+      return null;
+    }
+    
+    // Calculate total sales quantity
+    let totalSalesQuantity = 0;
+    let sa_name = "";
+    
+    for (const item of nmIdData) {
+      totalSalesQuantity += item.quantity || 0;
+      if (!sa_name && item.sa_name) {
+        sa_name = item.sa_name;
+      }
+    }
+    
+    // Calculate days in period
+    const startDate = new Date(formattedDateFrom);
+    const endDate = new Date(formattedDateTo);
+    const daysInPeriod = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    
+    // Calculate average daily sales
+    const averageDailySales = daysInPeriod > 0 ? totalSalesQuantity / daysInPeriod : 0;
+    
+    return {
+      averageDailySales,
+      sa_name: sa_name || ""
+    };
+  } catch (error) {
+    console.error("Error fetching average daily sales:", error);
+    return null;
+  }
+};
+
+/**
+ * Fetches complete product data by nmId including storage and sales information
+ */
+export const fetchProductDataByNmId = async (
+  apiKey: string,
+  nmId: number,
+  dateFrom: string,
+  dateTo: string
+): Promise<{
+  storageData: { averageStorageCost: number; brand: string; vendorCode: string; subject: string } | null;
+  salesData: { averageDailySales: number; sa_name: string } | null;
+}> => {
+  try {
+    console.log(`Fetching complete product data for nmId: ${nmId}`);
+    
+    // Fetch storage data
+    const storageData = await fetchAverageStorageCost(apiKey, nmId, dateFrom, dateTo);
+    
+    // Fetch sales data
+    const salesData = await fetchAverageDailySales(apiKey, nmId, dateFrom, dateTo);
+    
+    return {
+      storageData,
+      salesData
+    };
+  } catch (error) {
+    console.error("Error fetching product data:", error);
+    return {
+      storageData: null,
+      salesData: null
+    };
   }
 };

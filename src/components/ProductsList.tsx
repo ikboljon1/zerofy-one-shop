@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Package, RefreshCw } from "lucide-react";
+import { Package, RefreshCw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import React from "react";
+import FetchProductDataDialog from "./supplies/FetchProductDataDialog";
 
 interface Product {
   nmID: number;
@@ -30,6 +31,11 @@ interface Product {
     ppvz_for_pay?: number;
     retail_price?: number;
   };
+  // Storage data
+  averageStorageCost?: number;
+  // Sales data
+  averageDailySales?: number;
+  sa_name?: string; // Product article name from seller
 }
 
 interface ProductsListProps {
@@ -58,6 +64,7 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const [isDataDialogOpen, setIsDataDialogOpen] = useState(false);
 
   const calculateNetProfit = (product: Product) => {
     if (!product.expenses) return {
@@ -218,6 +225,74 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
       console.error('Error in fetchProductQuantities:', error);
       return {};
     }
+  };
+
+  const onProductDataFetched = (data: {
+    nmId: number;
+    averageStorageCost: number;
+    averageDailySales: number;
+    brand: string;
+    vendorCode: string;
+    subject: string;
+    sa_name: string;
+  }) => {
+    // Find the product with the matching nmId
+    const updatedProducts = products.map(product => {
+      if (product.nmID === data.nmId) {
+        return {
+          ...product,
+          brand: data.brand || product.brand,
+          vendorCode: data.vendorCode || product.vendorCode,
+          subject: data.subject || product.subject,
+          averageStorageCost: data.averageStorageCost,
+          averageDailySales: data.averageDailySales,
+          sa_name: data.sa_name
+        };
+      }
+      return product;
+    });
+    
+    // If we didn't find a matching product, create a new one
+    const productExists = updatedProducts.some(p => p.nmID === data.nmId);
+    
+    if (!productExists) {
+      // Create a minimal product with the fetched data
+      const newProduct: Product = {
+        nmID: data.nmId,
+        title: `Товар ${data.nmId}`,
+        brand: data.brand,
+        vendorCode: data.vendorCode,
+        subject: data.subject,
+        averageStorageCost: data.averageStorageCost,
+        averageDailySales: data.averageDailySales,
+        sa_name: data.sa_name,
+        photos: [{
+          big: "",
+          c246x328: ""
+        }],
+        expenses: {
+          logistics: 0,
+          storage: 0,
+          penalties: 0,
+          acceptance: 0,
+          deductions: 0
+        }
+      };
+      
+      updatedProducts.push(newProduct);
+    }
+    
+    setProducts(updatedProducts);
+    
+    // Save to local storage
+    if (selectedStore) {
+      localStorage.setItem(`products_${selectedStore.id}`, JSON.stringify(updatedProducts));
+    }
+    
+    toast({
+      title: "Успешно",
+      description: `Данные для товара с nmId ${data.nmId} обновлены`
+    });
   };
 
   const syncProducts = async () => {
@@ -447,11 +522,29 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
           <Package className="h-5 w-5" />
           <h2 className="text-xl font-semibold">Товары</h2>
         </div>
-        <Button onClick={syncProducts} disabled={isLoading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-          Синхронизировать
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setIsDataDialogOpen(true)} 
+            disabled={!selectedStore}
+          >
+            <Search className="h-4 w-4 mr-2" />
+            По nmId
+          </Button>
+          <Button onClick={syncProducts} disabled={isLoading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Синхронизировать
+          </Button>
+        </div>
       </div>
+
+      {/* Dialog for fetching product data by nmId */}
+      <FetchProductDataDialog
+        open={isDataDialogOpen}
+        onOpenChange={setIsDataDialogOpen}
+        onDataFetched={onProductDataFetched}
+        selectedStore={selectedStore}
+      />
 
       {products.length === 0 ? (
         <Card className="border-dashed">
@@ -521,6 +614,31 @@ const ProductsList = ({ selectedStore }: ProductsListProps) => {
                         placeholder="Введите себестоимость"
                       />
                     </div>
+                    
+                    {/* Display additional data if we have it */}
+                    {(product.averageStorageCost !== undefined || product.averageDailySales !== undefined) && (
+                      <div className="space-y-1.5 border-t pt-2">
+                        {product.averageStorageCost !== undefined && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Стоимость хранения (день):</span>
+                            <span>{product.averageStorageCost.toFixed(2)} ₽</span>
+                          </div>
+                        )}
+                        {product.averageDailySales !== undefined && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Средние продажи (день):</span>
+                            <span>{product.averageDailySales.toFixed(2)} шт.</span>
+                          </div>
+                        )}
+                        {product.sa_name && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Артикул продавца:</span>
+                            <span>{product.sa_name}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
                     <div className="space-y-1.5 border-t pt-2">
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Продано за 30 дней:</span>

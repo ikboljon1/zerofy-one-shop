@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { Package, RefreshCw } from "lucide-react";
+import { Package, RefreshCw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import ProductsList from "@/components/ProductsList";
@@ -12,6 +11,7 @@ import ProductsComponent from "@/components/Products";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CostPriceMetrics } from "@/components/supplies";
 import axios from "axios";
+import FetchProductDataDialog from "@/components/supplies/FetchProductDataDialog";
 
 interface ProductsProps {
   selectedStore?: Store | null;
@@ -34,6 +34,7 @@ const Products = ({ selectedStore }: ProductsProps) => {
   const [profitableProducts, setProfitableProducts] = useState<ProductData[]>([]);
   const [unprofitableProducts, setUnprofitableProducts] = useState<ProductData[]>([]);
   const [lastUpdateDate, setLastUpdateDate] = useState<string | null>(null);
+  const [isDataDialogOpen, setIsDataDialogOpen] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
@@ -177,6 +178,23 @@ const Products = ({ selectedStore }: ProductsProps) => {
       setIsLoading(false);
     }
   };
+  
+  const handleProductDataFetched = async (data: {
+    nmId: number;
+    averageStorageCost: number;
+    averageDailySales: number;
+    brand: string;
+    vendorCode: string;
+    subject: string;
+    sa_name: string;
+  }) => {
+    // We've fetched data for a specific product
+    // Here we could do something with it at the page level if needed
+    toast({
+      title: "Данные получены",
+      description: `Получены данные для nmId: ${data.nmId}`,
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -185,15 +203,34 @@ const Products = ({ selectedStore }: ProductsProps) => {
           <Package className="h-5 w-5" />
           <h1 className="text-2xl font-semibold">Товары</h1>
         </div>
-        <Button 
-          onClick={handleSync} 
-          disabled={isLoading || !selectedStore}
-          size={isMobile ? "sm" : "default"}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-          {isMobile ? "Синхр." : "Синхронизировать"}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsDataDialogOpen(true)}
+            disabled={!selectedStore}
+            size={isMobile ? "sm" : "default"}
+          >
+            <Search className="h-4 w-4 mr-2" />
+            {isMobile ? "По nmId" : "Получить по nmId"}
+          </Button>
+          <Button 
+            onClick={handleSync} 
+            disabled={isLoading || !selectedStore}
+            size={isMobile ? "sm" : "default"}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            {isMobile ? "Синхр." : "Синхронизировать"}
+          </Button>
+        </div>
       </div>
+      
+      {/* Dialog for fetching product data by nmId */}
+      <FetchProductDataDialog
+        open={isDataDialogOpen}
+        onOpenChange={setIsDataDialogOpen}
+        onDataFetched={handleProductDataFetched}
+        selectedStore={selectedStore}
+      />
       
       {lastUpdateDate && (
         <div className="flex items-center justify-end">
