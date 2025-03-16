@@ -1,5 +1,4 @@
-
-// Минимальная структура для API-интерфейса
+// ��инимальная структура для API-интерфейса
 export const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1'];
 
 // Пустые данные для состояния по умолчанию при превышении лимита
@@ -224,13 +223,14 @@ export const fetchAverageDailySalesFromAPI = async (
   dateTo: string
 ): Promise<Record<number, number>> => {
   try {
-    console.log(`[API] Requesting sales data for period: ${dateFrom} - ${dateTo}`);
+    console.log(`[FETCH-SALES-API] Запрос данных о продажах за период: ${dateFrom} - ${dateTo}`);
+    console.log(`[FETCH-SALES-API] API ключ: ${apiKey ? apiKey.substring(0, 5) + '...' + apiKey.substring(apiKey.length - 5) : 'отсутствует'}`);
     
     // Проверяем, есть ли уже кэшированные данные для этого периода
     const cachedData = getAverageDailySalesByPeriod(dateFrom, dateTo);
     if (cachedData) {
-      console.log(`[API] Using cached data for period ${dateFrom} - ${dateTo}`);
-      console.log(`[API] Cache contains data for ${Object.keys(cachedData).length} products`);
+      console.log(`[FETCH-SALES-API] Используем кэшированные данные для периода ${dateFrom} - ${dateTo}`);
+      console.log(`[FETCH-SALES-API] Кэш содержит данные для ${Object.keys(cachedData).length} товаров`);
       
       // Отправка события для уведомления компонентов об обновлении данных
       const event = new CustomEvent('salesDataUpdated', { 
@@ -246,21 +246,28 @@ export const fetchAverageDailySalesFromAPI = async (
       return cachedData;
     }
     
-    console.log(`[API] Cache miss, fetching fresh data from API for ${dateFrom} to ${dateTo}`);
+    console.log(`[FETCH-SALES-API] Кэш не найден, запрашиваем свежие данные из API за период ${dateFrom} - ${dateTo}`);
     
     // Получение всех данных с пагинацией
+    const url = "https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod";
+    console.log(`[FETCH-SALES-API] Базовый URL для запроса: ${url}`);
+    
     const allData = await fetchAllReportDetails(apiKey, dateFrom, dateTo);
     
     if (!allData || allData.length === 0) {
-      console.warn('[API] No data returned from API');
+      console.warn('[FETCH-SALES-API] API не вернул данных');
       return {};
     }
     
-    console.log(`[API] Received ${allData.length} sales records from API`);
+    console.log(`[FETCH-SALES-API] Получено ${allData.length} записей о продажах из API`);
     
     // Рассчитываем среднее количество продаж в день для каждого товара
     const averageSalesPerDay = calculateAverageDailySalesPerProduct(allData, dateFrom, dateTo);
-    console.log(`[API] Calculated average sales for ${Object.keys(averageSalesPerDay).length} products`);
+    console.log(`[FETCH-SALES-API] Рассчитаны средние продажи для ${Object.keys(averageSalesPerDay).length} товаров`);
+    
+    // Логируем первые 5 товаров для отладки
+    const top5Products = Object.entries(averageSalesPerDay).slice(0, 5);
+    console.log(`[FETCH-SALES-API] Примеры средних продаж (первые 5 товаров): ${JSON.stringify(top5Products)}`);
     
     // Сохраняем данные в localStorage для использования в других компонентах
     saveAverageDailySales(averageSalesPerDay, dateFrom, dateTo);
@@ -278,14 +285,17 @@ export const fetchAverageDailySalesFromAPI = async (
     
     return averageSalesPerDay;
   } catch (error) {
-    console.error('[API] Error fetching sales data:', error);
+    console.error('[FETCH-SALES-API] Ошибка при получении данных о продажах:', error);
+    if (error instanceof Error) {
+      console.error(`[FETCH-SALES-API] Сообщение ошибки: ${error.message}`);
+      console.error(`[FETCH-SALES-API] Стек вызовов: ${error.stack}`);
+    }
     return {};
   }
 };
 
 /**
  * Загружает детальный отчет с Wildberries API с поддержкой пагинации
- * Реализация в соответствии с функцией fetch_wb_report_detail из Python-скрипта
  */
 const fetchReportDetail = async (
   apiKey: string, 
@@ -308,34 +318,53 @@ const fetchReportDetail = async (
       "limit": limit,
     };
     
-    console.log(`[API] Загрузка отчета с rrdid ${rrdid}...`);
+    const fullUrl = `${url}?dateFrom=${dateFrom}&dateTo=${dateTo}&rrdid=${rrdid}&limit=${limit}`;
+    
+    console.log(`[FETCH-DETAIL] Запрос отчета с rrdid ${rrdid}...`);
+    console.log(`[FETCH-DETAIL] Полный URL: ${fullUrl}`);
+    console.log(`[FETCH-DETAIL] Заголовки: Authorization: ${apiKey ? apiKey.substring(0, 5) + '...' + apiKey.substring(apiKey.length - 5) : 'отсутствует'}`);
+    
     const response = await fetch(`${url}?dateFrom=${dateFrom}&dateTo=${dateTo}&rrdid=${rrdid}&limit=${limit}`, {
       headers
     });
     
+    console.log(`[FETCH-DETAIL] Статус ответа: ${response.status} ${response.statusText}`);
+    
     if (!response.ok) {
-      throw new Error(`[API] Запрос вернул ошибку: ${response.status} ${response.statusText}`);
+      console.error(`[FETCH-DETAIL] Запрос вернул ошибку: ${response.status} ${response.statusText}`);
+      throw new Error(`[FETCH-DETAIL] Запрос вернул ошибку: ${response.status} ${response.statusText}`);
     }
     
     const data = await response.json();
+    
+    console.log(`[FETCH-DETAIL] Получено записей: ${data ? data.length : 0}`);
+    
+    if (data && data.length > 0) {
+      console.log(`[FETCH-DETAIL] Пример первой записи: ${JSON.stringify(data[0]).substring(0, 300)}...`);
+      console.log(`[FETCH-DETAIL] Пример последней записи: ${JSON.stringify(data[data.length - 1]).substring(0, 300)}...`);
+    }
     
     // Определяем ID для следующего запроса
     let nextRrdid = 0;
     if (data && data.length > 0) {
       const lastRecord = data[data.length - 1];
       nextRrdid = lastRecord.rrd_id || 0;
+      console.log(`[FETCH-DETAIL] Следующий rrdid: ${nextRrdid}`);
     }
     
     return { data, nextRrdid };
   } catch (error) {
-    console.error("[API] Ошибка при загрузке отчета:", error);
+    console.error("[FETCH-DETAIL] Ошибка при загрузке отчета:", error);
+    if (error instanceof Error) {
+      console.error(`[FETCH-DETAIL] Сообщение ошибки: ${error.message}`);
+      console.error(`[FETCH-DETAIL] Стек вызовов: ${error.stack}`);
+    }
     return { data: [], nextRrdid: 0 };
   }
 };
 
 /**
  * Загружает все данные отчета с поддержкой пагинации
- * Реализация в соответствии с циклом while из Python-скрипта
  */
 const fetchAllReportDetails = async (apiKey: string, dateFrom: string, dateTo: string) => {
   let allData: any[] = [];
@@ -343,17 +372,18 @@ const fetchAllReportDetails = async (apiKey: string, dateFrom: string, dateTo: s
   let hasMoreData = true;
   let pageCount = 0;
   
-  console.log("[API] Начинаем пагинацию для получения всех данных отчета...");
+  console.log("[FETCH-ALL] Начинаем пагинацию для получения всех данных отчета...");
+  console.log(`[FETCH-ALL] Диапазон дат: ${dateFrom} - ${dateTo}`);
   
   while (hasMoreData) {
     pageCount++;
-    console.log(`[API] Загрузка страницы ${pageCount} с rrdid ${nextRrdid}...`);
+    console.log(`[FETCH-ALL] Загрузка страницы ${pageCount} с rrdid ${nextRrdid}...`);
     
     const result = await fetchReportDetail(apiKey, dateFrom, dateTo, nextRrdid);
     const data = result.data;
     
     if (!data || data.length === 0) {
-      console.log(`[API] Страница ${pageCount} вернула 0 строк, завершаем пагинацию.`);
+      console.log(`[FETCH-ALL] Страница ${pageCount} вернула 0 строк, завершаем пагинацию.`);
       hasMoreData = false;
       continue;
     }
@@ -364,32 +394,44 @@ const fetchAllReportDetails = async (apiKey: string, dateFrom: string, dateTo: s
     const prevRrdid = nextRrdid;
     nextRrdid = result.nextRrdid;
     
-    console.log(`[API] Страница ${pageCount} получено ${data.length} записей, последний rrdid: ${nextRrdid}`);
+    console.log(`[FETCH-ALL] Страница ${pageCount}: получено ${data.length} записей, последний rrdid: ${nextRrdid}`);
     
     // Если вернулось меньше записей, чем размер страницы, или если rrdid не изменился, значит данных больше нет
     if (data.length < 100000 || nextRrdid === 0 || nextRrdid === prevRrdid) {
-      console.log(`[API] Конец пагинации достигнут после ${pageCount} страниц. Всего записей: ${allData.length}`);
+      console.log(`[FETCH-ALL] Конец пагинации достигнут после ${pageCount} страниц. Всего записей: ${allData.length}`);
       hasMoreData = false;
     }
   }
   
-  console.log(`[API] Завершена загрузка всех страниц. Всего записей: ${allData.length}`);
+  console.log(`[FETCH-ALL] Завершена загрузка всех страниц. Всего записей: ${allData.length}`);
   return allData;
 };
 
 /**
  * Рассчитывает среднее количество продаж в день для каждого товара
- * Реализация в соответствии с функцией calculate_average_daily_sales_per_product из Python-скрипта
  */
 const calculateAverageDailySalesPerProduct = (data: any[], dateFrom: string, dateTo: string): Record<number, number> => {
+  console.log(`[CALC-AVG] Начинаем расчет средних продаж для ${data.length} записей за период ${dateFrom} - ${dateTo}`);
+  
   const salesByProduct: Record<number, {
     totalSalesQuantity: number
   }> = {};
   
+  // Логируем типы документов для отладки
+  const docTypes = new Set<string>();
+  data.forEach(record => {
+    if (record.doc_type_name) {
+      docTypes.add(record.doc_type_name);
+    }
+  });
+  console.log(`[CALC-AVG] Типы документов в данных: ${Array.from(docTypes).join(', ')}`);
+  
   // Суммируем количество продаж для каждого товара
   for (const record of data) {
     const nmId = record.nm_id;
-    if (!nmId) continue;
+    if (!nmId) {
+      continue;
+    }
     
     if (!salesByProduct[nmId]) {
       salesByProduct[nmId] = {
@@ -403,10 +445,14 @@ const calculateAverageDailySalesPerProduct = (data: any[], dateFrom: string, dat
     }
   }
   
+  console.log(`[CALC-AVG] Обработано товаров: ${Object.keys(salesByProduct).length}`);
+  
   // Рассчитываем количество дней в периоде
   const startDate = new Date(dateFrom);
   const endDate = new Date(dateTo);
   const daysInPeriod = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  
+  console.log(`[CALC-AVG] Количество дней в периоде: ${daysInPeriod}`);
   
   // Рассчитываем среднее количество продаж в день для каждого товара
   const averageSalesPerDay: Record<number, number> = {};
@@ -417,7 +463,13 @@ const calculateAverageDailySalesPerProduct = (data: any[], dateFrom: string, dat
     averageSalesPerDay[nmId] = parseFloat(averageSales.toFixed(2));
   }
   
-  console.log(`[API] Рассчитаны средние продажи для ${Object.keys(averageSalesPerDay).length} товаров за ${daysInPeriod} дней`);
+  // Логируем примеры средних продаж для отладки
+  const examples = Object.entries(averageSalesPerDay)
+    .slice(0, 5)
+    .map(([nmId, avg]) => `nmId ${nmId}: ${avg} шт/день`);
+  
+  console.log(`[CALC-AVG] Примеры средних продаж: ${examples.join(', ')}`);
+  console.log(`[CALC-AVG] Всего рассчитаны средние продажи для ${Object.keys(averageSalesPerDay).length} товаров за ${daysInPeriod} дней`);
   
   return averageSalesPerDay;
 };

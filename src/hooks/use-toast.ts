@@ -26,7 +26,8 @@ let count = 0
 
 function genId() {
   count = (count + 1) % Number.MAX_VALUE
-  return `${count}_${Date.now()}`  // Added timestamp to ensure uniqueness
+  const timestamp = Date.now().toString();
+  return `${count}_${timestamp}`  // Added timestamp to ensure uniqueness
 }
 
 type ActionType = typeof actionTypes
@@ -139,6 +140,7 @@ interface Toast extends Omit<ToasterToast, "id"> {}
 
 function toast({ ...props }: Toast) {
   console.log("[Toast] Creating new toast");
+  console.log(`[Toast] Title: "${props.title}", Description: "${props.description?.toString().substring(0, 50)}${props.description?.toString().length > 50 ? '...' : ''}"`);
   
   // Skip success notifications unless they are critical
   if (props.title === "Успех" || props.title?.toString().toLowerCase().includes("успешно")) {
@@ -158,13 +160,20 @@ function toast({ ...props }: Toast) {
     props.description = props.description.replace(/�/g, '');
   }
 
-  const update = (props: ToasterToast) =>
+  const update = (props: ToasterToast) => {
+    console.log(`[Toast] Updating toast with ID: ${id}`);
     dispatch({
       type: "UPDATE_TOAST",
       toast: { ...props, id },
-    })
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+    });
+  }
+  
+  const dismiss = () => {
+    console.log(`[Toast] Dismissing toast with ID: ${id}`);
+    dispatch({ type: "DISMISS_TOAST", toastId: id });
+  }
 
+  console.log(`[Toast] Dispatching ADD_TOAST action for toast with ID: ${id}`);
   dispatch({
     type: "ADD_TOAST",
     toast: {
@@ -177,6 +186,7 @@ function toast({ ...props }: Toast) {
     },
   })
 
+  console.log(`[Toast] Setting auto-dismiss timeout (5 seconds) for toast ID: ${id}`);
   setTimeout(dismiss, 5000);  // Auto dismiss after 5 seconds
 
   return {

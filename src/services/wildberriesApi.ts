@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import { WildberriesOrder, WildberriesSale } from "@/types/store";
 
@@ -109,19 +108,39 @@ const fetchReportDetail = async (apiKey: string, dateFrom: Date, dateTo: Date, r
       "limit": limit,
     };
     
-    console.log(`Fetching report detail from Wildberries API with rrdid ${rrdid}...`);
+    const fullUrl = `${url}?dateFrom=${formattedDateFrom}&dateTo=${formattedDateTo}&rrdid=${rrdid}&limit=${limit}`;
+    
+    console.log(`[API-REQUEST] Отправка запроса на: ${fullUrl}`);
+    console.log(`[API-REQUEST] Заголовки: Authorization: ${apiKey ? apiKey.substring(0, 5) + '...' + apiKey.substring(apiKey.length - 5) : 'отсутствует'}`);
+    console.log(`[API-REQUEST] Параметры: dateFrom=${formattedDateFrom}, dateTo=${formattedDateTo}, rrdid=${rrdid}, limit=${limit}`);
+    
     const response = await axios.get(url, { headers, params });
+    
+    console.log(`[API-RESPONSE] Статус: ${response.status} ${response.statusText}`);
+    console.log(`[API-RESPONSE] Получено записей: ${response.data ? response.data.length : 0}`);
+    
+    if (response.data && response.data.length > 0) {
+      console.log(`[API-RESPONSE] Первая запись: ${JSON.stringify(response.data[0]).substring(0, 300)}...`);
+      console.log(`[API-RESPONSE] Последняя запись: ${JSON.stringify(response.data[response.data.length - 1]).substring(0, 300)}...`);
+    } else {
+      console.log(`[API-RESPONSE] Данные отсутствуют или пустой массив`);
+    }
     
     // Определяем ID для следующего запроса в соответствии с Python-скриптом
     let nextRrdid = 0;
     if (response.data && response.data.length > 0) {
       const lastRecord = response.data[response.data.length - 1];
       nextRrdid = lastRecord.rrd_id || 0;
+      console.log(`[API-RESPONSE] Следующий rrdid: ${nextRrdid}`);
     }
     
     return { data: response.data, nextRrdid };
   } catch (error) {
-    console.error("Error fetching report detail:", error);
+    console.error("[API-ERROR] Ошибка при запросе отчета:", error);
+    if (axios.isAxiosError(error)) {
+      console.error(`[API-ERROR] Статус: ${error.response?.status} ${error.response?.statusText}`);
+      console.error(`[API-ERROR] Данные ответа:`, error.response?.data);
+    }
     return { data: null, nextRrdid: 0 };
   }
 };
@@ -136,17 +155,18 @@ const fetchAllReportDetails = async (apiKey: string, dateFrom: Date, dateTo: Dat
   let hasMoreData = true;
   let pageCount = 0;
   
-  console.log("Starting pagination process for all report details...");
+  console.log(`[API-PAGINATION] Начало процесса пагинации для загрузки полного отчета...`);
+  console.log(`[API-PAGINATION] Диапазон дат: ${formatDate(dateFrom)} - ${formatDate(dateTo)}`);
   
   while (hasMoreData) {
     pageCount++;
-    console.log(`Fetching page ${pageCount} with rrdid ${nextRrdid}...`);
+    console.log(`[API-PAGINATION] Загрузка страницы ${pageCount} с rrdid ${nextRrdid}...`);
     
     const result = await fetchReportDetail(apiKey, dateFrom, dateTo, nextRrdid);
     const data = result.data;
     
     if (!data || data.length === 0) {
-      console.log(`Page ${pageCount} returned no data, ending pagination.`);
+      console.log(`[API-PAGINATION] Страница ${pageCount} не вернула данных, завершаем пагинацию.`);
       hasMoreData = false;
       continue;
     }
@@ -157,16 +177,16 @@ const fetchAllReportDetails = async (apiKey: string, dateFrom: Date, dateTo: Dat
     const prevRrdid = nextRrdid;
     nextRrdid = result.nextRrdid;
     
-    console.log(`Page ${pageCount} received ${data.length} records, last rrdid: ${nextRrdid}`);
+    console.log(`[API-PAGINATION] Страница ${pageCount} получено ${data.length} записей, последний rrdid: ${nextRrdid}`);
     
     // Если вернулось меньше записей, чем размер страницы, или если rrdid не изменился, значит данных больше нет
     if (data.length < 100000 || nextRrdid === 0 || nextRrdid === prevRrdid) {
-      console.log(`End of pagination reached after ${pageCount} pages. Total records: ${allData.length}`);
+      console.log(`[API-PAGINATION] Конец пагинации достигнут после ${pageCount} страниц. Всего записей: ${allData.length}`);
       hasMoreData = false;
     }
   }
   
-  console.log(`Completed fetching all pages. Total records: ${allData.length}`);
+  console.log(`[API-PAGINATION] Завершена загрузка всех страниц. Всего записей: ${allData.length}`);
   return allData;
 };
 
@@ -449,11 +469,26 @@ export const fetchWildberriesOrders = async (apiKey: string, dateFrom: Date): Pr
       "dateFrom": formattedDate
     };
     
-    console.log("Fetching orders from Wildberries API...");
+    console.log(`[API-ORDERS] Запрос заказов из Wildberries API...`);
+    console.log(`[API-ORDERS] URL: ${url}?dateFrom=${formattedDate}`);
+    console.log(`[API-ORDERS] Заголовки: Authorization: ${apiKey ? apiKey.substring(0, 5) + '...' + apiKey.substring(apiKey.length - 5) : 'отсутствует'}`);
+    
     const response = await axios.get(url, { headers, params });
+    
+    console.log(`[API-ORDERS] Статус ответа: ${response.status} ${response.statusText}`);
+    console.log(`[API-ORDERS] Получено заказов: ${response.data ? response.data.length : 0}`);
+    
+    if (response.data && response.data.length > 0) {
+      console.log(`[API-ORDERS] Пример первого заказа: ${JSON.stringify(response.data[0]).substring(0, 300)}...`);
+    }
+    
     return response.data || [];
   } catch (error) {
-    console.error("Error fetching orders:", error);
+    console.error("[API-ORDERS-ERROR] Ошибка при загрузке заказов:", error);
+    if (axios.isAxiosError(error)) {
+      console.error(`[API-ORDERS-ERROR] Статус: ${error.response?.status} ${error.response?.statusText}`);
+      console.error(`[API-ORDERS-ERROR] Данные ответа:`, error.response?.data);
+    }
     return [];
   }
 };
@@ -471,11 +506,26 @@ export const fetchWildberriesSales = async (apiKey: string, dateFrom: Date): Pro
       "dateFrom": formattedDate
     };
     
-    console.log("Fetching sales from Wildberries API...");
+    console.log(`[API-SALES] Запрос продаж из Wildberries API...`);
+    console.log(`[API-SALES] URL: ${url}?dateFrom=${formattedDate}`);
+    console.log(`[API-SALES] Заголовки: Authorization: ${apiKey ? apiKey.substring(0, 5) + '...' + apiKey.substring(apiKey.length - 5) : 'отсутствует'}`);
+    
     const response = await axios.get(url, { headers, params });
+    
+    console.log(`[API-SALES] Статус ответа: ${response.status} ${response.statusText}`);
+    console.log(`[API-SALES] Получено записей о продажах: ${response.data ? response.data.length : 0}`);
+    
+    if (response.data && response.data.length > 0) {
+      console.log(`[API-SALES] Пример первой продажи: ${JSON.stringify(response.data[0]).substring(0, 300)}...`);
+    }
+    
     return response.data || [];
   } catch (error) {
-    console.error("Error fetching sales:", error);
+    console.error("[API-SALES-ERROR] Ошибка при загрузке продаж:", error);
+    if (axios.isAxiosError(error)) {
+      console.error(`[API-SALES-ERROR] Статус: ${error.response?.status} ${error.response?.statusText}`);
+      console.error(`[API-SALES-ERROR] Данные ответа:`, error.response?.data);
+    }
     return [];
   }
 };
@@ -516,7 +566,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       return getDemoData();
     }
     
-    // 5. Рассчитываем метрики на основе полученных данных (в соответствии с Python-скриптом)
+    // 5. Рассчитываем метрики на основе полученных данных (�� соответствии с Python-скриптом)
     console.log("Calculating metrics from report data...");
     const result = calculateMetrics(reportData, paidAcceptanceData);
     

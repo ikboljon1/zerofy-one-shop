@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
@@ -146,10 +145,16 @@ const Dashboard = () => {
       const userData = localStorage.getItem('user');
       const currentUserId = userData ? JSON.parse(userData).id : null;
       
+      console.log(`[Dashboard] Current user ID: ${currentUserId || 'not logged in'}`);
+      
       const allStores = loadStores();
+      console.log(`[Dashboard] Loaded ${allStores.length} stores from localStorage`);
+      
       const userStores = currentUserId 
         ? allStores.filter(store => store.userId === currentUserId)
         : allStores;
+      
+      console.log(`[Dashboard] User has ${userStores.length} stores`);
       
       const selectedStore = userStores.find(store => store.isSelected) || (userStores.length > 0 ? userStores[0] : null);
       
@@ -164,6 +169,7 @@ const Dashboard = () => {
       }
 
       console.log(`[Dashboard] Selected store: ${selectedStore.name} (ID: ${selectedStore.id})`);
+      console.log(`[Dashboard] API key available: ${!!selectedStore.apiKey}`);
       
       if (selectedStore.id !== selectedStoreId) {
         console.log(`[Dashboard] Store ID changed from ${selectedStoreId} to ${selectedStore.id}`);
@@ -188,6 +194,7 @@ const Dashboard = () => {
         
         console.log(`[Dashboard] Запрашиваем данные о средних продажах с ${dateFrom} по ${dateTo}`);
         console.log(`[Dashboard] Ключ кэша для периода: ${dateFrom}_${dateTo}`);
+        console.log(`[Dashboard] API ключ: ${selectedStore.apiKey ? selectedStore.apiKey.substring(0, 5) + '...' + selectedStore.apiKey.substring(selectedStore.apiKey.length - 5) : 'отсутствует'}`);
         
         // Запускаем запрос в фоне
         fetchAverageDailySalesFromAPI(selectedStore.apiKey, dateFrom, dateTo)
@@ -199,10 +206,16 @@ const Dashboard = () => {
             const sampleEntries = Object.entries(data).slice(0, 3);
             if (sampleEntries.length > 0) {
               console.log('[Dashboard] Примеры данных:', sampleEntries);
+            } else {
+              console.log('[Dashboard] Нет данных о средних продажах');
             }
           })
           .catch(error => {
             console.error('[Dashboard] Ошибка при получении данных о средних продажах:', error);
+            if (error instanceof Error) {
+              console.error(`[Dashboard] Сообщение ошибки: ${error.message}`);
+              console.error(`[Dashboard] Стек вызовов: ${error.stack}`);
+            }
           });
       } else {
         console.log("[Dashboard] Нет API ключа для запроса средних продаж");
@@ -247,6 +260,10 @@ const Dashboard = () => {
       });
     } catch (error) {
       console.error('[Dashboard] Error fetching data:', error);
+      if (error instanceof Error) {
+        console.error(`[Dashboard] Сообщение ошибки: ${error.message}`);
+        console.error(`[Dashboard] Стек вызовов: ${error.stack}`);
+      }
       toast({
         title: "Ошибка",
         description: "Не удалось загрузить данные",
