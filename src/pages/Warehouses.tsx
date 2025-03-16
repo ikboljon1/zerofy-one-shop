@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -60,6 +61,7 @@ const Warehouses: React.FC = () => {
   const [preferredWarehouses, setPreferredWarehouses] = useState<number[]>([]);
   const [averageDailySales, setAverageDailySales] = useState<Record<number, number>>({});
   const [dailyStorageCosts, setDailyStorageCosts] = useState<Record<number, number>>({});
+  const [storageCostsCalculated, setStorageCostsCalculated] = useState(false);
 
   useEffect(() => {
     const stores = ensureStoreSelectionPersistence();
@@ -73,10 +75,10 @@ const Warehouses: React.FC = () => {
         const preferred = getPreferredWarehouses(selected.id);
         setPreferredWarehouses(preferred);
       } else if (activeTab === 'inventory') {
+        // При загрузке "Инвентарь" загружаем ВСЕ необходимые данные
         loadWarehouseRemains(selected.apiKey);
         loadAverageDailySales(selected.apiKey);
-        // Загружаем данные о платном хранении для корректного расчета стоимости хранения
-        loadPaidStorageData(selected.apiKey);
+        loadPaidStorageData(selected.apiKey); // Загружаем данные о платном хранении сразу
       } else if (activeTab === 'storage') {
         loadPaidStorageData(selected.apiKey);
       }
@@ -93,19 +95,22 @@ const Warehouses: React.FC = () => {
         const preferred = getPreferredWarehouses(selectedStore.id);
         setPreferredWarehouses(preferred);
       } else if (activeTab === 'inventory') {
+        // При загрузке "Инвентарь" загружаем ВСЕ необходимые данные
         loadWarehouseRemains(selectedStore.apiKey);
         loadAverageDailySales(selectedStore.apiKey);
-        // Загружаем данные о платном хранении для корректного расчета стоимости хранения
-        loadPaidStorageData(selectedStore.apiKey);
+        loadPaidStorageData(selectedStore.apiKey); // Загружаем данные о платном хранении сразу
       } else if (activeTab === 'storage') {
         loadPaidStorageData(selectedStore.apiKey);
       }
     }
   }, [activeTab, selectedStore]);
 
-  // При получении данных о платном хранении вычисляем стоимость хранения
+  // Эффект для пересчета стоимости хранения при обновлении данных
   useEffect(() => {
     if (paidStorageData.length > 0 && warehouseRemains.length > 0) {
+      console.log('[Warehouses] Пересчет стоимости хранения из данных API...');
+      console.log(`[Warehouses] Имеется ${paidStorageData.length} записей о платном хранении`);
+      console.log(`[Warehouses] Имеется ${warehouseRemains.length} товаров на складах`);
       calculateRealStorageCostsFromAPI();
     }
   }, [paidStorageData, warehouseRemains]);
@@ -142,8 +147,8 @@ const Warehouses: React.FC = () => {
     }
   };
   
-  // Новая функция для расчета стоимости хранения на основе данных API
-  const calculateRealStorageCostsFromAPI = () => {
+  // Улучшенная функция для расчета стоимости хранения на основе данных API
+  const calculateRealStorageCostsFromAPI = useCallback(() => {
     console.log('[Warehouses] Расчет стоимости хранения на основе данных API');
     
     // Инициализируем объект для хранения результата
@@ -170,7 +175,7 @@ const Warehouses: React.FC = () => {
         // Также обновляем данные в самом объекте для удобства использования
         storageItem.dailyStorageCost = dailyCost;
         
-        console.log(`[Warehouses] Для товара ${nmId} найдена стоимость хранения: ${dailyCost}`);
+        console.log(`[Warehouses] Для товара ${nmId} найдена стоимость хранения из API: ${dailyCost.toFixed(2)}`);
       } else {
         // Если данных нет, используем расчет на основе объема (как запасной вариант)
         const volume = item.volume || 0.001;
@@ -178,13 +183,14 @@ const Warehouses: React.FC = () => {
           calculateCategoryRate(item.category) : 5;
         
         storageCosts[nmId] = volume * baseStorageRate;
-        console.log(`[Warehouses] Для товара ${nmId} стоимость хранения рассчитана: ${storageCosts[nmId]}`);
+        console.log(`[Warehouses] Для товара ${nmId} стоимость хранения рассчитана (запасной вариант): ${storageCosts[nmId].toFixed(2)}`);
       }
     });
     
     console.log('[Warehouses] Расчет стоимости хранения завершен для', Object.keys(storageCosts).length, 'товаров');
     setDailyStorageCosts(storageCosts);
-  };
+    setStorageCostsCalculated(true);
+  }, [warehouseRemains, paidStorageData]);
   
   // Вспомогательная функция для расчета тарифа в зависимости от категории товара
   const calculateCategoryRate = (category: string): number => {
@@ -284,7 +290,7 @@ const Warehouses: React.FC = () => {
       setWarehouseRemains(data);
       toast.success('Отчет об остатках на складах успешно загружен');
       
-      // После загрузки остатков обновляем стоимость хранения, если уже есть данные о платном хранении
+      // После загрузки остатков проверяем, нужно ли перерасчитать стоимость хранения
       if (paidStorageData.length > 0) {
         calculateRealStorageCostsFromAPI();
       }
@@ -312,9 +318,22 @@ const Warehouses: React.FC = () => {
       toast.info('Запрос отчета о платном хранении. Это может занять некоторое время...');
       
       const data = await fetchFullPaidStorageReport(apiKey, dateFrom, dateTo);
+      console.log(`[Warehouses] Получено ${data.length} записей данных о платном хранении`);
+      
+      // Небольшая отладочная информация, чтобы убедиться, что данные содержат нужные поля
+      if (data.length > 0) {
+        console.log('[Warehouses] Пример данных платного хранения:', {
+          nmId: data[0].nmId,
+          warehousePrice: data[0].warehousePrice,
+          volume: data[0].volume,
+          barcode: data[0].barcode,
+        });
+      }
+      
       setPaidStorageData(data);
       
-      // После загрузки данных о платном хранении обновляем стоимость хранения, если есть данные об остатках
+      // После загрузки данных о платном хранении, если у нас есть данные об остатках,
+      // запускаем перерасчет стоимости хранения
       if (warehouseRemains.length > 0) {
         calculateRealStorageCostsFromAPI();
       }
@@ -431,12 +450,16 @@ const Warehouses: React.FC = () => {
                   />
                   
                   <div className="mt-8">
-                    <StorageProfitabilityAnalysis 
-                      warehouseItems={warehouseRemains}
-                      paidStorageData={paidStorageData}
-                      averageDailySalesRate={averageDailySales}
-                      dailyStorageCost={dailyStorageCosts}
-                    />
+                    {loading.paidStorage ? (
+                      <Skeleton className="h-[400px] w-full" />
+                    ) : (
+                      <StorageProfitabilityAnalysis 
+                        warehouseItems={warehouseRemains}
+                        paidStorageData={paidStorageData}
+                        averageDailySalesRate={averageDailySales}
+                        dailyStorageCost={dailyStorageCosts}
+                      />
+                    )}
                   </div>
                 </>
               )}
