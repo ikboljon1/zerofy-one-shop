@@ -63,7 +63,7 @@ const APIKeyInput: React.FC<APIKeyInputProps> = ({
             />
             
             {isRateLimited && (
-              <Alert variant="warning" className="bg-yellow-900/20 border-yellow-500/30 text-yellow-300">
+              <Alert variant="warning">
                 <Info className="h-4 w-4 text-yellow-500" />
                 <AlertDescription>
                   Превышен лимит запросов к API Wildberries. Сервер ограничивает количество запросов в минуту.
@@ -72,7 +72,7 @@ const APIKeyInput: React.FC<APIKeyInputProps> = ({
               </Alert>
             )}
             
-            <Alert variant="default" className="bg-yellow-900/20 border-yellow-800/30 text-yellow-300">
+            <Alert variant="warning">
               <AlertTriangle className="h-4 w-4 text-yellow-500" />
               <AlertDescription>
                 Рекомендуется выбрать магазин в разделе "Магазины" вместо ручного ввода ключа

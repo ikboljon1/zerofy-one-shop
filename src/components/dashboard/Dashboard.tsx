@@ -165,7 +165,7 @@ const Dashboard = () => {
     toast({
       title: "Превышен лимит запросов",
       description: `Wildberries API временно ограничило доступ. Повторная попытка через ${Math.round(backoffTime/1000)} секунд.`,
-      variant: "destructive"
+      variant: "warning"
     });
     
     setTimeout(() => {
