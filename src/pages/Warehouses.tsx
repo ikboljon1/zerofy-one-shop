@@ -101,7 +101,7 @@ const Warehouses: React.FC = () => {
 
   const loadAverageDailySales = async (apiKey: string) => {
     if (!apiKey) {
-      toast.warning('Необходимо выбрать магазин для п��лучения данных');
+      toast.warning('Необходимо выбрать магазин для получения данных');
       return;
     }
     
@@ -383,7 +383,7 @@ const Warehouses: React.FC = () => {
                 <div>
                   <h2 className="text-lg font-semibold flex items-center gap-2">
                     <Building2 className="h-5 w-5 text-primary" />
-                    Упра��ление поставками
+                    Управление поставками
                   </h2>
                   <p className="text-sm text-muted-foreground">
                     Анализ коэффициентов приемки и выбор оптимального склада
