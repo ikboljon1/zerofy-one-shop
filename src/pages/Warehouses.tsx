@@ -367,7 +367,7 @@ const Warehouses: React.FC = () => {
                       paidStorageData={paidStorageData}
                       averageDailySalesRate={averageDailySales}
                       dailyStorageCost={dailyStorageCosts}
-                      loading={loading.averageSales}
+                      isLoadingData={loading.averageSales}
                     />
                   </div>
                 </>
