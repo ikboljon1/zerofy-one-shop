@@ -26,6 +26,7 @@ import AIAnalysisSection from "@/components/ai/AIAnalysisSection";
 import SalesTable from "./SalesTable";
 import { fetchAverageDailySalesFromAPI } from "@/components/analytics/data/demoData";
 import { format } from 'date-fns';
+import RateLimitHandler from "./RateLimitHandler";
 
 const Dashboard = () => {
   const { toast } = useToast();
@@ -46,6 +47,11 @@ const Dashboard = () => {
   });
 
   const [analyticsData, setAnalyticsData] = useState<any>(null);
+  
+  const [isRateLimited, setIsRateLimited] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [nextRetryTime, setNextRetryTime] = useState<Date | undefined>(undefined);
 
   const filterDataByPeriod = useCallback((date: string, period: Period) => {
     const now = new Date();
@@ -137,6 +143,59 @@ const Dashboard = () => {
     return getFilteredSales(sales);
   }, [sales, period]);
 
+  const calculateBackoffTime = (retryCount: number): number => {
+    const baseDelay = 5000;
+    const exponentialDelay = baseDelay * Math.pow(2, retryCount);
+    const maxDelay = 5 * 60 * 1000;
+    return Math.min(exponentialDelay, maxDelay);
+  };
+
+  const handleApiRateLimit = () => {
+    console.log(`[Dashboard] API rate limit detected. Retry count: ${retryCount}`);
+    setIsRateLimited(true);
+    setIsLoading(false);
+    
+    const nextRetry = new Date();
+    const backoffTime = calculateBackoffTime(retryCount);
+    nextRetry.setTime(nextRetry.getTime() + backoffTime);
+    setNextRetryTime(nextRetry);
+    
+    console.log(`[Dashboard] Setting next retry in ${backoffTime}ms (${nextRetry.toISOString()})`);
+    
+    toast({
+      title: "Превышен лимит запросов",
+      description: `Wildberries API временно ограничило доступ. Повторная попытка через ${Math.round(backoffTime/1000)} секунд.`,
+      variant: "destructive"
+    });
+    
+    setTimeout(() => {
+      console.log('[Dashboard] Attempting auto-retry after backoff');
+      retryFetchData();
+    }, backoffTime);
+  };
+
+  const retryFetchData = () => {
+    console.log('[Dashboard] Retrying data fetch');
+    setIsRetrying(true);
+    setRetryCount(prev => prev + 1);
+    fetchData()
+      .catch(error => {
+        console.error('[Dashboard] Retry fetch failed:', error);
+        if (error.message?.includes('429') || error.status === 429) {
+          handleApiRateLimit();
+        }
+      })
+      .finally(() => {
+        setIsRetrying(false);
+      });
+  };
+
+  const resetRateLimitState = () => {
+    setIsRateLimited(false);
+    setRetryCount(0);
+    setNextRetryTime(undefined);
+  };
+
   const fetchData = useCallback(async () => {
     try {
       console.log("[Dashboard] Starting data fetch...");
@@ -177,99 +236,138 @@ const Dashboard = () => {
       }
 
       console.log("[Dashboard] Fetching orders and sales data...");
-      const [ordersResult, salesResult] = await Promise.all([
-        fetchAndUpdateOrders(selectedStore),
-        fetchAndUpdateSales(selectedStore)
-      ]);
-      
-      // Запрашиваем данные о средних продажах, если есть API ключ
-      if (selectedStore.apiKey) {
-        const now = new Date();
-        const thirtyDaysAgo = new Date(now);
-        thirtyDaysAgo.setDate(now.getDate() - 30);
+      try {
+        const [ordersResult, salesResult] = await Promise.all([
+          fetchAndUpdateOrders(selectedStore),
+          fetchAndUpdateSales(selectedStore)
+        ]);
         
-        // Форматируем даты для API
-        const dateFrom = format(thirtyDaysAgo, 'yyyy-MM-dd');
-        const dateTo = format(now, 'yyyy-MM-dd');
+        resetRateLimitState();
         
-        console.log(`[Dashboard] Запрашиваем данные о средних продажах с ${dateFrom} по ${dateTo}`);
-        console.log(`[Dashboard] Ключ кэша для периода: ${dateFrom}_${dateTo}`);
-        console.log(`[Dashboard] API ключ: ${selectedStore.apiKey ? selectedStore.apiKey.substring(0, 5) + '...' + selectedStore.apiKey.substring(selectedStore.apiKey.length - 5) : 'отсутствует'}`);
-        
-        // Запускаем запрос в фоне
-        fetchAverageDailySalesFromAPI(selectedStore.apiKey, dateFrom, dateTo)
-          .then(data => {
-            console.log('[Dashboard] Получены данные о средних продажах:',
-                       `${Object.keys(data).length} товаров`);
-            
-            // Логирование первых нескольких записей для отладки
-            const sampleEntries = Object.entries(data).slice(0, 3);
-            if (sampleEntries.length > 0) {
-              console.log('[Dashboard] Примеры данных:', sampleEntries);
-            } else {
-              console.log('[Dashboard] Нет данных о средних продажах');
-            }
-          })
-          .catch(error => {
-            console.error('[Dashboard] Ошибка при получении данных о средних продажах:', error);
-            if (error instanceof Error) {
-              console.error(`[Dashboard] Сообщение ошибки: ${error.message}`);
-              console.error(`[Dashboard] Стек вызовов: ${error.stack}`);
-            }
-          });
-      } else {
-        console.log("[Dashboard] Нет API ключа для запроса средних продаж");
-      }
+        if (ordersResult) {
+          console.log(`[Dashboard] Received ${ordersResult.orders.length} orders from API`);
+          setOrders(ordersResult.orders);
+          setWarehouseDistribution(ordersResult.warehouseDistribution);
+          setRegionDistribution(ordersResult.regionDistribution);
+        } else {
+          console.log("[Dashboard] No orders from API, trying local storage");
+          const savedOrdersData = await getOrdersData(selectedStore.id);
+          if (savedOrdersData) {
+            console.log(`[Dashboard] Loaded ${savedOrdersData.orders?.length || 0} orders from storage`);
+            setOrders(savedOrdersData.orders || []);
+            setWarehouseDistribution(savedOrdersData.warehouseDistribution || []);
+            setRegionDistribution(savedOrdersData.regionDistribution || []);
+          } else {
+            console.log("[Dashboard] No orders found in storage");
+          }
+        }
 
-      if (ordersResult) {
-        console.log(`[Dashboard] Received ${ordersResult.orders.length} orders from API`);
-        setOrders(ordersResult.orders);
-        setWarehouseDistribution(ordersResult.warehouseDistribution);
-        setRegionDistribution(ordersResult.regionDistribution);
-      } else {
-        console.log("[Dashboard] No orders from API, trying local storage");
+        if (salesResult) {
+          console.log(`[Dashboard] Received ${salesResult.length} sales from API`);
+          setSales(salesResult);
+        } else {
+          console.log("[Dashboard] No sales from API, trying local storage");
+          const savedSalesData = await getSalesData(selectedStore.id);
+          if (savedSalesData) {
+            console.log(`[Dashboard] Loaded ${savedSalesData.sales?.length || 0} sales from storage`);
+            setSales(savedSalesData.sales || []);
+          } else {
+            console.log("[Dashboard] No sales found in storage");
+          }
+        }
+        
+        if (selectedStore.apiKey) {
+          const now = new Date();
+          const thirtyDaysAgo = new Date(now);
+          thirtyDaysAgo.setDate(now.getDate() - 30);
+          
+          const dateFrom = format(thirtyDaysAgo, 'yyyy-MM-dd');
+          const dateTo = format(now, 'yyyy-MM-dd');
+          
+          console.log(`[Dashboard] Запрашиваем данные о средних продажах с ${dateFrom} по ${dateTo}`);
+          console.log(`[Dashboard] Ключ кэша для периода: ${dateFrom}_${dateTo}`);
+          console.log(`[Dashboard] API ключ: ${selectedStore.apiKey ? selectedStore.apiKey.substring(0, 5) + '...' + selectedStore.apiKey.substring(selectedStore.apiKey.length - 5) : 'отсутствует'}`);
+          
+          fetchAverageDailySalesFromAPI(selectedStore.apiKey, dateFrom, dateTo)
+            .then(data => {
+              console.log('[Dashboard] Получены данные о средних продажах:',
+                        `${Object.keys(data).length} товаров`);
+              
+              const sampleEntries = Object.entries(data).slice(0, 3);
+              if (sampleEntries.length > 0) {
+                console.log('[Dashboard] Примеры данных:', sampleEntries);
+              } else {
+                console.log('[Dashboard] Нет данных о средних продажах');
+              }
+            })
+            .catch(error => {
+              console.error('[Dashboard] Ошибка при получении данных о средних продажах:', error);
+              if (error instanceof Error) {
+                console.error(`[Dashboard] Сообщение ошибки: ${error.message}`);
+                console.error(`[Dashboard] Стек вызовов: ${error.stack}`);
+              }
+              
+              if (error.message?.includes('429') || error.status === 429) {
+                console.log('[Dashboard] Rate limit detected during fetchAverageDailySalesFromAPI');
+                toast({
+                  title: "Ограничение API",
+                  description: "Не удалось получить данные о средних продажах из-за ограничений API",
+                  variant: "warning"
+                });
+              }
+            });
+        } else {
+          console.log("[Dashboard] Нет API ключа для запроса средних продаж");
+        }
+      } catch (error) {
+        console.error('[Dashboard] Error in API calls:', error);
+        
+        if (error.message?.includes('429') || error.status === 429 || 
+            error.response?.status === 429 || error.detail?.includes('too many requests')) {
+          handleApiRateLimit();
+          return;
+        }
+        
+        toast({
+          title: "Ошибка API",
+          description: error.detail || "Произошла ошибка при получении данных",
+          variant: "destructive"
+        });
+        
+        console.log("[Dashboard] Falling back to cached data due to API error");
         const savedOrdersData = await getOrdersData(selectedStore.id);
+        const savedSalesData = await getSalesData(selectedStore.id);
+        
         if (savedOrdersData) {
-          console.log(`[Dashboard] Loaded ${savedOrdersData.orders?.length || 0} orders from storage`);
           setOrders(savedOrdersData.orders || []);
           setWarehouseDistribution(savedOrdersData.warehouseDistribution || []);
           setRegionDistribution(savedOrdersData.regionDistribution || []);
-        } else {
-          console.log("[Dashboard] No orders found in storage");
         }
-      }
-
-      if (salesResult) {
-        console.log(`[Dashboard] Received ${salesResult.length} sales from API`);
-        setSales(salesResult);
-      } else {
-        console.log("[Dashboard] No sales from API, trying local storage");
-        const savedSalesData = await getSalesData(selectedStore.id);
+        
         if (savedSalesData) {
-          console.log(`[Dashboard] Loaded ${savedSalesData.sales?.length || 0} sales from storage`);
           setSales(savedSalesData.sales || []);
-        } else {
-          console.log("[Dashboard] No sales found in storage");
         }
       }
 
       console.log("[Dashboard] Data fetch completed successfully");
-      toast({
-        title: "Успех",
-        description: "Данные успешно обновлены",
-      });
+      setIsLoading(false);
     } catch (error) {
       console.error('[Dashboard] Error fetching data:', error);
       if (error instanceof Error) {
         console.error(`[Dashboard] Сообщение ошибки: ${error.message}`);
         console.error(`[Dashboard] Стек вызовов: ${error.stack}`);
       }
+      
+      if (error.message?.includes('429') || error.status === 429) {
+        handleApiRateLimit();
+        return;
+      }
+      
       toast({
         title: "Ошибка",
         description: "Не удалось загрузить данные",
         variant: "destructive"
       });
-    } finally {
       setIsLoading(false);
     }
   }, [selectedStoreId, toast]);
@@ -315,6 +413,16 @@ const Dashboard = () => {
           </div>
         )}
       </div>
+
+      {isRateLimited && (
+        <RateLimitHandler 
+          isVisible={isRateLimited}
+          onRetry={retryFetchData}
+          isRetrying={isRetrying}
+          retryCount={retryCount}
+          nextRetryTime={nextRetryTime}
+        />
+      )}
 
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className={`${isMobile ? 'w-full grid grid-cols-5 gap-1' : ''}`}>

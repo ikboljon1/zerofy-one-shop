@@ -3,16 +3,22 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { KeyRound, AlertTriangle } from 'lucide-react';
+import { KeyRound, AlertTriangle, Info } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface APIKeyInputProps {
   onApiKeySubmit: (apiKey: string) => void;
   isLoading?: boolean;
   message?: string;
+  isRateLimited?: boolean;
 }
 
-const APIKeyInput: React.FC<APIKeyInputProps> = ({ onApiKeySubmit, isLoading = false, message }) => {
+const APIKeyInput: React.FC<APIKeyInputProps> = ({ 
+  onApiKeySubmit, 
+  isLoading = false, 
+  message,
+  isRateLimited = false
+}) => {
   const [apiKey, setApiKey] = useState('');
   const [saved, setSaved] = useState(false);
 
@@ -55,6 +61,17 @@ const APIKeyInput: React.FC<APIKeyInputProps> = ({ onApiKeySubmit, isLoading = f
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
             />
+            
+            {isRateLimited && (
+              <Alert variant="warning" className="bg-yellow-900/20 border-yellow-500/30 text-yellow-300">
+                <Info className="h-4 w-4 text-yellow-500" />
+                <AlertDescription>
+                  Превышен лимит запросов к API Wildberries. Сервер ограничивает количество запросов в минуту.
+                  Подождите некоторое время перед следующей попыткой.
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <Alert variant="default" className="bg-yellow-900/20 border-yellow-800/30 text-yellow-300">
               <AlertTriangle className="h-4 w-4 text-yellow-500" />
               <AlertDescription>

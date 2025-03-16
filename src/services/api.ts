@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 
 // Create an axios instance with default config
@@ -20,12 +21,28 @@ api.interceptors.request.use((config) => {
     _random: Math.random()
   };
   
+  console.log(`[API] Request to ${config.url}`, {
+    method: config.method?.toUpperCase(),
+    params: config.params,
+    hasAuthHeader: !!config.headers.Authorization,
+    authHeaderPrefix: config.headers.Authorization ? 
+      String(config.headers.Authorization).substring(0, 10) + '...' : 'none'
+  });
+  
   return config;
 });
 
 // Add response interceptor for error handling
 api.interceptors.response.use(
   (response) => {
+    console.log(`[API] Response from ${response.config.url}`, {
+      status: response.status,
+      statusText: response.statusText,
+      dataSize: response.data ? 
+        (Array.isArray(response.data) ? response.data.length : 'object') : 'none',
+      hasData: !!response.data
+    });
+    
     // Улучшенное логирование для проверки наличия nm_id и других данных в ответе
     if (response.data) {
       console.log('API Response Structure:', Object.keys(response.data));
@@ -75,6 +92,18 @@ api.interceptors.response.use(
       console.error('Response status:', error.response.status);
       console.error('Response headers:', error.response.headers);
       
+      // Enhanced rate limit logging
+      if (error.response.status === 429) {
+        console.error('[API] RATE LIMIT EXCEEDED', {
+          url: error.config?.url,
+          detail: error.response.data?.detail || 'No detail provided',
+          retryAfter: error.response.headers?.['retry-after'] || 'Not specified',
+          requestId: error.response.data?.requestId || 'Unknown', 
+          limit: error.response.data?.detail?.match(/limited by ([^,]+)/) ? 
+            error.response.data.detail.match(/limited by ([^,]+)/)[1] : 'Unknown'
+        });
+      }
+      
       // Enhance error object with more information
       error.detail = error.response.data?.message || 
                      error.response.data?.error ||
@@ -83,6 +112,15 @@ api.interceptors.response.use(
       // Handle rate limiting (429)
       if (error.response.status === 429) {
         error.detail = 'Превышен лимит запросов к API. Пожалуйста, повторите попытку позже.';
+        error.isRateLimit = true;
+        
+        // Extract retry-after header if available
+        if (error.response.headers?.['retry-after']) {
+          error.retryAfter = parseInt(error.response.headers['retry-after']) * 1000; // convert to ms
+        } else {
+          // Default to 30 seconds if no retry-after header
+          error.retryAfter = 30000;
+        }
       }
     } else if (error.request) {
       // The request was made but no response was received
@@ -338,14 +376,19 @@ export const calculateTotalCostPrice = async (sales: any[], storeId: string): Pr
   return totalCostPrice;
 };
 
-// Function to fetch sales report
+// Enhanced fetch sales report function with detailed logging and rate limit handling
 export const fetchSalesReport = async (apiKey: string, dateFrom: Date, dateTo: Date, limit = 100000, rrdid = 0) => {
   try {
     // Format dates in the required format
     const fromDate = dateFrom.toISOString().split('T')[0];
     const toDate = dateTo.toISOString().split('T')[0];
     
-    console.log(`Fetching sales report from ${fromDate} to ${toDate} with rrdid=${rrdid}`);
+    console.log(`[API] Fetching sales report from ${fromDate} to ${toDate} with rrdid=${rrdid}`, {
+      endpoint: 'reportDetailByPeriod',
+      limit,
+      hasApiKey: !!apiKey,
+      apiKeyLength: apiKey ? apiKey.length : 0
+    });
     
     const response = await axios.get('https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod', {
       headers: {
@@ -355,29 +398,51 @@ export const fetchSalesReport = async (apiKey: string, dateFrom: Date, dateTo: D
         dateFrom: fromDate,
         dateTo: toDate,
         limit,
-        rrdid
+        rrdid,
+        _timestamp: Date.now(),  // Prevent caching
+        _random: Math.random()   // Prevent caching
       }
     });
     
-    console.log(`Received ${response.data?.length || 0} sales report items`);
+    console.log(`[API] Received ${response.data?.length || 0} sales report items`, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers
+    });
     
     // Check for nm_id in the response
     if (Array.isArray(response.data) && response.data.length > 0) {
       const hasNmId = response.data.some(item => 'nm_id' in item);
-      console.log('Sales report contains nm_id:', hasNmId);
+      console.log('[API] Sales report contains nm_id:', hasNmId);
       if (hasNmId) {
         const examples = response.data.slice(0, 3).map(item => ({
           nm_id: item.nm_id,
           quantity: item.quantity,
           subject: item.subject_name
         }));
-        console.log('Examples of sales with nm_id:', examples);
+        console.log('[API] Examples of sales with nm_id:', examples);
       }
     }
     
     return response.data;
   } catch (error) {
-    console.error('Error fetching sales report:', error);
+    console.error('[API] Error fetching sales report:', error);
+    
+    // Enhanced error logging for rate limits
+    if (error.response && error.response.status === 429) {
+      console.error('[API] RATE LIMIT during sales report fetch', {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data,
+        headers: error.response.headers,
+        retryAfter: error.response.headers?.['retry-after'] || 'Not specified'
+      });
+      
+      error.isRateLimit = true;
+      error.status = 429;
+      error.message = `Ошибка при получении отчета: 429`;
+    }
+    
     throw error;
   }
 };
@@ -402,7 +467,7 @@ export const processSalesReport = async (apiKey: string, dateFrom: Date, dateTo:
       }
       
       allSales = [...allSales, ...salesData];
-      console.log(`Fetched ${salesData.length} sales records, total: ${allSales.length}`);
+      console.log(`[API] Fetched ${salesData.length} sales records, total: ${allSales.length}`);
       
       // Check if another page needs to be loaded
       if (salesData.length > 0) {
@@ -413,7 +478,7 @@ export const processSalesReport = async (apiKey: string, dateFrom: Date, dateTo:
       }
     }
     
-    console.log(`Total sales records fetched: ${allSales.length}`);
+    console.log(`[API] Total sales records fetched: ${allSales.length}`);
     
     // Calculate total cost price
     const totalCostPrice = await calculateTotalCostPrice(allSales, storeId);
@@ -423,7 +488,13 @@ export const processSalesReport = async (apiKey: string, dateFrom: Date, dateTo:
       totalCostPrice
     };
   } catch (error) {
-    console.error('Error processing sales report:', error);
+    console.error('[API] Error processing sales report:', error);
+    
+    // Propagate rate limit errors
+    if (error.status === 429 || error.isRateLimit) {
+      throw error;
+    }
+    
     return {
       sales: [],
       totalCostPrice: 0
