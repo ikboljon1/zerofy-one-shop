@@ -745,8 +745,10 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         icon: <Clock className="h-3.5 w-3.5 text-emerald-500" />
       });
     }
-    return <div className="space-y-2">
-        {factors.map((factor, index) => <div key={index} className="flex items-center justify-between text-xs">
+    return (
+      <div className="space-y-2">
+        {factors.map((factor, index) => (
+          <div key={index} className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-1.5">
               {factor.icon}
-              <span className={`font-medium ${factor.
+              <span className={`
