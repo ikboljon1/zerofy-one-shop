@@ -72,7 +72,7 @@ const SalesDataDialog: React.FC<SalesDataDialogProps> = ({
 }) => {
   const [startDate, setStartDate] = useState<Date | undefined>(new Date(new Date().setDate(new Date().getDate() - 7)));
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
-  handleFetchData = async () => {
+  const handleFetchData = async () => {
     if (startDate && endDate) {
       await onFetchData(startDate, endDate);
     }
@@ -451,7 +451,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     const totalStorageCost = analysisResults.reduce((sum, item) => sum + item.totalStorageCost, 0);
     const potentialSavings = analysisResults.reduce((sum, item) => {
       return sum + (item.savingsWithDiscount > 0 ? item.savingsWithDiscount : 0);
-    }, 0);
+    }, 0);\
     const itemsStockingOutBeforeTarget = targetDate ? analysisResults.filter(item => item.projectedStockoutDate && item.projectedStockoutDate <= targetDate).length : 0;
     return {
       totalItems,
@@ -572,7 +572,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
           ...salesData
         }));
         
-        console.log('Обновлены данные о средних продажах:', Object.keys(salesData).length);
+        console.log('Обновлены данные о средних продажах:', Object.keys(salesData).length);\
         
         try {
           const storageData = await loadPaidStorageData();
@@ -617,7 +617,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         
         toast({
           title: "Данные получены",
-          description: `Данные о продажах за период ${format(startDate, 'dd.MM.yyyy')} - ${format(endDate, 'dd.MM.yyyy')} успешно загружены`,
+          description: `Данные о продажах за период ${format(startDate, 'dd.MM.yyyy')} - ${format(endDate, 'dd.MM.yyyy')} успешно загружены`,\
         });
       } else {
         toast({
@@ -757,4 +757,4 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         description: "Более 60 дней на распродажу запаса",
         value: formatDaysOfInventory(result.daysOfInventory),
         status: "warning",
-        icon: <Clock className="h-3.5 w-3
+        icon: <Clock className="h-3
