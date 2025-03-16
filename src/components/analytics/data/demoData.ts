@@ -1,3 +1,4 @@
+
 // Минимальная структура для API-интерфейса
 export const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1'];
 
@@ -44,6 +45,11 @@ export const inventoryData = [];
 const AVERAGE_SALES_STORAGE_KEY = 'wb_average_daily_sales';
 
 /**
+ * Ключ для хранения данных о продажах по периодам
+ */
+const AVERAGE_SALES_BY_PERIOD_STORAGE_KEY = `${AVERAGE_SALES_STORAGE_KEY}_by_period`;
+
+/**
  * Интерфейс для хранения данных о продажах по периодам
  */
 interface SalesDataByPeriod {
@@ -78,6 +84,7 @@ export const saveAverageDailySales = (
 ) => {
   try {
     console.log(`[Cache] Saving sales data, with period? ${!!dateFrom && !!dateTo}`);
+    console.log(`[Cache] Number of products: ${Object.keys(salesData).length}`);
     
     // Если не переданы даты, сохраняем в обычном формате (для обратной совместимости)
     if (!dateFrom || !dateTo) {
@@ -87,8 +94,7 @@ export const saveAverageDailySales = (
     }
 
     // Получаем текущие данные по периодам
-    const storageKey = `${AVERAGE_SALES_STORAGE_KEY}_by_period`;
-    const existingDataStr = localStorage.getItem(storageKey);
+    const existingDataStr = localStorage.getItem(AVERAGE_SALES_BY_PERIOD_STORAGE_KEY);
     console.log(`[Cache] Existing period data in storage: ${!!existingDataStr}`);
     
     const existingData: SalesDataByPeriod = existingDataStr 
@@ -98,15 +104,32 @@ export const saveAverageDailySales = (
     // Ключ для текущего периода
     const periodKey = generatePeriodKey(dateFrom, dateTo);
 
+    // Логируем первые 3 продукта для отладки
+    const sampleProducts = Object.entries(salesData).slice(0, 3);
+    console.log(`[Cache] Sample products (first 3): ${JSON.stringify(sampleProducts)}`);
+
     // Обновляем данные для текущего периода
     existingData[periodKey] = {
       averageSales: salesData,
       fetchDate: new Date().toISOString()
     };
 
+    // Логируем количество периодов после обновления
+    console.log(`[Cache] Total periods after update: ${Object.keys(existingData).length}`);
+
     // Сохраняем обновленные данные
-    localStorage.setItem(storageKey, JSON.stringify(existingData));
+    localStorage.setItem(AVERAGE_SALES_BY_PERIOD_STORAGE_KEY, JSON.stringify(existingData));
     console.log(`[Cache] Data saved for period ${periodKey} with ${Object.keys(salesData).length} product records`);
+
+    // Проверяем, сохранились ли данные
+    const checkSaved = localStorage.getItem(AVERAGE_SALES_BY_PERIOD_STORAGE_KEY);
+    if (checkSaved) {
+      const savedData = JSON.parse(checkSaved);
+      console.log(`[Cache] Verification: data for period ${periodKey} exists: ${!!savedData[periodKey]}`);
+      if (savedData[periodKey]) {
+        console.log(`[Cache] Verification: products count matches: ${Object.keys(savedData[periodKey].averageSales).length === Object.keys(salesData).length}`);
+      }
+    }
 
     // Также сохраняем в обычном формате для обратной совместимости
     localStorage.setItem(AVERAGE_SALES_STORAGE_KEY, JSON.stringify(salesData));
@@ -129,16 +152,16 @@ export const getAverageDailySalesByPeriod = (
     console.log(`[Cache] Trying to get sales data for period: ${dateFrom} - ${dateTo}`);
     
     // Получаем все данные по периодам
-    const storageKey = `${AVERAGE_SALES_STORAGE_KEY}_by_period`;
-    const allPeriodsDataStr = localStorage.getItem(storageKey);
+    const allPeriodsDataStr = localStorage.getItem(AVERAGE_SALES_BY_PERIOD_STORAGE_KEY);
     
     if (!allPeriodsDataStr) {
-      console.log(`[Cache] No period data found in storage at key: ${storageKey}`);
+      console.log(`[Cache] No period data found in storage at key: ${AVERAGE_SALES_BY_PERIOD_STORAGE_KEY}`);
       return null;
     }
     
     const allPeriodsData: SalesDataByPeriod = JSON.parse(allPeriodsDataStr);
     console.log(`[Cache] Found period data store with ${Object.keys(allPeriodsData).length} periods`);
+    console.log(`[Cache] Available periods: ${Object.keys(allPeriodsData).join(', ')}`);
 
     // Ключ для запрашиваемого периода
     const periodKey = generatePeriodKey(dateFrom, dateTo);
@@ -152,6 +175,10 @@ export const getAverageDailySalesByPeriod = (
       console.log(`[Cache] CACHE HIT! Found cached data for period ${periodKey}`);
       console.log(`[Cache] Cached data contains ${productCount} products, fetched on ${fetchDate.toLocaleString()}`);
       
+      // Логируем первые 3 продукта для отладки
+      const sampleProducts = Object.entries(cachedData).slice(0, 3);
+      console.log(`[Cache] Sample cached products (first 3): ${JSON.stringify(sampleProducts)}`);
+
       return cachedData;
     }
 
@@ -203,6 +230,7 @@ export const fetchAverageDailySalesFromAPI = async (
     const cachedData = getAverageDailySalesByPeriod(dateFrom, dateTo);
     if (cachedData) {
       console.log(`[API] Using cached data for period ${dateFrom} - ${dateTo}`);
+      console.log(`[API] Cache contains data for ${Object.keys(cachedData).length} products`);
       
       // Отправка события для уведомления компонентов об обновлении данных
       const event = new CustomEvent('salesDataUpdated', { 
@@ -232,6 +260,7 @@ export const fetchAverageDailySalesFromAPI = async (
     
     // Рассчитываем среднее количество продаж в день для каждого товара
     const averageSalesPerDay = calculateAverageDailySalesPerProduct(allData, dateFrom, dateTo);
+    console.log(`[API] Calculated average sales for ${Object.keys(averageSalesPerDay).length} products`);
     
     // Сохраняем данные в localStorage для использования в других компонентах
     saveAverageDailySales(averageSalesPerDay, dateFrom, dateTo);
@@ -279,13 +308,13 @@ const fetchReportDetail = async (
       "limit": limit,
     };
     
-    console.log(`Загрузка отчета с rrdid ${rrdid}...`);
+    console.log(`[API] Загрузка отчета с rrdid ${rrdid}...`);
     const response = await fetch(`${url}?dateFrom=${dateFrom}&dateTo=${dateTo}&rrdid=${rrdid}&limit=${limit}`, {
       headers
     });
     
     if (!response.ok) {
-      throw new Error(`API запрос вернул ошибку: ${response.status} ${response.statusText}`);
+      throw new Error(`[API] Запрос вернул ошибку: ${response.status} ${response.statusText}`);
     }
     
     const data = await response.json();
@@ -299,7 +328,7 @@ const fetchReportDetail = async (
     
     return { data, nextRrdid };
   } catch (error) {
-    console.error("Ошибка при загрузке отчета:", error);
+    console.error("[API] Ошибка при загрузке отчета:", error);
     return { data: [], nextRrdid: 0 };
   }
 };
@@ -314,17 +343,17 @@ const fetchAllReportDetails = async (apiKey: string, dateFrom: string, dateTo: s
   let hasMoreData = true;
   let pageCount = 0;
   
-  console.log("Начинаем пагинацию для получения всех данных отчета...");
+  console.log("[API] Начинаем пагинацию для получения всех данных отчета...");
   
   while (hasMoreData) {
     pageCount++;
-    console.log(`Загрузка страницы ${pageCount} с rrdid ${nextRrdid}...`);
+    console.log(`[API] Загрузка страницы ${pageCount} с rrdid ${nextRrdid}...`);
     
     const result = await fetchReportDetail(apiKey, dateFrom, dateTo, nextRrdid);
     const data = result.data;
     
     if (!data || data.length === 0) {
-      console.log(`Страница ${pageCount} вернула 0 строк, завершаем пагинацию.`);
+      console.log(`[API] Страница ${pageCount} вернула 0 строк, завершаем пагинацию.`);
       hasMoreData = false;
       continue;
     }
@@ -335,16 +364,16 @@ const fetchAllReportDetails = async (apiKey: string, dateFrom: string, dateTo: s
     const prevRrdid = nextRrdid;
     nextRrdid = result.nextRrdid;
     
-    console.log(`Страница ${pageCount} получено ${data.length} записей, последний rrdid: ${nextRrdid}`);
+    console.log(`[API] Страница ${pageCount} получено ${data.length} записей, последний rrdid: ${nextRrdid}`);
     
     // Если вернулось меньше записей, чем размер страницы, или если rrdid не изменился, значит данных больше нет
     if (data.length < 100000 || nextRrdid === 0 || nextRrdid === prevRrdid) {
-      console.log(`Конец пагинации достигнут после ${pageCount} страниц. Всего записей: ${allData.length}`);
+      console.log(`[API] Конец пагинации достигнут после ${pageCount} страниц. Всего записей: ${allData.length}`);
       hasMoreData = false;
     }
   }
   
-  console.log(`Завершена загрузка всех страниц. Всего записей: ${allData.length}`);
+  console.log(`[API] Завершена загрузка всех страниц. Всего записей: ${allData.length}`);
   return allData;
 };
 
@@ -388,7 +417,7 @@ const calculateAverageDailySalesPerProduct = (data: any[], dateFrom: string, dat
     averageSalesPerDay[nmId] = parseFloat(averageSales.toFixed(2));
   }
   
-  console.log(`Рассчитаны средние продажи для ${Object.keys(averageSalesPerDay).length} товаров за ${daysInPeriod} дней`);
+  console.log(`[API] Рассчитаны средние продажи для ${Object.keys(averageSalesPerDay).length} товаров за ${daysInPeriod} дней`);
   
   return averageSalesPerDay;
 };

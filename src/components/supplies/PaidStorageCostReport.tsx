@@ -245,7 +245,7 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
               </TableRow>
             ) : (
               filteredData.map((item, index) => (
-                <TableRow key={`${item.nmId}-${item.date}-${index}`}>
+                <TableRow key={`${item.nmId}-${item.date}-${index}-${item.warehouse}`}>
                   <TableCell>
                     <div className="space-y-1">
                       <div className="font-medium">

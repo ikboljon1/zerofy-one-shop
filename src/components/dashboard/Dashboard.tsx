@@ -179,15 +179,22 @@ const Dashboard = () => {
         const dateFrom = format(thirtyDaysAgo, 'yyyy-MM-dd');
         const dateTo = format(now, 'yyyy-MM-dd');
         
-        console.log(`Запрашиваем данные о средних продажах с ${dateFrom} по ${dateTo}`);
+        console.log(`[Dashboard] Запрашиваем данные о средних продажах с ${dateFrom} по ${dateTo}`);
         
         // Запускаем запрос в фоне
         fetchAverageDailySalesFromAPI(selectedStore.apiKey, dateFrom, dateTo)
           .then(data => {
-            console.log('Получены данные о средних продажах:', data);
+            console.log('[Dashboard] Получены данные о средних продажах:',
+                       `${Object.keys(data).length} товаров`);
+            
+            // Логирование первых нескольких записей для отладки
+            const sampleEntries = Object.entries(data).slice(0, 3);
+            if (sampleEntries.length > 0) {
+              console.log('[Dashboard] Примеры данных:', sampleEntries);
+            }
           })
           .catch(error => {
-            console.error('Ошибка при получении данных о средних продажах:', error);
+            console.error('[Dashboard] Ошибка при получении данных о средних продажах:', error);
           });
       }
 
@@ -218,7 +225,7 @@ const Dashboard = () => {
         description: "Данные успешно обновлены",
       });
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('[Dashboard] Error fetching data:', error);
       toast({
         title: "Ошибка",
         description: "Не удалось загрузить данные",
