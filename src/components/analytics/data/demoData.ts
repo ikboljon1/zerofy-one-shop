@@ -45,15 +45,100 @@ export const inventoryData = [];
 const AVERAGE_SALES_STORAGE_KEY = 'wb_average_daily_sales';
 
 /**
- * Сохраняет данные о средних продажах в localStorage
- * @param salesData Объект с данными о средних продажах
+ * Интерфейс для хранения данных о продажах по периодам
  */
-export const saveAverageDailySales = (salesData: Record<number, number>) => {
+interface SalesDataByPeriod {
+  // Ключ - строка в формате 'YYYY-MM-DD_YYYY-MM-DD' (начало_конец периода)
+  [periodKey: string]: {
+    averageSales: Record<number, number>; // nmId -> среднее количество продаж
+    fetchDate: string; // Дата и время получения данных
+  };
+}
+
+/**
+ * Генерирует ключ периода для хранения данных
+ * @param dateFrom Дата начала периода
+ * @param dateTo Дата окончания периода
+ */
+const generatePeriodKey = (dateFrom: string, dateTo: string): string => {
+  return `${dateFrom}_${dateTo}`;
+};
+
+/**
+ * Сохраняет данные о средних продажах в localStorage с привязкой к периоду
+ * @param salesData Объект с данными о средних продажах
+ * @param dateFrom Дата начала периода в формате YYYY-MM-DD
+ * @param dateTo Дата окончания периода в формате YYYY-MM-DD
+ */
+export const saveAverageDailySales = (
+  salesData: Record<number, number>,
+  dateFrom?: string,
+  dateTo?: string
+) => {
   try {
+    // Если не переданы даты, сохраняем в обычном формате (для обратной совместимости)
+    if (!dateFrom || !dateTo) {
+      localStorage.setItem(AVERAGE_SALES_STORAGE_KEY, JSON.stringify(salesData));
+      console.log('Данные о средних продажах сохранены в localStorage (без привязки к периоду)');
+      return;
+    }
+
+    // Получаем текущие данные по периодам
+    const existingData: SalesDataByPeriod = JSON.parse(
+      localStorage.getItem(`${AVERAGE_SALES_STORAGE_KEY}_by_period`) || '{}'
+    );
+
+    // Ключ для текущего периода
+    const periodKey = generatePeriodKey(dateFrom, dateTo);
+
+    // Обновляем данные для текущего периода
+    existingData[periodKey] = {
+      averageSales: salesData,
+      fetchDate: new Date().toISOString()
+    };
+
+    // Сохраняем обновленные данные
+    localStorage.setItem(`${AVERAGE_SALES_STORAGE_KEY}_by_period`, JSON.stringify(existingData));
+
+    // Также сохраняем в обычном формате для обратной совместимости
     localStorage.setItem(AVERAGE_SALES_STORAGE_KEY, JSON.stringify(salesData));
-    console.log('Данные о средних продажах сохранены в localStorage');
+
+    console.log(`Данные о средних продажах сохранены для периода ${dateFrom} - ${dateTo}`);
   } catch (error) {
     console.error('Ошибка при сохранении данных о продажах:', error);
+  }
+};
+
+/**
+ * Получает данные о средних продажах для конкретного периода
+ * @param dateFrom Дата начала периода в формате YYYY-MM-DD
+ * @param dateTo Дата окончания периода в формате YYYY-MM-DD
+ * @returns Объект с данными о средних продажах или null, если данных нет
+ */
+export const getAverageDailySalesByPeriod = (
+  dateFrom: string,
+  dateTo: string
+): Record<number, number> | null => {
+  try {
+    // Получаем все данные по периодам
+    const allPeriodsData: SalesDataByPeriod = JSON.parse(
+      localStorage.getItem(`${AVERAGE_SALES_STORAGE_KEY}_by_period`) || '{}'
+    );
+
+    // Ключ для запрашиваемого периода
+    const periodKey = generatePeriodKey(dateFrom, dateTo);
+
+    // Если есть данные для указанного периода, возвращаем их
+    if (allPeriodsData[periodKey]) {
+      console.log(`Найдены сохраненные данные о продажах для периода ${dateFrom} - ${dateTo}`);
+      return allPeriodsData[periodKey].averageSales;
+    }
+
+    console.log(`Нет сохраненных данных о продажах для периода ${dateFrom} - ${dateTo}`);
+    return null;
+  } catch (error) {
+    console.error('Ошибка при получении данных о продажах по периоду:', error);
+    return null;
   }
 };
 
@@ -85,6 +170,25 @@ export const fetchAverageDailySalesFromAPI = async (
   dateTo: string
 ): Promise<Record<number, number>> => {
   try {
+    // Проверяем, есть ли уже кэшированные данные для этого периода
+    const cachedData = getAverageDailySalesByPeriod(dateFrom, dateTo);
+    if (cachedData) {
+      console.log(`Используем кэшированные данные о продажах за период ${dateFrom} - ${dateTo}`);
+      
+      // Отправка события для уведомления компонентов об обновлении данных
+      const event = new CustomEvent('salesDataUpdated', { 
+        detail: { 
+          averageSalesPerDay: cachedData, 
+          dateFrom, 
+          dateTo,
+          fromCache: true
+        } 
+      });
+      window.dispatchEvent(event);
+      
+      return cachedData;
+    }
+    
     console.log(`Запрос данных о продажах с ${dateFrom} по ${dateTo}`);
     
     // Получение всех данных с пагинацией
@@ -101,14 +205,15 @@ export const fetchAverageDailySalesFromAPI = async (
     const averageSalesPerDay = calculateAverageDailySalesPerProduct(allData, dateFrom, dateTo);
     
     // Сохраняем данные в localStorage для использования в других компонентах
-    saveAverageDailySales(averageSalesPerDay);
+    saveAverageDailySales(averageSalesPerDay, dateFrom, dateTo);
     
     // Отправка события для уведомления компонентов об обновлении данных
     const event = new CustomEvent('salesDataUpdated', { 
       detail: { 
         averageSalesPerDay, 
         dateFrom, 
-        dateTo 
+        dateTo,
+        fromCache: false
       } 
     });
     window.dispatchEvent(event);

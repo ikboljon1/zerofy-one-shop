@@ -24,7 +24,7 @@ import SalesChart from "./SalesChart";
 import TipsSection from "./TipsSection";
 import AIAnalysisSection from "@/components/ai/AIAnalysisSection";
 import SalesTable from "./SalesTable";
-import { fetchAverageDailySalesFromAPI, saveAverageDailySales } from "@/components/analytics/data/demoData";
+import { fetchAverageDailySalesFromAPI } from "@/components/analytics/data/demoData";
 import { format } from 'date-fns';
 
 const Dashboard = () => {
@@ -185,8 +185,6 @@ const Dashboard = () => {
         fetchAverageDailySalesFromAPI(selectedStore.apiKey, dateFrom, dateTo)
           .then(data => {
             console.log('Получены данные о средних продажах:', data);
-            // Сохраняем данные для использования в других компонентах
-            saveAverageDailySales(data);
           })
           .catch(error => {
             console.error('Ошибка при получении данных о средних продажах:', error);
