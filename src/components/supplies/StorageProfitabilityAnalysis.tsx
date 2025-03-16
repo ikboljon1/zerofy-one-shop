@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -120,5 +121,32 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
   dailyStorageCost = {},
   loading = false
 }) => {
-  // Rest of the component remains unchanged
+  // For this placeholder implementation, just return a simple message
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Анализ рентабельности хранения</CardTitle>
+        <CardDescription>
+          Анализ затрат на хранение и оптимизация стоков
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="flex items-center justify-center p-12">
+            <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+            <p className="ml-4 text-muted-foreground">Загрузка данных...</p>
+          </div>
+        ) : (
+          <div>
+            <p>Количество товаров для анализа: {warehouseItems.length}</p>
+            <p>Платное хранение: {paidStorageData.length} записей</p>
+            <p>Средние продажи: {Object.keys(averageDailySalesRate).length} товаров</p>
+            <p>Ежедневные затраты на хранение: {Object.keys(dailyStorageCost).length} товаров</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 };
+
+export default StorageProfitabilityAnalysis;
