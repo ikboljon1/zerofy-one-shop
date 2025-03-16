@@ -1,8 +1,55 @@
+
 import axios from 'axios';
 
 interface SalesData {
   [nmId: number]: number;
 }
+
+// Color palette for charts
+export const COLORS = [
+  '#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A569BD', 
+  '#5DADE2', '#48C9B0', '#F4D03F', '#EB984E', '#EC7063'
+];
+
+// Empty data template for analytics
+export const emptyAnalyticsData = {
+  currentPeriod: {
+    sales: 0,
+    transferred: 0,
+    expenses: {
+      total: 0,
+      logistics: 0,
+      storage: 0,
+      penalties: 0,
+      advertising: 0,
+      acceptance: 0,
+      deductions: 0
+    },
+    netProfit: 0,
+    acceptance: 0,
+    returnsAmount: 0
+  },
+  dailySales: [],
+  productSales: [],
+  productReturns: [],
+  topProfitableProducts: [],
+  topUnprofitableProducts: []
+};
+
+// Empty timeline data for deductions chart
+export const emptyDeductionsTimelineData = Array.from({ length: 7 }, (_, i) => {
+  const date = new Date();
+  date.setDate(date.getDate() - (6 - i));
+  return {
+    date: date.toISOString().split('T')[0],
+    logistic: 0,
+    storage: 0, 
+    penalties: 0,
+    acceptance: 0,
+    advertising: 0,
+    deductions: 0
+  };
+});
 
 // Получение средних продаж за день из API Wildberries
 export const fetchAverageDailySalesFromAPI = async (
