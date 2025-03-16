@@ -39,6 +39,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { ensureStoreSelectionPersistence } from '@/utils/storeUtils';
 import { Store as StoreType } from '@/types/store';
+import { fetchAverageDailySalesFromAPI } from '@/components/analytics/data/demoData';
 
 const Warehouses: React.FC = () => {
   const [activeTab, setActiveTab] = useState('inventory');
@@ -52,10 +53,13 @@ const Warehouses: React.FC = () => {
     coefficients: false,
     options: false,
     remains: false,
-    paidStorage: false
+    paidStorage: false,
+    averageSales: false
   });
   const [selectedStore, setSelectedStore] = useState<StoreType | null>(null);
   const [preferredWarehouses, setPreferredWarehouses] = useState<number[]>([]);
+  const [averageDailySales, setAverageDailySales] = useState<Record<number, number>>({});
+  const [dailyStorageCosts, setDailyStorageCosts] = useState<Record<number, number>>({});
 
   useEffect(() => {
     const stores = ensureStoreSelectionPersistence();
@@ -70,6 +74,7 @@ const Warehouses: React.FC = () => {
         setPreferredWarehouses(preferred);
       } else if (activeTab === 'inventory') {
         loadWarehouseRemains(selected.apiKey);
+        loadAverageDailySales(selected.apiKey);
       } else if (activeTab === 'storage') {
         loadPaidStorageData(selected.apiKey);
       }
@@ -87,11 +92,74 @@ const Warehouses: React.FC = () => {
         setPreferredWarehouses(preferred);
       } else if (activeTab === 'inventory') {
         loadWarehouseRemains(selectedStore.apiKey);
+        loadAverageDailySales(selectedStore.apiKey);
       } else if (activeTab === 'storage') {
         loadPaidStorageData(selectedStore.apiKey);
       }
     }
   }, [activeTab, selectedStore]);
+
+  const loadAverageDailySales = async (apiKey: string) => {
+    if (!apiKey) {
+      toast.warning('Необходимо выбрать магазин для получения данных');
+      return;
+    }
+    
+    try {
+      setLoading(prev => ({ ...prev, averageSales: true }));
+      
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now);
+      thirtyDaysAgo.setDate(now.getDate() - 30);
+      
+      const dateFrom = formatDate(thirtyDaysAgo);
+      const dateTo = formatDate(now);
+      
+      console.log(`[Warehouses] Запрашиваем данные о средних продажах с ${dateFrom} по ${dateTo}`);
+      
+      const data = await fetchAverageDailySalesFromAPI(apiKey, dateFrom, dateTo);
+      console.log('[Warehouses] Получены данные о средних продажах:', 
+                  `${Object.keys(data).length} товаров`);
+      
+      setAverageDailySales(data);
+      
+      calculateRealStorageCosts();
+      
+    } catch (error: any) {
+      console.error('[Warehouses] Ошибка при загрузке средних продаж:', error);
+      generateMockAverageSales();
+    } finally {
+      setLoading(prev => ({ ...prev, averageSales: false }));
+    }
+  };
+  
+  const calculateRealStorageCosts = () => {
+    const storageCosts: Record<number, number> = {};
+    
+    warehouseRemains.forEach(item => {
+      const volume = item.volume || 0.001;
+      const baseStorageRate = 5;
+      storageCosts[item.nmId] = volume * baseStorageRate;
+    });
+    
+    setDailyStorageCosts(storageCosts);
+  };
+  
+  const generateMockAverageSales = () => {
+    const mockSalesData: Record<number, number> = {};
+    warehouseRemains.forEach(item => {
+      mockSalesData[item.nmId] = Math.random() * 2;
+    });
+    setAverageDailySales(mockSalesData);
+    console.log('[Warehouses] Используем моковые данные для средних продаж:', mockSalesData);
+  };
+  
+  const formatDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   const loadWarehouses = async (apiKey: string) => {
     try {
@@ -156,6 +224,9 @@ const Warehouses: React.FC = () => {
       
       setWarehouseRemains(data);
       toast.success('Отчет об остатках на складах успешно загружен');
+      
+      calculateRealStorageCosts();
+      
     } catch (error: any) {
       console.error('Ошибка при загрузке остатков на складах:', error);
       toast.error(`Не удалось загрузить отчет: ${error.message || 'Неизвестная ошибка'}`);
@@ -198,29 +269,13 @@ const Warehouses: React.FC = () => {
     
     if (activeTab === 'inventory') {
       loadWarehouseRemains(selectedStore.apiKey);
+      loadAverageDailySales(selectedStore.apiKey);
     } else if (activeTab === 'supplies') {
       loadWarehouses(selectedStore.apiKey);
       loadCoefficients(selectedStore.apiKey);
     } else if (activeTab === 'storage') {
       loadPaidStorageData(selectedStore.apiKey);
     }
-  };
-
-  const calculateAverageDailySales = () => {
-    const result: Record<number, number> = {};
-    warehouseRemains.forEach(item => {
-      result[item.nmId] = Math.random() * 2;
-    });
-    return result;
-  };
-
-  const calculateDailyStorageCosts = () => {
-    const result: Record<number, number> = {};
-    warehouseRemains.forEach(item => {
-      const volume = item.volume || 1;
-      result[item.nmId] = volume * 5;
-    });
-    return result;
   };
 
   const renderNoStoreSelected = () => (
@@ -290,7 +345,7 @@ const Warehouses: React.FC = () => {
                   ) : (
                     <RefreshCw className="h-4 w-4" />
                   )}
-                  Обн��вить данные
+                  Обновить данные
                 </Button>
               </div>
 
@@ -310,8 +365,9 @@ const Warehouses: React.FC = () => {
                     <StorageProfitabilityAnalysis 
                       warehouseItems={warehouseRemains}
                       paidStorageData={paidStorageData}
-                      averageDailySalesRate={calculateAverageDailySales()}
-                      dailyStorageCost={calculateDailyStorageCosts()}
+                      averageDailySalesRate={averageDailySales}
+                      dailyStorageCost={dailyStorageCosts}
+                      isLoadingData={loading.averageSales}
                     />
                   </div>
                 </>
