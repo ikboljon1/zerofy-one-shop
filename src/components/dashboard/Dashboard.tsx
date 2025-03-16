@@ -169,28 +169,6 @@ const Dashboard = () => {
         fetchAndUpdateSales(selectedStore)
       ]);
       
-      // Запрашиваем данные о средних продажах, если есть API ключ
-      if (selectedStore.apiKey) {
-        const now = new Date();
-        const thirtyDaysAgo = new Date(now);
-        thirtyDaysAgo.setDate(now.getDate() - 30);
-        
-        // Форматируем даты для API
-        const dateFrom = format(thirtyDaysAgo, 'yyyy-MM-dd');
-        const dateTo = format(now, 'yyyy-MM-dd');
-        
-        console.log(`Запрашиваем данные о средних продажах с ${dateFrom} по ${dateTo}`);
-        
-        // Запускаем запрос в фоне
-        fetchAverageDailySalesFromAPI(selectedStore.apiKey, dateFrom, dateTo)
-          .then(data => {
-            console.log('Получены данные о средних продажах:', data);
-          })
-          .catch(error => {
-            console.error('Ошибка при получении данных о средних продажах:', error);
-          });
-      }
-
       if (ordersResult) {
         setOrders(ordersResult.orders);
         setWarehouseDistribution(ordersResult.warehouseDistribution);
