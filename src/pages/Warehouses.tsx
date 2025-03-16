@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -75,6 +76,8 @@ const Warehouses: React.FC = () => {
       } else if (activeTab === 'inventory') {
         loadWarehouseRemains(selected.apiKey);
         loadAverageDailySales(selected.apiKey);
+        // Загружаем данные о платном хранении для корректного расчета стоимости хранения
+        loadPaidStorageData(selected.apiKey);
       } else if (activeTab === 'storage') {
         loadPaidStorageData(selected.apiKey);
       }
@@ -93,11 +96,20 @@ const Warehouses: React.FC = () => {
       } else if (activeTab === 'inventory') {
         loadWarehouseRemains(selectedStore.apiKey);
         loadAverageDailySales(selectedStore.apiKey);
+        // Загружаем данные о платном хранении для корректного расчета стоимости хранения
+        loadPaidStorageData(selectedStore.apiKey);
       } else if (activeTab === 'storage') {
         loadPaidStorageData(selectedStore.apiKey);
       }
     }
   }, [activeTab, selectedStore]);
+
+  // При получении данных о платном хранении вычисляем стоимость хранения
+  useEffect(() => {
+    if (paidStorageData.length > 0 && warehouseRemains.length > 0) {
+      calculateRealStorageCostsFromAPI();
+    }
+  }, [paidStorageData, warehouseRemains]);
 
   const loadAverageDailySales = async (apiKey: string) => {
     if (!apiKey) {
@@ -123,8 +135,6 @@ const Warehouses: React.FC = () => {
       
       setAverageDailySales(data);
       
-      calculateRealStorageCosts();
-      
     } catch (error: any) {
       console.error('[Warehouses] Ошибка при загрузке средних продаж:', error);
       generateMockAverageSales();
@@ -133,18 +143,59 @@ const Warehouses: React.FC = () => {
     }
   };
   
-  const calculateRealStorageCosts = () => {
+  // Новая функция для расчета стоимости хранения на основе данных API
+  const calculateRealStorageCostsFromAPI = () => {
+    console.log('[Warehouses] Расчет стоимости хранения на основе данных API');
+    
+    // Инициализируем объект для хранения результата
     const storageCosts: Record<number, number> = {};
     
+    // Для каждого товара в warehouseRemains ищем соответствующие данные о стоимости хранения
     warehouseRemains.forEach(item => {
-      const volume = item.volume || 0.001;
-      const baseStorageRate = 5;
-      storageCosts[item.nmId] = volume * baseStorageRate;
+      const nmId = item.nmId;
+      
+      // Ищем данные о стоимости хранения для этого товара
+      const storageItem = paidStorageData.find(
+        storage => storage.nmId === nmId
+      );
+      
+      if (storageItem && storageItem.dailyStorageCost) {
+        // Если нашли данные о стоимости хранения, используем их
+        storageCosts[nmId] = storageItem.dailyStorageCost;
+        console.log(`[Warehouses] Для товара ${nmId} найдена стоимость хранения: ${storageItem.dailyStorageCost}`);
+      } else {
+        // Если данных нет, используем расчет на основе объема (как запасной вариант)
+        const volume = item.volume || 0.001;
+        const baseStorageRate = item.category ? 
+          calculateCategoryRate(item.category) : 5;
+        
+        storageCosts[nmId] = volume * baseStorageRate;
+        console.log(`[Warehouses] Для товара ${nmId} стоимость хранения рассчитана: ${storageCosts[nmId]}`);
+      }
     });
     
+    console.log('[Warehouses] Расчет стоимости хранения завершен для', Object.keys(storageCosts).length, 'товаров');
     setDailyStorageCosts(storageCosts);
   };
   
+  // Вспомогательная функция для расчета тарифа в зависимости от категории товара
+  const calculateCategoryRate = (category: string): number => {
+    // Примерные тарифы для разных категорий товаров
+    switch(category.toLowerCase()) {
+      case 'обувь':
+        return 6.5;
+      case 'одежда':
+        return 5.8;
+      case 'аксессуары':
+        return 4.5;
+      case 'электроника':
+        return 7.2;
+      default:
+        return 5;
+    }
+  };
+  
+  // Функция для генерации случайных данных о продажах (используется при ошибке API)
   const generateMockAverageSales = () => {
     const mockSalesData: Record<number, number> = {};
     warehouseRemains.forEach(item => {
@@ -225,7 +276,10 @@ const Warehouses: React.FC = () => {
       setWarehouseRemains(data);
       toast.success('Отчет об остатках на складах успешно загружен');
       
-      calculateRealStorageCosts();
+      // После загрузки остатков обновляем стоимость хранения, если уже есть данные о платном хранении
+      if (paidStorageData.length > 0) {
+        calculateRealStorageCostsFromAPI();
+      }
       
     } catch (error: any) {
       console.error('Ошибка при загрузке остатков на складах:', error);
@@ -252,6 +306,11 @@ const Warehouses: React.FC = () => {
       const data = await fetchFullPaidStorageReport(apiKey, dateFrom, dateTo);
       setPaidStorageData(data);
       
+      // После загрузки данных о платном хранении обновляем стоимость хранения, если есть данные об остатках
+      if (warehouseRemains.length > 0) {
+        calculateRealStorageCostsFromAPI();
+      }
+      
       toast.success('Отчет о платном хранении успешно загружен');
     } catch (error: any) {
       console.error('Ошибка при загрузке отчета о платном хранении:', error);
@@ -270,6 +329,8 @@ const Warehouses: React.FC = () => {
     if (activeTab === 'inventory') {
       loadWarehouseRemains(selectedStore.apiKey);
       loadAverageDailySales(selectedStore.apiKey);
+      // Также обновляем данные о платном хранении для корректного расчета
+      loadPaidStorageData(selectedStore.apiKey);
     } else if (activeTab === 'supplies') {
       loadWarehouses(selectedStore.apiKey);
       loadCoefficients(selectedStore.apiKey);
@@ -367,7 +428,7 @@ const Warehouses: React.FC = () => {
                       paidStorageData={paidStorageData}
                       averageDailySalesRate={averageDailySales}
                       dailyStorageCost={dailyStorageCosts}
-                      isLoadingData={loading.averageSales}
+                      isLoadingData={loading.averageSales || loading.paidStorage}
                     />
                   </div>
                 </>
