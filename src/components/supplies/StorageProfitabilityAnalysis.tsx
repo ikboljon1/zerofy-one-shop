@@ -450,7 +450,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     const totalStorageCost = analysisResults.reduce((sum, item) => sum + item.totalStorageCost, 0);
     const potentialSavings = analysisResults.reduce((sum, item) => {
       return sum + (item.savingsWithDiscount > 0 ? item.savingsWithDiscount : 0);
-    }, 0);\
+    }, 0);
     const itemsStockingOutBeforeTarget = targetDate ? analysisResults.filter(item => item.projectedStockoutDate && item.projectedStockoutDate <= targetDate).length : 0;
     return {
       totalItems,
@@ -759,4 +759,3 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         icon: <Clock className="h-3.5 w-3.5 text-amber-500" />
       });
     }
-    return factors
