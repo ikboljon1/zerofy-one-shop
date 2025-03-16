@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -159,10 +158,19 @@ const Warehouses: React.FC = () => {
         storage => storage.nmId === nmId
       );
       
-      if (storageItem && storageItem.dailyStorageCost) {
-        // Если нашли данные о стоимости хранения, используем их
-        storageCosts[nmId] = storageItem.dailyStorageCost;
-        console.log(`[Warehouses] Для товара ${nmId} найдена стоимость хранения: ${storageItem.dailyStorageCost}`);
+      if (storageItem && storageItem.warehousePrice) {
+        // Вычисляем суточную стоимость хранения из данных API
+        // Поскольку API дает стоимость за некоторый период, делим на количество дней
+        // (обычно это месяц или неделя, используем примерно 30 дней)
+        const dailyCost = storageItem.warehousePrice / 30;
+        
+        // Сохраняем стоимость хранения для использования в компоненте
+        storageCosts[nmId] = dailyCost;
+        
+        // Также обновляем данные в самом объекте для удобства использования
+        storageItem.dailyStorageCost = dailyCost;
+        
+        console.log(`[Warehouses] Для товара ${nmId} найдена стоимость хранения: ${dailyCost}`);
       } else {
         // Если данных нет, используем расчет на основе объема (как запасной вариант)
         const volume = item.volume || 0.001;
@@ -428,7 +436,6 @@ const Warehouses: React.FC = () => {
                       paidStorageData={paidStorageData}
                       averageDailySalesRate={averageDailySales}
                       dailyStorageCost={dailyStorageCosts}
-                      isLoadingData={loading.averageSales || loading.paidStorage}
                     />
                   </div>
                 </>

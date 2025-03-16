@@ -312,7 +312,7 @@ const Dashboard = () => {
                 toast({
                   title: "Ограничение API",
                   description: "Не удалось получить данные о средних продажах из-за ограничений API",
-                  variant: "warning"
+                  variant: "destructive"
                 });
               }
             });

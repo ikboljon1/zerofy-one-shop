@@ -186,4 +186,5 @@ export interface PaidStorageItem {
   loyaltyDiscount: number;
   tariffFixDate: string;
   tariffLowerDate: string;
+  dailyStorageCost?: number; // Added this property as optional
 }
