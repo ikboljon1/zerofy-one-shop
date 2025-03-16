@@ -143,9 +143,8 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
   const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('wb_api_key') || '');
   const { toast } = useToast();
   
-  // Добавляем состояния для выбора дат
-  const [fromDate, setFromDate] = useState<Date>(subDays(new Date(), 30)); // По умолчанию 30 дней назад
-  const [toDate, setToDate] = useState<Date>(new Date()); // По умолчанию сегодня
+  const [fromDate, setFromDate] = useState<Date>(subDays(new Date(), 30));
+  const [toDate, setToDate] = useState<Date>(new Date());
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
 
   useEffect(() => {
@@ -451,7 +450,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
     const totalStorageCost = analysisResults.reduce((sum, item) => sum + item.totalStorageCost, 0);
     const potentialSavings = analysisResults.reduce((sum, item) => {
       return sum + (item.savingsWithDiscount > 0 ? item.savingsWithDiscount : 0);
-    }, 0);\
+    }, 0);
     const itemsStockingOutBeforeTarget = targetDate ? analysisResults.filter(item => item.projectedStockoutDate && item.projectedStockoutDate <= targetDate).length : 0;
     return {
       totalItems,
@@ -572,7 +571,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
           ...salesData
         }));
         
-        console.log('Обновлены данные о средних продажах:', Object.keys(salesData).length);\
+        console.log('Обновлены данные о средних продажах:', Object.keys(salesData).length);
         
         try {
           const storageData = await loadPaidStorageData();
@@ -617,7 +616,7 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         
         toast({
           title: "Данные получены",
-          description: `Данные о продажах за период ${format(startDate, 'dd.MM.yyyy')} - ${format(endDate, 'dd.MM.yyyy')} успешно загружены`,\
+          description: `Данные о продажах за период ${format(startDate, 'dd.MM.yyyy')} - ${format(endDate, 'dd.MM.yyyy')} успешно загружены`
         });
       } else {
         toast({
@@ -757,4 +756,10 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         description: "Более 60 дней на распродажу запаса",
         value: formatDaysOfInventory(result.daysOfInventory),
         status: "warning",
-        icon: <Clock className="h-3
+        icon: <Clock className="h-3.5 w-3.5 text-amber-500" />
+      });
+    }
+    return factors;
+  };
+
+  export default StorageProfitabilityAnalysis;
