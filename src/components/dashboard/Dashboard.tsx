@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
@@ -139,6 +140,7 @@ const Dashboard = () => {
 
   const fetchData = useCallback(async () => {
     try {
+      console.log("[Dashboard] Starting data fetch...");
       setIsLoading(true);
       
       const userData = localStorage.getItem('user');
@@ -152,6 +154,7 @@ const Dashboard = () => {
       const selectedStore = userStores.find(store => store.isSelected) || (userStores.length > 0 ? userStores[0] : null);
       
       if (!selectedStore) {
+        console.log("[Dashboard] No store selected");
         toast({
           title: "Внимание",
           description: "Выберите основной магазин в разделе 'Магазины'",
@@ -160,10 +163,14 @@ const Dashboard = () => {
         return;
       }
 
+      console.log(`[Dashboard] Selected store: ${selectedStore.name} (ID: ${selectedStore.id})`);
+      
       if (selectedStore.id !== selectedStoreId) {
+        console.log(`[Dashboard] Store ID changed from ${selectedStoreId} to ${selectedStore.id}`);
         setSelectedStoreId(selectedStore.id);
       }
 
+      console.log("[Dashboard] Fetching orders and sales data...");
       const [ordersResult, salesResult] = await Promise.all([
         fetchAndUpdateOrders(selectedStore),
         fetchAndUpdateSales(selectedStore)
@@ -180,6 +187,7 @@ const Dashboard = () => {
         const dateTo = format(now, 'yyyy-MM-dd');
         
         console.log(`[Dashboard] Запрашиваем данные о средних продажах с ${dateFrom} по ${dateTo}`);
+        console.log(`[Dashboard] Ключ кэша для периода: ${dateFrom}_${dateTo}`);
         
         // Запускаем запрос в фоне
         fetchAverageDailySalesFromAPI(selectedStore.apiKey, dateFrom, dateTo)
@@ -196,30 +204,43 @@ const Dashboard = () => {
           .catch(error => {
             console.error('[Dashboard] Ошибка при получении данных о средних продажах:', error);
           });
+      } else {
+        console.log("[Dashboard] Нет API ключа для запроса средних продаж");
       }
 
       if (ordersResult) {
+        console.log(`[Dashboard] Received ${ordersResult.orders.length} orders from API`);
         setOrders(ordersResult.orders);
         setWarehouseDistribution(ordersResult.warehouseDistribution);
         setRegionDistribution(ordersResult.regionDistribution);
       } else {
+        console.log("[Dashboard] No orders from API, trying local storage");
         const savedOrdersData = await getOrdersData(selectedStore.id);
         if (savedOrdersData) {
+          console.log(`[Dashboard] Loaded ${savedOrdersData.orders?.length || 0} orders from storage`);
           setOrders(savedOrdersData.orders || []);
           setWarehouseDistribution(savedOrdersData.warehouseDistribution || []);
           setRegionDistribution(savedOrdersData.regionDistribution || []);
+        } else {
+          console.log("[Dashboard] No orders found in storage");
         }
       }
 
       if (salesResult) {
+        console.log(`[Dashboard] Received ${salesResult.length} sales from API`);
         setSales(salesResult);
       } else {
+        console.log("[Dashboard] No sales from API, trying local storage");
         const savedSalesData = await getSalesData(selectedStore.id);
         if (savedSalesData) {
+          console.log(`[Dashboard] Loaded ${savedSalesData.sales?.length || 0} sales from storage`);
           setSales(savedSalesData.sales || []);
+        } else {
+          console.log("[Dashboard] No sales found in storage");
         }
       }
 
+      console.log("[Dashboard] Data fetch completed successfully");
       toast({
         title: "Успех",
         description: "Данные успешно обновлены",

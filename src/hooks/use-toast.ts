@@ -1,4 +1,3 @@
-
 import * as React from "react"
 
 import type {
@@ -27,7 +26,7 @@ let count = 0
 
 function genId() {
   count = (count + 1) % Number.MAX_VALUE
-  return count.toString()
+  return `${count}_${Date.now()}`  // Added timestamp to ensure uniqueness
 }
 
 type ActionType = typeof actionTypes
@@ -139,13 +138,17 @@ function dispatch(action: Action) {
 interface Toast extends Omit<ToasterToast, "id"> {}
 
 function toast({ ...props }: Toast) {
+  console.log("[Toast] Creating new toast");
+  
   // Skip success notifications unless they are critical
   if (props.title === "Успех" || props.title?.toString().toLowerCase().includes("успешно")) {
     // Don't show success notifications
+    console.log("[Toast] Skipping success toast");
     return { id: "", dismiss: () => {}, update: () => {} };
   }
   
   const id = genId()
+  console.log(`[Toast] Generated unique ID: ${id}`);
 
   if (typeof props.title === 'string') {
     props.title = props.title.replace(/�/g, '');
@@ -174,7 +177,7 @@ function toast({ ...props }: Toast) {
     },
   })
 
-  setTimeout(dismiss, TOAST_REMOVE_DELAY)
+  setTimeout(dismiss, 5000);  // Auto dismiss after 5 seconds
 
   return {
     id: id,
