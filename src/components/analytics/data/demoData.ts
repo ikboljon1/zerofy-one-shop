@@ -1,4 +1,3 @@
-
 // Минимальная структура для API-интерфейса
 export const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#6366F1'];
 
@@ -61,7 +60,9 @@ interface SalesDataByPeriod {
  * @param dateTo Дата окончания периода
  */
 const generatePeriodKey = (dateFrom: string, dateTo: string): string => {
-  return `${dateFrom}_${dateTo}`;
+  const key = `${dateFrom}_${dateTo}`;
+  console.log(`[Cache] Generated period key: ${key}`);
+  return key;
 };
 
 /**
@@ -76,17 +77,23 @@ export const saveAverageDailySales = (
   dateTo?: string
 ) => {
   try {
+    console.log(`[Cache] Saving sales data, with period? ${!!dateFrom && !!dateTo}`);
+    
     // Если не переданы даты, сохраняем в обычном формате (для обратной совместимости)
     if (!dateFrom || !dateTo) {
       localStorage.setItem(AVERAGE_SALES_STORAGE_KEY, JSON.stringify(salesData));
-      console.log('Данные о средних продажах сохранены в localStorage (без привязки к периоду)');
+      console.log('[Cache] Data saved in legacy format (without period)');
       return;
     }
 
     // Получаем текущие данные по периодам
-    const existingData: SalesDataByPeriod = JSON.parse(
-      localStorage.getItem(`${AVERAGE_SALES_STORAGE_KEY}_by_period`) || '{}'
-    );
+    const storageKey = `${AVERAGE_SALES_STORAGE_KEY}_by_period`;
+    const existingDataStr = localStorage.getItem(storageKey);
+    console.log(`[Cache] Existing period data in storage: ${!!existingDataStr}`);
+    
+    const existingData: SalesDataByPeriod = existingDataStr 
+      ? JSON.parse(existingDataStr) 
+      : {};
 
     // Ключ для текущего периода
     const periodKey = generatePeriodKey(dateFrom, dateTo);
@@ -98,14 +105,13 @@ export const saveAverageDailySales = (
     };
 
     // Сохраняем обновленные данные
-    localStorage.setItem(`${AVERAGE_SALES_STORAGE_KEY}_by_period`, JSON.stringify(existingData));
+    localStorage.setItem(storageKey, JSON.stringify(existingData));
+    console.log(`[Cache] Data saved for period ${periodKey} with ${Object.keys(salesData).length} product records`);
 
     // Также сохраняем в обычном формате для обратной совместимости
     localStorage.setItem(AVERAGE_SALES_STORAGE_KEY, JSON.stringify(salesData));
-
-    console.log(`Данные о средних продажах сохранены для периода ${dateFrom} - ${dateTo}`);
   } catch (error) {
-    console.error('Ошибка при сохранении данных о продажах:', error);
+    console.error('[Cache] Error saving sales data:', error);
   }
 };
 
@@ -120,24 +126,40 @@ export const getAverageDailySalesByPeriod = (
   dateTo: string
 ): Record<number, number> | null => {
   try {
+    console.log(`[Cache] Trying to get sales data for period: ${dateFrom} - ${dateTo}`);
+    
     // Получаем все данные по периодам
-    const allPeriodsData: SalesDataByPeriod = JSON.parse(
-      localStorage.getItem(`${AVERAGE_SALES_STORAGE_KEY}_by_period`) || '{}'
-    );
+    const storageKey = `${AVERAGE_SALES_STORAGE_KEY}_by_period`;
+    const allPeriodsDataStr = localStorage.getItem(storageKey);
+    
+    if (!allPeriodsDataStr) {
+      console.log(`[Cache] No period data found in storage at key: ${storageKey}`);
+      return null;
+    }
+    
+    const allPeriodsData: SalesDataByPeriod = JSON.parse(allPeriodsDataStr);
+    console.log(`[Cache] Found period data store with ${Object.keys(allPeriodsData).length} periods`);
 
     // Ключ для запрашиваемого периода
     const periodKey = generatePeriodKey(dateFrom, dateTo);
 
     // Если есть данные для указанного периода, возвращаем их
     if (allPeriodsData[periodKey]) {
-      console.log(`Найдены сохраненные данные о продажах для периода ${dateFrom} - ${dateTo}`);
-      return allPeriodsData[periodKey].averageSales;
+      const cachedData = allPeriodsData[periodKey].averageSales;
+      const fetchDate = new Date(allPeriodsData[periodKey].fetchDate);
+      const productCount = Object.keys(cachedData).length;
+      
+      console.log(`[Cache] CACHE HIT! Found cached data for period ${periodKey}`);
+      console.log(`[Cache] Cached data contains ${productCount} products, fetched on ${fetchDate.toLocaleString()}`);
+      
+      return cachedData;
     }
 
-    console.log(`Нет сохраненных данных о продажах для периода ${dateFrom} - ${dateTo}`);
+    console.log(`[Cache] CACHE MISS! No data found for period key: ${periodKey}`);
+    console.log(`[Cache] Available period keys: ${Object.keys(allPeriodsData).join(', ')}`);
     return null;
   } catch (error) {
-    console.error('Ошибка при получении данных о продажах по периоду:', error);
+    console.error('[Cache] Error retrieving sales data by period:', error);
     return null;
   }
 };
@@ -149,10 +171,15 @@ export const getAverageDailySalesByPeriod = (
 export const getAverageDailySales = (): Record<number, number> | null => {
   try {
     const data = localStorage.getItem(AVERAGE_SALES_STORAGE_KEY);
-    if (!data) return null;
-    return JSON.parse(data);
+    if (!data) {
+      console.log('[Cache] No legacy sales data found');
+      return null;
+    }
+    const parsedData = JSON.parse(data);
+    console.log(`[Cache] Found legacy sales data with ${Object.keys(parsedData).length} products`);
+    return parsedData;
   } catch (error) {
-    console.error('Ошибка при получении данных о продажах:', error);
+    console.error('[Cache] Error retrieving legacy sales data:', error);
     return null;
   }
 };
@@ -170,10 +197,12 @@ export const fetchAverageDailySalesFromAPI = async (
   dateTo: string
 ): Promise<Record<number, number>> => {
   try {
+    console.log(`[API] Requesting sales data for period: ${dateFrom} - ${dateTo}`);
+    
     // Проверяем, есть ли уже кэшированные данные для этого периода
     const cachedData = getAverageDailySalesByPeriod(dateFrom, dateTo);
     if (cachedData) {
-      console.log(`Используем кэшированные данные о продажах за период ${dateFrom} - ${dateTo}`);
+      console.log(`[API] Using cached data for period ${dateFrom} - ${dateTo}`);
       
       // Отправка события для уведомления компонентов об обновлении данных
       const event = new CustomEvent('salesDataUpdated', { 
@@ -189,17 +218,17 @@ export const fetchAverageDailySalesFromAPI = async (
       return cachedData;
     }
     
-    console.log(`Запрос данных о продажах с ${dateFrom} по ${dateTo}`);
+    console.log(`[API] Cache miss, fetching fresh data from API for ${dateFrom} to ${dateTo}`);
     
     // Получение всех данных с пагинацией
     const allData = await fetchAllReportDetails(apiKey, dateFrom, dateTo);
     
     if (!allData || allData.length === 0) {
-      console.warn('Не получено данных из API');
+      console.warn('[API] No data returned from API');
       return {};
     }
     
-    console.log(`Получено ${allData.length} записей о продажах`);
+    console.log(`[API] Received ${allData.length} sales records from API`);
     
     // Рассчитываем среднее количество продаж в день для каждого товара
     const averageSalesPerDay = calculateAverageDailySalesPerProduct(allData, dateFrom, dateTo);
@@ -220,7 +249,7 @@ export const fetchAverageDailySalesFromAPI = async (
     
     return averageSalesPerDay;
   } catch (error) {
-    console.error('Ошибка при получении данных о продажах:', error);
+    console.error('[API] Error fetching sales data:', error);
     return {};
   }
 };
