@@ -759,3 +759,14 @@ const StorageProfitabilityAnalysis: React.FC<StorageProfitabilityAnalysisProps> 
         icon: <Clock className="h-3.5 w-3.5 text-amber-500" />
       });
     }
+    return factors;
+  };
+
+  return (
+    <div>
+      <div>StorageProfitabilityAnalysis Component</div>
+    </div>
+  );
+};
+
+export default StorageProfitabilityAnalysis;
