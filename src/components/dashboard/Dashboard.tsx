@@ -31,7 +31,7 @@ import RateLimitHandler from "./RateLimitHandler";
 const Dashboard = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("orders");
   const [period, setPeriod] = useState<Period>("today");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
@@ -42,7 +42,7 @@ const Dashboard = () => {
   const [regionDistribution, setRegionDistribution] = useState<any[]>([]);
   
   const [dateRange, setDateRange] = useState({
-    from: new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+    from: new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000),
     to: new Date()
   });
 
@@ -424,19 +424,13 @@ const Dashboard = () => {
         />
       )}
 
-      <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className={`${isMobile ? 'w-full grid grid-cols-5 gap-1' : ''}`}>
-          <TabsTrigger value="overview" className={isMobile ? 'text-xs py-1 px-1' : ''}>Обзор</TabsTrigger>
+      <Tabs defaultValue="orders" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className={`${isMobile ? 'w-full grid grid-cols-4 gap-1' : ''}`}>
           <TabsTrigger value="orders" className={isMobile ? 'text-xs py-1 px-1' : ''}>Заказы</TabsTrigger>
           <TabsTrigger value="sales" className={isMobile ? 'text-xs py-1 px-1' : ''}>Продажи</TabsTrigger>
           <TabsTrigger value="geography" className={isMobile ? 'text-xs py-1 px-1' : ''}>География</TabsTrigger>
           <TabsTrigger value="ai-analysis" className={isMobile ? 'text-xs py-1 px-1' : ''}>AI-анализ</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="overview" className="space-y-4">
-          <Stats />
-          <TipsSection />
-        </TabsContent>
 
         <TabsContent value="orders" className="space-y-4">
           <div className={`mb-4 ${isMobile ? 'w-full' : 'flex items-center gap-4'}`}>
