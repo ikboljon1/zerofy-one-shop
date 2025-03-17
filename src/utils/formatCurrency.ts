@@ -1,15 +1,14 @@
-
 export const formatCurrency = (value: number | string): string => {
   const numValue = typeof value === 'string' ? parseFloat(value) : value;
   
   if (isNaN(numValue)) {
-    return '0';
+    return '0,00';
   }
   
-  // Format the number with thousands separators but without the ₽ symbol
+  // Format the number with thousands separators AND with 2 decimal places
   return new Intl.NumberFormat('ru-RU', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(numValue);
 };
 
