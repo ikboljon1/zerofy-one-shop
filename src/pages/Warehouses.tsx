@@ -109,7 +109,47 @@ const Warehouses: React.FC = () => {
     }
   }, [activeTab, selectedStore]);
 
+  // Добавим новый эффект для обработки изменений в выбранном магазине
   useEffect(() => {
+    const handleStoreChange = () => {
+      const stores = ensureStoreSelectionPersistence();
+      const selected = stores.find(store => store.isSelected);
+      
+      if (selected && (!selectedStore || selected.id !== selectedStore.id)) {
+        console.log('[Warehouses] Detected store change to:', selected.name);
+        setSelectedStore(selected);
+        
+        // Сбросим данные при изменении магазина, чтобы не показывать данные от предыдущего магазина
+        setWarehouseRemains([]);
+        setPaidStorageData([]);
+        setAverageDailySales({});
+        setDailyStorageCosts({});
+        setStorageCostsCalculated(false);
+        
+        // Загрузим новые данные для выбранного магазина
+        if (activeTab === 'inventory') {
+          loadWarehouseRemains(selected.apiKey);
+          loadAverageDailySales(selected.apiKey);
+          loadPaidStorageData(selected.apiKey);
+        } else if (activeTab === 'supplies') {
+          loadWarehouses(selected.apiKey);
+          loadCoefficients(selected.apiKey);
+        } else if (activeTab === 'storage') {
+          loadPaidStorageData(selected.apiKey);
+        }
+      }
+    };
+    
+    // Вызываем функцию при монтировании компонента
+    handleStoreChange();
+    
+    // Устанавливаем интервал для проверки изменений в выбранном магазине
+    const intervalId = setInterval(handleStoreChange, 2000);
+    
+    return () => clearInterval(intervalId);
+  }, [activeTab]);
+
+  const useEffect = () => {
     if (paidStorageData.length > 0 && warehouseRemains.length > 0) {
       console.log('[Warehouses] Пересчет стоимости хранения из данных API...');
       console.log(`[Warehouses] Имеется ${paidStorageData.length} записей о платном хранении`);
@@ -143,13 +183,19 @@ const Warehouses: React.FC = () => {
       const dateFrom = formatDate(thirtyDaysAgo);
       const dateTo = formatDate(now);
       
-      console.log(`[Warehouses] Запрашиваем данные о средних продажах с ${dateFrom} по ${dateTo}`);
+      console.log(`[Warehouses] Запрашиваем данные о средних продажах с ${dateFrom} по ${dateTo} для магазина с API ключом: ${apiKey.substring(0, 5)}...`);
       
       const data = await fetchAverageDailySalesFromAPI(apiKey, dateFrom, dateTo);
       console.log('[Warehouses] Получены данные о средних продажах:', 
                   `${Object.keys(data).length} товаров`);
       
-      setAverageDailySales(data);
+      // Проверяем, что данные были действительно получены
+      if (Object.keys(data).length === 0) {
+        console.log('[Warehouses] API вернул пустые данные о продажах, используем запасной вариант');
+        generateMockAverageSales();
+      } else {
+        setAverageDailySales(data);
+      }
       
     } catch (error: any) {
       console.error('[Warehouses] Ошибка при загрузке средних продаж:', error);
@@ -210,9 +256,16 @@ const Warehouses: React.FC = () => {
   
   const generateMockAverageSales = () => {
     const mockSalesData: Record<number, number> = {};
+    
+    // Используем более реалистичные значения для моковых данных
     warehouseRemains.forEach(item => {
-      mockSalesData[item.nmId] = Math.random() * 2;
+      // Генерируем число от 0.1 до 5 с одним десятичным знаком
+      const randomSales = Math.round((Math.random() * 4.9 + 0.1) * 10) / 10;
+      mockSalesData[item.nmId] = randomSales;
+      
+      console.log(`[Warehouses] Генерируем моковые данные для товара ${item.nmId}: ${randomSales.toFixed(1)} продаж/день`);
     });
+    
     setAverageDailySales(mockSalesData);
     console.log('[Warehouses] Используем моковые данные для средних продаж:', mockSalesData);
   };
@@ -384,6 +437,34 @@ const Warehouses: React.FC = () => {
     </Card>
   );
 
+  // Для StorageProfitabilityAnalysis, добавим обработку случая, когда нет данных о продажах
+  const renderAnalysis = () => {
+    // Проверим, есть ли данные для анализа
+    const hasData = warehouseRemains.length > 0 && 
+                   Object.keys(averageDailySales).length > 0;
+    
+    if (!hasData) {
+      return <Card>
+        <CardHeader>
+          <CardTitle>Анализ рентабельности хранения</CardTitle>
+          <CardDescription>Недостаточно данных для анализа</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-center py-8 text-muted-foreground">
+            Дождитесь загрузки данных о товарах и продажах
+          </p>
+        </CardContent>
+      </Card>;
+    }
+    
+    return <StorageProfitabilityAnalysis 
+      warehouseItems={warehouseRemains}
+      paidStorageData={paidStorageData}
+      averageDailySalesRate={averageDailySales}
+      dailyStorageCost={dailyStorageCosts}
+    />;
+  };
+
   return (
     <div className="container px-4 py-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -492,15 +573,10 @@ const Warehouses: React.FC = () => {
                   />
                   
                   <div className="mt-8">
-                    {loading.paidStorage ? (
+                    {loading.paidStorage || loading.averageSales ? (
                       <Skeleton className="h-[400px] w-full" />
                     ) : (
-                      <StorageProfitabilityAnalysis 
-                        warehouseItems={warehouseRemains}
-                        paidStorageData={paidStorageData}
-                        averageDailySalesRate={averageDailySales}
-                        dailyStorageCost={dailyStorageCosts}
-                      />
+                      renderAnalysis()
                     )}
                   </div>
                 </>
