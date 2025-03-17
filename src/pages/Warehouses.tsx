@@ -149,7 +149,7 @@ const Warehouses: React.FC = () => {
     return () => clearInterval(intervalId);
   }, [activeTab]);
 
-  const useEffect = () => {
+  useEffect(() => {
     if (paidStorageData.length > 0 && warehouseRemains.length > 0) {
       console.log('[Warehouses] Пересчет стоимости хранения из данных API...');
       console.log(`[Warehouses] Имеется ${paidStorageData.length} записей о платном хранении`);
