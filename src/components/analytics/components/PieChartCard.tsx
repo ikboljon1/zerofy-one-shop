@@ -4,6 +4,7 @@ import { COLORS } from "../data/demoData";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 import { formatCurrency, roundToTwoDecimals } from "@/utils/formatCurrency";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Info } from "lucide-react";
 
 interface PieChartCardProps {
   title: string;
@@ -44,6 +45,7 @@ const PieChartCard = ({
 
   // Определяем, нужно ли делать список скроллируемым (если больше 5 элементов)
   const needScroll = filteredData && filteredData.length > 5;
+  
   return <Card className="p-3">
       <div className="flex items-center justify-between mb-3 rounded-none">
         <h3 className="text-base font-medium">{title}</h3>
@@ -106,7 +108,13 @@ const PieChartCard = ({
               </>}
           </div>
         </div> : <div className="py-4 text-center text-muted-foreground">
-          <p className="text-xs">{emptyMessage}</p>
+          <div className="flex flex-col items-center space-y-2">
+            <Info className="h-5 w-5 text-blue-500" />
+            <p className="text-xs">{emptyMessage}</p>
+            <p className="text-xs text-blue-500">
+              Для отображения данных о рекламе, штрафах и удержаниях нажмите кнопку "Применить"
+            </p>
+          </div>
         </div>}
     </Card>;
 };
