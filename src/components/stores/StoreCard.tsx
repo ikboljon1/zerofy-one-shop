@@ -102,10 +102,7 @@ export function StoreCard({
                 <span className="text-muted-foreground">Расходы:</span>
                 <span className="font-medium">{formatCurrency(store.stats.currentPeriod.expenses.total)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Возвраты:</span>
-                <span className="font-medium">{formatCurrency(store.stats.currentPeriod.returnsAmount || 0)}</span>
-              </div>
+              {/* Removed the Возвраты (Returns) section as requested */}
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Чистая прибыль:</span>
                 <span className="font-medium">{formatCurrency(calculateNetProfit())}</span>
