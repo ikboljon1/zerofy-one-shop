@@ -3,15 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { 
-  loadStores,
-  getOrdersData, 
-  getSalesData, 
-  fetchAndUpdateOrders, 
-  fetchAndUpdateSales,
-  ensureStoreSelectionPersistence,
-  getSelectedStore
-} from "@/utils/storeUtils";
+import { loadStores, getOrdersData, getSalesData, fetchAndUpdateOrders, fetchAndUpdateSales, ensureStoreSelectionPersistence, getSelectedStore } from "@/utils/storeUtils";
 import OrdersTable from "./OrdersTable";
 import OrdersChart from "./OrdersChart";
 import GeographySection from "./GeographySection";
@@ -27,39 +19,34 @@ import SalesTable from "./SalesTable";
 import { fetchAverageDailySalesFromAPI } from "@/components/analytics/data/demoData";
 import { format } from 'date-fns';
 import RateLimitHandler from "./RateLimitHandler";
-
 const Dashboard = () => {
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState("orders");
   const [period, setPeriod] = useState<Period>("today");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
-  
   const [orders, setOrders] = useState<WildberriesOrder[]>([]);
   const [sales, setSales] = useState<WildberriesSale[]>([]);
   const [warehouseDistribution, setWarehouseDistribution] = useState<any[]>([]);
   const [regionDistribution, setRegionDistribution] = useState<any[]>([]);
-  
   const [dateRange, setDateRange] = useState({
     from: new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000),
     to: new Date()
   });
-
   const [analyticsData, setAnalyticsData] = useState<any>(null);
-  
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
   const [nextRetryTime, setNextRetryTime] = useState<Date | undefined>(undefined);
-
   const filterDataByPeriod = useCallback((date: string, period: Period) => {
     const now = new Date();
     const itemDate = new Date(date);
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const yesterdayStart = new Date(todayStart);
     yesterdayStart.setDate(yesterdayStart.getDate() - 1);
-
     switch (period) {
       case "today":
         return itemDate >= todayStart;
@@ -89,14 +76,11 @@ const Dashboard = () => {
         return true;
     }
   }, []);
-
   const getFilteredOrders = (orders: WildberriesOrder[]) => {
     const filteredOrders = orders.filter(order => filterDataByPeriod(order.date, period));
-
     const warehouseCounts: Record<string, number> = {};
     const regionCounts: Record<string, number> = {};
     const totalOrders = filteredOrders.length;
-
     filteredOrders.forEach(order => {
       if (order.warehouseName) {
         warehouseCounts[order.warehouseName] = (warehouseCounts[order.warehouseName] || 0) + 1;
@@ -105,118 +89,86 @@ const Dashboard = () => {
         regionCounts[order.regionName] = (regionCounts[order.regionName] || 0) + 1;
       }
     });
-
-    const newWarehouseDistribution = Object.entries(warehouseCounts)
-      .map(([name, count]) => ({
-        name,
-        count,
-        percentage: (count / totalOrders) * 100
-      }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
-
-    const newRegionDistribution = Object.entries(regionCounts)
-      .map(([name, count]) => ({
-        name,
-        count,
-        percentage: (count / totalOrders) * 100
-      }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
-
+    const newWarehouseDistribution = Object.entries(warehouseCounts).map(([name, count]) => ({
+      name,
+      count,
+      percentage: count / totalOrders * 100
+    })).sort((a, b) => b.count - a.count).slice(0, 5);
+    const newRegionDistribution = Object.entries(regionCounts).map(([name, count]) => ({
+      name,
+      count,
+      percentage: count / totalOrders * 100
+    })).sort((a, b) => b.count - a.count).slice(0, 5);
     return {
       orders: filteredOrders,
       warehouseDistribution: newWarehouseDistribution,
       regionDistribution: newRegionDistribution
     };
   };
-
   const getFilteredSales = (sales: WildberriesSale[]) => {
     return sales.filter(sale => filterDataByPeriod(sale.date, period));
   };
-
   const filteredOrdersData = useMemo(() => {
     return getFilteredOrders(orders);
   }, [orders, period]);
-
   const filteredSalesData = useMemo(() => {
     return getFilteredSales(sales);
   }, [sales, period]);
-
   const calculateBackoffTime = (retryCount: number): number => {
     const baseDelay = 5000;
     const exponentialDelay = baseDelay * Math.pow(2, retryCount);
     const maxDelay = 5 * 60 * 1000;
     return Math.min(exponentialDelay, maxDelay);
   };
-
   const handleApiRateLimit = () => {
     console.log(`[Dashboard] API rate limit detected. Retry count: ${retryCount}`);
     setIsRateLimited(true);
     setIsLoading(false);
-    
     const nextRetry = new Date();
     const backoffTime = calculateBackoffTime(retryCount);
     nextRetry.setTime(nextRetry.getTime() + backoffTime);
     setNextRetryTime(nextRetry);
-    
     console.log(`[Dashboard] Setting next retry in ${backoffTime}ms (${nextRetry.toISOString()})`);
-    
     toast({
       title: "Превышен лимит запросов",
-      description: `Wildberries API временно ограничило доступ. Повторная попытка через ${Math.round(backoffTime/1000)} секунд.`,
+      description: `Wildberries API временно ограничило доступ. Повторная попытка через ${Math.round(backoffTime / 1000)} секунд.`,
       variant: "destructive"
     });
-    
     setTimeout(() => {
       console.log('[Dashboard] Attempting auto-retry after backoff');
       retryFetchData();
     }, backoffTime);
   };
-
   const retryFetchData = () => {
     console.log('[Dashboard] Retrying data fetch');
     setIsRetrying(true);
     setRetryCount(prev => prev + 1);
-    fetchData()
-      .catch(error => {
-        console.error('[Dashboard] Retry fetch failed:', error);
-        if (error.message?.includes('429') || error.status === 429) {
-          handleApiRateLimit();
-        }
-      })
-      .finally(() => {
-        setIsRetrying(false);
-      });
+    fetchData().catch(error => {
+      console.error('[Dashboard] Retry fetch failed:', error);
+      if (error.message?.includes('429') || error.status === 429) {
+        handleApiRateLimit();
+      }
+    }).finally(() => {
+      setIsRetrying(false);
+    });
   };
-
   const resetRateLimitState = () => {
     setIsRateLimited(false);
     setRetryCount(0);
     setNextRetryTime(undefined);
   };
-
   const fetchData = useCallback(async () => {
     try {
       console.log("[Dashboard] Starting data fetch...");
       setIsLoading(true);
-      
       const userData = localStorage.getItem('user');
       const currentUserId = userData ? JSON.parse(userData).id : null;
-      
       console.log(`[Dashboard] Current user ID: ${currentUserId || 'not logged in'}`);
-      
       const allStores = loadStores();
       console.log(`[Dashboard] Loaded ${allStores.length} stores from localStorage`);
-      
-      const userStores = currentUserId 
-        ? allStores.filter(store => store.userId === currentUserId)
-        : allStores;
-      
+      const userStores = currentUserId ? allStores.filter(store => store.userId === currentUserId) : allStores;
       console.log(`[Dashboard] User has ${userStores.length} stores`);
-      
       const selectedStore = userStores.find(store => store.isSelected) || (userStores.length > 0 ? userStores[0] : null);
-      
       if (!selectedStore) {
         console.log("[Dashboard] No store selected");
         toast({
@@ -226,24 +178,16 @@ const Dashboard = () => {
         });
         return;
       }
-
       console.log(`[Dashboard] Selected store: ${selectedStore.name} (ID: ${selectedStore.id})`);
       console.log(`[Dashboard] API key available: ${!!selectedStore.apiKey}`);
-      
       if (selectedStore.id !== selectedStoreId) {
         console.log(`[Dashboard] Store ID changed from ${selectedStoreId} to ${selectedStore.id}`);
         setSelectedStoreId(selectedStore.id);
       }
-
       console.log("[Dashboard] Fetching orders and sales data...");
       try {
-        const [ordersResult, salesResult] = await Promise.all([
-          fetchAndUpdateOrders(selectedStore),
-          fetchAndUpdateSales(selectedStore)
-        ]);
-        
+        const [ordersResult, salesResult] = await Promise.all([fetchAndUpdateOrders(selectedStore), fetchAndUpdateSales(selectedStore)]);
         resetRateLimitState();
-        
         if (ordersResult) {
           console.log(`[Dashboard] Received ${ordersResult.orders.length} orders from API`);
           setOrders(ordersResult.orders);
@@ -261,7 +205,6 @@ const Dashboard = () => {
             console.log("[Dashboard] No orders found in storage");
           }
         }
-
         if (salesResult) {
           console.log(`[Dashboard] Received ${salesResult.length} sales from API`);
           setSales(salesResult);
@@ -275,80 +218,64 @@ const Dashboard = () => {
             console.log("[Dashboard] No sales found in storage");
           }
         }
-        
         if (selectedStore.apiKey) {
           const now = new Date();
           const thirtyDaysAgo = new Date(now);
           thirtyDaysAgo.setDate(now.getDate() - 30);
-          
           const dateFrom = format(thirtyDaysAgo, 'yyyy-MM-dd');
           const dateTo = format(now, 'yyyy-MM-dd');
-          
           console.log(`[Dashboard] Запрашиваем данные о средних продажах с ${dateFrom} по ${dateTo}`);
           console.log(`[Dashboard] Ключ кэша для периода: ${dateFrom}_${dateTo}`);
           console.log(`[Dashboard] API ключ: ${selectedStore.apiKey ? selectedStore.apiKey.substring(0, 5) + '...' + selectedStore.apiKey.substring(selectedStore.apiKey.length - 5) : 'отсутствует'}`);
-          
-          fetchAverageDailySalesFromAPI(selectedStore.apiKey, dateFrom, dateTo)
-            .then(data => {
-              console.log('[Dashboard] Получены данные о средних продажах:',
-                        `${Object.keys(data).length} товаров`);
-              
-              const sampleEntries = Object.entries(data).slice(0, 3);
-              if (sampleEntries.length > 0) {
-                console.log('[Dashboard] Примеры данных:', sampleEntries);
-              } else {
-                console.log('[Dashboard] Нет данных о средних продажах');
-              }
-            })
-            .catch(error => {
-              console.error('[Dashboard] Ошибка при получении данных о средних продажах:', error);
-              if (error instanceof Error) {
-                console.error(`[Dashboard] Сообщение ошибки: ${error.message}`);
-                console.error(`[Dashboard] Стек вызовов: ${error.stack}`);
-              }
-              
-              if (error.message?.includes('429') || error.status === 429) {
-                console.log('[Dashboard] Rate limit detected during fetchAverageDailySalesFromAPI');
-                toast({
-                  title: "Ограничение API",
-                  description: "Не удалось получить данные о средних продажах из-за ограничений API",
-                  variant: "destructive"
-                });
-              }
-            });
+          fetchAverageDailySalesFromAPI(selectedStore.apiKey, dateFrom, dateTo).then(data => {
+            console.log('[Dashboard] Получены данные о средних продажах:', `${Object.keys(data).length} товаров`);
+            const sampleEntries = Object.entries(data).slice(0, 3);
+            if (sampleEntries.length > 0) {
+              console.log('[Dashboard] Примеры данных:', sampleEntries);
+            } else {
+              console.log('[Dashboard] Нет данных о средних продажах');
+            }
+          }).catch(error => {
+            console.error('[Dashboard] Ошибка при получении данных о средних продажах:', error);
+            if (error instanceof Error) {
+              console.error(`[Dashboard] Сообщение ошибки: ${error.message}`);
+              console.error(`[Dashboard] Стек вызовов: ${error.stack}`);
+            }
+            if (error.message?.includes('429') || error.status === 429) {
+              console.log('[Dashboard] Rate limit detected during fetchAverageDailySalesFromAPI');
+              toast({
+                title: "Ограничение API",
+                description: "Не удалось получить данные о средних продажах из-за ограничений API",
+                variant: "destructive"
+              });
+            }
+          });
         } else {
           console.log("[Dashboard] Нет API ключа для запроса средних продаж");
         }
       } catch (error) {
         console.error('[Dashboard] Error in API calls:', error);
-        
-        if (error.message?.includes('429') || error.status === 429 || 
-            error.response?.status === 429 || error.detail?.includes('too many requests')) {
+        if (error.message?.includes('429') || error.status === 429 || error.response?.status === 429 || error.detail?.includes('too many requests')) {
           handleApiRateLimit();
           return;
         }
-        
         toast({
           title: "Ошибка API",
           description: error.detail || "Произошла ошибка при получении данных",
           variant: "destructive"
         });
-        
         console.log("[Dashboard] Falling back to cached data due to API error");
         const savedOrdersData = await getOrdersData(selectedStore.id);
         const savedSalesData = await getSalesData(selectedStore.id);
-        
         if (savedOrdersData) {
           setOrders(savedOrdersData.orders || []);
           setWarehouseDistribution(savedOrdersData.warehouseDistribution || []);
           setRegionDistribution(savedOrdersData.regionDistribution || []);
         }
-        
         if (savedSalesData) {
           setSales(savedSalesData.sales || []);
         }
       }
-
       console.log("[Dashboard] Data fetch completed successfully");
       setIsLoading(false);
     } catch (error) {
@@ -357,12 +284,10 @@ const Dashboard = () => {
         console.error(`[Dashboard] Сообщение ошибки: ${error.message}`);
         console.error(`[Dashboard] Стек вызовов: ${error.stack}`);
       }
-      
       if (error.message?.includes('429') || error.status === 429) {
         handleApiRateLimit();
         return;
       }
-      
       toast({
         title: "Ошибка",
         description: "Не удалось загрузить данные",
@@ -371,29 +296,23 @@ const Dashboard = () => {
       setIsLoading(false);
     }
   }, [selectedStoreId, toast]);
-
   useEffect(() => {
     const selectedStore = getSelectedStore();
-    
     if (selectedStore && selectedStore.id !== selectedStoreId) {
       setSelectedStoreId(selectedStore.id);
       fetchData();
     }
   }, [selectedStoreId, fetchData]);
-
   useEffect(() => {
     let refreshInterval: NodeJS.Timeout;
-    
     const handleStoreSelectionChange = () => {
       console.log('Store selection changed, refreshing data...');
       fetchData();
     };
-
     if (selectedStoreId) {
       window.addEventListener('store-selection-changed', handleStoreSelectionChange);
       refreshInterval = setInterval(fetchData, 60000);
     }
-
     return () => {
       window.removeEventListener('store-selection-changed', handleStoreSelectionChange);
       if (refreshInterval) {
@@ -401,28 +320,10 @@ const Dashboard = () => {
       }
     };
   }, [selectedStoreId, fetchData]);
+  return <div className="space-y-4">
+      
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className={`${isMobile ? 'text-xl' : 'text-3xl'} font-bold`}>Дашборд</h2>
-        {isLoading && (
-          <div className="flex items-center text-sm text-muted-foreground">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Обновление данных...
-          </div>
-        )}
-      </div>
-
-      {isRateLimited && (
-        <RateLimitHandler 
-          isVisible={isRateLimited}
-          onRetry={retryFetchData}
-          isRetrying={isRetrying}
-          retryCount={retryCount}
-          nextRetryTime={nextRetryTime}
-        />
-      )}
+      {isRateLimited && <RateLimitHandler isVisible={isRateLimited} onRetry={retryFetchData} isRetrying={isRetrying} retryCount={retryCount} nextRetryTime={nextRetryTime} />}
 
       <Tabs defaultValue="orders" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className={`${isMobile ? 'w-full grid grid-cols-4 gap-1' : ''}`}>
@@ -438,16 +339,9 @@ const Dashboard = () => {
             <div className="flex-grow"></div>
           </div>
           
-          {orders.length > 0 && (
-            <OrderMetrics orders={filteredOrdersData.orders} />
-          )}
+          {orders.length > 0 && <OrderMetrics orders={filteredOrdersData.orders} />}
           
-          {orders.length > 0 && (
-            <OrdersChart 
-              orders={filteredOrdersData.orders} 
-              sales={filteredSalesData}
-            />
-          )}
+          {orders.length > 0 && <OrdersChart orders={filteredOrdersData.orders} sales={filteredSalesData} />}
           
           <OrdersTable orders={filteredOrdersData.orders} />
         </TabsContent>
@@ -458,9 +352,7 @@ const Dashboard = () => {
             <div className="flex-grow"></div>
           </div>
           
-          {sales.length > 0 && (
-            <SalesMetrics sales={filteredSalesData} />
-          )}
+          {sales.length > 0 && <SalesMetrics sales={filteredSalesData} />}
           
           <SalesTable sales={filteredSalesData} />
         </TabsContent>
@@ -470,19 +362,13 @@ const Dashboard = () => {
             <PeriodSelector value={period} onChange={setPeriod} />
             <div className="flex-grow"></div>
           </div>
-          <GeographySection 
-            warehouseDistribution={warehouseDistribution} 
-            regionDistribution={regionDistribution}
-            sales={filteredSalesData}
-          />
+          <GeographySection warehouseDistribution={warehouseDistribution} regionDistribution={regionDistribution} sales={filteredSalesData} />
         </TabsContent>
 
         <TabsContent value="ai-analysis" className="space-y-4">
           <AIAnalysisSection />
         </TabsContent>
       </Tabs>
-    </div>
-  );
+    </div>;
 };
-
 export default React.memo(Dashboard);
