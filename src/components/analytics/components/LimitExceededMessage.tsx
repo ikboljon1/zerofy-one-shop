@@ -1,11 +1,10 @@
 
 import React from 'react';
-import { AlertTriangle, RefreshCw, Coffee, Clock, HelpCircle, BarChart3 } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Coffee, Clock, HelpCircle, Database, ChartBar, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Badge } from '@/components/ui/badge';
 
 interface LimitExceededMessageProps {
   onRefresh: () => void;
@@ -14,7 +13,8 @@ interface LimitExceededMessageProps {
   title?: string;
   retryAfter?: number; // Time in seconds until next retry
   retryCount?: number; // Number of retry attempts made
-  storeName?: string; // Added store name
+  showDemoDataInfo?: boolean; // Whether to show information about demo data
+  section?: 'storage' | 'inventory' | 'supplies' | 'general'; // Section-specific messages
 }
 
 const LimitExceededMessage: React.FC<LimitExceededMessageProps> = ({
@@ -24,7 +24,8 @@ const LimitExceededMessage: React.FC<LimitExceededMessageProps> = ({
   title = "Превышен лимит запросов",
   retryAfter,
   retryCount = 0,
-  storeName
+  showDemoDataInfo = true,
+  section = 'general'
 }) => {
   const [timeLeft, setTimeLeft] = React.useState<number>(retryAfter || 0);
   
@@ -58,11 +59,109 @@ const LimitExceededMessage: React.FC<LimitExceededMessageProps> = ({
     return `Попытка ${retryCount} не удалась. Пожалуйста, подождите ${formatTime(timeLeft)} перед следующей попыткой.`;
   };
   
-  const getDemoDataMessage = () => {
-    if (storeName) {
-      return `Показаны демонстрационные данные для магазина "${storeName}". Эти данные не отражают реальные показатели вашего магазина.`;
+  const getSectionSpecificGuide = () => {
+    switch (section) {
+      case 'storage':
+        return (
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium flex items-center">
+              <Database className="mr-2 h-4 w-4" />
+              Информация о данных платного хранения
+            </h4>
+            <ul className="text-sm space-y-2 text-muted-foreground">
+              <li className="flex gap-2">
+                <span className="text-primary font-medium">•</span>
+                <span>Все значения в режиме демо-данных будут показаны с фиксированными двумя десятичными знаками (например: 5,00)</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary font-medium">•</span>
+                <span>Средняя стоимость хранения в день в демо-режиме может быть нереалистичной (5,00 ₽)</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary font-medium">•</span>
+                <span>Для точного анализа стоимости хранения необходимо подключить API ключ магазина</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary font-medium">•</span>
+                <span>Обратите внимание на соотношение стоимости хранения к продажам для оценки рентабельности</span>
+              </li>
+            </ul>
+          </div>
+        );
+      case 'inventory':
+        return (
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium flex items-center">
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Информация о данных инвентаря
+            </h4>
+            <ul className="text-sm space-y-2 text-muted-foreground">
+              <li className="flex gap-2">
+                <span className="text-primary font-medium">•</span>
+                <span>В демо-режиме количество товаров и остатки могут не соответствовать реальности</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary font-medium">•</span>
+                <span>Все числовые значения будут отображаться с двумя десятичными знаками (0,00)</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary font-medium">•</span>
+                <span>Для точного анализа рентабельности используйте реальные данные через API</span>
+              </li>
+            </ul>
+          </div>
+        );
+      case 'supplies':
+        return (
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium flex items-center">
+              <ChartBar className="mr-2 h-4 w-4" />
+              Информация о данных поставок
+            </h4>
+            <ul className="text-sm space-y-2 text-muted-foreground">
+              <li className="flex gap-2">
+                <span className="text-primary font-medium">•</span>
+                <span>Коэффициенты приемки в демо-режиме могут не отражать актуальные значения</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary font-medium">•</span>
+                <span>Все числовые значения будут отображаться с двумя десятичными знаками (например: 1,50x)</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary font-medium">•</span>
+                <span>Для планирования реальных поставок используйте актуальные данные через API</span>
+              </li>
+            </ul>
+          </div>
+        );
+      default:
+        return (
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium flex items-center">
+              <Coffee className="mr-2 h-4 w-4" />
+              Руководство по работе с данными
+            </h4>
+            <ul className="text-sm space-y-2 text-muted-foreground">
+              <li className="flex gap-2">
+                <span className="text-primary font-medium">1.</span>
+                <span>При превышении лимита API показываются демо-данные для демонстрации функций</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary font-medium">2.</span>
+                <span>Для анализа рентабельности перейдите в раздел "Инвентарь" и проверьте таблицу</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary font-medium">3.</span>
+                <span>Для планирования поставок используйте раздел "Поставки" и анализируйте коэффициенты</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary font-medium">4.</span>
+                <span>Все числовые значения в демо-режиме отображаются с двумя десятичными знаками (0,00)</span>
+              </li>
+            </ul>
+          </div>
+        );
     }
-    return "Показаны демонстрационные данные. Эти данные не отражают реальные показатели вашего магазина.";
   };
   
   return (
@@ -84,11 +183,6 @@ const LimitExceededMessage: React.FC<LimitExceededMessageProps> = ({
           <CardTitle className="flex items-center text-amber-500">
             <AlertTriangle className="mr-2 h-5 w-5" />
             {title}
-            {storeName && (
-              <Badge variant="outline" className="ml-2 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-400 border-amber-300 dark:border-amber-700">
-                {storeName}
-              </Badge>
-            )}
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -106,7 +200,6 @@ const LimitExceededMessage: React.FC<LimitExceededMessageProps> = ({
             </TooltipProvider>
           </CardTitle>
           <CardDescription>{message}</CardDescription>
-          <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">{getDemoDataMessage()}</p>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -117,55 +210,11 @@ const LimitExceededMessage: React.FC<LimitExceededMessageProps> = ({
               </div>
             )}
             
-            <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-              <h4 className="text-sm font-medium flex items-center">
-                <BarChart3 className="mr-2 h-4 w-4" />
-                <span>Информация о демо-данных</span>
-              </h4>
-              <ul className="text-sm space-y-2 text-muted-foreground">
-                <li className="flex gap-2">
-                  <span className="text-primary font-medium">•</span>
-                  <span>Демо-данные для продаж: 294 290,60 ₽</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-primary font-medium">•</span>
-                  <span>Демо-данные для перечислений: 218 227,70 ₽</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-primary font-medium">•</span>
-                  <span>Демо-данные для расходов: 65 794,94 ₽</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-primary font-medium">•</span>
-                  <span>Демо-данные для чистой прибыли: 152 432,76 ₽</span>
-                </li>
-              </ul>
-            </div>
-            
-            <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-              <h4 className="text-sm font-medium flex items-center">
-                <Coffee className="mr-2 h-4 w-4" />
-                <span>Руководство по работе с данными</span>
-              </h4>
-              <ul className="text-sm space-y-2 text-muted-foreground">
-                <li className="flex gap-2">
-                  <span className="text-primary font-medium">1.</span>
-                  <span>При превышении лимита API показываются демо-данные для демонстрации функций</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-primary font-medium">2.</span>
-                  <span>Для анализа рентабельности перейдите в раздел "Инвентарь" и проверьте таблицу</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-primary font-medium">3.</span>
-                  <span>Для планирования поставок используйте раздел "Поставки" и анализируйте коэффициенты</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-primary font-medium">4.</span>
-                  <span>Отчеты о платном хранении находятся в разделе "Хранение"</span>
-                </li>
-              </ul>
-            </div>
+            {showDemoDataInfo && (
+              <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                {getSectionSpecificGuide()}
+              </div>
+            )}
             
             {getBackoffMessage() && (
               <div className="text-sm text-muted-foreground">

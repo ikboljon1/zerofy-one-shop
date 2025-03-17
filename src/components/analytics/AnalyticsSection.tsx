@@ -137,7 +137,6 @@ const AnalyticsSection = () => {
   const [showAIAnalysis, setShowAIAnalysis] = useState<boolean>(false);
   const [dataSource, setDataSource] = useState<'cache' | 'server' | 'error'>('cache');
   const [errorMessage, setErrorMessage] = useState<string>("");
-  const [selectedStoreName, setSelectedStoreName] = useState<string>("");
   const isMobile = useIsMobile();
   const { toast } = useToast();
 
@@ -147,12 +146,7 @@ const AnalyticsSection = () => {
     
     if (store && store.id !== selectedStoreId) {
       setSelectedStoreId(store.id);
-      setSelectedStoreName(store.name || "");
       return store;
-    }
-    
-    if (store && !selectedStoreName) {
-      setSelectedStoreName(store.name || "");
     }
     
     return store;
@@ -538,7 +532,6 @@ const AnalyticsSection = () => {
           onRefresh={fetchData} 
           isLoading={isLoading}
           message={errorMessage}
-          storeName={selectedStoreName}
         />
       )}
 
