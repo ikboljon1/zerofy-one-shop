@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,8 +12,6 @@ import Admin from "./pages/Admin";
 import LandingPage from "./pages/LandingPage";
 import Navbar from "./components/layout/Navbar";
 import { useEffect, useState } from "react";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
 
 const queryClient = new QueryClient();
 
@@ -92,9 +91,6 @@ const App = () => {
                 <Admin />
               </ProtectedRoute>
             } />
-            {/* Add these routes */}
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/terms-of-service" element={<TermsOfService />} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>

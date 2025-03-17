@@ -2,7 +2,6 @@
 import React from "react";
 import { Zap, Mail, Phone, MapPin, Twitter, Instagram, Facebook, Linkedin } from "lucide-react";
 import { Link } from "react-router-dom";
-
 const Footer = () => {
   return <footer className="bg-muted py-12 border-t">
       <div className="container mx-auto px-4 md:px-6">
@@ -22,8 +21,8 @@ const Footer = () => {
           <div className="flex-shrink-0">
             <h3 className="font-medium text-lg mb-4">Информация</h3>
             <ul className="space-y-2">
-              <li><Link to="/privacy-policy" className="text-muted-foreground hover:text-primary transition-colors">Политика конфиденциальности</Link></li>
-              <li><Link to="/terms-of-service" className="text-muted-foreground hover:text-primary transition-colors">Условия использования</Link></li>
+              <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Политика конфиденциальности</a></li>
+              <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Условия использования</a></li>
             </ul>
           </div>
 
