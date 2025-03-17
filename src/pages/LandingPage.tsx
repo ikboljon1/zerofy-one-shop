@@ -410,7 +410,8 @@ const LandingPage = () => {
     ]
   };
 
-  return <div className="min-h-screen bg-background">
+  return (
+    <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <section className="py-16 px-6 md:px-12 lg:px-16">
         <div className="max-w-7xl mx-auto">
@@ -454,7 +455,8 @@ const LandingPage = () => {
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, index) => <Card key={index} className="bg-card hover:shadow-md transition-all">
+            {features.map((feature, index) => (
+              <Card key={index} className="bg-card hover:shadow-md transition-all">
                 <CardHeader>
                   <div className="bg-primary/10 p-3 rounded-lg w-fit mb-3">
                     {feature.icon}
@@ -464,7 +466,8 @@ const LandingPage = () => {
                 <CardContent>
                   <p className="text-muted-foreground">{feature.description}</p>
                 </CardContent>
-              </Card>)}
+              </Card>
+            ))}
           </div>
         </div>
       </section>
@@ -602,4 +605,4 @@ const LandingPage = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={[
-                        { name: 'Прибыль', withZerofy: 123, withoutZerofy: 100 },
+                        { name: 'Прибыль', withZerofy: 123, withoutZerofy:
