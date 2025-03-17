@@ -3,17 +3,17 @@ export const formatCurrency = (value: number | string): string => {
   const numValue = typeof value === 'string' ? parseFloat(value) : value;
   
   if (isNaN(numValue)) {
-    return '0,00';
+    return '0,0';
   }
   
-  // Format the number with thousands separators AND with 2 decimal places
+  // Format the number with thousands separators AND with 1 decimal place
   return new Intl.NumberFormat('ru-RU', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
   }).format(numValue);
 };
 
-export const formatWithDecimals = (value: number | string, decimals: number = 2): string => {
+export const formatWithDecimals = (value: number | string, decimals: number = 1): string => {
   const numValue = typeof value === 'string' ? parseFloat(value) : value;
   
   if (isNaN(numValue)) {
@@ -39,10 +39,10 @@ export const parseCurrencyString = (value: string): number => {
 };
 
 /**
- * Округляет число до двух знаков после запятой
+ * Округляет число до одного знака после запятой
  * @param value Число для округления
  * @returns Округленное число
  */
 export const roundToTwoDecimals = (value: number): number => {
-  return Math.round(value * 100) / 100;
+  return Math.round(value * 10) / 10;
 };

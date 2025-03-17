@@ -71,11 +71,11 @@ const LimitExceededMessage: React.FC<LimitExceededMessageProps> = ({
             <ul className="text-sm space-y-2 text-muted-foreground">
               <li className="flex gap-2">
                 <span className="text-primary font-medium">•</span>
-                <span>Все значения в режиме демо-данных будут показаны с фиксированными двумя десятичными знаками (например: 5,00)</span>
+                <span>Все значения в режиме демо-данных будут показаны с одним десятичным знаком (например: 5,0)</span>
               </li>
               <li className="flex gap-2">
                 <span className="text-primary font-medium">•</span>
-                <span>Средняя стоимость хранения в день в демо-режиме может быть нереалистичной (5,00 ₽)</span>
+                <span>Средняя стоимость хранения в день в демо-режиме может быть нереалистичной (5,0 ₽)</span>
               </li>
               <li className="flex gap-2">
                 <span className="text-primary font-medium">•</span>
@@ -102,7 +102,7 @@ const LimitExceededMessage: React.FC<LimitExceededMessageProps> = ({
               </li>
               <li className="flex gap-2">
                 <span className="text-primary font-medium">•</span>
-                <span>Все числовые значения будут отображаться с двумя десятичными знаками (0,00)</span>
+                <span>Все числовые значения будут отображаться с одним десятичным знаком (0,0)</span>
               </li>
               <li className="flex gap-2">
                 <span className="text-primary font-medium">•</span>
@@ -125,7 +125,7 @@ const LimitExceededMessage: React.FC<LimitExceededMessageProps> = ({
               </li>
               <li className="flex gap-2">
                 <span className="text-primary font-medium">•</span>
-                <span>Все числовые значения будут отображаться с двумя десятичными знаками (например: 1,50x)</span>
+                <span>Все числовые значения будут отображаться с одним десятичным знаком (например: 1,5x)</span>
               </li>
               <li className="flex gap-2">
                 <span className="text-primary font-medium">•</span>
@@ -156,7 +156,7 @@ const LimitExceededMessage: React.FC<LimitExceededMessageProps> = ({
               </li>
               <li className="flex gap-2">
                 <span className="text-primary font-medium">4.</span>
-                <span>Все числовые значения в демо-режиме отображаются с двумя десятичными знаками (0,00)</span>
+                <span>Все числовые значения в демо-режиме отображаются с одним десятичным знаком (0,0)</span>
               </li>
             </ul>
           </div>
