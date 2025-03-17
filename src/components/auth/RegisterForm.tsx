@@ -27,6 +27,38 @@ const countryCodes = [
   { code: "+374", country: "Армения", pattern: /^\d{8}$/, example: "XX XXX XXX", maxLength: 8 },
 ];
 
+// Операторы связи по кодам для разных стран
+const operatorCodes = {
+  "+996": [
+    { codes: ["50", "51", "52", "53", "54", "55", "56", "57", "58", "59"], name: "Билайн" },
+    { codes: ["70", "71", "72", "73", "74", "75", "76", "77", "78", "79"], name: "О!" },
+    { codes: ["22", "22", "23", "24", "25", "26", "27", "28", "29"], name: "Мегаком" },
+  ],
+  "+7": [
+    { codes: ["900", "901", "902", "903", "904", "905", "906", "908", "909", "950", "951", "952", "953", "954", "955", "956", "958", "959", "999"], name: "МТС" },
+    { codes: ["910", "911", "912", "913", "914", "915", "916", "917", "918", "919", "980", "981", "982", "983", "984", "985", "986", "987", "988", "989"], name: "Билайн" },
+    { codes: ["920", "921", "922", "923", "924", "925", "926", "927", "928", "929", "930", "931", "932", "933", "934", "935", "936", "937", "938", "939", "960", "961", "962", "963", "964", "965", "966", "967", "968", "969"], name: "Мегафон" },
+    { codes: ["970", "971", "972", "973", "974", "975", "976", "977", "978", "979", "991", "992", "993", "994", "995", "996", "997", "998", "999"], name: "Tele2" },
+  ],
+  "+77": [
+    { codes: ["00", "01", "02", "05", "07", "08"], name: "Алтел" },
+    { codes: ["11", "12", "13", "14", "15", "16", "17", "18", "19", "71", "76", "77", "78"], name: "Билайн" },
+    { codes: ["05", "25", "26", "27", "28", "29", "75", "89", "69", "67"], name: "Актив" },
+    { codes: ["47", "48", "70", "71", "76", "77", "78"], name: "Теле2" },
+  ],
+  "+996": [
+    { codes: ["55", "55", "55", "57", "58"], name: "Мегаком" },
+    { codes: ["70", "50", "51", "52"], name: "Билайн" },
+    { codes: ["77", "75", "76", "78"], name: "О!" },
+  ],
+  "+998": [
+    { codes: ["90", "91"], name: "Beeline" },
+    { codes: ["93", "94"], name: "Ucell" },
+    { codes: ["95", "99"], name: "UzMobile" },
+    { codes: ["97", "98"], name: "MobiUz" },
+  ],
+};
+
 // Helper function to format phone number based on country pattern
 const formatPhoneNumber = (value: string, countryCode: string) => {
   // Remove all non-digit characters
@@ -37,6 +69,39 @@ const formatPhoneNumber = (value: string, countryCode: string) => {
   
   // Truncate to max length for the country
   return digitsOnly.slice(0, country.maxLength);
+};
+
+// Helper function to get operator name by phone number and country code
+const getOperatorName = (phoneNumber: string, countryCode: string): string | null => {
+  const operators = operatorCodes[countryCode as keyof typeof operatorCodes];
+  if (!operators) return null;
+  
+  // Extract start of the phone number to check against operator codes
+  // For different countries, we check different numbers of digits
+  const digits = phoneNumber.replace(/\D/g, "");
+  
+  // Define how many digits to check based on country code
+  let digitsToCheck = 2; // Default
+  if (countryCode === "+7") digitsToCheck = 3;
+  
+  if (digits.length < digitsToCheck) return null;
+  
+  const prefix = digits.substring(0, digitsToCheck);
+  
+  // Find matching operator
+  const operator = operators.find(op => op.codes.includes(prefix));
+  return operator ? operator.name : null;
+};
+
+// Helper function to validate phone number with operator
+const validatePhoneWithOperator = (phone: string, countryCode: string): boolean => {
+  // First check if the phone number matches the country pattern
+  const country = countryCodes.find(c => c.code === countryCode);
+  if (!country || !country.pattern.test(phone)) return false;
+  
+  // Then check if it belongs to a valid operator
+  const operatorName = getOperatorName(phone, countryCode);
+  return operatorName !== null;
 };
 
 const registerSchema = z.object({
@@ -62,6 +127,8 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
   const [verificationMethod, setVerificationMethod] = useState<"email" | "phone">("email");
   const [verificationSent, setVerificationSent] = useState(false);
   const [verificationStep, setVerificationStep] = useState(false);
+  const [operatorName, setOperatorName] = useState<string | null>(null);
+  const [isValidOperator, setIsValidOperator] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -119,17 +186,31 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
         setValue("phone", formatted);
       }
       
+      // Reset operator validation
+      setOperatorName(null);
+      setIsValidOperator(true);
+      
       trigger("phone"); // Re-validate with new country code
     }
   }, [countryCode, setValue, getValues, trigger]);
   
-  // Format phone as user types
+  // Format phone as user types and check operator
   useEffect(() => {
     const subscription = watch((value, { name }) => {
       if (name === "phone") {
         const formattedValue = formatPhoneNumber(value.phone || "", countryCode);
         if (formattedValue !== value.phone) {
           setValue("phone", formattedValue);
+        }
+        
+        // Check operator if we have enough digits
+        if (formattedValue.length >= 2) {
+          const operator = getOperatorName(formattedValue, countryCode);
+          setOperatorName(operator);
+          setIsValidOperator(operator !== null);
+        } else {
+          setOperatorName(null);
+          setIsValidOperator(true); // Reset validation until we have enough digits
         }
       }
     });
@@ -139,31 +220,41 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
   
   // Validate phone against current country pattern and check if it exists
   useEffect(() => {
-    if (phoneValue && phoneValue.length >= currentCountry.maxLength) {
+    if (phoneValue && phoneValue.length >= 2) {
       const checkPhone = async () => {
-        // Validate against country pattern
-        const isValidForCountry = currentCountry.pattern.test(phoneValue);
+        // Check operator
+        const operator = getOperatorName(phoneValue, countryCode);
+        setOperatorName(operator);
+        setIsValidOperator(operator !== null);
         
-        if (!isValidForCountry) {
-          return;
-        }
-        
-        const fullPhoneNumber = `${countryCode}${phoneValue}`;
-        const exists = await checkPhoneExists(fullPhoneNumber);
-        setIsPhoneUnique(!exists);
-        
-        if (exists) {
-          toast({
-            title: "Предупреждение",
-            description: "Номер телефона уже зарегистрирован в системе",
-            variant: "destructive",
-          });
+        // Only proceed with existence check if we have a valid number for the country
+        if (phoneValue.length >= currentCountry.maxLength) {
+          // Validate against country pattern
+          const isValidForCountry = currentCountry.pattern.test(phoneValue);
+          
+          if (!isValidForCountry) {
+            return;
+          }
+          
+          const fullPhoneNumber = `${countryCode}${phoneValue}`;
+          const exists = await checkPhoneExists(fullPhoneNumber);
+          setIsPhoneUnique(!exists);
+          
+          if (exists) {
+            toast({
+              title: "Предупреждение",
+              description: "Номер телефона уже зарегистрирован в системе",
+              variant: "destructive",
+            });
+          }
         }
       };
       
       checkPhone();
     } else {
       setIsPhoneUnique(true);
+      setOperatorName(null);
+      setIsValidOperator(true);
     }
   }, [phoneValue, countryCode, toast, currentCountry.pattern, currentCountry.maxLength]);
 
@@ -177,6 +268,17 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
           toast({
             title: "Ошибка",
             description: `Неверный формат телефона для ${currentCountry.country}`,
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        // Проверка оператора
+        if (!isValidOperator) {
+          toast({
+            title: "Ошибка",
+            description: "Указан неверный код оператора для выбранной страны",
             variant: "destructive",
           });
           setIsLoading(false);
@@ -270,6 +372,16 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
         setIsLoading(false);
       }
     } else {
+      // Проверяем валидность оператора перед отправкой кода
+      if (!isValidOperator) {
+        toast({
+          title: "Ошибка",
+          description: "Указан неверный код оператора для выбранной страны",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       // Отправляем код верификации
       sendVerificationCode();
     }
@@ -284,6 +396,17 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
         toast({
           title: "Ошибка",
           description: `Неверный формат телефона для ${currentCountry.country}`,
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      // Validate the operator code
+      if (!isValidOperator) {
+        toast({
+          title: "Ошибка",
+          description: "Указан неверный код оператора для выбранной страны",
           variant: "destructive",
         });
         setIsLoading(false);
@@ -399,9 +522,10 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
                 id="phone"
                 type="tel"
                 placeholder={phoneFormatExample}
-                className={`flex-1 ${!isPhoneUnique ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                className={`flex-1 ${!isPhoneUnique || !isValidOperator ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                 {...register("phone")}
                 maxLength={currentCountry.maxLength}
+                formatPhone={true}
               />
             </div>
             {errors.phone && (
@@ -409,6 +533,12 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
             )}
             {!currentCountry.pattern.test(phoneValue) && phoneValue.length > 0 && (
               <p className="text-sm text-amber-500">Неверный формат номера для {currentCountry.country}</p>
+            )}
+            {operatorName && (
+              <p className="text-sm text-green-600">Оператор: {operatorName}</p>
+            )}
+            {!isValidOperator && phoneValue.length >= 2 && (
+              <p className="text-sm text-destructive">Неверный код оператора для выбранной страны</p>
             )}
             {!isPhoneUnique && (
               <p className="text-sm text-destructive">Этот номер уже зарегистрирован</p>
@@ -433,6 +563,7 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
             disabled={
               isLoading || 
               !isPhoneUnique || 
+              !isValidOperator ||
               (phoneValue && !currentCountry.pattern.test(phoneValue))
             }
           >
@@ -454,6 +585,7 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
             )}
             <p className="text-sm text-muted-foreground">
               Код верификации отправлен на {verificationMethod === "email" ? `email ${emailValue}` : `телефон ${countryCode}${phoneValue}`}
+              {operatorName && verificationMethod === "phone" && ` (${operatorName})`}
             </p>
           </div>
           

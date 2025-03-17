@@ -28,8 +28,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       
       // For phone formatting, ensure only digits
       if (formatPhone && type === 'tel') {
-        // Let the parent component handle the formatting
-        // This happens in the RegisterForm component
+        const digitsOnly = e.target.value.replace(/\D/g, '');
+        e.target.value = digitsOnly;
       }
       
       // Call the original onChange handler
