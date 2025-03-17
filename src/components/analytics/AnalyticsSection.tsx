@@ -200,6 +200,13 @@ const AnalyticsSection = () => {
 
   const fetchData = async () => {
     try {
+      setIsLoading(true);
+      
+      toast({
+        title: "Загрузка данных",
+        description: "Получение аналитической информации...",
+      });
+      
       const selectedStore = getSelectedStore();
       
       if (!selectedStore) {
@@ -218,7 +225,7 @@ const AnalyticsSection = () => {
         setIsLoading(false);
         toast({
           title: "Ошибка API",
-          description: "Превышен лимит запросов. Используйте кешированные данные и повторите позже.",
+          description: "Превышен лимит запросов. Используйте кешир��ванные данные и повторите позже.",
           variant: "destructive"
         });
         return;
@@ -520,12 +527,30 @@ const AnalyticsSection = () => {
             <Button 
               variant="outline" 
               onClick={() => setShowAIAnalysis(!showAIAnalysis)}
+              disabled={isLoading}
             >
-              {showAIAnalysis ? "Скрыть AI анализ" : "Показать AI анализ"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Загрузка...
+                </>
+              ) : (
+                showAIAnalysis ? "Скрыть AI анализ" : "Показать AI ана��из"
+              )}
             </Button>
           </div>
         </div>
       </div>
+
+      {isLoading && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-100 dark:border-blue-800/30 p-6 rounded-lg flex flex-col items-center justify-center space-y-3">
+          <Loader2 className="h-10 w-10 text-blue-500 animate-spin" />
+          <div className="text-center">
+            <h3 className="text-blue-700 dark:text-blue-300 font-medium">Загрузка данных</h3>
+            <p className="text-sm text-blue-600/70 dark:text-blue-400/70">Пожалуйста, подождите. Это может занять несколько секунд...</p>
+          </div>
+        </div>
+      )}
 
       {dataSource === 'error' && (
         <LimitExceededMessage 
@@ -544,7 +569,7 @@ const AnalyticsSection = () => {
         />
       )}
 
-      {dataSource !== 'error' && (
+      {!isLoading && dataSource !== 'error' && (
         <div className="space-y-8">
           <KeyMetrics data={data} />
 
@@ -560,6 +585,7 @@ const AnalyticsSection = () => {
               data={penalties}
               emptyMessage="Штрафы отсутствуют"
               noFallbackData={true}
+              isLoading={isLoading}
             />
             <PieChartCard 
               title="Прочие удержания"
@@ -567,6 +593,7 @@ const AnalyticsSection = () => {
               data={deductions}
               emptyMessage="Удержания отсутствуют"
               noFallbackData={true}
+              isLoading={isLoading}
             />
           </div>
 
@@ -578,6 +605,7 @@ const AnalyticsSection = () => {
               showCount={true}
               emptyMessage="Возвраты отсутствуют"
               noFallbackData={true}
+              isLoading={isLoading}
             />
             <PieChartCard 
               title="Расходы на рекламу по товарам"
@@ -585,6 +613,7 @@ const AnalyticsSection = () => {
               data={productAdvertisingData}
               emptyMessage="Нет данных о расходах на рекламу"
               noFallbackData={true}
+              isLoading={isLoading}
             />
           </div>
 
@@ -609,3 +638,4 @@ const AnalyticsSection = () => {
 };
 
 export default AnalyticsSection;
+

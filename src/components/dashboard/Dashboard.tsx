@@ -175,6 +175,12 @@ const Dashboard = () => {
     try {
       console.log("[Dashboard] Starting data fetch...");
       setIsLoading(true);
+      
+      toast({
+        title: "Загрузка данных",
+        description: "Пожалуйста, подождите, идет получение информации...",
+      });
+      
       const userData = localStorage.getItem('user');
       const currentUserId = userData ? JSON.parse(userData).id : null;
       console.log(`[Dashboard] Current user ID: ${currentUserId || 'not logged in'}`);
@@ -359,6 +365,13 @@ const Dashboard = () => {
           showDemoDataInfo={true}
           section="general"
         />
+      )}
+
+      {isLoading && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30 p-4 rounded-lg flex items-center justify-center space-x-3">
+          <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+          <p className="text-blue-700 dark:text-blue-300 font-medium">Загрузка данных...</p>
+        </div>
       )}
 
       <Tabs defaultValue="orders" value={activeTab} onValueChange={setActiveTab} className="space-y-4">

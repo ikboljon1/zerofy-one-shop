@@ -4,7 +4,7 @@ import { COLORS } from "../data/demoData";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 import { formatCurrency, roundToTwoDecimals } from "@/utils/formatCurrency";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Info, AlertTriangle, PieChart as PieChartIcon, Coffee } from "lucide-react";
+import { Info, AlertTriangle, PieChart as PieChartIcon, Coffee, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface PieChartCardProps {
@@ -20,6 +20,7 @@ interface PieChartCardProps {
   showCount?: boolean; // Флаг для отображения количества
   emptyMessage?: string; // Сообщение при отсутствии данных
   noFallbackData?: boolean; // Флаг для отключения демо-данных
+  isLoading?: boolean; // Флаг для индикации загрузки
 }
 
 const PieChartCard = ({
@@ -29,7 +30,8 @@ const PieChartCard = ({
   valueLabel = "",
   showCount = false,
   emptyMessage = "Нет данных за выбранный период",
-  noFallbackData = false
+  noFallbackData = false,
+  isLoading = false
 }: PieChartCardProps) => {
   // Отфильтровываем данные с нулевыми значениями
   const filteredData = data && data.filter(item => item.value !== 0);
@@ -57,7 +59,22 @@ const PieChartCard = ({
           {icon}
         </div>
       </div>
-      {hasData ? <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      
+      {isLoading ? (
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="py-10 px-4 flex flex-col items-center justify-center space-y-2 rounded-lg bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900/60 dark:to-blue-900/20 border border-blue-100/50 dark:border-blue-900/30"
+        >
+          <Loader2 className="h-10 w-10 text-blue-500 animate-spin" />
+          <h4 className="text-sm font-medium text-slate-700 dark:text-slate-200 text-center">Загрузка данных...</h4>
+          <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+            Пожалуйста, подождите, идет обработка информации
+          </p>
+        </motion.div>
+      ) : hasData ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="h-[150px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -111,7 +128,8 @@ const PieChartCard = ({
                   </div>)}
               </>}
           </div>
-        </div> : 
+        </div>
+      ) : (
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -142,7 +160,7 @@ const PieChartCard = ({
             )}
           </div>
         </motion.div>
-      }
+      )}
     </Card>;
 };
 
