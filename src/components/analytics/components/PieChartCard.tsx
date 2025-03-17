@@ -4,7 +4,8 @@ import { COLORS } from "../data/demoData";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 import { formatCurrency, roundToTwoDecimals } from "@/utils/formatCurrency";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Info } from "lucide-react";
+import { Info, AlertTriangle, PieChart as PieChartIcon, Coffee } from "lucide-react";
+import { motion } from "framer-motion";
 
 interface PieChartCardProps {
   title: string;
@@ -110,17 +111,38 @@ const PieChartCard = ({
                   </div>)}
               </>}
           </div>
-        </div> : <div className="py-4 text-center text-muted-foreground">
-          <div className="flex flex-col items-center space-y-2">
-            <Info className="h-5 w-5 text-blue-500" />
-            <p className="text-xs">{emptyMessage}</p>
-            {showApplyInformation && (
-              <p className="text-xs text-blue-500">
-                Для отображения данных о рекламе, штрафах и удержаниях нажмите кнопку "Применить"
-              </p>
+        </div> : 
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="py-6 px-4 text-center rounded-lg bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900/60 dark:to-blue-900/20 border border-blue-100/50 dark:border-blue-900/30"
+        >
+          <div className="flex flex-col items-center space-y-3">
+            {showApplyInformation ? (
+              <>
+                <AlertTriangle className="h-10 w-10 text-amber-400 mb-1 animate-pulse" />
+                <h4 className="text-sm font-medium text-slate-700 dark:text-slate-200">{emptyMessage}</h4>
+                <div className="max-w-[220px] mx-auto bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg border border-amber-200/50 dark:border-amber-800/30">
+                  <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">
+                    Для отображения данных нажмите кнопку "Применить"
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <PieChartIcon className="h-8 w-8 text-blue-400/70 dark:text-blue-500/70 mb-1" />
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-300">{emptyMessage}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Данные обновятся после выбора другого периода
+                  </p>
+                </div>
+              </>
             )}
           </div>
-        </div>}
+        </motion.div>
+      }
     </Card>;
 };
 

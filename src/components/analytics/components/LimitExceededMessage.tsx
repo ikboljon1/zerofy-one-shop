@@ -178,9 +178,9 @@ const LimitExceededMessage: React.FC<LimitExceededMessageProps> = ({
         duration: 0.3
       }}
     >
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center text-amber-500">
+      <Card className="overflow-hidden border-amber-200 dark:border-amber-800 shadow-md">
+        <CardHeader className="pb-2 bg-gradient-to-r from-amber-50/70 to-orange-50/70 dark:from-amber-950/40 dark:to-orange-950/40">
+          <CardTitle className="flex items-center text-amber-600 dark:text-amber-400">
             <AlertTriangle className="mr-2 h-5 w-5" />
             {title}
             <TooltipProvider>
@@ -199,46 +199,46 @@ const LimitExceededMessage: React.FC<LimitExceededMessageProps> = ({
               </Tooltip>
             </TooltipProvider>
           </CardTitle>
-          <CardDescription>{message}</CardDescription>
+          <CardDescription className="text-amber-700 dark:text-amber-300">{message}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-4">
           <div className="space-y-4">
             {timeLeft > 0 && (
-              <div className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span>Следующая попытка через: {formatTime(timeLeft)}</span>
+              <div className="flex items-center gap-2 text-sm bg-amber-50 dark:bg-amber-950/40 p-2 rounded-md">
+                <Clock className="h-4 w-4 text-amber-500" />
+                <span className="text-amber-700 dark:text-amber-300 font-medium">Следующая попытка через: {formatTime(timeLeft)}</span>
               </div>
             )}
             
             {showDemoDataInfo && (
-              <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+              <div className="bg-blue-50/80 dark:bg-blue-950/30 rounded-lg p-4 space-y-3 border border-blue-100/80 dark:border-blue-900/30">
                 {getSectionSpecificGuide()}
               </div>
             )}
             
             {getBackoffMessage() && (
-              <div className="text-sm text-muted-foreground">
+              <div className="text-sm text-muted-foreground bg-slate-50 dark:bg-slate-900/50 p-3 rounded-md">
                 {getBackoffMessage()}
               </div>
             )}
           </div>
         </CardContent>
-        <CardFooter>
+        <CardFooter className="bg-gradient-to-r from-amber-50/50 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/20 pt-3">
           <Button 
             variant="outline" 
             onClick={onRefresh} 
             disabled={isLoading || timeLeft > 0} 
-            className="w-full"
+            className="w-full bg-white dark:bg-slate-900 hover:bg-amber-50 dark:hover:bg-amber-950/50 border-amber-200 dark:border-amber-800"
           >
             {isLoading ? (
               <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Обновление...
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin text-amber-500" />
+                <span className="text-amber-700 dark:text-amber-300">Обновление...</span>
               </>
             ) : (
               <>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Повторить запрос
+                <RefreshCw className="mr-2 h-4 w-4 text-amber-500" />
+                <span className="text-amber-700 dark:text-amber-300">Повторить запрос</span>
               </>
             )}
           </Button>
