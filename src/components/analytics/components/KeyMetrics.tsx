@@ -27,12 +27,10 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
   const [returnsAmount, setReturnsAmount] = useState(data.currentPeriod.returnsAmount || 0);
   
   useEffect(() => {
-    // Update state values whenever data changes
-    setTotalExpenses(Number(data.currentPeriod.expenses.total) || 0);
-    setNetProfit(Number(data.currentPeriod.netProfit) || 0);
-    setReturnsAmount(Number(data.currentPeriod.returnsAmount) || 0);
+    setTotalExpenses(data.currentPeriod.expenses.total);
+    setNetProfit(data.currentPeriod.netProfit);
+    setReturnsAmount(data.currentPeriod.returnsAmount || 0);
     
-    // Listen for cost price updates
     const handleCostPriceUpdate = () => {
       const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
       const selectedStore = stores.find((store: any) => store.isSelected);
@@ -40,37 +38,24 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
       if (selectedStore) {
         const analyticsData = JSON.parse(localStorage.getItem(`marketplace_analytics_${selectedStore.id}`) || "{}");
         if (analyticsData?.data?.currentPeriod) {
-          setTotalExpenses(Number(analyticsData.data.currentPeriod.expenses.total) || 0);
-          setNetProfit(Number(analyticsData.data.currentPeriod.netProfit) || 0);
-          setReturnsAmount(Number(analyticsData.data.currentPeriod.returnsAmount) || 0);
+          setTotalExpenses(analyticsData.data.currentPeriod.expenses.total);
+          setNetProfit(analyticsData.data.currentPeriod.netProfit);
+          setReturnsAmount(analyticsData.data.currentPeriod.returnsAmount || 0);
         }
       }
     };
     
-    // Listen for store data updates
-    const handleStoreDataUpdate = (event: CustomEvent) => {
-      const { analytics } = event.detail;
-      if (analytics?.data?.currentPeriod) {
-        setTotalExpenses(Number(analytics.data.currentPeriod.expenses.total) || 0);
-        setNetProfit(Number(analytics.data.currentPeriod.netProfit) || 0);
-        setReturnsAmount(Number(analytics.data.currentPeriod.returnsAmount) || 0);
-      }
-    };
-    
     window.addEventListener('costPriceUpdated', handleCostPriceUpdate);
-    window.addEventListener('store-data-updated', handleStoreDataUpdate as EventListener);
     
     return () => {
       window.removeEventListener('costPriceUpdated', handleCostPriceUpdate);
-      window.removeEventListener('store-data-updated', handleStoreDataUpdate as EventListener);
     };
   }, [data]);
   
   useEffect(() => {
-    // Calculate net profit considering expenses and returns
-    const calculatedNetProfit = Number(data.currentPeriod.transferred) - Number(totalExpenses) - Number(returnsAmount);
-    setNetProfit(calculatedNetProfit);
-  }, [data.currentPeriod.transferred, totalExpenses, returnsAmount]);
+    // Обновляем расчет чистой прибыли с учетом возвратов
+    setNetProfit(data.currentPeriod.transferred - data.currentPeriod.expenses.total - (data.currentPeriod.returnsAmount || 0));
+  }, [data]);
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

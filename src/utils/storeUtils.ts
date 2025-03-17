@@ -41,46 +41,6 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
       const { from, to } = getLastWeekDateRange();
       const stats = await fetchWildberriesStats(store.apiKey, from, to);
       if (stats) {
-        if (stats.currentPeriod) {
-          stats.currentPeriod.expenses = {
-            total: Number(stats.currentPeriod.expenses.total || 0),
-            logistics: Number(stats.currentPeriod.expenses.logistics || 0),
-            storage: Number(stats.currentPeriod.expenses.storage || 0),
-            penalties: Number(stats.currentPeriod.expenses.penalties || 0),
-            acceptance: Number(stats.currentPeriod.expenses.acceptance || 0),
-            advertising: Number(stats.currentPeriod.expenses.advertising || 0),
-            deductions: Number(stats.currentPeriod.expenses.deductions || 0),
-            costPrice: Number(stats.currentPeriod.expenses.costPrice || 0)
-          };
-          
-          stats.currentPeriod.sales = Number(stats.currentPeriod.sales || 0);
-          stats.currentPeriod.transferred = Number(stats.currentPeriod.transferred || 0);
-          stats.currentPeriod.netProfit = Number(stats.currentPeriod.netProfit || 0);
-          stats.currentPeriod.acceptance = Number(stats.currentPeriod.acceptance || 0);
-          stats.currentPeriod.returns = Number(stats.currentPeriod.returns || 0);
-          stats.currentPeriod.returnsAmount = Number(stats.currentPeriod.returnsAmount || 0);
-        }
-        
-        if (stats.previousPeriod) {
-          stats.previousPeriod.expenses = {
-            total: Number(stats.previousPeriod.expenses.total || 0),
-            logistics: Number(stats.previousPeriod.expenses.logistics || 0),
-            storage: Number(stats.previousPeriod.expenses.storage || 0),
-            penalties: Number(stats.previousPeriod.expenses.penalties || 0),
-            acceptance: Number(stats.previousPeriod.expenses.acceptance || 0),
-            advertising: Number(stats.previousPeriod.expenses.advertising || 0),
-            deductions: Number(stats.previousPeriod.expenses.deductions || 0),
-            costPrice: Number(stats.previousPeriod.expenses.costPrice || 0)
-          };
-          
-          stats.previousPeriod.sales = Number(stats.previousPeriod.sales || 0);
-          stats.previousPeriod.transferred = Number(stats.previousPeriod.transferred || 0);
-          stats.previousPeriod.netProfit = Number(stats.previousPeriod.netProfit || 0);
-          stats.previousPeriod.acceptance = Number(stats.previousPeriod.acceptance || 0);
-          stats.previousPeriod.returns = Number(stats.previousPeriod.returns || 0);
-          stats.previousPeriod.returnsAmount = Number(stats.previousPeriod.returnsAmount || 0);
-        }
-        
         const updatedStore = { 
           ...store, 
           stats,
@@ -121,8 +81,6 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           timestamp: Date.now()
         };
         
-        localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
-        
         try {
           await axios.post('http://localhost:3001/api/store-stats', {
             storeId: store.id,
@@ -133,12 +91,9 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           
           await axios.post('http://localhost:3001/api/analytics', analyticsData);
         } catch (error) {
-          console.error('Error saving stats to API:', error);
+          console.error('Error saving stats to DB:', error);
+          localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
         }
-        
-        window.dispatchEvent(new CustomEvent('store-data-updated', { 
-          detail: { store: updatedStore, analytics: analyticsData }
-        }));
         
         return updatedStore;
       }
@@ -557,6 +512,10 @@ export const ensureStoreSelectionPersistence = (): Store[] => {
   return userStores;
 };
 
+/**
+ * Gets the currently selected store without modifying any selections
+ * This is used to prevent unwanted reselection of stores
+ */
 export const getSelectedStore = (): Store | null => {
   try {
     const userData = localStorage.getItem('user');

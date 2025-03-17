@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ShoppingBag, Store, Package2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -127,12 +128,12 @@ export default function Stores({ onStoreSelect }: StoresProps) {
 
     try {
       // Validate API key before creating the store
-      const validationResult = await validateApiKey(newStore.apiKey);
+      const isValidApiKey = await validateApiKey(newStore.apiKey);
       
-      if (!validationResult.isValid) {
+      if (!isValidApiKey) {
         toast({
           title: "Ошибка API ключа",
-          description: validationResult.errorMessage || "Указанный API ключ некорректен. Пожалуйста, проверьте ключ и попробуйте снова.",
+          description: "Указанный API ключ некорректен. Пожалуйста, проверьте ключ и попробуйте снова.",
           variant: "destructive",
         });
         setIsLoading(false);
@@ -158,74 +159,18 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       const updatedStore = await refreshStoreStats(store);
       const storeToAdd = updatedStore || store;
       
-      // Сохраняем данные для использования в Analytics и Dashboard
+      // Также сохраняем данные для использования в Analytics и Dashboard
       if (updatedStore && updatedStore.stats) {
-        const today = new Date();
-        const weekAgo = new Date(today);
-        weekAgo.setDate(today.getDate() - 7);
-        
-        // Создаем или обновляем данные для Analytics
         const analyticsData = {
           storeId: store.id,
-          dateFrom: weekAgo.toISOString(),
-          dateTo: today.toISOString(),
+          dateFrom: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          dateTo: new Date().toISOString(),
           data: updatedStore.stats,
-          penalties: [],
-          returns: [],
-          deductions: [],
-          deductionsTimeline: updatedStore.stats.dailySales?.map((day: any, index: number) => {
-            const daysCount = updatedStore.stats.dailySales.length || 1;
-            const logistic = (updatedStore.stats.currentPeriod.expenses.logistics || 0) / daysCount;
-            const storage = (updatedStore.stats.currentPeriod.expenses.storage || 0) / daysCount;
-            const penalties = (updatedStore.stats.currentPeriod.expenses.penalties || 0) / daysCount;
-            const acceptance = (updatedStore.stats.currentPeriod.expenses.acceptance || 0) / daysCount;
-            const advertising = (updatedStore.stats.currentPeriod.expenses.advertising || 0) / daysCount;
-            const deductions = (updatedStore.stats.currentPeriod.expenses.deductions || 0) / daysCount;
-            
-            return {
-              date: typeof day.date === 'string' ? day.date.split('T')[0] : new Date(weekAgo.getTime() + index * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-              logistic,
-              storage,
-              penalties,
-              acceptance,
-              advertising,
-              deductions
-            };
-          }) || [],
-          productAdvertisingData: [],
-          advertisingBreakdown: { search: 0 },
           timestamp: Date.now()
         };
         
-        // Сохраняем данные для аналитики в localStorage
+        // Сохраняем данные для использования в аналитике
         localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
-        
-        // Пытаемся сохранить данные в API, если это не удается - уже сохранили в localStorage
-        try {
-          await fetch('http://localhost:3001/api/store-stats', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              storeId: store.id,
-              dateFrom: weekAgo.toISOString(),
-              dateTo: today.toISOString(),
-              data: updatedStore.stats
-            })
-          });
-          
-          await fetch('http://localhost:3001/api/analytics', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(analyticsData)
-          });
-        } catch (apiError) {
-          console.error('Error saving data to API:', apiError);
-          // Данные уже сохранены в localStorage, поэтому продолжаем
-        }
       }
       
       // Получаем все магазины и добавляем новый
@@ -247,11 +192,6 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         title: "Успешно",
         description: "Магазин успешно добавлен",
       });
-      
-      // Вызываем диспетчер события для обновления других компонентов
-      window.dispatchEvent(new CustomEvent('store-added', { 
-        detail: { store: storeToAdd }
-      }));
     } catch (error) {
       console.error("Ошибка при добавлении магазина:", error);
       toast({
@@ -322,83 +262,22 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         
         // Также обновляем данные для использования в Analytics и Dashboard
         if (updatedStore.stats) {
-          const today = new Date();
-          const weekAgo = new Date(today);
-          weekAgo.setDate(today.getDate() - 7);
-          
-          // Обновляем данные для Analytics
           const analyticsData = {
             storeId: store.id,
-            dateFrom: weekAgo.toISOString(),
-            dateTo: today.toISOString(),
+            dateFrom: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+            dateTo: new Date().toISOString(),
             data: updatedStore.stats,
-            penalties: [],
-            returns: [],
-            deductions: [],
-            deductionsTimeline: updatedStore.stats.dailySales?.map((day: any, index: number) => {
-              const daysCount = updatedStore.stats.dailySales.length || 1;
-              const logistic = (updatedStore.stats.currentPeriod.expenses.logistics || 0) / daysCount;
-              const storage = (updatedStore.stats.currentPeriod.expenses.storage || 0) / daysCount;
-              const penalties = (updatedStore.stats.currentPeriod.expenses.penalties || 0) / daysCount;
-              const acceptance = (updatedStore.stats.currentPeriod.expenses.acceptance || 0) / daysCount;
-              const advertising = (updatedStore.stats.currentPeriod.expenses.advertising || 0) / daysCount;
-              const deductions = (updatedStore.stats.currentPeriod.expenses.deductions || 0) / daysCount;
-              
-              return {
-                date: typeof day.date === 'string' ? day.date.split('T')[0] : new Date(weekAgo.getTime() + index * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                logistic,
-                storage,
-                penalties,
-                acceptance,
-                advertising,
-                deductions
-              };
-            }) || [],
-            productAdvertisingData: [],
-            advertisingBreakdown: { search: 0 },
             timestamp: Date.now()
           };
           
-          // Сохраняем данные для аналитики в localStorage
+          // Сохраняем данные для использования в аналитике
           localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
-          
-          // Пытаемся сохранить данные в API, если это не удается - уже сохранили в localStorage
-          try {
-            await fetch('http://localhost:3001/api/store-stats', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                storeId: store.id,
-                dateFrom: weekAgo.toISOString(),
-                dateTo: today.toISOString(),
-                data: updatedStore.stats
-              })
-            });
-            
-            await fetch('http://localhost:3001/api/analytics', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(analyticsData)
-            });
-          } catch (apiError) {
-            console.error('Error saving data to API:', apiError);
-            // Данные уже сохранены в localStorage, поэтому продолжаем
-          }
         }
         
         toast({
           title: "Успешно",
           description: "Статистика магазина обновлена",
         });
-        
-        // Вызываем диспетчер события для обновления других компонентов
-        window.dispatchEvent(new CustomEvent('store-data-updated', { 
-          detail: { store: updatedStore }
-        }));
       }
     } catch (error) {
       console.error("Ошибка при обновлении статистики:", error);
