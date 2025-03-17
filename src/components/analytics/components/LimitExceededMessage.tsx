@@ -148,15 +148,15 @@ const LimitExceededMessage: React.FC<LimitExceededMessageProps> = ({
               </li>
               <li className="flex gap-2">
                 <span className="text-primary font-medium">2.</span>
-                <span>Для анализа рентабельности перейдите в раздел "Инвентарь" и проверьте таблицу</span>
+                <span>Все денежные значения отображаются с двумя десятичными знаками (например: 294 290,60)</span>
               </li>
               <li className="flex gap-2">
                 <span className="text-primary font-medium">3.</span>
-                <span>Для планирования поставок используйте раздел "Поставки" и анализируйте коэффициенты</span>
+                <span>Для анализа рентабельности перейдите в раздел "Инвентарь" и проверьте таблицу</span>
               </li>
               <li className="flex gap-2">
                 <span className="text-primary font-medium">4.</span>
-                <span>Все числовые значения в демо-режиме отображаются с двумя десятичными знаками (0,00)</span>
+                <span>Для планирования поставок используйте раздел "Поставки" и анализируйте коэффициенты</span>
               </li>
             </ul>
           </div>
