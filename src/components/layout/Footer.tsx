@@ -7,20 +7,20 @@ const Footer = () => {
   return (
     <footer className="bg-muted py-12 border-t">
       <div className="container mx-auto px-4 md:px-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+        <div className="flex flex-wrap justify-between items-start gap-6">
           {/* Company Info */}
-          <div className="space-y-4">
+          <div className="space-y-4 flex-1">
             <div className="flex items-center gap-2">
               <Zap className="h-6 w-6 text-primary" />
               <span className="font-bold text-xl">Zerofy</span>
             </div>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground max-w-md">
               Мы помогаем продавцам на маркетплейсах управлять своим бизнесом более эффективно с помощью аналитики и искусственного интеллекта.
             </p>
           </div>
 
           {/* Legal */}
-          <div>
+          <div className="flex-shrink-0">
             <h3 className="font-medium text-lg mb-4">Информация</h3>
             <ul className="space-y-2">
               <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Политика конфиденциальности</a></li>
@@ -29,7 +29,7 @@ const Footer = () => {
           </div>
 
           {/* Contact */}
-          <div>
+          <div className="flex-shrink-0">
             <h3 className="font-medium text-lg mb-4">Контакты</h3>
             <ul className="space-y-3">
               <li className="flex items-center gap-2">

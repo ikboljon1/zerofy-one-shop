@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Zap, ChevronRight, Users, ShieldCheck, BarChart2, Package, CircleCheck, Rocket, Clock, Settings, CreditCard, HeartHandshake, MessageSquare, ArrowRight, LineChart, PieChart, Gauge, AreaChart, TrendingUp, CheckCircle, Calculator, Database, BellRing, ArrowUpRight, BoxSelect, Wallet, PercentSquare, BadgeDollarSign, TrendingDown, AlertTriangle, ChevronUp, BarChart3, Lightbulb, CircleDollarSign, Landmark } from "lucide-react";
@@ -346,7 +345,8 @@ const LandingPage = () => {
     </div>
   };
 
-  return <div className="min-h-screen bg-background">
+  return (
+    <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <section className="py-16 px-6 md:px-12 lg:px-16">
         <div className="max-w-7xl mx-auto">
@@ -390,7 +390,8 @@ const LandingPage = () => {
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, index) => <Card key={index} className="bg-card hover:shadow-md transition-all">
+            {features.map((feature, index) => (
+              <Card key={index} className="bg-card hover:shadow-md transition-all">
                 <CardHeader>
                   <div className="bg-primary/10 p-3 rounded-lg w-fit mb-3">
                     {feature.icon}
@@ -400,7 +401,8 @@ const LandingPage = () => {
                 <CardContent>
                   <p className="text-muted-foreground">{feature.description}</p>
                 </CardContent>
-              </Card>)}
+              </Card>
+            ))}
           </div>
         </div>
       </section>
@@ -417,10 +419,21 @@ const LandingPage = () => {
           
           <div className="border rounded-xl overflow-hidden shadow-sm">
             <div className="bg-muted p-4 flex overflow-x-auto">
-              {demoTabs.map(tab => <button key={tab.id} onClick={() => setActiveDemoTab(tab.id)} className={cn("flex items-center px-4 py-2 rounded-lg whitespace-nowrap mr-2", activeDemoTab === tab.id ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:bg-background/40")}>
+              {demoTabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveDemoTab(tab.id)}
+                  className={cn(
+                    "flex items-center px-4 py-2 rounded-lg whitespace-nowrap mr-2",
+                    activeDemoTab === tab.id
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-background/40"
+                  )}
+                >
                   <span className="mr-2">{tab.icon}</span>
                   <span>{tab.title}</span>
-                </button>)}
+                </button>
+              ))}
             </div>
             <div className="p-4">
               {demoContent[activeDemoTab as keyof typeof demoContent]}
@@ -485,7 +498,8 @@ const LandingPage = () => {
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => <Card key={index} className="bg-card">
+            {testimonials.map((testimonial, index) => (
+              <Card key={index} className="bg-card">
                 <CardContent className="pt-6">
                   <div className="mb-4 text-muted-foreground">
                     <QuoteIcon className="h-10 w-10 opacity-50" />
@@ -496,7 +510,8 @@ const LandingPage = () => {
                     <p className="text-sm text-muted-foreground">{testimonial.company}</p>
                   </div>
                 </CardContent>
-              </Card>)}
+              </Card>
+            ))}
           </div>
         </div>
       </section>
@@ -518,16 +533,30 @@ const LandingPage = () => {
       <Footer />
 
       {showAuthModal && <AuthModal open={showAuthModal} onClose={() => setShowAuthModal(false)} initialMode={authMode} />}
-    </div>;
+    </div>
+  );
 };
 
 const QuoteIcon = ({
   className
 }: {
   className?: string;
-}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
     <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z" />
     <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z" />
-  </svg>;
+  </svg>
+);
 
 export default LandingPage;
