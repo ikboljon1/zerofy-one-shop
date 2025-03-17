@@ -340,22 +340,6 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
                   </TooltipProvider>
                 </div>
               </TableHead>
-              <TableHead>
-                <div className="flex items-center gap-1.5">
-                  Продажи/день
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-xs">
-                        Среднее количество продаж товара в день по данным API Wildberries 
-                        за последние 30 дней
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </TableHead>
               <TableHead>Количество</TableHead>
               <TableHead>Период</TableHead>
             </TableRow>
@@ -363,7 +347,7 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
           <TableBody>
             {groupedData.byNmId.size === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-6">
+                <TableCell colSpan={5} className="text-center py-6">
                   <div className="flex flex-col items-center justify-center gap-2">
                     <Package className="h-8 w-8 text-muted-foreground" />
                     <p className="text-muted-foreground">Нет данных для отображения</p>
@@ -407,13 +391,6 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
                       <div className="font-medium text-primary">{formatWithDecimals(data.avgDailyCost, 2)}</div>
                       <div className="text-xs text-muted-foreground">
                         за единицу в день
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium text-primary">
-                        {data.avgDailySales !== null 
-                          ? `${data.avgDailySales.toFixed(2)} шт.` 
-                          : "Нет данных"}
                       </div>
                     </TableCell>
                     <TableCell>
