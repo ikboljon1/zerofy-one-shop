@@ -35,7 +35,7 @@ const WarehouseTabs: React.FC<WarehouseTabsProps> = ({ selectedStore }) => {
         loadWarehouses(selectedStore.apiKey);
         loadCoefficients(selectedStore.apiKey);
         // Get preferred warehouses but don't need to store them in a variable here
-        getPreferredWarehouses(parseInt(selectedStore.id.toString()));
+        getPreferredWarehouses(selectedStore.id.toString());
       } else if (activeTab === 'inventory') {
         loadWarehouseRemains(selectedStore.apiKey);
         loadAverageDailySales(selectedStore.apiKey);
