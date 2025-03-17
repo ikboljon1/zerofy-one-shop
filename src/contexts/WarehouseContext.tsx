@@ -1,10 +1,11 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { 
   fetchAcceptanceCoefficients, 
   fetchWarehouses, 
   fetchFullPaidStorageReport,
   getPreferredWarehouses,
-  togglePreferredWarehouse
+  togglePreferredWarehouse as apiTogglePreferredWarehouse
 } from '@/services/suppliesApi';
 import {
   fetchWarehouseRemains
@@ -383,7 +384,7 @@ export const WarehouseProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   // Обработчик сохранения предпочтительного склада
   const handleSavePreferredWarehouse = (storeId: number, warehouseId: number) => {
-    const newPreferred = togglePreferredWarehouse(storeId.toString(), warehouseId.toString());
+    const newPreferred = apiTogglePreferredWarehouse(storeId.toString(), warehouseId);
     setPreferredWarehouses(newPreferred);
   };
 

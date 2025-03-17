@@ -273,7 +273,7 @@ export const calculateDailyStorageCost = (storageData: PaidStorageItem[]): Map<n
     if (item.nmId) {
       if (!productsStorage.has(item.nmId)) {
         productsStorage.set(item.nmId, { 
-          totalCost: 0, 
+          totalCost: number, 
           dates: new Set<string>(),
           averageDailyCost: 0,
           days: 0
@@ -522,7 +522,7 @@ export const fetchAllSalesReport = async (
       const prevRrdid = nextRrdid;
       nextRrdid = data[data.length - 1]?.rrd_id || 0;
       
-      console.log(`Страница ${pageCount}: п��лучено ${data.length} записей, последний rrdid: ${nextRrdid}`);
+      console.log(`Страница ${pageCount}: получено ${data.length} записей, последний rrdid: ${nextRrdid}`);
       
       // Если вернулось меньше записей, чем размер страницы, или если rrdid не изменился, значит данных больше нет
       if (data.length < 100000 || nextRrdid === 0 || nextRrdid === prevRrdid) {
@@ -788,7 +788,7 @@ export const getMockSalesData = (productIds: number[], days: number = 30): any[]
       const date = new Date();
       date.setDate(date.getDate() - day);
       
-      // Сл��чайное количество продаж для этого дня
+      // Случайное количество продаж для этого дня
       const dailySales = Math.floor(Math.random() * salesCount) + 1;
       
       for (let i = 0; i < dailySales; i++) {
