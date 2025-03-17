@@ -96,7 +96,7 @@ const SupplyForm: React.FC<SupplyFormProps> = ({ onWarehouseSelect }) => {
               </SelectTrigger>
               <SelectContent>
                 {wbWarehouses.map(warehouse => (
-                  <SelectItem key={warehouse.id} value={String(warehouse.id)}>
+                  <SelectItem key={warehouse.ID} value={String(warehouse.ID)}>
                     {warehouse.name}
                   </SelectItem>
                 ))}

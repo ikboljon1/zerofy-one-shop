@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { 
   fetchAcceptanceCoefficients, 
@@ -384,7 +383,7 @@ export const WarehouseProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   // Обработчик сохранения предпочтительного склада
   const handleSavePreferredWarehouse = (storeId: number, warehouseId: number) => {
-    const newPreferred = togglePreferredWarehouse(storeId, warehouseId);
+    const newPreferred = togglePreferredWarehouse(storeId, warehouseId.toString());
     setPreferredWarehouses(newPreferred);
   };
 

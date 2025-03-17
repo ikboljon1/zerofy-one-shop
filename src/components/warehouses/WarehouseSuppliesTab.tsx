@@ -40,12 +40,7 @@ const WarehouseSuppliesTab: React.FC<WarehouseSuppliesTabProps> = ({ storeApiKey
   return (
     <>
       <WarehouseTabHeader
-        title={
-          <div className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-primary" />
-            Управление поставками
-          </div>
-        }
+        title="Управление поставками"
         description="Анализ коэффициентов приемки и выбор оптимального склада"
         tooltipContent={
           <div className="space-y-2">
