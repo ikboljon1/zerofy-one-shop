@@ -4,8 +4,7 @@ import { Zap, Mail, Phone, MapPin, Twitter, Instagram, Facebook, Linkedin } from
 import { Link } from "react-router-dom";
 
 const Footer = () => {
-  return (
-    <footer className="bg-muted py-12 border-t">
+  return <footer className="bg-muted py-12 border-t">
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex flex-wrap justify-between items-start gap-6">
           {/* Company Info */}
@@ -23,8 +22,8 @@ const Footer = () => {
           <div className="flex-shrink-0">
             <h3 className="font-medium text-lg mb-4">Информация</h3>
             <ul className="space-y-2">
-              <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Политика конфиденциальности</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Условия использования</a></li>
+              <li><Link to="/privacy-policy" className="text-muted-foreground hover:text-primary transition-colors">Политика конфиденциальности</Link></li>
+              <li><Link to="/terms-of-service" className="text-muted-foreground hover:text-primary transition-colors">Условия использования</Link></li>
             </ul>
           </div>
 
@@ -38,28 +37,12 @@ const Footer = () => {
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="h-4 w-4 text-muted-foreground" />
-                <a href="tel:+78001234567" className="text-muted-foreground hover:text-primary transition-colors">+7 (800) 123-45-67</a>
+                <a href="tel:+996709727212" className="text-muted-foreground hover:text-primary transition-colors">+996709727212</a>
               </li>
-              <li className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Москва, ул. Примерная, 123</span>
-              </li>
+              
             </ul>
 
-            <div className="flex gap-4 mt-4">
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                <Twitter className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                <Linkedin className="h-5 w-5" />
-              </a>
-            </div>
+            
           </div>
         </div>
 
@@ -69,8 +52,6 @@ const Footer = () => {
           </p>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 };
-
 export default Footer;
