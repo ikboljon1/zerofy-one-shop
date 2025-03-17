@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Zap, ChevronRight, Users, ShieldCheck, BarChart2, Package, CircleCheck, Rocket, Clock, Settings, CreditCard, HeartHandshake, MessageSquare, ArrowRight, LineChart, PieChart, Gauge, AreaChart, TrendingUp, CheckCircle, Calculator, Database, BellRing, ArrowUpRight, BoxSelect, Wallet, PercentSquare, BadgeDollarSign, TrendingDown, AlertTriangle, ChevronUp, BarChart3, Lightbulb, CircleDollarSign, Landmark } from "lucide-react";
+import { Zap, ChevronRight, Users, ShieldCheck, BarChart2, Package, CircleCheck, Rocket, Clock, Settings, CreditCard, HeartHandshake, MessageSquare, ArrowRight, LineChart, PieChart, Gauge, AreaChart, TrendingUp, CheckCircle, Calculator, Database, BellRing, ArrowUpRight, BoxSelect, Wallet, PercentSquare, BadgeDollarSign, TrendingDown, AlertTriangle, ChevronUp, BarChart3, Lightbulb, CircleDollarSign, Landmark, ThumbsUp, ThumbsDown, TrendingDown, Scale, Ban, XCircle, Frown, ArrowUpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import AuthModal from "@/components/auth/AuthModal";
@@ -9,6 +8,7 @@ import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { initialTariffs } from "@/data/tariffs";
 import Footer from "@/components/layout/Footer";
+import { BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar, ResponsiveContainer } from "recharts";
 
 const LandingPage = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -346,6 +346,70 @@ const LandingPage = () => {
     </div>
   };
 
+  // New data for pros and cons section
+  const prosAndCons = {
+    pros: [
+      {
+        title: "Рост прибыли",
+        description: "В среднем +23% к чистой прибыли за счет оптимизации товарного портфеля",
+        icon: <TrendingUp className="h-10 w-10 text-emerald-500" />,
+        value: 23,
+        color: "emerald"
+      },
+      {
+        title: "Экономия времени",
+        description: "До 15 часов в неделю экономии на рутинных операциях",
+        icon: <Clock className="h-10 w-10 text-blue-500" />,
+        value: 15,
+        color: "blue"
+      },
+      {
+        title: "Снижение возвратов",
+        description: "В среднем на 18% меньше возвратов благодаря грамотному планированию поставок",
+        icon: <ArrowUpCircle className="h-10 w-10 text-indigo-500" />,
+        value: 18,
+        color: "indigo"
+      },
+      {
+        title: "Сокращение остатков",
+        description: "До 32% снижение неликвидных товарных остатков",
+        icon: <Scale className="h-10 w-10 text-violet-500" />,
+        value: 32,
+        color: "violet"
+      }
+    ],
+    cons: [
+      {
+        title: "Потерянная прибыль",
+        description: "До 38% потенциальной прибыли теряется из-за неоптимальных цен",
+        icon: <TrendingDown className="h-10 w-10 text-red-500" />,
+        value: 38,
+        color: "red"
+      },
+      {
+        title: "Избыточные расходы",
+        description: "В среднем 22% бюджета тратится на неэффективное хранение",
+        icon: <AlertTriangle className="h-10 w-10 text-orange-500" />,
+        value: 22,
+        color: "orange"
+      },
+      {
+        title: "Упущенные возможности",
+        description: "До 45% потенциальных продаж теряется из-за отсутствия аналитики",
+        icon: <Ban className="h-10 w-10 text-rose-500" />,
+        value: 45,
+        color: "rose"
+      },
+      {
+        title: "Риск неликвидности",
+        description: "До 27% товаров становятся неликвидными без системы контроля",
+        icon: <XCircle className="h-10 w-10 text-pink-500" />,
+        value: 27,
+        color: "pink"
+      }
+    ]
+  };
+
   return <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <section className="py-16 px-6 md:px-12 lg:px-16">
@@ -405,129 +469,137 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Demo Section */}
-      <section className="py-16 px-6 md:px-12 lg:px-16">
+      {/* Pros and Cons Section */}
+      <section className="py-20 px-6 md:px-12 lg:px-16 bg-gradient-to-br from-white to-blue-50/40 dark:from-gray-900 dark:to-blue-950/30">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Посмотрите как это работает</h2>
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Факты о работе на маркетплейсах</h2>
             <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-              Интерактивная демонстрация основных функций платформы
+              Сравните результаты работы с аналитической платформой и без неё
             </p>
           </div>
           
-          <div className="border rounded-xl overflow-hidden shadow-sm">
-            <div className="bg-muted p-4 flex overflow-x-auto">
-              {demoTabs.map(tab => <button key={tab.id} onClick={() => setActiveDemoTab(tab.id)} className={cn("flex items-center px-4 py-2 rounded-lg whitespace-nowrap mr-2", activeDemoTab === tab.id ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:bg-background/40")}>
-                  <span className="mr-2">{tab.icon}</span>
-                  <span>{tab.title}</span>
-                </button>)}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            {/* Pros Column */}
+            <div>
+              <div className="flex items-center gap-3 mb-8">
+                <div className="bg-emerald-100 dark:bg-emerald-900/30 p-3 rounded-full">
+                  <ThumbsUp className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-blue-600 dark:from-emerald-400 dark:to-blue-400">С Zerofy</h3>
+              </div>
+              
+              <div className="space-y-6">
+                {prosAndCons.pros.map((pro, index) => (
+                  <motion.div 
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1, duration: 0.5 }}
+                    viewport={{ once: true }}
+                    className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-${pro.color}-100 dark:border-${pro.color}-900/30 overflow-hidden`}
+                  >
+                    <div className="p-6">
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className={`bg-${pro.color}-100 dark:bg-${pro.color}-900/30 p-3 rounded-lg`}>
+                          {pro.icon}
+                        </div>
+                        <h4 className="text-xl font-semibold">{pro.title}</h4>
+                      </div>
+                      
+                      <p className="text-muted-foreground mb-4">{pro.description}</p>
+                      
+                      <div className="bg-gray-100 dark:bg-gray-700/50 h-3 rounded-full overflow-hidden">
+                        <motion.div 
+                          className={`h-full bg-gradient-to-r from-${pro.color}-500 to-${pro.color}-400`}
+                          style={{ width: `${pro.value}%` }}
+                          initial={{ width: "0%" }}
+                          whileInView={{ width: `${pro.value}%` }}
+                          transition={{ delay: 0.3, duration: 0.8 }}
+                          viewport={{ once: true }}
+                        />
+                      </div>
+                      <div className="mt-2 text-right text-sm font-medium text-muted-foreground">
+                        +{pro.value}%
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             </div>
-            <div className="p-4">
-              {demoContent[activeDemoTab as keyof typeof demoContent]}
+            
+            {/* Cons Column */}
+            <div>
+              <div className="flex items-center gap-3 mb-8">
+                <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-full">
+                  <ThumbsDown className="h-6 w-6 text-red-600 dark:text-red-400" />
+                </div>
+                <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-600 to-orange-600 dark:from-red-400 dark:to-orange-400">Без аналитики</h3>
+              </div>
+              
+              <div className="space-y-6">
+                {prosAndCons.cons.map((con, index) => (
+                  <motion.div 
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1, duration: 0.5 }}
+                    viewport={{ once: true }}
+                    className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-${con.color}-100 dark:border-${con.color}-900/30 overflow-hidden`}
+                  >
+                    <div className="p-6">
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className={`bg-${con.color}-100 dark:bg-${con.color}-900/30 p-3 rounded-lg`}>
+                          {con.icon}
+                        </div>
+                        <h4 className="text-xl font-semibold">{con.title}</h4>
+                      </div>
+                      
+                      <p className="text-muted-foreground mb-4">{con.description}</p>
+                      
+                      <div className="bg-gray-100 dark:bg-gray-700/50 h-3 rounded-full overflow-hidden">
+                        <motion.div 
+                          className={`h-full bg-gradient-to-r from-${con.color}-500 to-${con.color}-400`}
+                          style={{ width: `${con.value}%` }}
+                          initial={{ width: "0%" }}
+                          whileInView={{ width: `${con.value}%` }}
+                          transition={{ delay: 0.3, duration: 0.8 }}
+                          viewport={{ once: true }}
+                        />
+                      </div>
+                      <div className="mt-2 text-right text-sm font-medium text-muted-foreground">
+                        -{con.value}%
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section id="pricing-section" className="py-16 px-6 bg-muted/30 md:px-12 lg:px-16">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Тарифы</h2>
-            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-              Выберите подходящий для вас тариф
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {pricing.map((plan, index) => (
-              <Card key={index} className={cn("flex flex-col", plan.popular ? "border-primary shadow-md relative" : "")}>
-                {plan.popular && (
-                  <div className="absolute top-0 right-0 -translate-y-1/2 px-4 py-1 bg-primary text-primary-foreground rounded-full text-sm font-medium">
-                    Популярный выбор
+          
+          {/* Data Visualization */}
+          <motion.div 
+            className="mt-20"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+            viewport={{ once: true }}
+          >
+            <Card className="overflow-hidden border-0 shadow-xl bg-gradient-to-br from-white to-indigo-50/40 dark:from-gray-900 dark:to-indigo-950/30">
+              <CardHeader>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <div className="bg-indigo-100 dark:bg-indigo-900/50 p-2 rounded-lg">
+                    <BarChart3 className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
                   </div>
-                )}
-                <CardHeader>
-                  <CardTitle>{plan.name}</CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
-                  <div className="mt-4">
-                    <span className="text-4xl font-bold">{plan.price === "0" ? "Бесплатно" : `${plan.price} ₽`}</span>
-                    {plan.price !== "0" && <span className="text-muted-foreground ml-1">/мес</span>}
-                  </div>
-                </CardHeader>
-                <CardContent className="flex-grow">
-                  <ul className="space-y-2">
-                    {plan.features.map((feature, i) => (
-                      <li key={i} className="flex items-start">
-                        <CheckCircle className="h-5 w-5 text-primary mr-2 flex-shrink-0 mt-0.5" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-                <CardFooter>
-                  <Button className="w-full" variant={plan.buttonVariant}>
-                    {plan.price === "0" ? "Начать бесплатно" : "Выбрать план"}
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <section className="py-16 px-6 md:px-12 lg:px-16">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Отзывы клиентов</h2>
-            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-              Узнайте, что говорят о нас наши клиенты
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => <Card key={index} className="bg-card">
-                <CardContent className="pt-6">
-                  <div className="mb-4 text-muted-foreground">
-                    <QuoteIcon className="h-10 w-10 opacity-50" />
-                  </div>
-                  <p className="mb-6 italic">{testimonial.quote}</p>
-                  <div>
-                    <p className="font-semibold">{testimonial.author}</p>
-                    <p className="text-sm text-muted-foreground">{testimonial.company}</p>
-                  </div>
-                </CardContent>
-              </Card>)}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-16 px-6 bg-primary text-primary-foreground md:px-12 lg:px-16">
-        <div className="max-w-7xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">Начните оптимизировать свой бизнес сегодня</h2>
-          <p className="text-lg opacity-90 mb-8 max-w-3xl mx-auto">
-            Присоединяйтесь к тысячам продавцов, которые уже используют нашу платформу для повышения эффективности своего бизнеса
-          </p>
-          <Button size="lg" variant="secondary" className="text-primary font-medium" onClick={() => handleAuthClick('register')}>
-            Попробовать бесплатно <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
-        </div>
-      </section>
-
-      {/* Footer Section */}
-      <Footer />
-
-      {showAuthModal && <AuthModal open={showAuthModal} onClose={() => setShowAuthModal(false)} initialMode={authMode} />}
-    </div>;
-};
-
-const QuoteIcon = ({
-  className
-}: {
-  className?: string;
-}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z" />
-    <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z" />
-  </svg>;
-
-export default LandingPage;
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-700 dark:from-indigo-400 dark:to-blue-400">
+                    Сравнение эффективности бизнеса
+                  </span>
+                </CardTitle>
+                <CardDescription>Средние показатели компаний до и после внедрения аналитической платформы</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={[
+                        { name: 'Прибыль', withZerofy: 123, withoutZerofy: 100 },
