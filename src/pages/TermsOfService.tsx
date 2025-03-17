@@ -1,10 +1,19 @@
 
-import React from "react";
+import React, { useState } from "react";
 import MainLayout from "../components/layout/MainLayout";
 
 const TermsOfService = () => {
+  const [activeTab, setActiveTab] = useState(""); // Empty string as no tab is active
+  
+  // Create a handler for tab changes to pass to MainLayout
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    // We don't need to do anything with the tab change in this context
+    // but we need to provide this function to satisfy the type requirements
+  };
+
   return (
-    <MainLayout>
+    <MainLayout activeTab={activeTab} onTabChange={handleTabChange}>
       <div className="container mx-auto px-4 py-12">
         <h1 className="text-3xl font-bold mb-8">Условия использования</h1>
         
