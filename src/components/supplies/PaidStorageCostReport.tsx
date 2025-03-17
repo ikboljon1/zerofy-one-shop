@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, ArrowUpDown, Package, DollarSign, Calendar, RefreshCw, Truck, Warehouse, CalendarDays, Info } from 'lucide-react';
-import { formatCurrency } from '@/utils/formatCurrency';
+import { formatCurrency, formatWithDecimals } from '@/utils/formatCurrency';
 import { PaidStorageItem } from '@/types/supplies';
 import { format, parseISO, isValid, subMonths } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -104,13 +104,15 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
         totalItems: number,
         dates: Set<string>,
         avgDailySales: number | null,
+        itemDays: number, // Добавляем новую переменную для учета товаро-дней
       }>(),
       byWarehouse: new Map<string, { 
         totalCost: number, 
         avgDailyCost: number, 
         totalItems: number,
         itemsCount: number,
-        dates: Set<string>
+        dates: Set<string>,
+        itemDays: number, // Добавляем новую переменную для учета товаро-дней
       }>()
     };
     
@@ -123,15 +125,23 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
             item, 
             totalItems: 0,
             dates: new Set<string>(),
-            avgDailySales: null
+            avgDailySales: null,
+            itemDays: 0, // Инициализируем счетчик товаро-дней
           });
         }
         
         const entry = result.byNmId.get(item.nmId)!;
         entry.totalCost += item.warehousePrice || 0;
-        entry.totalItems += item.barcodesCount || 0;
+        
+        // Если у записи есть количество баркодов и дата, учитываем их как товаро-дни
+        const itemCount = item.barcodesCount || 0;
+        entry.totalItems += itemCount;
+        
+        // Каждая запись представляет определенное количество товаров на складе в указанную дату
         if (item.date) {
           entry.dates.add(item.date);
+          // Добавляем к товаро-дням: количество товаров в этот день
+          entry.itemDays += itemCount;
         }
         
         if (averageDailySales && averageDailySales[item.nmId]) {
@@ -146,28 +156,46 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
             avgDailyCost: 0, 
             totalItems: 0,
             itemsCount: 0,
-            dates: new Set<string>()
+            dates: new Set<string>(),
+            itemDays: 0, // Инициализируем счетчик товаро-дней
           });
         }
         
         const entry = result.byWarehouse.get(item.warehouse)!;
         entry.totalCost += item.warehousePrice || 0;
-        entry.totalItems += item.barcodesCount || 0;
+        
+        const itemCount = item.barcodesCount || 0;
+        entry.totalItems += itemCount;
         entry.itemsCount++;
+        
         if (item.date) {
           entry.dates.add(item.date);
+          // Добавляем к товаро-дням: количество товаров в этот день
+          entry.itemDays += itemCount;
         }
       }
     });
     
-    const daysDiff = Math.max(1, Math.round((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24)));
-    
+    // Расчёт стоимости хранения в день с учетом товаро-дней
     result.byNmId.forEach(entry => {
-      entry.avgDailyCost = entry.totalCost / daysDiff;
+      // Если у товара нет учтенных товаро-дней, используем общий период
+      if (entry.itemDays > 0) {
+        // Стоимость в день = общая стоимость / количество товаро-дней
+        entry.avgDailyCost = entry.totalCost / entry.itemDays;
+      } else {
+        const daysDiff = Math.max(1, Math.round((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24)));
+        entry.avgDailyCost = entry.totalItems > 0 ? entry.totalCost / (entry.totalItems * daysDiff) : 0;
+      }
     });
     
     result.byWarehouse.forEach(entry => {
-      entry.avgDailyCost = entry.totalCost / daysDiff;
+      if (entry.itemDays > 0) {
+        // Стоимость в день = общая стоимость / количество товаро-дней
+        entry.avgDailyCost = entry.totalCost / entry.itemDays;
+      } else {
+        const daysDiff = Math.max(1, Math.round((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24)));
+        entry.avgDailyCost = entry.totalItems > 0 ? entry.totalCost / (entry.totalItems * daysDiff) : 0;
+      }
     });
     
     return result;
@@ -305,8 +333,8 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
                         <Info className="h-4 w-4 text-muted-foreground" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
-                        Средняя стоимость хранения в день, рассчитанная как общая стоимость, 
-                        разделенная на количество дней в выбранном периоде ({Math.round((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24))} дн.)
+                        Средняя стоимость хранения одной единицы товара в день, 
+                        рассчитанная по данным о фактическом хранении
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -376,9 +404,9 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
                       <div className="font-medium text-primary">{formatCurrency(data.totalCost)}</div>
                     </TableCell>
                     <TableCell>
-                      <div className="font-medium text-primary">{formatCurrency(data.avgDailyCost)}</div>
+                      <div className="font-medium text-primary">{formatWithDecimals(data.avgDailyCost, 2)}</div>
                       <div className="text-xs text-muted-foreground">
-                        в день
+                        за единицу в день
                       </div>
                     </TableCell>
                     <TableCell>
@@ -425,8 +453,8 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
                         <Info className="h-4 w-4 text-muted-foreground" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
-                        Средняя стоимость хранения в день, рассчитанная как общая стоимость, 
-                        разделенная на количество дней в выбранном периоде ({Math.round((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24))} дн.)
+                        Средняя стоимость хранения одной единицы товара в день, 
+                        рассчитанная по данным о фактическом хранении
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -467,9 +495,9 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
                       <div className="font-medium text-primary">{formatCurrency(data.totalCost)}</div>
                     </TableCell>
                     <TableCell>
-                      <div className="font-medium text-primary">{formatCurrency(data.avgDailyCost)}</div>
+                      <div className="font-medium text-primary">{formatWithDecimals(data.avgDailyCost, 2)}</div>
                       <div className="text-xs text-muted-foreground">
-                        в день
+                        за единицу в день
                       </div>
                     </TableCell>
                     <TableCell>
@@ -501,7 +529,13 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
   
   const daysDiff = Math.max(1, Math.round((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24)));
   
-  const averageDailyStorageCost = totalStorageCost / daysDiff;
+  // Расчет суммарного количества товаро-дней для всего отчета
+  const totalItemDays = storageData.reduce((sum, item) => sum + (item.barcodesCount || 0), 0);
+  
+  // Корректировка расчета средней дневной стоимости хранения
+  const averageDailyStorageCost = totalItemDays > 0 
+    ? totalStorageCost / totalItemDays 
+    : totalStorageCost / daysDiff;
 
   return (
     <Card className="shadow-lg border-0">
@@ -531,8 +565,8 @@ const PaidStorageCostReport: React.FC<PaidStorageCostReportProps> = ({
               <div className="p-3 bg-green-100 dark:bg-green-800/30 rounded-full mb-3">
                 <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
-              <div className="text-2xl font-bold text-primary">{formatCurrency(averageDailyStorageCost)}</div>
-              <div className="text-sm text-muted-foreground">Средняя стоимость в день</div>
+              <div className="text-2xl font-bold text-primary">{formatWithDecimals(averageDailyStorageCost, 2)}</div>
+              <div className="text-sm text-muted-foreground">Стоимость единицы в день</div>
             </CardContent>
           </Card>
           
