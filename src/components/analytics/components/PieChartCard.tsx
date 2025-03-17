@@ -46,6 +46,9 @@ const PieChartCard = ({
   // Определяем, нужно ли делать список скроллируемым (если больше 5 элементов)
   const needScroll = filteredData && filteredData.length > 5;
   
+  // Определяем, нужно ли показывать информационное сообщение о применении
+  const showApplyInformation = title.includes("реклам") || title.includes("штраф") || title.includes("удержани") || title.includes("Удержания");
+  
   return <Card className="p-3">
       <div className="flex items-center justify-between mb-3 rounded-none">
         <h3 className="text-base font-medium">{title}</h3>
@@ -111,9 +114,11 @@ const PieChartCard = ({
           <div className="flex flex-col items-center space-y-2">
             <Info className="h-5 w-5 text-blue-500" />
             <p className="text-xs">{emptyMessage}</p>
-            <p className="text-xs text-blue-500">
-              Для отображения данных о рекламе, штрафах и удержаниях нажмите кнопку "Применить"
-            </p>
+            {showApplyInformation && (
+              <p className="text-xs text-blue-500">
+                Для отображения данных о рекламе, штрафах и удержаниях нажмите кнопку "Применить"
+              </p>
+            )}
           </div>
         </div>}
     </Card>;
