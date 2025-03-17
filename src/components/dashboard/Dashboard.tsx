@@ -19,6 +19,7 @@ import SalesTable from "./SalesTable";
 import { fetchAverageDailySalesFromAPI } from "@/components/analytics/data/demoData";
 import { format } from 'date-fns';
 import RateLimitHandler from "./RateLimitHandler";
+
 const Dashboard = () => {
   const {
     toast
@@ -41,6 +42,8 @@ const Dashboard = () => {
   const [retryCount, setRetryCount] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
   const [nextRetryTime, setNextRetryTime] = useState<Date | undefined>(undefined);
+  const [selectedStoreName, setSelectedStoreName] = useState<string>("");
+
   const filterDataByPeriod = useCallback((date: string, period: Period) => {
     const now = new Date();
     const itemDate = new Date(date);
@@ -76,6 +79,7 @@ const Dashboard = () => {
         return true;
     }
   }, []);
+
   const getFilteredOrders = (orders: WildberriesOrder[]) => {
     const filteredOrders = orders.filter(order => filterDataByPeriod(order.date, period));
     const warehouseCounts: Record<string, number> = {};
@@ -105,21 +109,26 @@ const Dashboard = () => {
       regionDistribution: newRegionDistribution
     };
   };
+
   const getFilteredSales = (sales: WildberriesSale[]) => {
     return sales.filter(sale => filterDataByPeriod(sale.date, period));
   };
+
   const filteredOrdersData = useMemo(() => {
     return getFilteredOrders(orders);
   }, [orders, period]);
+
   const filteredSalesData = useMemo(() => {
     return getFilteredSales(sales);
   }, [sales, period]);
+
   const calculateBackoffTime = (retryCount: number): number => {
     const baseDelay = 5000;
     const exponentialDelay = baseDelay * Math.pow(2, retryCount);
     const maxDelay = 5 * 60 * 1000;
     return Math.min(exponentialDelay, maxDelay);
   };
+
   const handleApiRateLimit = () => {
     console.log(`[Dashboard] API rate limit detected. Retry count: ${retryCount}`);
     setIsRateLimited(true);
@@ -139,6 +148,7 @@ const Dashboard = () => {
       retryFetchData();
     }, backoffTime);
   };
+
   const retryFetchData = () => {
     console.log('[Dashboard] Retrying data fetch');
     setIsRetrying(true);
@@ -152,11 +162,13 @@ const Dashboard = () => {
       setIsRetrying(false);
     });
   };
+
   const resetRateLimitState = () => {
     setIsRateLimited(false);
     setRetryCount(0);
     setNextRetryTime(undefined);
   };
+
   const fetchData = useCallback(async () => {
     try {
       console.log("[Dashboard] Starting data fetch...");
@@ -296,13 +308,14 @@ const Dashboard = () => {
       setIsLoading(false);
     }
   }, [selectedStoreId, toast]);
+
   useEffect(() => {
-    const selectedStore = getSelectedStore();
-    if (selectedStore && selectedStore.id !== selectedStoreId) {
-      setSelectedStoreId(selectedStore.id);
-      fetchData();
+    const store = getSelectedStore();
+    if (store) {
+      setSelectedStoreName(store.name || "");
     }
-  }, [selectedStoreId, fetchData]);
+  }, [selectedStoreId]);
+
   useEffect(() => {
     let refreshInterval: NodeJS.Timeout;
     const handleStoreSelectionChange = () => {
@@ -320,10 +333,19 @@ const Dashboard = () => {
       }
     };
   }, [selectedStoreId, fetchData]);
+
   return <div className="space-y-4">
       
-
-      {isRateLimited && <RateLimitHandler isVisible={isRateLimited} onRetry={retryFetchData} isRetrying={isRetrying} retryCount={retryCount} nextRetryTime={nextRetryTime} />}
+      {isRateLimited && (
+        <RateLimitHandler 
+          isVisible={isRateLimited} 
+          onRetry={retryFetchData} 
+          isRetrying={isRetrying} 
+          retryCount={retryCount} 
+          nextRetryTime={nextRetryTime}
+          storeName={selectedStoreName}
+        />
+      )}
 
       <Tabs defaultValue="orders" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className={`${isMobile ? 'w-full grid grid-cols-4 gap-1' : ''}`}>
@@ -371,4 +393,5 @@ const Dashboard = () => {
       </Tabs>
     </div>;
 };
+
 export default React.memo(Dashboard);

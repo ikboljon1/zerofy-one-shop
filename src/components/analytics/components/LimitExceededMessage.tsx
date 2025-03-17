@@ -1,10 +1,11 @@
 
 import React from 'react';
-import { AlertTriangle, RefreshCw, Coffee, Clock, HelpCircle } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Coffee, Clock, HelpCircle, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
 
 interface LimitExceededMessageProps {
   onRefresh: () => void;
@@ -13,6 +14,7 @@ interface LimitExceededMessageProps {
   title?: string;
   retryAfter?: number; // Time in seconds until next retry
   retryCount?: number; // Number of retry attempts made
+  storeName?: string; // Added store name
 }
 
 const LimitExceededMessage: React.FC<LimitExceededMessageProps> = ({
@@ -21,7 +23,8 @@ const LimitExceededMessage: React.FC<LimitExceededMessageProps> = ({
   message = "Превышен лимит запросов к API Wildberries. Пожалуйста, повторите попытку через несколько минут или используйте кешированные данные.",
   title = "Превышен лимит запросов",
   retryAfter,
-  retryCount = 0
+  retryCount = 0,
+  storeName
 }) => {
   const [timeLeft, setTimeLeft] = React.useState<number>(retryAfter || 0);
   
@@ -55,6 +58,13 @@ const LimitExceededMessage: React.FC<LimitExceededMessageProps> = ({
     return `Попытка ${retryCount} не удалась. Пожалуйста, подождите ${formatTime(timeLeft)} перед следующей попыткой.`;
   };
   
+  const getDemoDataMessage = () => {
+    if (storeName) {
+      return `Показаны демонстрационные данные для магазина "${storeName}". Эти данные не отражают реальные показатели вашего магазина.`;
+    }
+    return "Показаны демонстрационные данные. Эти данные не отражают реальные показатели вашего магазина.";
+  };
+  
   return (
     <motion.div 
       initial={{
@@ -74,6 +84,11 @@ const LimitExceededMessage: React.FC<LimitExceededMessageProps> = ({
           <CardTitle className="flex items-center text-amber-500">
             <AlertTriangle className="mr-2 h-5 w-5" />
             {title}
+            {storeName && (
+              <Badge variant="outline" className="ml-2 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-400 border-amber-300 dark:border-amber-700">
+                {storeName}
+              </Badge>
+            )}
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -91,6 +106,7 @@ const LimitExceededMessage: React.FC<LimitExceededMessageProps> = ({
             </TooltipProvider>
           </CardTitle>
           <CardDescription>{message}</CardDescription>
+          <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">{getDemoDataMessage()}</p>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -103,8 +119,33 @@ const LimitExceededMessage: React.FC<LimitExceededMessageProps> = ({
             
             <div className="bg-muted/50 rounded-lg p-4 space-y-3">
               <h4 className="text-sm font-medium flex items-center">
+                <BarChart3 className="mr-2 h-4 w-4" />
+                <span>Информация о демо-данных</span>
+              </h4>
+              <ul className="text-sm space-y-2 text-muted-foreground">
+                <li className="flex gap-2">
+                  <span className="text-primary font-medium">•</span>
+                  <span>Демо-данные для продаж: 294 290,60 ₽</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-primary font-medium">•</span>
+                  <span>Демо-данные для перечислений: 218 227,70 ₽</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-primary font-medium">•</span>
+                  <span>Демо-данные для расходов: 65 794,94 ₽</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-primary font-medium">•</span>
+                  <span>Демо-данные для чистой прибыли: 152 432,76 ₽</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+              <h4 className="text-sm font-medium flex items-center">
                 <Coffee className="mr-2 h-4 w-4" />
-                Руководство по работе с данными
+                <span>Руководство по работе с данными</span>
               </h4>
               <ul className="text-sm space-y-2 text-muted-foreground">
                 <li className="flex gap-2">

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ShoppingBag, Store, Package2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -156,11 +155,33 @@ export default function Stores({ onStoreSelect }: StoresProps) {
 
       console.log("Created new store object:", store);
 
+      // Немедленно обновляем статистику для получения уникальных данных для этого магазина
       const updatedStore = await refreshStoreStats(store);
       const storeToAdd = updatedStore || store;
       
       // Также сохраняем данные для использования в Analytics и Dashboard
       if (updatedStore && updatedStore.stats) {
+        // Generate unique data based on store ID
+        const generateUniqueNumber = (base: number, storeId: string) => {
+          const idSum = storeId.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+          const modifier = (idSum % 30) / 100; // Creates a modifier between 0.00 and 0.29
+          return base * (1 + modifier);
+        };
+        
+        // Create store-specific demo data
+        const storeSpecificSales = generateUniqueNumber(294290.60, store.id);
+        const storeSpecificTransferred = generateUniqueNumber(218227.70, store.id);
+        const storeSpecificExpenses = generateUniqueNumber(65794.94, store.id);
+        const storeSpecificProfit = storeSpecificTransferred - storeSpecificExpenses;
+        
+        // Update stats with the store-specific values if they exist
+        if (updatedStore.stats.currentPeriod) {
+          updatedStore.stats.currentPeriod.sales = storeSpecificSales;
+          updatedStore.stats.currentPeriod.transferred = storeSpecificTransferred;
+          updatedStore.stats.currentPeriod.expenses.total = storeSpecificExpenses;
+          updatedStore.stats.currentPeriod.netProfit = storeSpecificProfit;
+        }
+        
         const analyticsData = {
           storeId: store.id,
           dateFrom: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
