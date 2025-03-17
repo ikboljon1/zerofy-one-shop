@@ -383,7 +383,7 @@ export const WarehouseProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   // Обработчик сохранения предпочтительного склада
   const handleSavePreferredWarehouse = (storeId: number, warehouseId: number) => {
-    const newPreferred = togglePreferredWarehouse(storeId, warehouseId.toString());
+    const newPreferred = togglePreferredWarehouse(storeId.toString(), warehouseId.toString());
     setPreferredWarehouses(newPreferred);
   };
 
@@ -468,3 +468,4 @@ export const useWarehouse = () => {
   }
   return context;
 };
+
