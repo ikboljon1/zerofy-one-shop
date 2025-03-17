@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,30 +18,13 @@ const countryCodes = [
   { code: "+77", country: "Казахстан", pattern: /^\d{9}$/, example: "XXX XXX XXX", maxLength: 9 },
 ];
 
-// Операторы связи по кодам для разных стран
+// Операторы связи только для Кыргызстана
 const operatorCodes = {
   "+996": [
-    { codes: ["55", "55", "55", "57", "58"], name: "Мегаком" },
-    { codes: ["70", "50", "51", "52"], name: "Билайн" },
-    { codes: ["77", "75", "76", "78"], name: "О!" },
-  ],
-  "+7": [
-    { codes: ["900", "901", "902", "903", "904", "905", "906", "908", "909", "950", "951", "952", "953", "954", "955", "956", "958", "959", "999"], name: "МТС" },
-    { codes: ["910", "911", "912", "913", "914", "915", "916", "917", "918", "919", "980", "981", "982", "983", "984", "985", "986", "987", "988", "989"], name: "Билайн" },
-    { codes: ["920", "921", "922", "923", "924", "925", "926", "927", "928", "929", "930", "931", "932", "933", "934", "935", "936", "937", "938", "939", "960", "961", "962", "963", "964", "965", "966", "967", "968", "969"], name: "Мегафон" },
-    { codes: ["970", "971", "972", "973", "974", "975", "976", "977", "978", "979", "991", "992", "993", "994", "995", "996", "997", "998", "999"], name: "Tele2" },
-  ],
-  "+77": [
-    { codes: ["00", "01", "02", "05", "07", "08"], name: "Алтел" },
-    { codes: ["11", "12", "13", "14", "15", "16", "17", "18", "19", "71", "76", "77", "78"], name: "Билайн" },
-    { codes: ["05", "25", "26", "27", "28", "29", "75", "89", "69", "67"], name: "Актив" },
-    { codes: ["47", "48", "70", "71", "76", "77", "78"], name: "Теле2" },
-  ],
-  "+996": [
-    { codes: ["55", "55", "55", "57", "58"], name: "Мегаком" },
-    { codes: ["70", "50", "51", "52"], name: "Билайн" },
-    { codes: ["77", "75", "76", "78"], name: "О!" },
-  ],
+    { codes: ["55", "56", "57", "58"], name: "Мегаком" },
+    { codes: ["50", "51", "52", "53", "54"], name: "Билайн" },
+    { codes: ["70", "75", "76", "77", "78"], name: "О!" },
+  ]
 };
 
 // Helper function to get operator name by phone number and country code
@@ -51,16 +33,11 @@ const getOperatorName = (phoneNumber: string, countryCode: string): string | nul
   if (!operators) return null;
   
   // Extract start of the phone number to check against operator codes
-  // For different countries, we check different numbers of digits
   const digits = phoneNumber.replace(/\D/g, "");
   
-  // Define how many digits to check based on country code
-  let digitsToCheck = 2; // Default
-  if (countryCode === "+7") digitsToCheck = 3;
+  if (digits.length < 2) return null;
   
-  if (digits.length < digitsToCheck) return null;
-  
-  const prefix = digits.substring(0, digitsToCheck);
+  const prefix = digits.substring(0, 2);
   
   // Find matching operator
   const operator = operators.find(op => op.codes.includes(prefix));
