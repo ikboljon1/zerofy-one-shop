@@ -19,6 +19,8 @@ import SalesTable from "./SalesTable";
 import { fetchAverageDailySalesFromAPI } from "@/components/analytics/data/demoData";
 import { format } from 'date-fns';
 import RateLimitHandler from "./RateLimitHandler";
+import LimitExceededMessage from "@/components/analytics/components/LimitExceededMessage";
+
 const Dashboard = () => {
   const {
     toast
@@ -41,6 +43,8 @@ const Dashboard = () => {
   const [retryCount, setRetryCount] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
   const [nextRetryTime, setNextRetryTime] = useState<Date | undefined>(undefined);
+  const [isDemoData, setIsDemoData] = useState(false);
+
   const filterDataByPeriod = useCallback((date: string, period: Period) => {
     const now = new Date();
     const itemDate = new Date(date);
@@ -76,6 +80,7 @@ const Dashboard = () => {
         return true;
     }
   }, []);
+
   const getFilteredOrders = (orders: WildberriesOrder[]) => {
     const filteredOrders = orders.filter(order => filterDataByPeriod(order.date, period));
     const warehouseCounts: Record<string, number> = {};
@@ -105,24 +110,30 @@ const Dashboard = () => {
       regionDistribution: newRegionDistribution
     };
   };
+
   const getFilteredSales = (sales: WildberriesSale[]) => {
     return sales.filter(sale => filterDataByPeriod(sale.date, period));
   };
+
   const filteredOrdersData = useMemo(() => {
     return getFilteredOrders(orders);
   }, [orders, period]);
+
   const filteredSalesData = useMemo(() => {
     return getFilteredSales(sales);
   }, [sales, period]);
+
   const calculateBackoffTime = (retryCount: number): number => {
     const baseDelay = 5000;
     const exponentialDelay = baseDelay * Math.pow(2, retryCount);
     const maxDelay = 5 * 60 * 1000;
     return Math.min(exponentialDelay, maxDelay);
   };
+
   const handleApiRateLimit = () => {
     console.log(`[Dashboard] API rate limit detected. Retry count: ${retryCount}`);
     setIsRateLimited(true);
+    setIsDemoData(true);
     setIsLoading(false);
     const nextRetry = new Date();
     const backoffTime = calculateBackoffTime(retryCount);
@@ -139,6 +150,7 @@ const Dashboard = () => {
       retryFetchData();
     }, backoffTime);
   };
+
   const retryFetchData = () => {
     console.log('[Dashboard] Retrying data fetch');
     setIsRetrying(true);
@@ -152,11 +164,13 @@ const Dashboard = () => {
       setIsRetrying(false);
     });
   };
+
   const resetRateLimitState = () => {
     setIsRateLimited(false);
     setRetryCount(0);
     setNextRetryTime(undefined);
   };
+
   const fetchData = useCallback(async () => {
     try {
       console.log("[Dashboard] Starting data fetch...");
@@ -188,6 +202,7 @@ const Dashboard = () => {
       try {
         const [ordersResult, salesResult] = await Promise.all([fetchAndUpdateOrders(selectedStore), fetchAndUpdateSales(selectedStore)]);
         resetRateLimitState();
+        setIsDemoData(false);
         if (ordersResult) {
           console.log(`[Dashboard] Received ${ordersResult.orders.length} orders from API`);
           setOrders(ordersResult.orders);
@@ -201,8 +216,10 @@ const Dashboard = () => {
             setOrders(savedOrdersData.orders || []);
             setWarehouseDistribution(savedOrdersData.warehouseDistribution || []);
             setRegionDistribution(savedOrdersData.regionDistribution || []);
+            setIsDemoData(true);
           } else {
             console.log("[Dashboard] No orders found in storage");
+            setIsDemoData(true);
           }
         }
         if (salesResult) {
@@ -214,8 +231,10 @@ const Dashboard = () => {
           if (savedSalesData) {
             console.log(`[Dashboard] Loaded ${savedSalesData.sales?.length || 0} sales from storage`);
             setSales(savedSalesData.sales || []);
+            setIsDemoData(true);
           } else {
             console.log("[Dashboard] No sales found in storage");
+            setIsDemoData(true);
           }
         }
         if (selectedStore.apiKey) {
@@ -234,6 +253,7 @@ const Dashboard = () => {
               console.log('[Dashboard] Примеры данных:', sampleEntries);
             } else {
               console.log('[Dashboard] Нет данных о средних продажах');
+              setIsDemoData(true);
             }
           }).catch(error => {
             console.error('[Dashboard] Ошибка при получении данных о средних продажах:', error);
@@ -243,6 +263,7 @@ const Dashboard = () => {
             }
             if (error.message?.includes('429') || error.status === 429) {
               console.log('[Dashboard] Rate limit detected during fetchAverageDailySalesFromAPI');
+              setIsDemoData(true);
               toast({
                 title: "Ограничение API",
                 description: "Не удалось получить данные о средних продажах из-за ограничений API",
@@ -252,6 +273,7 @@ const Dashboard = () => {
           });
         } else {
           console.log("[Dashboard] Нет API ключа для запроса средних продаж");
+          setIsDemoData(true);
         }
       } catch (error) {
         console.error('[Dashboard] Error in API calls:', error);
@@ -275,6 +297,7 @@ const Dashboard = () => {
         if (savedSalesData) {
           setSales(savedSalesData.sales || []);
         }
+        setIsDemoData(true);
       }
       console.log("[Dashboard] Data fetch completed successfully");
       setIsLoading(false);
@@ -294,8 +317,10 @@ const Dashboard = () => {
         variant: "destructive"
       });
       setIsLoading(false);
+      setIsDemoData(true);
     }
   }, [selectedStoreId, toast]);
+
   useEffect(() => {
     const selectedStore = getSelectedStore();
     if (selectedStore && selectedStore.id !== selectedStoreId) {
@@ -303,6 +328,7 @@ const Dashboard = () => {
       fetchData();
     }
   }, [selectedStoreId, fetchData]);
+
   useEffect(() => {
     let refreshInterval: NodeJS.Timeout;
     const handleStoreSelectionChange = () => {
@@ -320,10 +346,20 @@ const Dashboard = () => {
       }
     };
   }, [selectedStoreId, fetchData]);
-  return <div className="space-y-4">
-      
 
+  return <div className="space-y-4">
       {isRateLimited && <RateLimitHandler isVisible={isRateLimited} onRetry={retryFetchData} isRetrying={isRetrying} retryCount={retryCount} nextRetryTime={nextRetryTime} />}
+      
+      {isDemoData && !isRateLimited && (
+        <LimitExceededMessage 
+          onRefresh={fetchData} 
+          isLoading={isLoading}
+          title="Демо-данные"
+          message="В настоящий момент отображаются демонстрационные данные для ознакомления с функциональностью."
+          showDemoDataInfo={true}
+          section="general"
+        />
+      )}
 
       <Tabs defaultValue="orders" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className={`${isMobile ? 'w-full grid grid-cols-4 gap-1' : ''}`}>
@@ -371,4 +407,5 @@ const Dashboard = () => {
       </Tabs>
     </div>;
 };
+
 export default React.memo(Dashboard);
