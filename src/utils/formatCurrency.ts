@@ -1,3 +1,4 @@
+
 export const formatCurrency = (value: number | string): string => {
   const numValue = typeof value === 'string' ? parseFloat(value) : value;
   
@@ -16,7 +17,7 @@ export const formatWithDecimals = (value: number | string, decimals: number = 2)
   const numValue = typeof value === 'string' ? parseFloat(value) : value;
   
   if (isNaN(numValue)) {
-    return '0';
+    return '0' + (decimals > 0 ? ',' + '0'.repeat(decimals) : '');
   }
   
   // Format the number with specified decimal places but without the ₽ symbol

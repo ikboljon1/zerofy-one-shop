@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,7 +7,9 @@ import {
   RefreshCw, 
   Store, 
   DollarSign,
-  Building2
+  Building2,
+  HelpCircle,
+  Book
 } from 'lucide-react';
 import { 
   fetchAcceptanceCoefficients, 
@@ -41,6 +42,8 @@ import { Button } from '@/components/ui/button';
 import { ensureStoreSelectionPersistence } from '@/utils/storeUtils';
 import { Store as StoreType } from '@/types/store';
 import { fetchAverageDailySalesFromAPI } from '@/components/analytics/data/demoData';
+import LimitExceededMessage from '@/components/analytics/components/LimitExceededMessage';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const Warehouses: React.FC = () => {
   const [activeTab, setActiveTab] = useState('inventory');
@@ -62,6 +65,9 @@ const Warehouses: React.FC = () => {
   const [averageDailySales, setAverageDailySales] = useState<Record<number, number>>({});
   const [dailyStorageCosts, setDailyStorageCosts] = useState<Record<number, number>>({});
   const [storageCostsCalculated, setStorageCostsCalculated] = useState(false);
+  const [showHelpGuide, setShowHelpGuide] = useState(
+    localStorage.getItem('warehouses_seen_help') !== 'true'
+  );
 
   useEffect(() => {
     const stores = ensureStoreSelectionPersistence();
@@ -75,10 +81,9 @@ const Warehouses: React.FC = () => {
         const preferred = getPreferredWarehouses(selected.id);
         setPreferredWarehouses(preferred);
       } else if (activeTab === 'inventory') {
-        // При загрузке "Инвентарь" загружаем ВСЕ необходимые данные
         loadWarehouseRemains(selected.apiKey);
         loadAverageDailySales(selected.apiKey);
-        loadPaidStorageData(selected.apiKey); // Загружаем данные о платном хранении сразу
+        loadPaidStorageData(selected.apiKey);
       } else if (activeTab === 'storage') {
         loadPaidStorageData(selected.apiKey);
       }
@@ -95,17 +100,15 @@ const Warehouses: React.FC = () => {
         const preferred = getPreferredWarehouses(selectedStore.id);
         setPreferredWarehouses(preferred);
       } else if (activeTab === 'inventory') {
-        // При загрузке "Инвентарь" загружаем ВСЕ необходимые данные
         loadWarehouseRemains(selectedStore.apiKey);
         loadAverageDailySales(selectedStore.apiKey);
-        loadPaidStorageData(selectedStore.apiKey); // Загружаем данные о платном хранении сразу
+        loadPaidStorageData(selectedStore.apiKey);
       } else if (activeTab === 'storage') {
         loadPaidStorageData(selectedStore.apiKey);
       }
     }
   }, [activeTab, selectedStore]);
 
-  // Эффект для пересчета стоимости хранения при обновлении данных
   useEffect(() => {
     if (paidStorageData.length > 0 && warehouseRemains.length > 0) {
       console.log('[Warehouses] Пересчет стоимости хранения из данных API...');
@@ -114,6 +117,15 @@ const Warehouses: React.FC = () => {
       calculateRealStorageCostsFromAPI();
     }
   }, [paidStorageData, warehouseRemains]);
+
+  useEffect(() => {
+    if (showHelpGuide) {
+      const timer = setTimeout(() => {
+        localStorage.setItem('warehouses_seen_help', 'true');
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showHelpGuide]);
 
   const loadAverageDailySales = async (apiKey: string) => {
     if (!apiKey) {
@@ -147,37 +159,26 @@ const Warehouses: React.FC = () => {
     }
   };
   
-  // Улучшенная функция для расчета стоимости хранения на основе данных API
   const calculateRealStorageCostsFromAPI = useCallback(() => {
     console.log('[Warehouses] Расчет стоимости хранения на основе данных API');
     
-    // Инициализируем объект для хранения результата
     const storageCosts: Record<number, number> = {};
     
-    // Для каждого товара в warehouseRemains ищем соответствующие данные о стоимости хранения
     warehouseRemains.forEach(item => {
       const nmId = item.nmId;
       
-      // Ищем данные о стоимости хранения для этого товара
       const storageItem = paidStorageData.find(
         storage => storage.nmId === nmId
       );
       
       if (storageItem && storageItem.warehousePrice) {
-        // Вычисляем суточную стоимость хранения из данных API
-        // Поскольку API дает стоимость за некоторый период, делим на количество дней
-        // (обычно это месяц или неделя, используем примерно 30 дней)
         const dailyCost = storageItem.warehousePrice / 30;
         
-        // Сохраняем стоимость хранения для использования в компоненте
         storageCosts[nmId] = dailyCost;
-        
-        // Также обновляем данные в самом объекте для удобства использования
         storageItem.dailyStorageCost = dailyCost;
         
         console.log(`[Warehouses] Для товара ${nmId} найдена стоимость хранения из API: ${dailyCost.toFixed(2)}`);
       } else {
-        // Если данных нет, используем расчет на основе объема (как запасной вариант)
         const volume = item.volume || 0.001;
         const baseStorageRate = item.category ? 
           calculateCategoryRate(item.category) : 5;
@@ -192,9 +193,7 @@ const Warehouses: React.FC = () => {
     setStorageCostsCalculated(true);
   }, [warehouseRemains, paidStorageData]);
   
-  // Вспомогательная функция для расчета тарифа в зависимости от категории товара
   const calculateCategoryRate = (category: string): number => {
-    // Примерные тарифы для разных категорий товаров
     switch(category.toLowerCase()) {
       case 'обувь':
         return 6.5;
@@ -209,7 +208,6 @@ const Warehouses: React.FC = () => {
     }
   };
   
-  // Функция для генерации случайных данных о продажах (используется при ошибке API)
   const generateMockAverageSales = () => {
     const mockSalesData: Record<number, number> = {};
     warehouseRemains.forEach(item => {
@@ -290,7 +288,6 @@ const Warehouses: React.FC = () => {
       setWarehouseRemains(data);
       toast.success('Отчет об остатках на складах успешно загружен');
       
-      // После загрузки остатков проверяем, нужно ли перерасчитать стоимость хранения
       if (paidStorageData.length > 0) {
         calculateRealStorageCostsFromAPI();
       }
@@ -320,7 +317,6 @@ const Warehouses: React.FC = () => {
       const data = await fetchFullPaidStorageReport(apiKey, dateFrom, dateTo);
       console.log(`[Warehouses] Получено ${data.length} записей данных о платном хранении`);
       
-      // Небольшая отладочная информация, чтобы убедиться, что данные содержат нужные поля
       if (data.length > 0) {
         console.log('[Warehouses] Пример данных платного хранения:', {
           nmId: data[0].nmId,
@@ -332,8 +328,6 @@ const Warehouses: React.FC = () => {
       
       setPaidStorageData(data);
       
-      // После загрузки данных о платном хранении, если у нас есть данные об остатках,
-      // запускаем перерасчет стоимости хранения
       if (warehouseRemains.length > 0) {
         calculateRealStorageCostsFromAPI();
       }
@@ -356,7 +350,6 @@ const Warehouses: React.FC = () => {
     if (activeTab === 'inventory') {
       loadWarehouseRemains(selectedStore.apiKey);
       loadAverageDailySales(selectedStore.apiKey);
-      // Также обновляем данные о платном хранении для корректного расчета
       loadPaidStorageData(selectedStore.apiKey);
     } else if (activeTab === 'supplies') {
       loadWarehouses(selectedStore.apiKey);
@@ -394,8 +387,35 @@ const Warehouses: React.FC = () => {
   return (
     <div className="container px-4 py-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Управление складами и логистикой</h1>
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          Управление складами и логистикой
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="ml-1">
+                  <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p className="max-w-xs">
+                  Здесь вы управляете запасами, планируете поставки и анализируете затраты на хранение
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </h1>
       </div>
+
+      {showHelpGuide && (
+        <div className="mb-4">
+          <LimitExceededMessage
+            title="Руководство по работе со складами"
+            message="Здесь вы можете управлять запасами товаров, планировать поставки и анализировать затраты на хранение."
+            onRefresh={() => setShowHelpGuide(false)}
+            isLoading={false}
+          />
+        </div>
+      )}
 
       <Tabs defaultValue="inventory" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid grid-cols-3 w-full max-w-md">
@@ -417,9 +437,31 @@ const Warehouses: React.FC = () => {
           {!selectedStore ? renderNoStoreSelected() : (
             <>
               <div className="flex justify-between items-center mb-4">
-                <div>
-                  <h2 className="text-lg font-semibold">Остатки товаров на складах</h2>
-                  <p className="text-sm text-muted-foreground">Актуальная информация о количестве товаров</p>
+                <div className="flex items-center">
+                  <div>
+                    <h2 className="text-lg font-semibold">Остатки товаров на складах</h2>
+                    <p className="text-sm text-muted-foreground">Актуальная информация о количестве товаров</p>
+                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="ml-1">
+                          <Book className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-xs">
+                        <div className="space-y-2">
+                          <p className="font-medium">Как работать с разделом "Инвентарь":</p>
+                          <ol className="list-decimal pl-4 space-y-1">
+                            <li>Здесь отображаются все ваши товары на складах Wildberries</li>
+                            <li>Таблица показывает количество, стоимость и дневные продажи</li>
+                            <li>Анализ рентабельности помогает выявить "залежавшиеся" товары</li>
+                            <li>При отсутствии данных API показываются демо-данные</li>
+                          </ol>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 <Button 
                   variant="outline" 
@@ -471,14 +513,36 @@ const Warehouses: React.FC = () => {
           {!selectedStore ? renderNoStoreSelected() : (
             <>
               <div className="flex justify-between items-center mb-4">
-                <div>
-                  <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <Building2 className="h-5 w-5 text-primary" />
-                    Управление поставками
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Анализ коэффициентов приемки и выбор оптимального склада
-                  </p>
+                <div className="flex items-center">
+                  <div>
+                    <h2 className="text-lg font-semibold flex items-center gap-2">
+                      <Building2 className="h-5 w-5 text-primary" />
+                      Управление поставками
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Анализ коэффициентов приемки и выбор оптимального склада
+                    </p>
+                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="ml-1">
+                          <Book className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-xs">
+                        <div className="space-y-2">
+                          <p className="font-medium">Как работать с разделом "Поставки":</p>
+                          <ol className="list-decimal pl-4 space-y-1">
+                            <li>Используйте форму для ввода параметров планируемой поставки</li>
+                            <li>Изучите коэффициенты приемки по дням недели для каждого склада</li>
+                            <li>Выбирайте склады с высокими коэффициентами для более быстрой приемки</li>
+                            <li>При отсутствии данных API показываются демо-данные</li>
+                          </ol>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 <Button 
                   variant="outline" 
@@ -522,9 +586,32 @@ const Warehouses: React.FC = () => {
           {!selectedStore ? renderNoStoreSelected() : (
             <>
               <div className="flex justify-between items-center mb-4">
-                <div>
-                  <h2 className="text-lg font-semibold">Отчет о платном хранении</h2>
-                  <p className="text-sm text-muted-foreground">Аналитика затрат на хранение товаров</p>
+                <div className="flex items-center">
+                  <div>
+                    <h2 className="text-lg font-semibold">Отчет о платном хранении</h2>
+                    <p className="text-sm text-muted-foreground">Аналитика затрат на хранение товаров</p>
+                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="ml-1">
+                          <Book className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-xs">
+                        <div className="space-y-2">
+                          <p className="font-medium">Как работать с разделом "Хранение":</p>
+                          <ol className="list-decimal pl-4 space-y-1">
+                            <li>Здесь отображаются затраты на хранение ваших товаров</li>
+                            <li>Анализируйте дневную стоимость хранения каждого товара</li>
+                            <li>Сопоставляйте стоимость хранения с прибылью от продаж</li>
+                            <li>Выявляйте товары с высокими затратами на хранение</li>
+                            <li>При отсутствии данных API показываются демо-данные</li>
+                          </ol>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 <Button 
                   variant="outline" 
