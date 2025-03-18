@@ -25,19 +25,17 @@ export function StoreCard({
   canDelete = true
 }: StoreCardProps) {
   const handleSelectionChange = () => {
-    if (!store.isSelected) {
-      onToggleSelection(store.id);
-      window.dispatchEvent(new CustomEvent('store-selection-changed', { 
-        detail: { storeId: store.id, selected: true, timestamp: Date.now() } 
-      }));
-      localStorage.setItem('last_selected_store', JSON.stringify({
-        storeId: store.id,
-        timestamp: Date.now()
-      }));
-      
-      // Clear warehouse cache when switching to a different store
-      clearStoreCache(store.id);
-    }
+    onToggleSelection(store.id);
+    window.dispatchEvent(new CustomEvent('store-selection-changed', { 
+      detail: { storeId: store.id, selected: true, timestamp: Date.now() } 
+    }));
+    localStorage.setItem('last_selected_store', JSON.stringify({
+      storeId: store.id,
+      timestamp: Date.now()
+    }));
+    
+    // Clear warehouse cache when switching to a different store
+    clearStoreCache(store.id);
   };
 
   const handleRefreshStats = () => {

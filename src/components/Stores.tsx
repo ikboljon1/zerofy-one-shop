@@ -27,7 +27,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       const userData = localStorage.getItem('user');
       const currentUserId = userData ? JSON.parse(userData).id : null;
       
-      // Загружаем и фильтруем магазины по текущему пользователю
+      // Load and filter stores by current user
       const savedStores = ensureStoreSelectionPersistence();
       const userStores = currentUserId 
         ? savedStores.filter(store => store.userId === currentUserId)
@@ -36,6 +36,11 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       setStores(userStores);
       checkDeletePermissions();
       getStoreLimitFromTariff();
+      
+      // Make sure at least one store is selected if any stores exist
+      if (userStores.length > 0 && !userStores.some(store => store.isSelected)) {
+        handleToggleSelection(userStores[0].id);
+      }
     } catch (error) {
       console.error("Ошибка загрузки магазинов:", error);
       toast({
@@ -140,7 +145,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         return;
       }
 
-      // Получаем текущего пользователя из localStorage
+      // Get current user from localStorage
       const userData = localStorage.getItem('user');
       const currentUserId = userData ? JSON.parse(userData).id : null;
 
@@ -151,7 +156,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         apiKey: newStore.apiKey,
         isSelected: false,
         lastFetchDate: new Date().toISOString(),
-        userId: currentUserId // Привязываем магазин к текущему пользователю
+        userId: currentUserId
       };
 
       console.log("Created new store object:", store);
@@ -159,7 +164,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       const updatedStore = await refreshStoreStats(store);
       const storeToAdd = updatedStore || store;
       
-      // Также сохраняем данные для использования в Analytics и Dashboard
+      // Save data for Analytics and Dashboard
       if (updatedStore && updatedStore.stats) {
         const analyticsData = {
           storeId: store.id,
@@ -169,28 +174,48 @@ export default function Stores({ onStoreSelect }: StoresProps) {
           timestamp: Date.now()
         };
         
-        // Сохраняем данные для использования в аналитике
         localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
       }
       
-      // Получаем все магазины и добавляем новый
+      // Get all stores and add the new one
       const allStores = loadStores();
-      const updatedStores = [...allStores, storeToAdd];
       
-      // Если это первый магазин пользователя, помечаем его как выбранный
-      if (updatedStores.filter(s => s.userId === currentUserId).length === 1) {
+      // If this is the user's first store, mark it as selected and deselect others
+      const userStoreCount = allStores.filter(s => s.userId === currentUserId).length;
+      
+      if (userStoreCount === 0) {
         storeToAdd.isSelected = true;
+        // Deselect all other stores
+        allStores.forEach(s => {
+          s.isSelected = false;
+        });
       }
       
-      // Обновляем только магазины текущего пользователя в состоянии
+      const updatedStores = [...allStores, storeToAdd];
+      
+      // Update only current user's stores in state
       const userStores = currentUserId 
         ? updatedStores.filter(s => s.userId === currentUserId)
         : updatedStores;
       
       setStores(userStores);
-      saveStores(updatedStores); // Сохраняем все магазины
+      saveStores(updatedStores); // Save all stores
       
       console.log("Store added successfully:", storeToAdd);
+      
+      // Trigger selection event if this is the first store
+      if (storeToAdd.isSelected) {
+        window.dispatchEvent(new CustomEvent('store-selection-changed', { 
+          detail: { storeId: storeToAdd.id, selected: true, timestamp: Date.now() } 
+        }));
+        
+        if (onStoreSelect) {
+          onStoreSelect({
+            id: storeToAdd.id,
+            apiKey: storeToAdd.apiKey
+          });
+        }
+      }
       
       // Clear cache to ensure fresh data
       clearAllStoreCache();
@@ -213,14 +238,14 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   };
 
   const handleToggleSelection = (storeId: string) => {
-    // Получаем все магазины
+    // Get all stores
     const allStores = loadStores();
     const updatedAllStores = allStores.map(store => ({
       ...store,
       isSelected: store.id === storeId
     }));
     
-    // Обновляем состояние только для магазинов текущего пользователя
+    // Update state only for current user's stores
     const userData = localStorage.getItem('user');
     const currentUserId = userData ? JSON.parse(userData).id : null;
     
@@ -229,13 +254,16 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       : updatedAllStores;
     
     setStores(userStores);
-    saveStores(updatedAllStores); // Сохраняем все магазины
+    saveStores(updatedAllStores); // Save all stores
 
     // Save the selected store separately for better persistence
     localStorage.setItem('last_selected_store', JSON.stringify({
       storeId,
       timestamp: Date.now()
     }));
+
+    // Clear cache for the selected store
+    clearStoreCache(storeId);
 
     const selectedStore = stores.find(store => store.id === storeId);
     if (selectedStore && onStoreSelect) {
@@ -251,13 +279,13 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     try {
       const updatedStore = await refreshStoreStats(store);
       if (updatedStore) {
-        // Получаем все магазины
+        // Get all stores
         const allStores = loadStores();
         const updatedAllStores = allStores.map(s => 
           s.id === store.id ? updatedStore : s
         );
         
-        // Обновляем состояние только для магазинов текущего пользователя
+        // Update state only for current user's stores
         const userData = localStorage.getItem('user');
         const currentUserId = userData ? JSON.parse(userData).id : null;
         
@@ -266,9 +294,9 @@ export default function Stores({ onStoreSelect }: StoresProps) {
           : updatedAllStores;
         
         setStores(userStores);
-        saveStores(updatedAllStores); // Сохраняем все магазины
+        saveStores(updatedAllStores); // Save all stores
         
-        // Также обновляем данные для использования в Analytics и Dashboard
+        // Also update data for Analytics and Dashboard
         if (updatedStore.stats) {
           const analyticsData = {
             storeId: store.id,
@@ -278,7 +306,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
             timestamp: Date.now()
           };
           
-          // Сохраняем данные для использования в аналитике
+          // Save data for analytics
           localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
         }
         
@@ -313,11 +341,11 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     const storeToDelete = stores.find(store => store.id === storeId);
     if (!storeToDelete) return;
 
-    // Получаем все магазины и удаляем нужный
+    // Get all stores and remove the one to delete
     const allStores = loadStores();
     const updatedAllStores = allStores.filter(store => store.id !== storeId);
     
-    // Обновляем состояние только для магазинов текущего пользователя
+    // Update state only for current user's stores
     const userData = localStorage.getItem('user');
     const currentUserId = userData ? JSON.parse(userData).id : null;
     
@@ -329,7 +357,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     clearAllStoreCache();
     
     setStores(userStores);
-    saveStores(updatedAllStores); // Сохраняем все магазины
+    saveStores(updatedAllStores); // Save all stores
     
     localStorage.removeItem(`${STATS_STORAGE_KEY}_${storeId}`);
     localStorage.removeItem(`marketplace_analytics_${storeId}`);
