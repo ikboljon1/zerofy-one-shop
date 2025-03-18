@@ -1,105 +1,121 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Index from "./pages/Index";
-import Products from "./pages/Products";
-import Warehouses from "./pages/Warehouses";
-import Advertising from "./components/Advertising";
-import Admin from "./pages/Admin";
-import LandingPage from "./pages/LandingPage";
-import Navbar from "./components/layout/Navbar";
-import { useEffect, useState } from "react";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
 
-const queryClient = new QueryClient();
+import { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { Toaster } from '@/components/ui/sonner';
+import { User } from './types/user';
 
-// Protected route component that checks authentication
-const ProtectedRoute = ({ children, requireAdmin = false }: { children: JSX.Element, requireAdmin?: boolean }) => {
-  const userString = localStorage.getItem('user') || sessionStorage.getItem('user');
-  const isAuthenticated = userString !== null;
+// Pages
+import Index from './pages/Index';
+import LandingPage from './pages/LandingPage';
+import Admin from './pages/Admin';
+import Products from './pages/Products';
+import Warehouses from './pages/Warehouses';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
+
+// Context Providers
+import { WarehouseProvider } from './contexts/WarehouseContext';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: false,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+    },
+  },
+});
+
+// Protected Route Component
+const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+  const isAuthenticated = localStorage.getItem('authToken') !== null;
   
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
   }
   
-  // Check if route requires admin role
-  if (requireAdmin) {
+  return children;
+};
+
+// Admin Route Component
+const AdminRoute = ({ children }: { children: JSX.Element }) => {
+  const isAuthenticated = localStorage.getItem('authToken') !== null;
+  const userStr = localStorage.getItem('user');
+  let isAdmin = false;
+  
+  if (userStr) {
     try {
-      const user = JSON.parse(userString || '{}');
-      if (user.role !== 'admin') {
-        // Redirect non-admin users to dashboard
-        return <Navigate to="/dashboard" replace />;
-      }
+      const user = JSON.parse(userStr) as User;
+      isAdmin = user.role === 'admin';
     } catch (e) {
-      // In case of JSON parse error, redirect to dashboard
-      return <Navigate to="/dashboard" replace />;
+      console.error('Error parsing user data', e);
     }
+  }
+  
+  if (!isAuthenticated || !isAdmin) {
+    return <Navigate to="/dashboard" replace />;
   }
   
   return children;
 };
 
-const App = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+function App() {
+  const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
   
   useEffect(() => {
-    // Check if user is authenticated on initial load
-    const user = localStorage.getItem('user');
-    setIsAuthenticated(!!user);
+    const token = localStorage.getItem('authToken');
+    setIsUserLoggedIn(!!token);
+    
+    const handleStorageChange = () => {
+      const newToken = localStorage.getItem('authToken');
+      setIsUserLoggedIn(!!newToken);
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
-
+  
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Route to landing page, авторизованные пользователи тоже могут видеть лендинг */}
-            <Route path="/" element={
-              <>
-                <Navbar />
-                <LandingPage />
-              </>
-            } />
-            
-            {/* Protected routes */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <Index />
-              </ProtectedRoute>
-            } />
-            <Route path="/products" element={
-              <ProtectedRoute>
-                <Products />
-              </ProtectedRoute>
-            } />
-            <Route path="/warehouses" element={
-              <ProtectedRoute>
-                <Warehouses />
-              </ProtectedRoute>
-            } />
-            <Route path="/advertising" element={
-              <ProtectedRoute>
-                <Advertising />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin" element={
-              <ProtectedRoute requireAdmin={true}>
-                <Admin />
-              </ProtectedRoute>
-            } />
-            {/* Add these routes */}
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/terms-of-service" element={<TermsOfService />} />
-          </Routes>
-        </BrowserRouter>
+        <WarehouseProvider>
+          <Router>
+            <Routes>
+              <Route path="/" element={isUserLoggedIn ? <Navigate to="/dashboard" /> : <LandingPage />} />
+              <Route path="/dashboard/*" element={
+                <ProtectedRoute>
+                  <Index />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin" element={
+                <AdminRoute>
+                  <Admin />
+                </AdminRoute>
+              } />
+              <Route path="/products" element={
+                <ProtectedRoute>
+                  <Products />
+                </ProtectedRoute>
+              } />
+              <Route path="/warehouses" element={
+                <ProtectedRoute>
+                  <Warehouses />
+                </ProtectedRoute>
+              } />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
+            </Routes>
+          </Router>
+          <Toaster position="top-right" />
+        </WarehouseProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
-};
+}
 
 export default App;
