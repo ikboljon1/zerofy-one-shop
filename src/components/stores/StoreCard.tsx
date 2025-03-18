@@ -59,6 +59,10 @@ export function StoreCard({
     return transferred - expenses.total - costPrice - returnsAmount;
   };
 
+  const hasStats = !!store.stats && 
+    !!store.stats.currentPeriod && 
+    typeof store.stats.currentPeriod.sales !== 'undefined';
+
   return (
     <Card className={store.isSelected ? "border-primary" : ""}>
       <CardHeader className="pb-2">
@@ -88,7 +92,7 @@ export function StoreCard({
             <span className="text-muted-foreground">Маркетплейс:</span>
             <span className="font-medium">{store.marketplace}</span>
           </div>
-          {store.stats && (
+          {hasStats ? (
             <>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Продажи:</span>
@@ -102,12 +106,15 @@ export function StoreCard({
                 <span className="text-muted-foreground">Расходы:</span>
                 <span className="font-medium">{formatCurrency(store.stats.currentPeriod.expenses.total)}</span>
               </div>
-              {/* Removed the Возвраты (Returns) section as requested */}
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Чистая прибыль:</span>
                 <span className="font-medium">{formatCurrency(calculateNetProfit())}</span>
               </div>
             </>
+          ) : (
+            <div className="py-2 text-center text-muted-foreground">
+              Нет данных о продажах
+            </div>
           )}
           <Button 
             variant="outline" 
@@ -115,7 +122,7 @@ export function StoreCard({
             onClick={handleRefreshStats}
             disabled={isLoading}
           >
-            Обновить статистику
+            {hasStats ? "Обновить статистику" : "Загрузить статистику"}
           </Button>
         </div>
       </CardContent>

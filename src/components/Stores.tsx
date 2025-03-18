@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ShoppingBag, Store, Package2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -128,12 +127,12 @@ export default function Stores({ onStoreSelect }: StoresProps) {
 
     try {
       // Validate API key before creating the store
-      const isValidApiKey = await validateApiKey(newStore.apiKey);
+      const validation = await validateApiKey(newStore.apiKey);
       
-      if (!isValidApiKey) {
+      if (!validation.isValid) {
         toast({
           title: "Ошибка API ключа",
-          description: "Указанный API ключ некорректен. Пожалуйста, проверьте ключ и попробуйте снова.",
+          description: validation.errorMessage || "Указанный API ключ некорректен. Пожалуйста, проверьте ключ и попробуйте снова.",
           variant: "destructive",
         });
         setIsLoading(false);
@@ -156,6 +155,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
 
       console.log("Created new store object:", store);
 
+      // Обновляем статистику магазина
       const updatedStore = await refreshStoreStats(store);
       const storeToAdd = updatedStore || store;
       
@@ -175,6 +175,12 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       
       // Получаем все магазины и добавляем новый
       const allStores = loadStores();
+      
+      // Ensure all other stores are not selected if this is the first store
+      if (allStores.length === 0) {
+        storeToAdd.isSelected = true;
+      }
+      
       const updatedStores = [...allStores, storeToAdd];
       
       // Обновляем только магазины текущего пользователя в состоянии
@@ -192,6 +198,13 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         title: "Успешно",
         description: "Магазин успешно добавлен",
       });
+      
+      // If this is the first store, trigger selection event
+      if (storeToAdd.isSelected) {
+        window.dispatchEvent(new CustomEvent('store-selection-changed', { 
+          detail: { storeId: storeToAdd.id, selected: true, timestamp: Date.now() } 
+        }));
+      }
     } catch (error) {
       console.error("Ошибка при добавлении магазина:", error);
       toast({

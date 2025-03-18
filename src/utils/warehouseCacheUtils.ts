@@ -150,3 +150,24 @@ export function getCacheExpirationTime(key: string, storeId: string): string {
     return 'Неизвестно';
   }
 }
+
+// Function to clear all cache for a specific store
+export function clearAllStoreCache(storeId: string): void {
+  try {
+    const keys = [
+      WAREHOUSE_REMAINS_KEY,
+      WAREHOUSES_LIST_KEY,
+      COEFFICIENTS_KEY,
+      PAID_STORAGE_KEY,
+      AVERAGE_SALES_KEY
+    ];
+    
+    keys.forEach(key => {
+      clearCache(key, storeId);
+    });
+    
+    console.log(`[Cache] Cleared all cache for store ${storeId}`);
+  } catch (error) {
+    console.error('[Cache] Error clearing all cache:', error);
+  }
+}

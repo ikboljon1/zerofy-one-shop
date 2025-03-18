@@ -39,8 +39,53 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
   if (store.marketplace === "Wildberries") {
     try {
       const { from, to } = getLastWeekDateRange();
+      console.log(`[StoreUtils] Fetching stats for store ${store.id} from ${from.toISOString()} to ${to.toISOString()}`);
       const stats = await fetchWildberriesStats(store.apiKey, from, to);
+      
       if (stats) {
+        console.log(`[StoreUtils] Successfully received stats for store ${store.id}`);
+        
+        // Ensure all required properties exist and have default values if needed
+        if (!stats.currentPeriod) {
+          stats.currentPeriod = {
+            sales: 0,
+            orders: 0,
+            returns: 0,
+            returnsAmount: 0,
+            ordersCanceledByClient: 0,
+            ordersCanceledByClientAmount: 0,
+            ordersInProgress: 0,
+            ordersInProgressAmount: 0,
+            countUniqueProducts: 0,
+            averageOrderPrice: 0,
+            revenue: 0,
+            transferred: 0,
+            expenses: {
+              total: 0,
+              logistics: 0,
+              storage: 0,
+              commission: 0,
+              payments: 0,
+              penalties: 0,
+              acceptance: 0,
+              advertising: 0,
+              deductions: 0
+            }
+          };
+        } else if (!stats.currentPeriod.expenses) {
+          stats.currentPeriod.expenses = {
+            total: 0,
+            logistics: 0,
+            storage: 0,
+            commission: 0,
+            payments: 0,
+            penalties: 0,
+            acceptance: 0,
+            advertising: 0,
+            deductions: 0
+          };
+        }
+        
         const updatedStore = { 
           ...store, 
           stats,
@@ -95,11 +140,51 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
         }
         
+        console.log(`[StoreUtils] Store updated with stats:`, updatedStore.stats.currentPeriod);
         return updatedStore;
+      } else {
+        console.log(`[StoreUtils] No stats returned for store ${store.id}`);
       }
     } catch (error) {
-      console.error('Error refreshing stats:', error);
-      return store;
+      console.error('[StoreUtils] Error refreshing stats:', error);
+      if (error.response && error.response.status === 429) {
+        console.warn('[StoreUtils] Rate limit exceeded, using default stats structure');
+        // Create a default stats structure when rate limited
+        const defaultStats = {
+          currentPeriod: {
+            sales: 0,
+            orders: 0,
+            returns: 0,
+            returnsAmount: 0,
+            ordersCanceledByClient: 0,
+            ordersCanceledByClientAmount: 0,
+            ordersInProgress: 0,
+            ordersInProgressAmount: 0,
+            countUniqueProducts: 0,
+            averageOrderPrice: 0,
+            revenue: 0,
+            transferred: 0,
+            expenses: {
+              total: 0,
+              logistics: 0,
+              storage: 0,
+              commission: 0,
+              payments: 0,
+              penalties: 0,
+              acceptance: 0,
+              advertising: 0,
+              deductions: 0
+            }
+          },
+          dailySales: []
+        };
+        
+        return {
+          ...store,
+          stats: defaultStats,
+          lastFetchDate: new Date().toISOString()
+        };
+      }
     }
   }
   return store;
@@ -586,3 +671,4 @@ export const validateApiKey = async (apiKey: string): Promise<{ isValid: boolean
     return { isValid: false, errorMessage: "Невозможно соединиться с API Wildberries" };
   }
 };
+
