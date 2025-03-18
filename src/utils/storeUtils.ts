@@ -1,7 +1,6 @@
 import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY, ORDERS_STORAGE_KEY, SALES_STORAGE_KEY, WildberriesOrder, WildberriesSale } from "@/types/store";
 import { fetchWildberriesStats, fetchWildberriesOrders, fetchWildberriesSales } from "@/services/wildberriesApi";
 import axios from "axios";
-import { CACHE_KEYS, getCache, setCache } from "./cacheUtils";
 
 export const getLastWeekDateRange = () => {
   const now = new Date();
@@ -108,21 +107,13 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
 
 export const getOrdersData = async (storeId: string) => {
   try {
-    const cached = getCache<any>(CACHE_KEYS.ORDERS, storeId);
-    if (cached) {
-      console.log('[Store] Using cached orders data');
-      return cached.data;
-    }
-
     const response = await axios.get(`http://localhost:3001/api/orders/${storeId}`);
     if (response.data) {
-      const data = {
+      return {
         orders: response.data.orders,
         warehouseDistribution: response.data.warehouse_distribution,
         regionDistribution: response.data.region_distribution
       };
-      setCache(CACHE_KEYS.ORDERS, data, storeId);
-      return data;
     }
   } catch (error) {
     console.error('Error fetching orders from DB:', error);
@@ -136,17 +127,11 @@ export const getOrdersData = async (storeId: string) => {
 
 export const getSalesData = async (storeId: string) => {
   try {
-    const cached = getCache<any>(CACHE_KEYS.SALES, storeId);
-    if (cached) {
-      console.log('[Store] Using cached sales data');
-      return cached.data;
-    }
-
     const response = await axios.get(`http://localhost:3001/api/sales/${storeId}`);
     if (response.data) {
-      const data = { sales: response.data.sales };
-      setCache(CACHE_KEYS.SALES, data, storeId);
-      return data;
+      return {
+        sales: response.data.sales
+      };
     }
   } catch (error) {
     console.error('Error fetching sales from DB:', error);
@@ -161,12 +146,6 @@ export const getSalesData = async (storeId: string) => {
 export const fetchAndUpdateOrders = async (store: Store) => {
   if (store.marketplace === "Wildberries") {
     try {
-      const cached = getCache<any>(CACHE_KEYS.ORDERS, store.id);
-      if (cached) {
-        console.log('[Store] Using cached orders data for update');
-        return cached.data;
-      }
-
       const { from } = getLastWeekDateRange();
       const orders = await fetchWildberriesOrders(store.apiKey, from);
       
@@ -218,7 +197,6 @@ export const fetchAndUpdateOrders = async (store: Store) => {
         
         try {
           await axios.post('http://localhost:3001/api/orders', ordersData);
-          setCache(CACHE_KEYS.ORDERS, ordersData, store.id);
         } catch (error) {
           console.error('Error saving orders to DB:', error);
           localStorage.setItem(`${ORDERS_STORAGE_KEY}_${store.id}`, JSON.stringify(ordersData));
@@ -240,12 +218,6 @@ export const fetchAndUpdateOrders = async (store: Store) => {
 export const fetchAndUpdateSales = async (store: Store) => {
   if (store.marketplace === "Wildberries") {
     try {
-      const cached = getCache<any>(CACHE_KEYS.SALES, store.id);
-      if (cached) {
-        console.log('[Store] Using cached sales data for update');
-        return cached.data;
-      }
-
       const { from } = getLastWeekDateRange();
       const sales = await fetchWildberriesSales(store.apiKey, from);
       
@@ -260,7 +232,6 @@ export const fetchAndUpdateSales = async (store: Store) => {
         
         try {
           await axios.post('http://localhost:3001/api/sales', salesData);
-          setCache(CACHE_KEYS.SALES, salesData, store.id);
         } catch (error) {
           console.error('Error saving sales to DB:', error);
           localStorage.setItem(`${SALES_STORAGE_KEY}_${store.id}`, JSON.stringify(salesData));
