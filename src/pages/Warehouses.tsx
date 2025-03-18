@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -463,5 +464,34 @@ const Warehouses: React.FC = () => {
                     size="sm"
                     onClick={handleRefreshData}
                     disabled={loading.paidStorage}
-                   
+                    className="flex items-center gap-2"
+                  >
+                    {loading.paidStorage ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                    Обновить данные
+                  </Button>
+                </div>
 
+                <div className="mt-4">
+                  {loading.paidStorage ? (
+                    <Skeleton className="h-[400px] w-full" />
+                  ) : (
+                    <PaidStorageCostReport
+                      data={paidStorageData}
+                      isLoading={loading.paidStorage}
+                    />
+                  )}
+                </div>
+              </>
+            )}
+          </TabsContent>
+        </Tabs>
+      )}
+    </div>
+  );
+};
+
+export default Warehouses;
