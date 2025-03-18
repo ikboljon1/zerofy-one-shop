@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -39,7 +40,22 @@ import {
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ensureStoreSelectionPersistence } from '@/utils/storeUtils';
+import { 
+  ensureStoreSelectionPersistence, 
+  saveWarehousesToCache, 
+  loadWarehousesFromCache, 
+  saveCoefficientsToCache, 
+  loadCoefficientsFromCache, 
+  saveWarehouseRemainsToCache, 
+  loadWarehouseRemainsFromCache, 
+  savePaidStorageToCache, 
+  loadPaidStorageFromCache, 
+  saveAverageSalesToCache, 
+  loadAverageSalesFromCache, 
+  saveStorageCostsToCache, 
+  loadStorageCostsFromCache,
+  isCacheValid
+} from '@/utils/storeUtils';
 import { Store as StoreType } from '@/types/store';
 import { fetchAverageDailySalesFromAPI } from '@/components/analytics/data/demoData';
 import LimitExceededMessage from '@/components/analytics/components/LimitExceededMessage';
@@ -68,6 +84,21 @@ const Warehouses: React.FC = () => {
   const [showHelpGuide, setShowHelpGuide] = useState(
     localStorage.getItem('warehouses_seen_help') !== 'true'
   );
+  const [dataSource, setDataSource] = useState<{
+    warehouses: 'api' | 'cache' | 'none';
+    coefficients: 'api' | 'cache' | 'none';
+    remains: 'api' | 'cache' | 'none';
+    paidStorage: 'api' | 'cache' | 'none';
+    averageSales: 'api' | 'cache' | 'none';
+    storageCosts: 'calculated' | 'cache' | 'none';
+  }>({
+    warehouses: 'none',
+    coefficients: 'none',
+    remains: 'none',
+    paidStorage: 'none',
+    averageSales: 'none',
+    storageCosts: 'none'
+  });
 
   useEffect(() => {
     const stores = ensureStoreSelectionPersistence();
@@ -76,16 +107,17 @@ const Warehouses: React.FC = () => {
     if (selected) {
       setSelectedStore(selected);
       if (activeTab === 'supplies') {
-        loadWarehouses(selected.apiKey);
-        loadCoefficients(selected.apiKey);
+        loadCachedWarehouses(selected.id);
+        loadCachedCoefficients(selected.id);
         const preferred = getPreferredWarehouses(selected.id);
         setPreferredWarehouses(preferred);
       } else if (activeTab === 'inventory') {
-        loadWarehouseRemains(selected.apiKey);
-        loadAverageDailySales(selected.apiKey);
-        loadPaidStorageData(selected.apiKey);
+        loadCachedWarehouseRemains(selected.id);
+        loadCachedAverageDailySales(selected.id);
+        loadCachedPaidStorage(selected.id);
+        loadCachedStorageCosts(selected.id);
       } else if (activeTab === 'storage') {
-        loadPaidStorageData(selected.apiKey);
+        loadCachedPaidStorage(selected.id);
       }
     } else if (stores.length > 0) {
       setSelectedStore(stores[0]);
@@ -95,16 +127,17 @@ const Warehouses: React.FC = () => {
   useEffect(() => {
     if (selectedStore) {
       if (activeTab === 'supplies') {
-        loadWarehouses(selectedStore.apiKey);
-        loadCoefficients(selectedStore.apiKey);
+        loadCachedWarehouses(selectedStore.id);
+        loadCachedCoefficients(selectedStore.id);
         const preferred = getPreferredWarehouses(selectedStore.id);
         setPreferredWarehouses(preferred);
       } else if (activeTab === 'inventory') {
-        loadWarehouseRemains(selectedStore.apiKey);
-        loadAverageDailySales(selectedStore.apiKey);
-        loadPaidStorageData(selectedStore.apiKey);
+        loadCachedWarehouseRemains(selectedStore.id);
+        loadCachedAverageDailySales(selectedStore.id);
+        loadCachedPaidStorage(selectedStore.id);
+        loadCachedStorageCosts(selectedStore.id);
       } else if (activeTab === 'storage') {
-        loadPaidStorageData(selectedStore.apiKey);
+        loadCachedPaidStorage(selectedStore.id);
       }
     }
   }, [activeTab, selectedStore]);
@@ -127,7 +160,116 @@ const Warehouses: React.FC = () => {
     }
   }, [showHelpGuide]);
 
-  const loadAverageDailySales = async (apiKey: string) => {
+  // Функции для загрузки данных из кеша с последующим обновлением из API
+  
+  const loadCachedWarehouses = (storeId: string) => {
+    const cachedData = loadWarehousesFromCache(storeId);
+    
+    if (cachedData) {
+      setWbWarehouses(cachedData.warehouses);
+      setDataSource(prev => ({ ...prev, warehouses: 'cache' }));
+      
+      // Если кеш устарел или пользователь переключился на вкладку, обновим данные
+      if (!isCacheValid(cachedData.timestamp) || activeTab === 'supplies') {
+        loadWarehouses(selectedStore?.apiKey || '', false);
+      }
+    } else {
+      // Если кеша нет, загружаем с API
+      if (selectedStore) {
+        loadWarehouses(selectedStore.apiKey, false);
+      }
+    }
+  };
+  
+  const loadCachedCoefficients = (storeId: string, warehouseId?: number) => {
+    const cachedData = loadCoefficientsFromCache(storeId, warehouseId);
+    
+    if (cachedData) {
+      setCoefficients(cachedData.coefficients);
+      setDataSource(prev => ({ ...prev, coefficients: 'cache' }));
+      
+      // Если кеш устарел или пользователь переключился на вкладку, обновим данные
+      if (!isCacheValid(cachedData.timestamp) || activeTab === 'supplies') {
+        loadCoefficients(selectedStore?.apiKey || '', warehouseId, false);
+      }
+    } else {
+      // Если кеша нет, загружаем с API
+      if (selectedStore) {
+        loadCoefficients(selectedStore.apiKey, warehouseId, false);
+      }
+    }
+  };
+  
+  const loadCachedWarehouseRemains = (storeId: string) => {
+    const cachedData = loadWarehouseRemainsFromCache(storeId);
+    
+    if (cachedData) {
+      setWarehouseRemains(cachedData.remains);
+      setDataSource(prev => ({ ...prev, remains: 'cache' }));
+      
+      // Если кеш устарел или пользователь переключился на вкладку, обновим данные
+      if (!isCacheValid(cachedData.timestamp) || activeTab === 'inventory') {
+        loadWarehouseRemains(selectedStore?.apiKey || '', false);
+      }
+    } else {
+      // Если кеша нет, загружаем с API
+      if (selectedStore) {
+        loadWarehouseRemains(selectedStore.apiKey, false);
+      }
+    }
+  };
+  
+  const loadCachedPaidStorage = (storeId: string) => {
+    const cachedData = loadPaidStorageFromCache(storeId);
+    
+    if (cachedData) {
+      setPaidStorageData(cachedData.paidStorage);
+      setDataSource(prev => ({ ...prev, paidStorage: 'cache' }));
+      
+      // Если кеш устарел или пользователь переключился на вкладку, обновим данные
+      if (!isCacheValid(cachedData.timestamp) || 
+          activeTab === 'inventory' || 
+          activeTab === 'storage') {
+        loadPaidStorageData(selectedStore?.apiKey || '', false);
+      }
+    } else {
+      // Если кеша нет, загружаем с API
+      if (selectedStore) {
+        loadPaidStorageData(selectedStore.apiKey, false);
+      }
+    }
+  };
+  
+  const loadCachedAverageDailySales = (storeId: string) => {
+    const cachedData = loadAverageSalesFromCache(storeId);
+    
+    if (cachedData) {
+      setAverageDailySales(cachedData.averageSales);
+      setDataSource(prev => ({ ...prev, averageSales: 'cache' }));
+      
+      // Если кеш устарел или пользователь переключился на вкладку, обновим данные
+      if (!isCacheValid(cachedData.timestamp) || activeTab === 'inventory') {
+        loadAverageDailySales(selectedStore?.apiKey || '', false);
+      }
+    } else {
+      // Если кеша нет, загружаем с API
+      if (selectedStore) {
+        loadAverageDailySales(selectedStore.apiKey, false);
+      }
+    }
+  };
+  
+  const loadCachedStorageCosts = (storeId: string) => {
+    const cachedData = loadStorageCostsFromCache(storeId);
+    
+    if (cachedData) {
+      setDailyStorageCosts(cachedData.storageCosts);
+      setStorageCostsCalculated(true);
+      setDataSource(prev => ({ ...prev, storageCosts: 'cache' }));
+    }
+  };
+
+  const loadAverageDailySales = async (apiKey: string, forceRefresh: boolean = true) => {
     if (!apiKey) {
       toast.warning('Необходимо выбрать магазин для получения данных');
       return;
@@ -150,10 +292,22 @@ const Warehouses: React.FC = () => {
                   `${Object.keys(data).length} товаров`);
       
       setAverageDailySales(data);
+      setDataSource(prev => ({ ...prev, averageSales: 'api' }));
+      
+      // Сохраняем в кеш только при успешном получении новых данных
+      if (selectedStore && Object.keys(data).length > 0) {
+        saveAverageSalesToCache(selectedStore.id, data);
+      }
       
     } catch (error: any) {
       console.error('[Warehouses] Ошибка при загрузке средних продаж:', error);
-      generateMockAverageSales();
+      
+      // Если принудительное обновление и произошла ошибка, генерируем моковые данные
+      if (forceRefresh) {
+        generateMockAverageSales();
+      } else {
+        toast.error('Не удалось обновить данные о средних продажах');
+      }
     } finally {
       setLoading(prev => ({ ...prev, averageSales: false }));
     }
@@ -191,7 +345,13 @@ const Warehouses: React.FC = () => {
     console.log('[Warehouses] Расчет стоимости хранения завершен для', Object.keys(storageCosts).length, 'товаров');
     setDailyStorageCosts(storageCosts);
     setStorageCostsCalculated(true);
-  }, [warehouseRemains, paidStorageData]);
+    setDataSource(prev => ({ ...prev, storageCosts: 'calculated' }));
+    
+    // Сохраняем рассчитанные стоимости в кеш
+    if (selectedStore && Object.keys(storageCosts).length > 0) {
+      saveStorageCostsToCache(selectedStore.id, storageCosts);
+    }
+  }, [warehouseRemains, paidStorageData, selectedStore]);
   
   const calculateCategoryRate = (category: string): number => {
     switch(category.toLowerCase()) {
@@ -224,20 +384,46 @@ const Warehouses: React.FC = () => {
     return `${year}-${month}-${day}`;
   };
 
-  const loadWarehouses = async (apiKey: string) => {
+  const loadWarehouses = async (apiKey: string, forceRefresh: boolean = true) => {
+    if (!apiKey) {
+      toast.warning('Необходимо выбрать магазин для получения данных');
+      return;
+    }
+    
     try {
       setLoading(prev => ({ ...prev, warehouses: true }));
       const data = await fetchWarehouses(apiKey);
       setWbWarehouses(data);
+      setDataSource(prev => ({ ...prev, warehouses: 'api' }));
+      
+      // Сохраняем в кеш только при успешном получении новых данных
+      if (selectedStore && data.length > 0) {
+        saveWarehousesToCache(selectedStore.id, data);
+      }
+      
+      if (forceRefresh) {
+        toast.success('Список складов успешно обновлен');
+      }
     } catch (error) {
       console.error('Ошибка при загрузке складов:', error);
-      toast.error('Не удалось загрузить список складов');
+      
+      if (forceRefresh) {
+        toast.error('Не удалось загрузить список складов');
+      } else {
+        // При фоновом обновлении не показываем ошибку пользователю
+        console.log('Не удалось обновить список складов в фоновом режиме');
+      }
     } finally {
       setLoading(prev => ({ ...prev, warehouses: false }));
     }
   };
 
-  const loadCoefficients = async (apiKey: string, warehouseId?: number) => {
+  const loadCoefficients = async (apiKey: string, warehouseId?: number, forceRefresh: boolean = true) => {
+    if (!apiKey) {
+      toast.warning('Необходимо выбрать магазин для получения данных');
+      return;
+    }
+    
     try {
       setLoading(prev => ({ ...prev, coefficients: true }));
       const data = await fetchAcceptanceCoefficients(
@@ -245,9 +431,25 @@ const Warehouses: React.FC = () => {
         warehouseId ? [warehouseId] : undefined
       );
       setCoefficients(data);
+      setDataSource(prev => ({ ...prev, coefficients: 'api' }));
+      
+      // Сохраняем в кеш только при успешном получении новых данных
+      if (selectedStore && data.length > 0) {
+        saveCoefficientsToCache(selectedStore.id, data, warehouseId);
+      }
+      
+      if (forceRefresh) {
+        toast.success('Коэффициенты приемки успешно обновлены');
+      }
     } catch (error) {
       console.error('Ошибка при загрузке коэффициентов:', error);
-      toast.error('Не удалось загрузить коэффициенты приемки');
+      
+      if (forceRefresh) {
+        toast.error('Не удалось загрузить коэффициенты приемки');
+      } else {
+        // При фоновом обновлении не показываем ошибку пользователю
+        console.log('Не удалось обновить коэффициенты приемки в фоновом режиме');
+      }
     } finally {
       setLoading(prev => ({ ...prev, coefficients: false }));
     }
@@ -257,7 +459,7 @@ const Warehouses: React.FC = () => {
     setSelectedWarehouseId(warehouseId);
     
     if (selectedStore) {
-      loadCoefficients(selectedStore.apiKey, warehouseId);
+      loadCachedCoefficients(selectedStore.id, warehouseId);
     }
   };
 
@@ -268,7 +470,7 @@ const Warehouses: React.FC = () => {
     setPreferredWarehouses(newPreferred);
   };
 
-  const loadWarehouseRemains = async (apiKey: string) => {
+  const loadWarehouseRemains = async (apiKey: string, forceRefresh: boolean = true) => {
     if (!apiKey) {
       toast.warning('Необходимо выбрать магазин для получения данных');
       return;
@@ -276,7 +478,10 @@ const Warehouses: React.FC = () => {
     
     try {
       setLoading(prev => ({ ...prev, remains: true }));
-      toast.info('Запрос на формирование отчета отправлен. Это может занять некоторое время...');
+      
+      if (forceRefresh) {
+        toast.info('Запрос на формирование отчета отправлен. Это может занять некоторое время...');
+      }
       
       const data = await fetchWarehouseRemains(apiKey, {
         groupByBrand: true,
@@ -286,7 +491,16 @@ const Warehouses: React.FC = () => {
       });
       
       setWarehouseRemains(data);
-      toast.success('Отчет об остатках на складах успешно загружен');
+      setDataSource(prev => ({ ...prev, remains: 'api' }));
+      
+      // Сохраняем в кеш только при успешном получении новых данных
+      if (selectedStore && data.length > 0) {
+        saveWarehouseRemainsToCache(selectedStore.id, data);
+      }
+      
+      if (forceRefresh) {
+        toast.success('Отчет об остатках на складах успешно загружен');
+      }
       
       if (paidStorageData.length > 0) {
         calculateRealStorageCostsFromAPI();
@@ -294,7 +508,13 @@ const Warehouses: React.FC = () => {
       
     } catch (error: any) {
       console.error('Ошибка при загрузке остатков на складах:', error);
-      toast.error(`Не удалось загрузить отчет: ${error.message || 'Неизвестная ошибка'}`);
+      
+      if (forceRefresh) {
+        toast.error(`Не удалось загрузить отчет: ${error.message || 'Неизвестная ошибка'}`);
+      } else {
+        // При фоновом обновлении не показываем ошибку пользователю
+        console.log('Не удалось обновить отчет об остатках в фоновом режиме');
+      }
     } finally {
       setLoading(prev => ({ ...prev, remains: false }));
     }
@@ -302,6 +522,7 @@ const Warehouses: React.FC = () => {
 
   const loadPaidStorageData = async (
     apiKey: string, 
+    forceRefresh: boolean = true,
     dateFrom: string = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     dateTo: string = new Date().toISOString().split('T')[0]
   ) => {
@@ -312,7 +533,10 @@ const Warehouses: React.FC = () => {
     
     try {
       setLoading(prev => ({ ...prev, paidStorage: true }));
-      toast.info('Запрос отчета о платном хранении. Это может занять некоторое время...');
+      
+      if (forceRefresh) {
+        toast.info('Запрос отчета о платном хранении. Это может занять некоторое время...');
+      }
       
       const data = await fetchFullPaidStorageReport(apiKey, dateFrom, dateTo);
       console.log(`[Warehouses] Получено ${data.length} записей данных о платном хранении`);
@@ -327,15 +551,30 @@ const Warehouses: React.FC = () => {
       }
       
       setPaidStorageData(data);
+      setDataSource(prev => ({ ...prev, paidStorage: 'api' }));
+      
+      // Сохраняем в кеш только при успешном получении новых данных
+      if (selectedStore && data.length > 0) {
+        savePaidStorageToCache(selectedStore.id, data);
+      }
+      
+      if (forceRefresh) {
+        toast.success('Отчет о платном хранении успешно загружен');
+      }
       
       if (warehouseRemains.length > 0) {
         calculateRealStorageCostsFromAPI();
       }
       
-      toast.success('Отчет о платном хранении успешно загружен');
     } catch (error: any) {
       console.error('Ошибка при загрузке отчета о платном хранении:', error);
-      toast.error(`Не удалось загрузить отчет: ${error.message || 'Неизвестная ошибка'}`);
+      
+      if (forceRefresh) {
+        toast.error(`Не удалось загрузить отчет: ${error.message || 'Неизвестная ошибка'}`);
+      } else {
+        // При фоновом обновлении не показываем ошибку пользователю
+        console.log('Не удалось обновить отчет о платном хранении в фоновом режиме');
+      }
     } finally {
       setLoading(prev => ({ ...prev, paidStorage: false }));
     }
@@ -348,14 +587,14 @@ const Warehouses: React.FC = () => {
     }
     
     if (activeTab === 'inventory') {
-      loadWarehouseRemains(selectedStore.apiKey);
-      loadAverageDailySales(selectedStore.apiKey);
-      loadPaidStorageData(selectedStore.apiKey);
+      loadWarehouseRemains(selectedStore.apiKey, true);
+      loadAverageDailySales(selectedStore.apiKey, true);
+      loadPaidStorageData(selectedStore.apiKey, true);
     } else if (activeTab === 'supplies') {
-      loadWarehouses(selectedStore.apiKey);
-      loadCoefficients(selectedStore.apiKey);
+      loadWarehouses(selectedStore.apiKey, true);
+      loadCoefficients(selectedStore.apiKey, undefined, true);
     } else if (activeTab === 'storage') {
-      loadPaidStorageData(selectedStore.apiKey);
+      loadPaidStorageData(selectedStore.apiKey, true);
     }
   };
 
@@ -440,7 +679,14 @@ const Warehouses: React.FC = () => {
                 <div className="flex items-center">
                   <div>
                     <h2 className="text-lg font-semibold">Остатки товаров на складах</h2>
-                    <p className="text-sm text-muted-foreground">Актуальная информация о количестве товаров</p>
+                    <p className="text-sm text-muted-foreground">
+                      Актуальная информация о количестве товаров
+                      {dataSource.remains === 'cache' && !loading.remains && (
+                        <span className="text-xs ml-2 text-yellow-500 font-medium">
+                          (из кеша)
+                        </span>
+                      )}
+                    </p>
                   </div>
                   <TooltipProvider>
                     <Tooltip>
@@ -479,7 +725,7 @@ const Warehouses: React.FC = () => {
                 </Button>
               </div>
 
-              {loading.remains ? (
+              {loading.remains && warehouseRemains.length === 0 ? (
                 <div className="grid gap-4">
                   <Skeleton className="h-[400px] w-full" />
                   <Skeleton className="h-[300px] w-full" />
@@ -492,7 +738,7 @@ const Warehouses: React.FC = () => {
                   />
                   
                   <div className="mt-8">
-                    {loading.paidStorage ? (
+                    {loading.paidStorage && paidStorageData.length === 0 ? (
                       <Skeleton className="h-[400px] w-full" />
                     ) : (
                       <StorageProfitabilityAnalysis 
@@ -521,6 +767,11 @@ const Warehouses: React.FC = () => {
                     </h2>
                     <p className="text-sm text-muted-foreground">
                       Анализ коэффициентов приемки и выбор оптимального склада
+                      {dataSource.coefficients === 'cache' && !loading.coefficients && (
+                        <span className="text-xs ml-2 text-yellow-500 font-medium">
+                          (из кеша)
+                        </span>
+                      )}
                     </p>
                   </div>
                   <TooltipProvider>
@@ -566,7 +817,7 @@ const Warehouses: React.FC = () => {
                 </div>
                 
                 <div className="lg:col-span-2">
-                  {loading.coefficients ? (
+                  {loading.coefficients && coefficients.length === 0 ? (
                     <Skeleton className="h-[600px] w-full" />
                   ) : (
                     <WarehouseCoefficientsDateCard
@@ -589,7 +840,14 @@ const Warehouses: React.FC = () => {
                 <div className="flex items-center">
                   <div>
                     <h2 className="text-lg font-semibold">Отчет о платном хранении</h2>
-                    <p className="text-sm text-muted-foreground">Аналитика затрат на хранение товаров</p>
+                    <p className="text-sm text-muted-foreground">
+                      Аналитика затрат на хранение товаров
+                      {dataSource.paidStorage === 'cache' && !loading.paidStorage && (
+                        <span className="text-xs ml-2 text-yellow-500 font-medium">
+                          (из кеша)
+                        </span>
+                      )}
+                    </p>
                   </div>
                   <TooltipProvider>
                     <Tooltip>

@@ -2,6 +2,14 @@ import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY, ORDERS_STORAGE_KEY, SALES
 import { fetchWildberriesStats, fetchWildberriesOrders, fetchWildberriesSales } from "@/services/wildberriesApi";
 import axios from "axios";
 
+const WAREHOUSES_CACHE_KEY = 'cached_warehouses';
+const COEFFICIENTS_CACHE_KEY = 'cached_coefficients';
+const WAREHOUSE_REMAINS_CACHE_KEY = 'cached_warehouse_remains';
+const PAID_STORAGE_CACHE_KEY = 'cached_paid_storage';
+const AVERAGE_SALES_CACHE_KEY = 'cached_average_sales';
+const STORAGE_COSTS_CACHE_KEY = 'cached_storage_costs';
+const CACHE_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 часа в миллисекундах
+
 export const getLastWeekDateRange = () => {
   const now = new Date();
   const lastWeek = new Date(now);
@@ -512,10 +520,6 @@ export const ensureStoreSelectionPersistence = (): Store[] => {
   return userStores;
 };
 
-/**
- * Gets the currently selected store without modifying any selections
- * This is used to prevent unwanted reselection of stores
- */
 export const getSelectedStore = (): Store | null => {
   try {
     const userData = localStorage.getItem('user');
@@ -585,4 +589,288 @@ export const validateApiKey = async (apiKey: string): Promise<{ isValid: boolean
     
     return { isValid: false, errorMessage: "Невозможно соединиться с API Wildberries" };
   }
+};
+
+export const saveWarehousesToCache = (storeId: string, warehouses: any[]): void => {
+  try {
+    const cacheData = {
+      warehouses,
+      timestamp: Date.now(),
+      storeId
+    };
+    localStorage.setItem(`${WAREHOUSES_CACHE_KEY}_${storeId}`, JSON.stringify(cacheData));
+    console.log(`[Cache] Сохранены данные о ${warehouses.length} складах для магазина ${storeId}`);
+  } catch (error) {
+    console.error('[Cache] Ошибка при сохранении складов в кеш:', error);
+  }
+};
+
+export const loadWarehousesFromCache = (storeId: string): { warehouses: any[], timestamp: number } | null => {
+  try {
+    const cachedData = localStorage.getItem(`${WAREHOUSES_CACHE_KEY}_${storeId}`);
+    if (!cachedData) {
+      console.log('[Cache] Кеш складов не найден');
+      return null;
+    }
+    
+    const { warehouses, timestamp } = JSON.parse(cachedData);
+    const isCacheValid = Date.now() - timestamp < CACHE_EXPIRY_TIME;
+    
+    if (!isCacheValid) {
+      console.log('[Cache] Кеш складов устарел');
+      return { warehouses, timestamp };
+    }
+    
+    console.log(`[Cache] Загружены данные о ${warehouses.length} складах из кеша`);
+    return { warehouses, timestamp };
+  } catch (error) {
+    console.error('[Cache] Ошибка при загрузке складов из кеша:', error);
+    return null;
+  }
+};
+
+export const saveCoefficientsToCache = (storeId: string, coefficients: any[], warehouseId?: number): void => {
+  try {
+    const cacheKey = warehouseId 
+      ? `${COEFFICIENTS_CACHE_KEY}_${storeId}_${warehouseId}` 
+      : `${COEFFICIENTS_CACHE_KEY}_${storeId}`;
+    
+    const cacheData = {
+      coefficients,
+      timestamp: Date.now(),
+      storeId,
+      warehouseId
+    };
+    
+    localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+    console.log(`[Cache] Сохранены данные о ${coefficients.length} коэффициентах для магазина ${storeId}`);
+  } catch (error) {
+    console.error('[Cache] Ошибка при сохранении коэффициентов в кеш:', error);
+  }
+};
+
+export const loadCoefficientsFromCache = (storeId: string, warehouseId?: number): { coefficients: any[], timestamp: number } | null => {
+  try {
+    const cacheKey = warehouseId 
+      ? `${COEFFICIENTS_CACHE_KEY}_${storeId}_${warehouseId}` 
+      : `${COEFFICIENTS_CACHE_KEY}_${storeId}`;
+    
+    const cachedData = localStorage.getItem(cacheKey);
+    if (!cachedData) {
+      console.log('[Cache] Кеш коэффициентов не найден');
+      return null;
+    }
+    
+    const { coefficients, timestamp } = JSON.parse(cachedData);
+    const isCacheValid = Date.now() - timestamp < CACHE_EXPIRY_TIME;
+    
+    if (!isCacheValid) {
+      console.log('[Cache] Кеш коэффициентов устарел');
+      return { coefficients, timestamp };
+    }
+    
+    console.log(`[Cache] Загружены данные о ${coefficients.length} коэффициентах из кеша`);
+    return { coefficients, timestamp };
+  } catch (error) {
+    console.error('[Cache] Ошибка при загрузке коэффициентов из кеша:', error);
+    return null;
+  }
+};
+
+export const saveWarehouseRemainsToCache = (storeId: string, remains: any[]): void => {
+  try {
+    const cacheData = {
+      remains,
+      timestamp: Date.now(),
+      storeId
+    };
+    localStorage.setItem(`${WAREHOUSE_REMAINS_CACHE_KEY}_${storeId}`, JSON.stringify(cacheData));
+    console.log(`[Cache] Сохранены данные о ${remains.length} остатках на складах для магазина ${storeId}`);
+  } catch (error) {
+    console.error('[Cache] Ошибка при сохранении остатков в кеш:', error);
+  }
+};
+
+export const loadWarehouseRemainsFromCache = (storeId: string): { remains: any[], timestamp: number } | null => {
+  try {
+    const cachedData = localStorage.getItem(`${WAREHOUSE_REMAINS_CACHE_KEY}_${storeId}`);
+    if (!cachedData) {
+      console.log('[Cache] Кеш остатков на складах не найден');
+      return null;
+    }
+    
+    const { remains, timestamp } = JSON.parse(cachedData);
+    const isCacheValid = Date.now() - timestamp < CACHE_EXPIRY_TIME;
+    
+    if (!isCacheValid) {
+      console.log('[Cache] Кеш остатков на складах устарел');
+      return { remains, timestamp };
+    }
+    
+    console.log(`[Cache] Загружены данные о ${remains.length} остатках на складах из кеша`);
+    return { remains, timestamp };
+  } catch (error) {
+    console.error('[Cache] Ошибка при загрузке остатков из кеша:', error);
+    return null;
+  }
+};
+
+export const savePaidStorageToCache = (storeId: string, paidStorage: any[]): void => {
+  try {
+    const cacheData = {
+      paidStorage,
+      timestamp: Date.now(),
+      storeId
+    };
+    localStorage.setItem(`${PAID_STORAGE_CACHE_KEY}_${storeId}`, JSON.stringify(cacheData));
+    console.log(`[Cache] Сохранены данные о ${paidStorage.length} записях платного хранения для магазина ${storeId}`);
+  } catch (error) {
+    console.error('[Cache] Ошибка при сохранении платного хранения в кеш:', error);
+  }
+};
+
+export const loadPaidStorageFromCache = (storeId: string): { paidStorage: any[], timestamp: number } | null => {
+  try {
+    const cachedData = localStorage.getItem(`${PAID_STORAGE_CACHE_KEY}_${storeId}`);
+    if (!cachedData) {
+      console.log('[Cache] Кеш платного хранения не найден');
+      return null;
+    }
+    
+    const { paidStorage, timestamp } = JSON.parse(cachedData);
+    const isCacheValid = Date.now() - timestamp < CACHE_EXPIRY_TIME;
+    
+    if (!isCacheValid) {
+      console.log('[Cache] Кеш платного хранения устарел');
+      return { paidStorage, timestamp };
+    }
+    
+    console.log(`[Cache] Загружены данные о ${paidStorage.length} записях платного хранения из кеша`);
+    return { paidStorage, timestamp };
+  } catch (error) {
+    console.error('[Cache] Ошибка при загрузке платного хранения из кеша:', error);
+    return null;
+  }
+};
+
+export const saveAverageSalesToCache = (storeId: string, averageSales: Record<number, number>): void => {
+  try {
+    const cacheData = {
+      averageSales,
+      timestamp: Date.now(),
+      storeId
+    };
+    localStorage.setItem(`${AVERAGE_SALES_CACHE_KEY}_${storeId}`, JSON.stringify(cacheData));
+    console.log(`[Cache] Сохранены данные о средних продажах для ${Object.keys(averageSales).length} товаров`);
+  } catch (error) {
+    console.error('[Cache] Ошибка при сохранении средних продаж в кеш:', error);
+  }
+};
+
+export const loadAverageSalesFromCache = (storeId: string): { averageSales: Record<number, number>, timestamp: number } | null => {
+  try {
+    const cachedData = localStorage.getItem(`${AVERAGE_SALES_CACHE_KEY}_${storeId}`);
+    if (!cachedData) {
+      console.log('[Cache] Кеш средних продаж не найден');
+      return null;
+    }
+    
+    const { averageSales, timestamp } = JSON.parse(cachedData);
+    const isCacheValid = Date.now() - timestamp < CACHE_EXPIRY_TIME;
+    
+    if (!isCacheValid) {
+      console.log('[Cache] Кеш средних продаж устарел');
+      return { averageSales, timestamp };
+    }
+    
+    console.log(`[Cache] Загружены данные о средних продажах для ${Object.keys(averageSales).length} товаров из кеша`);
+    return { averageSales, timestamp };
+  } catch (error) {
+    console.error('[Cache] Ошибка при загрузке средних продаж из кеша:', error);
+    return null;
+  }
+};
+
+export const saveStorageCostsToCache = (storeId: string, storageCosts: Record<number, number>): void => {
+  try {
+    const cacheData = {
+      storageCosts,
+      timestamp: Date.now(),
+      storeId
+    };
+    localStorage.setItem(`${STORAGE_COSTS_CACHE_KEY}_${storeId}`, JSON.stringify(cacheData));
+    console.log(`[Cache] Сохранены данные о стоимости хранения для ${Object.keys(storageCosts).length} товаров`);
+  } catch (error) {
+    console.error('[Cache] Ошибка при сохранении стоимости хранения в кеш:', error);
+  }
+};
+
+export const loadStorageCostsFromCache = (storeId: string): { storageCosts: Record<number, number>, timestamp: number } | null => {
+  try {
+    const cachedData = localStorage.getItem(`${STORAGE_COSTS_CACHE_KEY}_${storeId}`);
+    if (!cachedData) {
+      console.log('[Cache] Кеш стоимости хранения не найден');
+      return null;
+    }
+    
+    const { storageCosts, timestamp } = JSON.parse(cachedData);
+    const isCacheValid = Date.now() - timestamp < CACHE_EXPIRY_TIME;
+    
+    if (!isCacheValid) {
+      console.log('[Cache] Кеш стоимости хранения устарел');
+      return { storageCosts, timestamp };
+    }
+    
+    console.log(`[Cache] Загружены данные о стоимости хранения для ${Object.keys(storageCosts).length} товаров из кеша`);
+    return { storageCosts, timestamp };
+  } catch (error) {
+    console.error('[Cache] Ошибка при загрузке стоимости хранения из кеша:', error);
+    return null;
+  }
+};
+
+export const invalidateWarehouseDataCache = (storeId: string, cacheType?: string): void => {
+  try {
+    if (!cacheType) {
+      localStorage.removeItem(`${WAREHOUSES_CACHE_KEY}_${storeId}`);
+      localStorage.removeItem(`${COEFFICIENTS_CACHE_KEY}_${storeId}`);
+      localStorage.removeItem(`${WAREHOUSE_REMAINS_CACHE_KEY}_${storeId}`);
+      localStorage.removeItem(`${PAID_STORAGE_CACHE_KEY}_${storeId}`);
+      localStorage.removeItem(`${AVERAGE_SALES_CACHE_KEY}_${storeId}`);
+      localStorage.removeItem(`${STORAGE_COSTS_CACHE_KEY}_${storeId}`);
+      console.log(`[Cache] Очищен весь кеш данных для магазина ${storeId}`);
+      return;
+    }
+    
+    switch (cacheType) {
+      case 'warehouses':
+        localStorage.removeItem(`${WAREHOUSES_CACHE_KEY}_${storeId}`);
+        break;
+      case 'coefficients':
+        localStorage.removeItem(`${COEFFICIENTS_CACHE_KEY}_${storeId}`);
+        break;
+      case 'remains':
+        localStorage.removeItem(`${WAREHOUSE_REMAINS_CACHE_KEY}_${storeId}`);
+        break;
+      case 'paidStorage':
+        localStorage.removeItem(`${PAID_STORAGE_CACHE_KEY}_${storeId}`);
+        break;
+      case 'averageSales':
+        localStorage.removeItem(`${AVERAGE_SALES_CACHE_KEY}_${storeId}`);
+        break;
+      case 'storageCosts':
+        localStorage.removeItem(`${STORAGE_COSTS_CACHE_KEY}_${storeId}`);
+        break;
+      default:
+        console.warn(`[Cache] Неизвестный тип кеша: ${cacheType}`);
+    }
+    
+    console.log(`[Cache] Очищен кеш ${cacheType} для магазина ${storeId}`);
+  } catch (error) {
+    console.error('[Cache] Ошибка при инвалидации кеша:', error);
+  }
+};
+
+export const isCacheValid = (timestamp: number): boolean => {
+  return Date.now() - timestamp < CACHE_EXPIRY_TIME;
 };
