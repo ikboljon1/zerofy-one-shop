@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ShoppingBag, Store, Package2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,6 +8,7 @@ import { AddStoreDialog } from "./stores/AddStoreDialog";
 import { StoreCard } from "./stores/StoreCard";
 import { getSubscriptionStatus, SubscriptionData } from "@/services/userService";
 import { Badge } from "@/components/ui/badge";
+import { clearAllStoreCache } from "@/utils/warehouseCacheUtils";
 
 interface StoresProps {
   onStoreSelect?: (store: { id: string; apiKey: string }) => void;
@@ -177,6 +177,11 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       const allStores = loadStores();
       const updatedStores = [...allStores, storeToAdd];
       
+      // Если это первый магазин пользователя, помечаем его как выбранный
+      if (updatedStores.filter(s => s.userId === currentUserId).length === 1) {
+        storeToAdd.isSelected = true;
+      }
+      
       // Обновляем только магазины текущего пользователя в состоянии
       const userStores = currentUserId 
         ? updatedStores.filter(s => s.userId === currentUserId)
@@ -186,6 +191,9 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       saveStores(updatedStores); // Сохраняем все магазины
       
       console.log("Store added successfully:", storeToAdd);
+      
+      // Clear cache to ensure fresh data
+      clearAllStoreCache();
       
       setIsOpen(false);
       toast({
@@ -316,6 +324,9 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     const userStores = currentUserId 
       ? updatedAllStores.filter(store => store.userId === currentUserId)
       : updatedAllStores;
+    
+    // Clear all cache for the deleted store
+    clearAllStoreCache();
     
     setStores(userStores);
     saveStores(updatedAllStores); // Сохраняем все магазины

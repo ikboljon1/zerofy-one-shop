@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2 } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { clearStoreCache } from "@/utils/warehouseCacheUtils";
 
 interface StoreCardProps {
   store: Store;
@@ -33,11 +34,17 @@ export function StoreCard({
         storeId: store.id,
         timestamp: Date.now()
       }));
+      
+      // Clear warehouse cache when switching to a different store
+      clearStoreCache(store.id);
     }
   };
 
   const handleRefreshStats = () => {
     onRefreshStats(store);
+    
+    // Clear warehouse cache when refreshing store stats
+    clearStoreCache(store.id);
   };
 
   const calculateNetProfit = () => {
@@ -102,7 +109,6 @@ export function StoreCard({
                 <span className="text-muted-foreground">Расходы:</span>
                 <span className="font-medium">{formatCurrency(store.stats.currentPeriod.expenses.total)}</span>
               </div>
-              {/* Removed the Возвраты (Returns) section as requested */}
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Чистая прибыль:</span>
                 <span className="font-medium">{formatCurrency(calculateNetProfit())}</span>
