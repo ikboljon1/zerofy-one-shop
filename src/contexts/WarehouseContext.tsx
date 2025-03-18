@@ -46,7 +46,7 @@ interface WarehouseContextType {
   calculateRealStorageCostsFromAPI: () => void;
   setSelectedWarehouseId: (id: number | undefined) => void;
   refreshData: (apiKey: string, section: 'inventory' | 'supplies' | 'storage') => Promise<void>;
-  togglePreferredWarehouse: (storeId: number, warehouseId: number) => void;
+  togglePreferredWarehouse: (storeId: number, warehouseId: number) => number[];
 }
 
 const WarehouseContext = createContext<WarehouseContextType | undefined>(undefined);
@@ -83,7 +83,6 @@ export const WarehouseProvider: React.FC<WarehouseProviderProps> = ({ children }
     averageSales: false
   });
   
-  // Cache indicators to prevent redundant API calls
   const [dataFetched, setDataFetched] = useState({
     warehouses: false,
     coefficients: false,
@@ -99,7 +98,6 @@ export const WarehouseProvider: React.FC<WarehouseProviderProps> = ({ children }
       return;
     }
     
-    // Skip if data is already loaded
     if (dataFetched.warehouses && wbWarehouses.length > 0) {
       console.log('[WarehouseContext] Using cached warehouses data');
       return;
@@ -126,7 +124,6 @@ export const WarehouseProvider: React.FC<WarehouseProviderProps> = ({ children }
       return;
     }
     
-    // If requesting data for a specific warehouse, don't use cache
     const shouldUseCache = !warehouseId && dataFetched.coefficients && coefficients.length > 0;
     
     if (shouldUseCache) {
@@ -161,7 +158,6 @@ export const WarehouseProvider: React.FC<WarehouseProviderProps> = ({ children }
       return;
     }
     
-    // Skip if data is already loaded
     if (dataFetched.remains && warehouseRemains.length > 0) {
       console.log('[WarehouseContext] Using cached warehouse remains data');
       return;
@@ -206,7 +202,6 @@ export const WarehouseProvider: React.FC<WarehouseProviderProps> = ({ children }
       return;
     }
     
-    // Skip if data is already loaded
     if (dataFetched.paidStorage && paidStorageData.length > 0) {
       console.log('[WarehouseContext] Using cached paid storage data');
       return;
@@ -252,7 +247,6 @@ export const WarehouseProvider: React.FC<WarehouseProviderProps> = ({ children }
       return;
     }
     
-    // Skip if data is already loaded
     if (dataFetched.averageSales && Object.keys(averageDailySales).length > 0) {
       console.log('[WarehouseContext] Using cached average daily sales data');
       return;
@@ -286,7 +280,6 @@ export const WarehouseProvider: React.FC<WarehouseProviderProps> = ({ children }
     }
   };
   
-  // Helper function to format date
   const formatDate = (date: Date): string => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -294,7 +287,6 @@ export const WarehouseProvider: React.FC<WarehouseProviderProps> = ({ children }
     return `${year}-${month}-${day}`;
   };
   
-  // Generate mock sales data if API fails
   const generateMockAverageSales = () => {
     const mockSalesData: Record<number, number> = {};
     warehouseRemains.forEach(item => {
@@ -305,7 +297,6 @@ export const WarehouseProvider: React.FC<WarehouseProviderProps> = ({ children }
     console.log('[WarehouseContext] Используем моковые данные для средних продаж:', mockSalesData);
   };
   
-  // Calculate storage costs from API data
   const calculateRealStorageCostsFromAPI = () => {
     console.log('[WarehouseContext] Расчет стоимости хранения на основе данных API');
     
@@ -345,7 +336,6 @@ export const WarehouseProvider: React.FC<WarehouseProviderProps> = ({ children }
     setStorageCostsCalculated(true);
   };
   
-  // Helper function to calculate storage rate by category
   const calculateCategoryRate = (category: string): number => {
     switch(category.toLowerCase()) {
       case 'обувь':
@@ -361,39 +351,32 @@ export const WarehouseProvider: React.FC<WarehouseProviderProps> = ({ children }
     }
   };
   
-  // Function to toggle preferred warehouse for a store
-  const togglePreferredWarehouse = (storeId: number, warehouseId: number) => {
-    // Get the current list of preferred warehouses for the store
-    const currentPreferred = getPreferredWarehouses(storeId.toString());
+  const togglePreferredWarehouse = (storeId: number, warehouseId: number): number[] => {
+    const storeIdStr = storeId.toString();
     
-    // Toggle the warehouse ID in the preferred list
+    const currentPreferred = getPreferredWarehouses(storeIdStr);
+    
     let newPreferred = [...currentPreferred];
     
     if (newPreferred.includes(warehouseId)) {
-      // Remove from preferred if already included
       newPreferred = newPreferred.filter(id => id !== warehouseId);
     } else {
-      // Add to preferred if not included
       newPreferred.push(warehouseId);
     }
     
-    // Update local storage with new preferred warehouses
-    localStorage.setItem(`preferred_warehouses_${storeId}`, JSON.stringify(newPreferred));
+    localStorage.setItem(`preferred_warehouses_${storeIdStr}`, JSON.stringify(newPreferred));
     
-    // Update state
     setPreferredWarehouses(newPreferred);
     
     return newPreferred;
   };
   
-  // Function to refresh all data for a specific section
   const refreshData = async (apiKey: string, section: 'inventory' | 'supplies' | 'storage') => {
     if (!apiKey) {
       toast.warning('Необходимо выбрать магазин для получения данных');
       return;
     }
     
-    // Reset data fetched flags for the specified section
     if (section === 'inventory') {
       setDataFetched(prev => ({ 
         ...prev, 
@@ -402,7 +385,6 @@ export const WarehouseProvider: React.FC<WarehouseProviderProps> = ({ children }
         paidStorage: false 
       }));
       
-      // Reload data
       await loadWarehouseRemains(apiKey);
       await loadAverageDailySales(apiKey);
       await loadPaidStorageData(apiKey);
@@ -414,7 +396,6 @@ export const WarehouseProvider: React.FC<WarehouseProviderProps> = ({ children }
         coefficients: false 
       }));
       
-      // Reload data
       await loadWarehouses(apiKey);
       await loadCoefficients(apiKey);
       
@@ -424,13 +405,11 @@ export const WarehouseProvider: React.FC<WarehouseProviderProps> = ({ children }
         paidStorage: false 
       }));
       
-      // Reload data
       await loadPaidStorageData(apiKey);
     }
   };
 
   const value = {
-    // Data
     wbWarehouses,
     coefficients,
     warehouseRemains,
@@ -441,10 +420,8 @@ export const WarehouseProvider: React.FC<WarehouseProviderProps> = ({ children }
     storageCostsCalculated,
     selectedWarehouseId,
     
-    // Loading states
     loading,
     
-    // Functions
     loadWarehouses,
     loadCoefficients,
     loadWarehouseRemains,

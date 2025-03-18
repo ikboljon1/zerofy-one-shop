@@ -97,7 +97,6 @@ const Warehouses: React.FC = () => {
     }
   }, [showHelpGuide]);
 
-  // Helper function to load data based on active tab
   const loadDataForActiveTab = (store: StoreType, tab: string) => {
     if (tab === 'supplies') {
       loadWarehouses(store.apiKey);
@@ -122,8 +121,15 @@ const Warehouses: React.FC = () => {
   const handleSavePreferredWarehouse = (warehouseId: number) => {
     if (!selectedStore) return;
     
-    const newPreferred = togglePreferredWarehouseInContext(selectedStore.id, warehouseId);
-    setPreferredWarehouses(newPreferred);
+    const storeId = typeof selectedStore.id === 'string' 
+      ? parseInt(selectedStore.id, 10) 
+      : selectedStore.id;
+    
+    const newPreferred = togglePreferredWarehouseInContext(storeId, warehouseId);
+    
+    if (newPreferred) {
+      setPreferredWarehouses(newPreferred);
+    }
   };
 
   const handleRefreshData = () => {
