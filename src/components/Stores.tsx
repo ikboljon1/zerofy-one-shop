@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ShoppingBag, Store, Package2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,16 +21,18 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [canDeleteStores, setCanDeleteStores] = useState(false);
   const [storeLimit, setStoreLimit] = useState<number>(1); // Default to 1
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     try {
       const userData = localStorage.getItem('user');
-      const currentUserId = userData ? JSON.parse(userData).id : null;
+      const userId = userData ? JSON.parse(userData).id : null;
+      setCurrentUserId(userId);
       
       const savedStores = ensureStoreSelectionPersistence();
-      const userStores = currentUserId 
-        ? savedStores.filter(store => store.userId === currentUserId)
+      const userStores = userId 
+        ? savedStores.filter(store => store.userId === userId)
         : savedStores;
       
       setStores(userStores);
