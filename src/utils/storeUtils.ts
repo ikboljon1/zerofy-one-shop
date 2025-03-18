@@ -1,4 +1,4 @@
-import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY, ORDERS_STORAGE_KEY, SALES_STORAGE_KEY } from "@/types/store";
+import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY, ORDERS_STORAGE_KEY, SALES_STORAGE_KEY, WildberriesOrder, WildberriesSale } from "@/types/store";
 import { fetchWildberriesStats, fetchWildberriesOrders, fetchWildberriesSales } from "@/services/wildberriesApi";
 import axios from "axios";
 
@@ -39,43 +39,8 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
   if (store.marketplace === "Wildberries") {
     try {
       const { from, to } = getLastWeekDateRange();
-      console.log(`[StoreUtils] Fetching stats for store ${store.id} from ${from.toISOString()} to ${to.toISOString()}`);
       const stats = await fetchWildberriesStats(store.apiKey, from, to);
-      
       if (stats) {
-        console.log(`[StoreUtils] Successfully received stats for store ${store.id}`);
-        
-        // Ensure all required properties exist and have default values if needed
-        if (!stats.currentPeriod) {
-          stats.currentPeriod = {
-            sales: 0,
-            transferred: 0,
-            expenses: {
-              total: 0,
-              logistics: 0,
-              storage: 0,
-              penalties: 0,
-              acceptance: 0,
-              advertising: 0,
-              deductions: 0
-            },
-            netProfit: 0,
-            acceptance: 0,
-            returns: 0,
-            returnsAmount: 0
-          };
-        } else if (!stats.currentPeriod.expenses) {
-          stats.currentPeriod.expenses = {
-            total: 0,
-            logistics: 0,
-            storage: 0,
-            penalties: 0,
-            acceptance: 0,
-            advertising: 0,
-            deductions: 0
-          };
-        }
-        
         const updatedStore = { 
           ...store, 
           stats,
@@ -130,43 +95,11 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
           localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
         }
         
-        console.log(`[StoreUtils] Store updated with stats:`, updatedStore.stats.currentPeriod);
         return updatedStore;
-      } else {
-        console.log(`[StoreUtils] No stats returned for store ${store.id}`);
       }
     } catch (error) {
-      console.error('[StoreUtils] Error refreshing stats:', error);
-      if (error.response && error.response.status === 429) {
-        console.warn('[StoreUtils] Rate limit exceeded, using default stats structure');
-        // Create a default stats structure when rate limited
-        const defaultStats = {
-          currentPeriod: {
-            sales: 0,
-            transferred: 0,
-            expenses: {
-              total: 0,
-              logistics: 0,
-              storage: 0,
-              penalties: 0,
-              acceptance: 0,
-              advertising: 0,
-              deductions: 0
-            },
-            netProfit: 0,
-            acceptance: 0,
-            returns: 0,
-            returnsAmount: 0
-          },
-          dailySales: []
-        };
-        
-        return {
-          ...store,
-          stats: defaultStats,
-          lastFetchDate: new Date().toISOString()
-        };
-      }
+      console.error('Error refreshing stats:', error);
+      return store;
     }
   }
   return store;
@@ -528,7 +461,7 @@ export const ensureStoreSelectionPersistence = (): Store[] => {
   const currentUserId = userData ? JSON.parse(userData).id : null;
   
   const userStores = currentUserId 
-    ? stores.filter(store => store.userId === currentUserId)
+    ? stores.filter(store => store.userId === currentUserId) 
     : stores;
   
   if (!userStores.length) return userStores;
