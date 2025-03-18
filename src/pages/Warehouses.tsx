@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -98,6 +97,7 @@ const Warehouses: React.FC = () => {
     }
   }, [showHelpGuide]);
 
+  // Helper function to load data based on active tab
   const loadDataForActiveTab = (store: StoreType, tab: string) => {
     if (tab === 'supplies') {
       loadWarehouses(store.apiKey);
@@ -122,19 +122,8 @@ const Warehouses: React.FC = () => {
   const handleSavePreferredWarehouse = (warehouseId: number) => {
     if (!selectedStore) return;
     
-    // Преобразуем ID магазина в число, если он является строкой
-    const storeId = selectedStore.id;
-    
-    // Вызываем функцию контекста и присваиваем результат переменной
-    const newPreferred = togglePreferredWarehouseInContext(
-      typeof storeId === 'string' ? parseInt(storeId) : storeId, 
-      warehouseId
-    );
-    
-    // Обновляем состояние, только если получили массив
-    if (newPreferred && Array.isArray(newPreferred)) {
-      setPreferredWarehouses(newPreferred);
-    }
+    const newPreferred = togglePreferredWarehouseInContext(selectedStore.id, warehouseId);
+    setPreferredWarehouses(newPreferred);
   };
 
   const handleRefreshData = () => {
