@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { WarehouseCoefficient, Warehouse } from '@/types/supplies';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,13 +25,19 @@ interface WarehouseCoefficientsDateCardProps {
   selectedWarehouseId?: number;
   title?: string;
   warehouses?: Warehouse[];
+  onWarehouseSelect?: (warehouseId: number) => void;
+  onSavePreferred?: (warehouseId: number) => void;
+  preferredWarehouses?: number[];
 }
 
 const WarehouseCoefficientsDateCard: React.FC<WarehouseCoefficientsDateCardProps> = ({ 
   coefficients, 
   selectedWarehouseId,
   title = "Коэффициенты приемки",
-  warehouses = []
+  warehouses = [],
+  onWarehouseSelect,
+  onSavePreferred,
+  preferredWarehouses = []
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   
