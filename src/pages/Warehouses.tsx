@@ -24,7 +24,7 @@ import { Store as StoreType } from '@/types/store';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ensureStoreSelectionPersistence } from '@/utils/storeUtils';
+import { ensureStoreSelectionPersistence, getSelectedStore } from '@/utils/storeUtils';
 import LimitExceededMessage from '@/components/analytics/components/LimitExceededMessage';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useWarehouse } from '@/contexts/WarehouseContext';
@@ -78,10 +78,28 @@ const Warehouses: React.FC = () => {
 
   // Initialize store and load initial data
   useEffect(() => {
+    console.log("Initializing Warehouses component");
+    // First, try to get the selected store directly
+    const directSelectedStore = getSelectedStore();
+    
+    if (directSelectedStore) {
+      console.log(`Direct selected store found: ${directSelectedStore.name} (${directSelectedStore.id})`);
+      setSelectedStore(directSelectedStore);
+      
+      // Reset data for this store to ensure we don't show stale data
+      resetDataForStore(directSelectedStore.id);
+      
+      // Load data for the current tab
+      loadDataForActiveTab(directSelectedStore, activeTab);
+      return;
+    }
+    
+    // Fallback to the old method if needed
     const stores = ensureStoreSelectionPersistence();
     const selected = stores.find(store => store.isSelected);
     
     if (selected) {
+      console.log(`Selected store found from persistence: ${selected.name} (${selected.id})`);
       setSelectedStore(selected);
       
       // Reset data for this store to ensure we don't show stale data
@@ -89,7 +107,10 @@ const Warehouses: React.FC = () => {
       
       loadDataForActiveTab(selected, activeTab);
     } else if (stores.length > 0) {
+      console.log(`No selected store found, using first available: ${stores[0].name}`);
       setSelectedStore(stores[0]);
+    } else {
+      console.log("No stores found");
     }
   }, []);
 
