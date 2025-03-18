@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +14,7 @@ import Navbar from "./components/layout/Navbar";
 import { useEffect, useState } from "react";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import { WarehouseProvider } from "./contexts/WarehouseContext";
 
 const queryClient = new QueryClient();
 
@@ -54,49 +56,51 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Route to landing page, авторизованные пользователи тоже могут видеть лендинг */}
-            <Route path="/" element={
-              <>
-                <Navbar />
-                <LandingPage />
-              </>
-            } />
-            
-            {/* Protected routes */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <Index />
-              </ProtectedRoute>
-            } />
-            <Route path="/products" element={
-              <ProtectedRoute>
-                <Products />
-              </ProtectedRoute>
-            } />
-            <Route path="/warehouses" element={
-              <ProtectedRoute>
-                <Warehouses />
-              </ProtectedRoute>
-            } />
-            <Route path="/advertising" element={
-              <ProtectedRoute>
-                <Advertising />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin" element={
-              <ProtectedRoute requireAdmin={true}>
-                <Admin />
-              </ProtectedRoute>
-            } />
-            {/* Add these routes */}
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/terms-of-service" element={<TermsOfService />} />
-          </Routes>
-        </BrowserRouter>
+        <WarehouseProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Route to landing page, авторизованные пользователи тоже могут видеть лендинг */}
+              <Route path="/" element={
+                <>
+                  <Navbar />
+                  <LandingPage />
+                </>
+              } />
+              
+              {/* Protected routes */}
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <Index />
+                </ProtectedRoute>
+              } />
+              <Route path="/products" element={
+                <ProtectedRoute>
+                  <Products />
+                </ProtectedRoute>
+              } />
+              <Route path="/warehouses" element={
+                <ProtectedRoute>
+                  <Warehouses />
+                </ProtectedRoute>
+              } />
+              <Route path="/advertising" element={
+                <ProtectedRoute>
+                  <Advertising />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin" element={
+                <ProtectedRoute requireAdmin={true}>
+                  <Admin />
+                </ProtectedRoute>
+              } />
+              {/* Add these routes */}
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/terms-of-service" element={<TermsOfService />} />
+            </Routes>
+          </BrowserRouter>
+        </WarehouseProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
