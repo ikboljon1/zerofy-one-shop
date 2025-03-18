@@ -49,36 +49,26 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
         if (!stats.currentPeriod) {
           stats.currentPeriod = {
             sales: 0,
-            orders: 0,
-            returns: 0,
-            returnsAmount: 0,
-            ordersCanceledByClient: 0,
-            ordersCanceledByClientAmount: 0,
-            ordersInProgress: 0,
-            ordersInProgressAmount: 0,
-            countUniqueProducts: 0,
-            averageOrderPrice: 0,
-            revenue: 0,
             transferred: 0,
             expenses: {
               total: 0,
               logistics: 0,
               storage: 0,
-              commission: 0,
-              payments: 0,
               penalties: 0,
               acceptance: 0,
               advertising: 0,
               deductions: 0
-            }
+            },
+            netProfit: 0,
+            acceptance: 0,
+            returns: 0,
+            returnsAmount: 0
           };
         } else if (!stats.currentPeriod.expenses) {
           stats.currentPeriod.expenses = {
             total: 0,
             logistics: 0,
             storage: 0,
-            commission: 0,
-            payments: 0,
             penalties: 0,
             acceptance: 0,
             advertising: 0,
@@ -153,28 +143,20 @@ export const refreshStoreStats = async (store: Store): Promise<Store | null> => 
         const defaultStats = {
           currentPeriod: {
             sales: 0,
-            orders: 0,
-            returns: 0,
-            returnsAmount: 0,
-            ordersCanceledByClient: 0,
-            ordersCanceledByClientAmount: 0,
-            ordersInProgress: 0,
-            ordersInProgressAmount: 0,
-            countUniqueProducts: 0,
-            averageOrderPrice: 0,
-            revenue: 0,
             transferred: 0,
             expenses: {
               total: 0,
               logistics: 0,
               storage: 0,
-              commission: 0,
-              payments: 0,
               penalties: 0,
               acceptance: 0,
               advertising: 0,
               deductions: 0
-            }
+            },
+            netProfit: 0,
+            acceptance: 0,
+            returns: 0,
+            returnsAmount: 0
           },
           dailySales: []
         };
@@ -671,4 +653,3 @@ export const validateApiKey = async (apiKey: string): Promise<{ isValid: boolean
     return { isValid: false, errorMessage: "Невозможно соединиться с API Wildberries" };
   }
 };
-
