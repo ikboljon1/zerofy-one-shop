@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -30,7 +31,6 @@ import { ensureStoreSelectionPersistence } from '@/utils/storeUtils';
 import { Store as StoreType } from '@/types/store';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useWarehouse } from '@/contexts/WarehouseContext';
-import LimitExceededMessage from '@/components/analytics/components/LimitExceededMessage';
 
 const Warehouses: React.FC = () => {
   const [activeTab, setActiveTab] = useState('inventory');
@@ -71,7 +71,7 @@ const Warehouses: React.FC = () => {
       loadDataForActiveTab(selected, activeTab);
       
       // Get preferred warehouses
-      const preferred = getPreferredWarehouses(selected.id.toString());
+      const preferred = getPreferredWarehouses(selected.id);
       setPreferredWarehouses(preferred);
     } else if (stores.length > 0) {
       setSelectedStore(stores[0]);
@@ -83,7 +83,7 @@ const Warehouses: React.FC = () => {
       loadDataForActiveTab(selectedStore, activeTab);
       
       // Update preferred warehouses when store changes
-      const preferred = getPreferredWarehouses(selectedStore.id.toString());
+      const preferred = getPreferredWarehouses(selectedStore.id);
       setPreferredWarehouses(preferred);
     }
   }, [activeTab, selectedStore]);
