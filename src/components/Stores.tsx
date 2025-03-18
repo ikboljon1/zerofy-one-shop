@@ -8,7 +8,7 @@ import { AddStoreDialog } from "./stores/AddStoreDialog";
 import { StoreCard } from "./stores/StoreCard";
 import { getSubscriptionStatus, SubscriptionData } from "@/services/userService";
 import { Badge } from "@/components/ui/badge";
-import { clearAllStoreCache } from "@/utils/warehouseCacheUtils";
+import { clearAllStoreCache, clearStoreCache } from "@/utils/warehouseCacheUtils";
 
 interface StoresProps {
   onStoreSelect?: (store: { id: string; apiKey: string }) => void;

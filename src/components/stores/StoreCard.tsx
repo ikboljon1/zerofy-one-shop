@@ -93,7 +93,7 @@ export function StoreCard({
             <span className="text-muted-foreground">Маркетплейс:</span>
             <span className="font-medium">{store.marketplace}</span>
           </div>
-          {store.stats && (
+          {store.stats ? (
             <>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Продажи:</span>
@@ -112,6 +112,10 @@ export function StoreCard({
                 <span className="font-medium">{formatCurrency(calculateNetProfit())}</span>
               </div>
             </>
+          ) : (
+            <div className="py-2 text-center text-muted-foreground">
+              Нет данных. Нажмите "Обновить статистику"
+            </div>
           )}
           <Button 
             variant="outline" 
@@ -119,7 +123,7 @@ export function StoreCard({
             onClick={handleRefreshStats}
             disabled={isLoading}
           >
-            Обновить статистику
+            {isLoading ? "Загрузка..." : "Обновить статистику"}
           </Button>
         </div>
       </CardContent>
