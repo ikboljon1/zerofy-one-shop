@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ShoppingBag, Store, Package2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,24 +20,24 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [canDeleteStores, setCanDeleteStores] = useState(false);
   const [storeLimit, setStoreLimit] = useState<number>(1); // Default to 1
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     try {
       const userData = localStorage.getItem('user');
-      const userId = userData ? JSON.parse(userData).id : null;
-      setCurrentUserId(userId);
+      const currentUserId = userData ? JSON.parse(userData).id : null;
       
+      // Load and filter stores by current user
       const savedStores = ensureStoreSelectionPersistence();
-      const userStores = userId 
-        ? savedStores.filter(store => store.userId === userId)
+      const userStores = currentUserId 
+        ? savedStores.filter(store => store.userId === currentUserId)
         : savedStores;
       
       setStores(userStores);
       checkDeletePermissions();
       getStoreLimitFromTariff();
       
+      // Make sure at least one store is selected if any stores exist
       if (userStores.length > 0 && !userStores.some(store => store.isSelected)) {
         handleToggleSelection(userStores[0].id);
       }
@@ -53,12 +52,14 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   }, []);
 
   const getStoreLimitFromTariff = () => {
+    // Get user data from localStorage
     const userData = localStorage.getItem('user');
     if (!userData) return;
     
     try {
       const user = JSON.parse(userData);
       
+      // Set store limit based on tariff
       switch (user.tariffId) {
         case "1": // Базовый
           setStoreLimit(1);
@@ -82,12 +83,14 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   };
 
   const checkDeletePermissions = async () => {
+    // Get current user from localStorage
     const userData = localStorage.getItem('user');
     if (!userData) return;
     
     try {
       const user = JSON.parse(userData);
       
+      // Get subscription information
       const subscriptionData: SubscriptionData = getSubscriptionStatus(user);
       
       if (subscriptionData && subscriptionData.endDate) {
@@ -95,6 +98,8 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         const oneMonthAgo = new Date();
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
         
+        // Если конец подписки более чем через месяц, значит подписка оформлена менее месяца назад
+        // В этом случае удаление запрещено
         setCanDeleteStores(subscriptionEndDate.getTime() - oneMonthAgo.getTime() < 0);
       }
     } catch (error) {
@@ -114,6 +119,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       return;
     }
 
+    // Check if store limit has been reached
     if (stores.length >= storeLimit) {
       toast({
         title: "Ограничение тарифа",
@@ -126,6 +132,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     setIsLoading(true);
 
     try {
+      // Validate API key before creating the store
       const isValidApiKey = await validateApiKey(newStore.apiKey);
       
       if (!isValidApiKey) {
@@ -137,6 +144,10 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         setIsLoading(false);
         return;
       }
+
+      // Get current user from localStorage
+      const userData = localStorage.getItem('user');
+      const currentUserId = userData ? JSON.parse(userData).id : null;
 
       const store: StoreType = {
         id: Date.now().toString(),
@@ -153,6 +164,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       const updatedStore = await refreshStoreStats(store);
       const storeToAdd = updatedStore || store;
       
+      // Save data for Analytics and Dashboard
       if (updatedStore && updatedStore.stats) {
         const analyticsData = {
           storeId: store.id,
@@ -165,10 +177,15 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
       }
       
+      // Get all stores and add the new one
       const allStores = loadStores();
       
-      if (allStores.length === 0) {
+      // If this is the user's first store, mark it as selected and deselect others
+      const userStoreCount = allStores.filter(s => s.userId === currentUserId).length;
+      
+      if (userStoreCount === 0) {
         storeToAdd.isSelected = true;
+        // Deselect all other stores
         allStores.forEach(s => {
           s.isSelected = false;
         });
@@ -176,15 +193,17 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       
       const updatedStores = [...allStores, storeToAdd];
       
+      // Update only current user's stores in state
       const userStores = currentUserId 
         ? updatedStores.filter(s => s.userId === currentUserId)
         : updatedStores;
       
       setStores(userStores);
-      saveStores(updatedStores);
+      saveStores(updatedStores); // Save all stores
       
       console.log("Store added successfully:", storeToAdd);
       
+      // Trigger selection event if this is the first store
       if (storeToAdd.isSelected) {
         window.dispatchEvent(new CustomEvent('store-selection-changed', { 
           detail: { storeId: storeToAdd.id, selected: true, timestamp: Date.now() } 
@@ -198,6 +217,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         }
       }
       
+      // Clear cache to ensure fresh data
       clearAllStoreCache();
       
       setIsOpen(false);
@@ -218,12 +238,14 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   };
 
   const handleToggleSelection = (storeId: string) => {
+    // Get all stores
     const allStores = loadStores();
     const updatedAllStores = allStores.map(store => ({
       ...store,
       isSelected: store.id === storeId
     }));
     
+    // Update state only for current user's stores
     const userData = localStorage.getItem('user');
     const currentUserId = userData ? JSON.parse(userData).id : null;
     
@@ -232,15 +254,17 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       : updatedAllStores;
     
     setStores(userStores);
-    saveStores(updatedAllStores);
-    
+    saveStores(updatedAllStores); // Save all stores
+
+    // Save the selected store separately for better persistence
     localStorage.setItem('last_selected_store', JSON.stringify({
       storeId,
       timestamp: Date.now()
     }));
-    
+
+    // Clear cache for the selected store
     clearStoreCache(storeId);
-    
+
     const selectedStore = stores.find(store => store.id === storeId);
     if (selectedStore && onStoreSelect) {
       onStoreSelect({
@@ -255,11 +279,13 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     try {
       const updatedStore = await refreshStoreStats(store);
       if (updatedStore) {
+        // Get all stores
         const allStores = loadStores();
         const updatedAllStores = allStores.map(s => 
           s.id === store.id ? updatedStore : s
         );
         
+        // Update state only for current user's stores
         const userData = localStorage.getItem('user');
         const currentUserId = userData ? JSON.parse(userData).id : null;
         
@@ -268,8 +294,9 @@ export default function Stores({ onStoreSelect }: StoresProps) {
           : updatedAllStores;
         
         setStores(userStores);
-        saveStores(updatedAllStores);
+        saveStores(updatedAllStores); // Save all stores
         
+        // Also update data for Analytics and Dashboard
         if (updatedStore.stats) {
           const analyticsData = {
             storeId: store.id,
@@ -279,6 +306,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
             timestamp: Date.now()
           };
           
+          // Save data for analytics
           localStorage.setItem(`marketplace_analytics_${store.id}`, JSON.stringify(analyticsData));
         }
         
@@ -300,6 +328,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   };
 
   const handleDeleteStore = (storeId: string) => {
+    // Проверяем, можно ли удалять магазины
     if (!canDeleteStores) {
       toast({
         title: "Действие запрещено",
@@ -312,9 +341,11 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     const storeToDelete = stores.find(store => store.id === storeId);
     if (!storeToDelete) return;
 
+    // Get all stores and remove the one to delete
     const allStores = loadStores();
     const updatedAllStores = allStores.filter(store => store.id !== storeId);
     
+    // Update state only for current user's stores
     const userData = localStorage.getItem('user');
     const currentUserId = userData ? JSON.parse(userData).id : null;
     
@@ -322,10 +353,11 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       ? updatedAllStores.filter(store => store.userId === currentUserId)
       : updatedAllStores;
     
+    // Clear all cache for the deleted store
     clearAllStoreCache();
     
     setStores(userStores);
-    saveStores(updatedAllStores);
+    saveStores(updatedAllStores); // Save all stores
     
     localStorage.removeItem(`${STATS_STORAGE_KEY}_${storeId}`);
     localStorage.removeItem(`marketplace_analytics_${storeId}`);
@@ -343,6 +375,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
           <ShoppingBag className="h-5 w-5" />
           <h2 className="text-xl font-semibold">Магазины</h2>
           
+          {/* Store count indicator */}
           <Badge variant="outline" className="flex items-center gap-1.5 ml-2 bg-blue-950/30 text-blue-400 border-blue-800">
             <Package2 className="h-3.5 w-3.5" />
             <span>{stores.length}/{storeLimit}</span>
@@ -365,7 +398,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
             <p className="text-muted-foreground">У вас пока нет добавленных магазинов</p>
             {storeLimit > 0 && (
               <p className="text-sm text-muted-foreground mt-2">
-                Ваш текущий тариф позволяет добавить до {storeLimit} {storeLimit === 1 ? 'магазин' : storeLimit < 5 ? 'магазина' : 'магазинов'}
+                Ваш текущий тариф позволяет добавить до {storeLimit} {storeLimit === 1 ? 'магазина' : storeLimit < 5 ? 'магазина' : 'магазинов'}
               </p>
             )}
           </CardContent>
