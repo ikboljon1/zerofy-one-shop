@@ -1,0 +1,73 @@
+
+import { useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { getCacheItem, setCacheItem, CACHE_TTL } from '@/utils/cacheUtils';
+import { toast } from 'sonner';
+
+interface WarehouseDataParams {
+  storeId: string;
+  apiKey: string;
+  endpoint: string;
+  cacheKey: string;
+  ttl: number;
+  fetchFn: () => Promise<any>;
+}
+
+export const useWarehouseData = ({
+  storeId,
+  apiKey,
+  endpoint,
+  cacheKey,
+  ttl,
+  fetchFn
+}: WarehouseDataParams) => {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const fullCacheKey = `${cacheKey}_${storeId}`;
+
+  const fetchWithCache = useCallback(async () => {
+    const cachedData = getCacheItem(fullCacheKey, ttl);
+    if (cachedData) {
+      return cachedData;
+    }
+
+    try {
+      const data = await fetchFn();
+      setCacheItem(fullCacheKey, data);
+      return data;
+    } catch (error) {
+      console.error(`Error fetching ${endpoint}:`, error);
+      throw error;
+    }
+  }, [storeId, endpoint, fullCacheKey, ttl, fetchFn]);
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: [endpoint, storeId],
+    queryFn: fetchWithCache,
+    staleTime: ttl,
+    retry: 2,
+    onError: (err: Error) => {
+      toast.error(`Ошибка при загрузке данных: ${err.message}`);
+    }
+  });
+
+  const refresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const freshData = await fetchFn();
+      setCacheItem(fullCacheKey, freshData);
+      setIsRefreshing(false);
+      return freshData;
+    } catch (error) {
+      setIsRefreshing(false);
+      throw error;
+    }
+  }, [storeId, endpoint, fullCacheKey, fetchFn]);
+
+  return {
+    data,
+    isLoading,
+    error,
+    isRefreshing,
+    refresh
+  };
+};
