@@ -224,7 +224,7 @@ export const authenticate = async (
     console.error('Error during authentication:', error);
     
     // Fallback для разработки
-    if (email === 'admin' && password === 'admin') {
+    if (email === 'zerofy' && password === 'Zerofy2025') {
       const users = await getUsers();
       const adminUser = users.find(user => user.role === 'admin') || users[0];
       
@@ -531,7 +531,7 @@ function simulateSmtpConnection(settings: SmtpSettings): { success: boolean; mes
     } else if (!settings.secure && settings.port !== 25 && settings.port !== 587) {
       return { 
         success: false, 
-        message: "Для нешифрованного соединения с Mail.ru требуется порт 25 или 587" 
+        message: "Для ��ешифрованного соединения с Mail.ru требуется порт 25 или 587" 
       };
     }
   }
@@ -723,7 +723,7 @@ function simulatePop3Connection(settings: Pop3Settings): { success: boolean; mes
   if (blacklistedHosts.includes(settings.host)) {
     return { 
       success: false, 
-      message: "Не удалось подключиться к серверу: хост не найден в DNS" 
+      message: "Не уд��лось подключиться к серверу: хост не найден в DNS" 
     };
   }
   

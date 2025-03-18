@@ -99,7 +99,7 @@ const LoginForm = ({ onSuccess, onForgotPassword }: LoginFormProps) => {
         <Input
           id="email"
           type="text"
-          placeholder="Введите логин (admin)"
+          placeholder="Введите логин (zerofy)"
           {...register("email")}
         />
         {errors.email && (
@@ -124,7 +124,7 @@ const LoginForm = ({ onSuccess, onForgotPassword }: LoginFormProps) => {
         <Input
           id="password"
           type="password"
-          placeholder="Введите пароль (admin)"
+          placeholder="Введите пароль (Zerofy2025)"
           {...register("password")}
         />
         {errors.password && (
