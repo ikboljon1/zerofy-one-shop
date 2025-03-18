@@ -2,6 +2,120 @@ import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY, ORDERS_STORAGE_KEY, SALES
 import { fetchWildberriesStats, fetchWildberriesOrders, fetchWildberriesSales } from "@/services/wildberriesApi";
 import axios from "axios";
 
+// Storage keys for warehouse data
+export const WB_WAREHOUSES_STORAGE_KEY = "wb_warehouses";
+export const WB_COEFFICIENTS_STORAGE_KEY = "wb_coefficients";
+export const WB_REMAINS_STORAGE_KEY = "wb_remains";
+export const WB_PAID_STORAGE_KEY = "wb_paid_storage";
+export const WB_AVG_SALES_STORAGE_KEY = "wb_avg_daily_sales";
+
+// Timeouts and cache expiration settings in milliseconds
+const CACHE_EXPIRATION = {
+  WAREHOUSES: 24 * 60 * 60 * 1000, // 24 hours
+  COEFFICIENTS: 8 * 60 * 60 * 1000, // 8 hours
+  REMAINS: 4 * 60 * 60 * 1000, // 4 hours
+  PAID_STORAGE: 24 * 60 * 60 * 1000, // 24 hours
+  AVG_SALES: 24 * 60 * 60 * 1000, // 24 hours
+};
+
+/**
+ * Caches warehouse data to localStorage with store ID and expiration
+ */
+export const cacheWarehouseData = (storeId: string, key: string, data: any) => {
+  if (!storeId || !data) return;
+  
+  try {
+    const cacheItem = {
+      data,
+      timestamp: Date.now(),
+      storeId
+    };
+    
+    localStorage.setItem(`${key}_${storeId}`, JSON.stringify(cacheItem));
+    console.log(`Cached ${key} data for store ${storeId}`);
+    
+    // Dispatch event to notify other components about data update
+    window.dispatchEvent(new CustomEvent(`${key}-updated`, { 
+      detail: { storeId, data, timestamp: Date.now() } 
+    }));
+  } catch (error) {
+    console.error(`Error caching ${key} data:`, error);
+  }
+};
+
+/**
+ * Gets cached warehouse data if available and not expired
+ */
+export const getCachedWarehouseData = (storeId: string, key: string, maxAge?: number) => {
+  if (!storeId) return null;
+  
+  try {
+    const cachedItem = localStorage.getItem(`${key}_${storeId}`);
+    if (!cachedItem) return null;
+    
+    const { data, timestamp, storeId: cachedStoreId } = JSON.parse(cachedItem);
+    
+    // Verify the cache is for the correct store
+    if (cachedStoreId !== storeId) return null;
+    
+    // Check if cache has expired
+    const age = Date.now() - timestamp;
+    const expiration = maxAge || getExpirationForKey(key);
+    
+    if (age > expiration) {
+      console.log(`Cached ${key} data expired (${Math.round(age/1000/60)} minutes old)`);
+      return null;
+    }
+    
+    console.log(`Using cached ${key} data (${Math.round(age/1000/60)} minutes old)`);
+    return data;
+  } catch (error) {
+    console.error(`Error retrieving cached ${key} data:`, error);
+    return null;
+  }
+};
+
+/**
+ * Gets appropriate expiration time for a cache key
+ */
+const getExpirationForKey = (key: string): number => {
+  switch (key) {
+    case WB_WAREHOUSES_STORAGE_KEY:
+      return CACHE_EXPIRATION.WAREHOUSES;
+    case WB_COEFFICIENTS_STORAGE_KEY:
+      return CACHE_EXPIRATION.COEFFICIENTS;
+    case WB_REMAINS_STORAGE_KEY:
+      return CACHE_EXPIRATION.REMAINS;
+    case WB_PAID_STORAGE_KEY:
+      return CACHE_EXPIRATION.PAID_STORAGE;
+    case WB_AVG_SALES_STORAGE_KEY:
+      return CACHE_EXPIRATION.AVG_SALES;
+    default:
+      return 60 * 60 * 1000; // Default 1 hour
+  }
+};
+
+/**
+ * Clears all cached warehouse data for a specific store
+ */
+export const clearWarehouseCache = (storeId: string) => {
+  if (!storeId) return;
+  
+  const keys = [
+    WB_WAREHOUSES_STORAGE_KEY,
+    WB_COEFFICIENTS_STORAGE_KEY,
+    WB_REMAINS_STORAGE_KEY,
+    WB_PAID_STORAGE_KEY,
+    WB_AVG_SALES_STORAGE_KEY
+  ];
+  
+  keys.forEach(key => {
+    localStorage.removeItem(`${key}_${storeId}`);
+  });
+  
+  console.log(`Cleared all warehouse cache for store ${storeId}`);
+};
+
 export const getLastWeekDateRange = () => {
   const now = new Date();
   const lastWeek = new Date(now);
