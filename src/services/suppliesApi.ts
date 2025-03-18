@@ -25,7 +25,7 @@ export const fetchSupplyOptions = async (apiKey: string, barcodes: string[]): Pr
     return response.data;
   } catch (error: any) {
     console.error('Error fetching supply options:', error.response ? error.response.data : error.message);
-    throw error;
+    throw new Error(error.response ? `${error.response.status}: ${error.response.data?.message || 'Unknown error'}` : error.message);
   }
 };
 
@@ -52,7 +52,7 @@ export const fetchAcceptanceCoefficients = async (apiKey: string, warehouseIDs?:
     return response.data;
   } catch (error: any) {
     console.error('Error fetching acceptance coefficients:', error.response ? error.response.data : error.message);
-    throw error;
+    throw new Error(error.response ? `${error.response.status}: ${error.response.data?.message || 'Unknown error'}` : error.message);
   }
 };
 
@@ -72,7 +72,7 @@ export const fetchWarehouses = async (apiKey: string): Promise<Warehouse[]> => {
     return response.data;
   } catch (error: any) {
     console.error('Error fetching warehouses:', error.response ? error.response.data : error.message);
-    throw error;
+    throw new Error(error.response ? `${error.response.status}: ${error.response.data?.message || 'Unknown error'}` : error.message);
   }
 };
 
@@ -85,20 +85,58 @@ export const fetchWarehouses = async (apiKey: string): Promise<Warehouse[]> => {
  */
 export const fetchFullPaidStorageReport = async (apiKey: string, dateFrom: string, dateTo: string): Promise<any[]> => {
   try {
+    // Проверяем, действителен ли API-ключ
+    if (!apiKey || apiKey.trim() === '') {
+      throw new Error('API ключ не указан или недействителен');
+    }
+
+    console.log(`Fetching storage report from ${dateFrom} to ${dateTo}`);
+    
+    // Добавляем обработку возможных ошибок с датами
+    if (!isValidDate(dateFrom) || !isValidDate(dateTo)) {
+      throw new Error('Некорректный формат даты. Используйте формат YYYY-MM-DD');
+    }
+
     const response = await axios.get<any[]>(
       `${API_BASE_URL}/storage/full-paid-report?dateFrom=${dateFrom}&dateTo=${dateTo}`,
       {
         headers: {
           'Authorization': apiKey,
           'Content-Type': 'application/json'
-        }
+        },
+        // Увеличиваем таймаут, так как этот запрос может выполняться дольше
+        timeout: 30000
       }
     );
+    
+    // Если ответ пустой, возвращаем пустой массив вместо ошибки
+    if (!response.data || (Array.isArray(response.data) && response.data.length === 0)) {
+      console.log('No paid storage data found for the specified period');
+      return [];
+    }
+    
     return response.data;
   } catch (error: any) {
-    console.error('Error fetching full paid storage report:', error.response ? error.response.data : error.message);
-    throw error;
+    // Улучшаем обработку ошибок с дополнительной информацией
+    console.error('Error fetching full paid storage report:', error);
+    const errorMessage = error.response 
+      ? `Request failed with status code ${error.response.status}${error.response.data?.message ? ': ' + error.response.data.message : ''}` 
+      : error.message;
+    
+    throw new Error(errorMessage);
   }
+};
+
+// Вспомогательная функция для проверки валидности даты
+const isValidDate = (dateString: string): boolean => {
+  if (!dateString) return false;
+  
+  // Проверяем формат YYYY-MM-DD
+  const regex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!regex.test(dateString)) return false;
+  
+  const date = new Date(dateString);
+  return !isNaN(date.getTime());
 };
 
 /**
@@ -133,14 +171,14 @@ export const fetchLastMonthSalesData = async (apiKey: string): Promise<Map<numbe
     
     console.log(`Fetching sales data from ${dateFrom} to ${dateTo}`);
     
-    // In a real implementation, this would make an API call to Wildberries
-    // For now, we'll simulate the API response
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network request
+    // В реальном приложении здесь был бы API-запрос к Wildberries
+    // Сейчас мы имитируем запрос
+    await new Promise(resolve => setTimeout(resolve, 500)); // Имитация задержки сети
     
-    // Sample data map
+    // Простая демо-карта данных
     const salesMap = new Map<number, number>();
     
-    // Let's add some mock data for testing
+    // Добавляем тестовые данные
     for (let i = 1000; i < 1100; i++) {
       salesMap.set(i, Math.floor(Math.random() * 30));
     }
@@ -149,7 +187,7 @@ export const fetchLastMonthSalesData = async (apiKey: string): Promise<Map<numbe
     return salesMap;
   } catch (error: any) {
     console.error('Error fetching sales data:', error.message || error);
-    // Return empty map in case of error
+    // Возвращаем пустую карту при ошибке вместо выбрасывания исключения
     return new Map<number, number>();
   }
 };
@@ -204,6 +242,7 @@ export const fetchLastMonthStorageData = async (apiKey: string): Promise<any[]> 
     return await fetchFullPaidStorageReport(apiKey, dateFrom, dateTo);
   } catch (error: any) {
     console.error('Error fetching storage data:', error.message || error);
+    // Вместо выбрасывания ошибки возвращаем пустой массив
     return [];
   }
 };

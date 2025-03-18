@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -121,13 +122,17 @@ const Warehouses: React.FC = () => {
   const handleSavePreferredWarehouse = (warehouseId: number) => {
     if (!selectedStore) return;
     
-    const storeId = typeof selectedStore.id === 'string' 
-      ? parseInt(selectedStore.id, 10) 
-      : selectedStore.id;
+    // Преобразуем ID магазина в число, если он является строкой
+    const storeId = selectedStore.id;
     
-    const newPreferred = togglePreferredWarehouseInContext(storeId, warehouseId);
+    // Вызываем функцию контекста и присваиваем результат переменной
+    const newPreferred = togglePreferredWarehouseInContext(
+      typeof storeId === 'string' ? parseInt(storeId) : storeId, 
+      warehouseId
+    );
     
-    if (newPreferred) {
+    // Обновляем состояние, только если получили массив
+    if (newPreferred && Array.isArray(newPreferred)) {
       setPreferredWarehouses(newPreferred);
     }
   };
