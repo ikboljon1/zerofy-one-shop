@@ -1,5 +1,11 @@
 import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY, ORDERS_STORAGE_KEY, SALES_STORAGE_KEY, WildberriesOrder, WildberriesSale } from "@/types/store";
 import { fetchWildberriesStats, fetchWildberriesOrders, fetchWildberriesSales } from "@/services/wildberriesApi";
+import { 
+  WarehouseCoefficient, 
+  Warehouse as WBWarehouse,
+  WarehouseRemainItem,
+  PaidStorageItem
+} from '@/types/supplies';
 import axios from "axios";
 
 export const getLastWeekDateRange = () => {
@@ -584,5 +590,132 @@ export const validateApiKey = async (apiKey: string): Promise<{ isValid: boolean
     }
     
     return { isValid: false, errorMessage: "Невозможно соединиться с API Wildberries" };
+  }
+};
+
+export const WAREHOUSE_CACHE_KEYS = {
+  WAREHOUSES: 'wb_warehouses_cache',
+  COEFFICIENTS: 'wb_coefficients_cache',
+  REMAINS: 'wb_remains_cache',
+  PAID_STORAGE: 'wb_paid_storage_cache',
+  PREFERRED: 'wb_preferred_warehouses',
+  AVERAGE_SALES: 'wb_average_daily_sales',
+  STORAGE_COSTS: 'wb_daily_storage_costs',
+  TIMESTAMP: 'wb_warehouses_data_timestamp'
+};
+
+const CACHE_TIMEOUT = 24 * 60 * 60 * 1000;
+
+export const cacheWarehouseData = <T>(storeId: string, dataType: string, data: T): void => {
+  try {
+    const cacheKey = `${dataType}_${storeId}`;
+    localStorage.setItem(cacheKey, JSON.stringify(data));
+    
+    // Update timestamp
+    const timestamps = JSON.parse(localStorage.getItem(WAREHOUSE_CACHE_KEYS.TIMESTAMP) || '{}');
+    timestamps[cacheKey] = Date.now();
+    localStorage.setItem(WAREHOUSE_CACHE_KEYS.TIMESTAMP, JSON.stringify(timestamps));
+    
+    console.log(`[Cache] Warehouse ${dataType} data cached for store ${storeId}`);
+  } catch (error) {
+    console.error(`[Cache] Error caching warehouse ${dataType} data:`, error);
+  }
+};
+
+export const loadWarehouseData = <T>(storeId: string, dataType: string): T | null => {
+  try {
+    const cacheKey = `${dataType}_${storeId}`;
+    const cachedData = localStorage.getItem(cacheKey);
+    
+    if (!cachedData) {
+      console.log(`[Cache] No cached ${dataType} data found for store ${storeId}`);
+      return null;
+    }
+    
+    // Check if cache is expired
+    const timestamps = JSON.parse(localStorage.getItem(WAREHOUSE_CACHE_KEYS.TIMESTAMP) || '{}');
+    const timestamp = timestamps[cacheKey];
+    
+    if (!timestamp || Date.now() - timestamp > CACHE_TIMEOUT) {
+      console.log(`[Cache] Cached ${dataType} data expired for store ${storeId}`);
+      return null;
+    }
+    
+    console.log(`[Cache] Using cached ${dataType} data for store ${storeId}`);
+    return JSON.parse(cachedData) as T;
+  } catch (error) {
+    console.error(`[Cache] Error loading warehouse ${dataType} data:`, error);
+    return null;
+  }
+};
+
+export const cacheWBWarehouses = (storeId: string, warehouses: WBWarehouse[]): void => {
+  cacheWarehouseData(storeId, WAREHOUSE_CACHE_KEYS.WAREHOUSES, warehouses);
+};
+
+export const loadWBWarehouses = (storeId: string): WBWarehouse[] | null => {
+  return loadWarehouseData<WBWarehouse[]>(storeId, WAREHOUSE_CACHE_KEYS.WAREHOUSES);
+};
+
+export const cacheCoefficients = (storeId: string, coefficients: WarehouseCoefficient[]): void => {
+  cacheWarehouseData(storeId, WAREHOUSE_CACHE_KEYS.COEFFICIENTS, coefficients);
+};
+
+export const loadCoefficients = (storeId: string): WarehouseCoefficient[] | null => {
+  return loadWarehouseData<WarehouseCoefficient[]>(storeId, WAREHOUSE_CACHE_KEYS.COEFFICIENTS);
+};
+
+export const cacheWarehouseRemains = (storeId: string, remains: WarehouseRemainItem[]): void => {
+  cacheWarehouseData(storeId, WAREHOUSE_CACHE_KEYS.REMAINS, remains);
+};
+
+export const loadWarehouseRemains = (storeId: string): WarehouseRemainItem[] | null => {
+  return loadWarehouseData<WarehouseRemainItem[]>(storeId, WAREHOUSE_CACHE_KEYS.REMAINS);
+};
+
+export const cachePaidStorageData = (storeId: string, storageData: PaidStorageItem[]): void => {
+  cacheWarehouseData(storeId, WAREHOUSE_CACHE_KEYS.PAID_STORAGE, storageData);
+};
+
+export const loadPaidStorageData = (storeId: string): PaidStorageItem[] | null => {
+  return loadWarehouseData<PaidStorageItem[]>(storeId, WAREHOUSE_CACHE_KEYS.PAID_STORAGE);
+};
+
+export const cacheAverageDailySales = (storeId: string, salesData: Record<number, number>): void => {
+  cacheWarehouseData(storeId, WAREHOUSE_CACHE_KEYS.AVERAGE_SALES, salesData);
+};
+
+export const loadAverageDailySales = (storeId: string): Record<number, number> | null => {
+  return loadWarehouseData<Record<number, number>>(storeId, WAREHOUSE_CACHE_KEYS.AVERAGE_SALES);
+};
+
+export const cacheDailyStorageCosts = (storeId: string, costsData: Record<number, number>): void => {
+  cacheWarehouseData(storeId, WAREHOUSE_CACHE_KEYS.STORAGE_COSTS, costsData);
+};
+
+export const loadDailyStorageCosts = (storeId: string): Record<number, number> | null => {
+  return loadWarehouseData<Record<number, number>>(storeId, WAREHOUSE_CACHE_KEYS.STORAGE_COSTS);
+};
+
+export const invalidateWarehouseCache = (storeId: string): void => {
+  try {
+    Object.values(WAREHOUSE_CACHE_KEYS).forEach(key => {
+      if (key !== WAREHOUSE_CACHE_KEYS.TIMESTAMP) {
+        localStorage.removeItem(`${key}_${storeId}`);
+      }
+    });
+    
+    // Update timestamps
+    const timestamps = JSON.parse(localStorage.getItem(WAREHOUSE_CACHE_KEYS.TIMESTAMP) || '{}');
+    Object.keys(timestamps).forEach(key => {
+      if (key.endsWith(`_${storeId}`)) {
+        delete timestamps[key];
+      }
+    });
+    localStorage.setItem(WAREHOUSE_CACHE_KEYS.TIMESTAMP, JSON.stringify(timestamps));
+    
+    console.log(`[Cache] All warehouse cache invalidated for store ${storeId}`);
+  } catch (error) {
+    console.error('[Cache] Error invalidating warehouse cache:', error);
   }
 };
