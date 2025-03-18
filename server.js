@@ -24,11 +24,27 @@ db.serialize(() => {
     company TEXT,
     role TEXT DEFAULT 'user',
     status TEXT DEFAULT 'active',
-    subscription_type TEXT DEFAULT 'free',
+    tariff_id TEXT DEFAULT '1',
+    is_subscription_active BOOLEAN DEFAULT 0,
     subscription_expiry DATETIME,
     registered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     last_login DATETIME,
-    store_count INTEGER DEFAULT 0
+    store_count INTEGER DEFAULT 0,
+    is_in_trial BOOLEAN DEFAULT 0,
+    avatar TEXT
+  )`);
+
+  // Таблица для тарифов
+  db.run(`CREATE TABLE IF NOT EXISTS tariffs (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    price REAL NOT NULL,
+    period TEXT NOT NULL,
+    description TEXT,
+    features TEXT,
+    is_popular BOOLEAN DEFAULT 0,
+    is_active BOOLEAN DEFAULT 1,
+    store_limit INTEGER DEFAULT 1
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS email_settings (
@@ -167,21 +183,398 @@ db.serialize(() => {
       db.run("INSERT INTO app_settings (setting_name, setting_value) VALUES ('verification_method', 'email')");
     }
   });
+  
+  // Проверяем, есть ли тарифы в базе данных, если нет - добавляем начальные
+  db.get("SELECT COUNT(*) as count FROM tariffs", (err, row) => {
+    if (err || (row && row.count === 0)) {
+      // Добавляем начальные тарифы
+      const initialTariffs = [
+        {
+          id: '1',
+          name: 'Базовый',
+          price: 990,
+          period: 'monthly',
+          description: 'Идеально для начинающих продавцов',
+          features: JSON.stringify([
+            'Доступ к основным отчетам',
+            'Управление до 100 товаров',
+            'Базовая аналитика',
+            'Email поддержка'
+          ]),
+          is_popular: 0,
+          is_active: 1,
+          store_limit: 1
+        },
+        {
+          id: '2',
+          name: 'Профессиональный',
+          price: 1990,
+          period: 'monthly',
+          description: 'Для растущих магазинов',
+          features: JSON.stringify([
+            'Все функции Базового тарифа',
+            'Управление до 1000 товаров',
+            'Расширенная аналитика',
+            'Приоритетная поддержка',
+            'API интеграции'
+          ]),
+          is_popular: 1,
+          is_active: 1,
+          store_limit: 2
+        },
+        {
+          id: '3',
+          name: 'Бизнес',
+          price: 4990,
+          period: 'monthly',
+          description: 'Комплексное решение для крупных продавцов',
+          features: JSON.stringify([
+            'Все функции Профессионального тарифа',
+            'Неограниченное количество товаров',
+            'Персональный менеджер',
+            'Расширенный API доступ',
+            'Белая метка (White Label)',
+            'Приоритетные обновления'
+          ]),
+          is_popular: 0,
+          is_active: 1,
+          store_limit: 10
+        },
+        {
+          id: '4',
+          name: 'Корпоративный',
+          price: 9990,
+          period: 'monthly',
+          description: 'Максимальные возможности для корпоративных клиентов',
+          features: JSON.stringify([
+            'Все функции Бизнес тарифа',
+            'Неограниченное количество товаров',
+            'Выделенный аккаунт-менеджер',
+            'Приоритетная техническая поддержка 24/7',
+            'Индивидуальная настройка и кастомизация',
+            'Интеграция с корпоративными системами'
+          ]),
+          is_popular: 0,
+          is_active: 1,
+          store_limit: 999
+        }
+      ];
+      
+      initialTariffs.forEach(tariff => {
+        db.run(
+          `INSERT INTO tariffs (id, name, price, period, description, features, is_popular, is_active, store_limit) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            tariff.id, 
+            tariff.name, 
+            tariff.price, 
+            tariff.period, 
+            tariff.description, 
+            tariff.features, 
+            tariff.is_popular, 
+            tariff.is_active, 
+            tariff.store_limit
+          ]
+        );
+      });
+    }
+  });
+  
+  // Проверяем, есть ли пользователи в базе данных, если нет - до��авляем тестовых
+  db.get("SELECT COUNT(*) as count FROM users", (err, row) => {
+    if (err || (row && row.count === 0)) {
+      // Добавляем тестовых пользователей
+      const testUsers = [
+        {
+          email: 'admin@example.com',
+          password: 'admin123',
+          name: 'Администратор',
+          role: 'admin',
+          status: 'active',
+          tariff_id: '4',
+          is_subscription_active: 1,
+          subscription_expiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          registered_at: new Date().toISOString(),
+          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin'
+        },
+        {
+          email: 'user@example.com',
+          password: 'user123',
+          name: 'Тестовый Пользователь',
+          role: 'user',
+          status: 'active',
+          tariff_id: '1',
+          is_subscription_active: 0,
+          registered_at: new Date().toISOString(),
+          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=User'
+        },
+        {
+          email: 'zerofy',
+          password: 'Zerofy2025',
+          name: 'Zerofy Admin',
+          role: 'admin',
+          status: 'active',
+          tariff_id: '4',
+          is_subscription_active: 1,
+          subscription_expiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          registered_at: new Date().toISOString(),
+          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zerofy'
+        }
+      ];
+      
+      testUsers.forEach(user => {
+        db.run(
+          `INSERT INTO users (email, password, name, role, status, tariff_id, is_subscription_active, subscription_expiry, registered_at, avatar) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            user.email, 
+            user.password, 
+            user.name, 
+            user.role, 
+            user.status, 
+            user.tariff_id, 
+            user.is_subscription_active, 
+            user.subscription_expiry, 
+            user.registered_at,
+            user.avatar
+          ]
+        );
+      });
+    }
+  });
 });
 
-// Регистрация пользователя
-app.post('/api/register', (req, res) => {
-  const { email, password } = req.body;
+// API для работы с пользователями
+// Получение всех пользователей
+app.get('/api/users', (req, res) => {
+  db.all('SELECT * FROM users ORDER BY registered_at DESC', (err, rows) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Ошибка при получении списка пользователей' });
+    }
+    res.json(rows.map(user => ({
+      id: user.id.toString(),
+      email: user.email,
+      name: user.name,
+      phone: user.phone,
+      company: user.company,
+      role: user.role,
+      status: user.status,
+      tariffId: user.tariff_id,
+      isSubscriptionActive: Boolean(user.is_subscription_active),
+      subscriptionEndDate: user.subscription_expiry,
+      registeredAt: user.registered_at,
+      lastLogin: user.last_login,
+      avatar: user.avatar,
+      isInTrial: Boolean(user.is_in_trial),
+      storeCount: user.store_count || 0
+    })));
+  });
+});
+
+// Получение информации о пользователе по ID
+app.get('/api/users/:id', (req, res) => {
+  const userId = req.params.id;
+  db.get('SELECT * FROM users WHERE id = ?', [userId], (err, user) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Ошибка при получении информации о пользователе' });
+    }
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    res.json({
+      id: user.id.toString(),
+      email: user.email,
+      name: user.name,
+      phone: user.phone,
+      company: user.company,
+      role: user.role,
+      status: user.status,
+      tariffId: user.tariff_id,
+      isSubscriptionActive: Boolean(user.is_subscription_active),
+      subscriptionEndDate: user.subscription_expiry,
+      registeredAt: user.registered_at,
+      lastLogin: user.last_login,
+      avatar: user.avatar,
+      isInTrial: Boolean(user.is_in_trial),
+      storeCount: user.store_count || 0
+    });
+  });
+});
+
+// Добавление нового пользователя
+app.post('/api/users', (req, res) => {
+  const { email, password, name, phone, company, role, status, tariffId } = req.body;
+  
   if (!email || !password) {
     return res.status(400).json({ error: 'Email и пароль обязательны' });
   }
-  const query = 'INSERT INTO users (email, password) VALUES (?, ?)';
-  db.run(query, [email, password], function(err) {
+  
+  const avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${name || email}`;
+  
+  const query = `INSERT INTO users (
+    email, password, name, phone, company, role, status, tariff_id, avatar, registered_at
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  
+  db.run(query, [
+    email, 
+    password, 
+    name || null, 
+    phone || null, 
+    company || null, 
+    role || 'user', 
+    status || 'active', 
+    tariffId || '1',
+    avatar,
+    new Date().toISOString()
+  ], function(err) {
     if (err) {
       console.error(err);
-      return res.status(500).json({ error: 'Ошибка при регистрации пользователя' });
+      return res.status(500).json({ error: 'Ошибка при добавлении пользователя' });
     }
-    res.json({ id: this.lastID });
+    
+    // Получаем добавленного пользователя
+    db.get('SELECT * FROM users WHERE id = ?', [this.lastID], (err, user) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Ошибка при получении добавленного пользователя' });
+      }
+      
+      res.json({
+        id: user.id.toString(),
+        email: user.email,
+        name: user.name,
+        phone: user.phone,
+        company: user.company,
+        role: user.role,
+        status: user.status,
+        tariffId: user.tariff_id,
+        isSubscriptionActive: Boolean(user.is_subscription_active),
+        subscriptionEndDate: user.subscription_expiry,
+        registeredAt: user.registered_at,
+        lastLogin: user.last_login,
+        avatar: user.avatar,
+        isInTrial: Boolean(user.is_in_trial),
+        storeCount: user.store_count || 0
+      });
+    });
+  });
+});
+
+// Обновление информации о пользователе
+app.put('/api/users/:id', (req, res) => {
+  const userId = req.params.id;
+  const {
+    email, password, name, phone, company, role, status,
+    tariffId, isSubscriptionActive, subscriptionEndDate, lastLogin
+  } = req.body;
+
+  // Формируем SQL запрос на обновление только переданных полей
+  let updates = [];
+  let values = [];
+
+  if (email !== undefined) {
+    updates.push('email = ?');
+    values.push(email);
+  }
+  if (password !== undefined) {
+    updates.push('password = ?');
+    values.push(password);
+  }
+  if (name !== undefined) {
+    updates.push('name = ?');
+    values.push(name);
+  }
+  if (phone !== undefined) {
+    updates.push('phone = ?');
+    values.push(phone);
+  }
+  if (company !== undefined) {
+    updates.push('company = ?');
+    values.push(company);
+  }
+  if (role !== undefined) {
+    updates.push('role = ?');
+    values.push(role);
+  }
+  if (status !== undefined) {
+    updates.push('status = ?');
+    values.push(status);
+  }
+  if (tariffId !== undefined) {
+    updates.push('tariff_id = ?');
+    values.push(tariffId);
+  }
+  if (isSubscriptionActive !== undefined) {
+    updates.push('is_subscription_active = ?');
+    values.push(isSubscriptionActive ? 1 : 0);
+  }
+  if (subscriptionEndDate !== undefined) {
+    updates.push('subscription_expiry = ?');
+    values.push(subscriptionEndDate);
+  }
+  if (lastLogin !== undefined) {
+    updates.push('last_login = ?');
+    values.push(lastLogin);
+  }
+
+  if (updates.length === 0) {
+    return res.status(400).json({ error: 'Нет данных для обновления' });
+  }
+
+  const query = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
+  values.push(userId);
+
+  db.run(query, values, function(err) {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Ошибка при обновлении информации о пользователе' });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    
+    // Получаем обновленного пользователя
+    db.get('SELECT * FROM users WHERE id = ?', [userId], (err, user) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Ошибка при получении обновленного пользователя' });
+      }
+      
+      res.json({
+        id: user.id.toString(),
+        email: user.email,
+        name: user.name,
+        phone: user.phone,
+        company: user.company,
+        role: user.role,
+        status: user.status,
+        tariffId: user.tariff_id,
+        isSubscriptionActive: Boolean(user.is_subscription_active),
+        subscriptionEndDate: user.subscription_expiry,
+        registeredAt: user.registered_at,
+        lastLogin: user.last_login,
+        avatar: user.avatar,
+        isInTrial: Boolean(user.is_in_trial),
+        storeCount: user.store_count || 0
+      });
+    });
+  });
+});
+
+// Удаление пользователя
+app.delete('/api/users/:id', (req, res) => {
+  const userId = req.params.id;
+  db.run('DELETE FROM users WHERE id = ?', [userId], function(err) {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Ошибка при удалении пользователя' });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    res.json({ success: true });
   });
 });
 
@@ -192,620 +585,326 @@ app.post('/api/login', (req, res) => {
     return res.status(400).json({ error: 'Email и пароль обязательны' });
   }
   const query = 'SELECT * FROM users WHERE email = ? AND password = ?';
-  db.get(query, [email, password], (err, row) => {
+  db.get(query, [email, password], (err, user) => {
     if (err) {
       console.error(err);
       return res.status(500).json({ error: 'Ошибка при авторизации' });
     }
-    if (!row) {
+    if (!user) {
       return res.status(401).json({ error: 'Неверные учетные данные' });
     }
-    res.json({ id: row.id, email: row.email, role: row.role, status: row.status });
+    res.json({
+      id: user.id.toString(),
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      status: user.status,
+      tariffId: user.tariff_id,
+      isSubscriptionActive: Boolean(user.is_subscription_active),
+      subscriptionEndDate: user.subscription_expiry,
+      avatar: user.avatar
+    });
   });
 });
 
-// Получение информации о пользователе по ID
-app.get('/api/users/:id', (req, res) => {
-  const userId = req.params.id;
-  const query = 'SELECT id, email, role, status, subscription_type, subscription_expiry FROM users WHERE id = ?';
-  db.get(query, [userId], (err, row) => {
+// API для работы с тарифами
+// Получение всех тарифов
+app.get('/api/tariffs', (req, res) => {
+  db.all('SELECT * FROM tariffs ORDER BY price ASC', (err, rows) => {
     if (err) {
       console.error(err);
-      return res.status(500).json({ error: 'Ошибка при получении информации о пользователе' });
+      return res.status(500).json({ error: 'Ошибка при получении списка тарифов' });
     }
-    if (!row) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
-    }
-    res.json(row);
+    
+    const tariffs = rows.map(tariff => ({
+      id: tariff.id,
+      name: tariff.name,
+      price: tariff.price,
+      period: tariff.period,
+      description: tariff.description,
+      features: JSON.parse(tariff.features || '[]'),
+      isPopular: Boolean(tariff.is_popular),
+      isActive: Boolean(tariff.is_active),
+      storeLimit: tariff.store_limit
+    }));
+    
+    res.json(tariffs);
   });
 });
 
-// Обновление информации о пользователе
-app.put('/api/users/:id', (req, res) => {
-    const userId = req.params.id;
-    const { role, status, subscription_type, subscription_expiry } = req.body;
-  
-    // Проверяем, что хотя бы одно из полей для обновления присутствует в запросе
-    if (!role && !status && !subscription_type && !subscription_expiry) {
-      return res.status(400).json({ error: 'Необходимо указать хотя бы одно поле для обновления' });
+// Получение тарифа по ID
+app.get('/api/tariffs/:id', (req, res) => {
+  const tariffId = req.params.id;
+  db.get('SELECT * FROM tariffs WHERE id = ?', [tariffId], (err, tariff) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Ошибка при получении информации о тарифе' });
     }
-  
-    let query = 'UPDATE users SET ';
-    const updates = [];
-    const values = [];
-  
-    if (role) {
-      updates.push('role = ?');
-      values.push(role);
+    if (!tariff) {
+      return res.status(404).json({ error: 'Тариф не найден' });
     }
-    if (status) {
-      updates.push('status = ?');
-      values.push(status);
-    }
-    if (subscription_type) {
-      updates.push('subscription_type = ?');
-      values.push(subscription_type);
-    }
-    if (subscription_expiry) {
-      updates.push('subscription_expiry = ?');
-      values.push(subscription_expiry);
-    }
+    
+    res.json({
+      id: tariff.id,
+      name: tariff.name,
+      price: tariff.price,
+      period: tariff.period,
+      description: tariff.description,
+      features: JSON.parse(tariff.features || '[]'),
+      isPopular: Boolean(tariff.is_popular),
+      isActive: Boolean(tariff.is_active),
+      storeLimit: tariff.store_limit
+    });
+  });
+});
+
+// Обновление тарифа
+app.put('/api/tariffs/:id', (req, res) => {
+  const tariffId = req.params.id;
+  const { name, price, period, description, features, isPopular, isActive, storeLimit } = req.body;
   
-    query += updates.join(', ');
-    query += ' WHERE id = ?';
-    values.push(userId);
+  // Формируем SQL запрос на обновление только переданных полей
+  let updates = [];
+  let values = [];
   
-    db.run(query, values, function(err) {
+  if (name !== undefined) {
+    updates.push('name = ?');
+    values.push(name);
+  }
+  if (price !== undefined) {
+    updates.push('price = ?');
+    values.push(price);
+  }
+  if (period !== undefined) {
+    updates.push('period = ?');
+    values.push(period);
+  }
+  if (description !== undefined) {
+    updates.push('description = ?');
+    values.push(description);
+  }
+  if (features !== undefined) {
+    updates.push('features = ?');
+    values.push(JSON.stringify(features));
+  }
+  if (isPopular !== undefined) {
+    updates.push('is_popular = ?');
+    values.push(isPopular ? 1 : 0);
+  }
+  if (isActive !== undefined) {
+    updates.push('is_active = ?');
+    values.push(isActive ? 1 : 0);
+  }
+  if (storeLimit !== undefined) {
+    updates.push('store_limit = ?');
+    values.push(storeLimit);
+  }
+  
+  if (updates.length === 0) {
+    return res.status(400).json({ error: 'Нет данных для обновления' });
+  }
+  
+  const query = `UPDATE tariffs SET ${updates.join(', ')} WHERE id = ?`;
+  values.push(tariffId);
+  
+  db.run(query, values, function(err) {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Ошибка при обновлении тарифа' });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Тариф не найден' });
+    }
+    
+    // Получаем обновленный тариф
+    db.get('SELECT * FROM tariffs WHERE id = ?', [tariffId], (err, tariff) => {
       if (err) {
         console.error(err);
-        return res.status(500).json({ error: 'Ошибка при обновлении информации о пользователе' });
+        return res.status(500).json({ error: 'Ошибка при получении обновленного тарифа' });
       }
-      if (this.changes === 0) {
+      
+      res.json({
+        id: tariff.id,
+        name: tariff.name,
+        price: tariff.price,
+        period: tariff.period,
+        description: tariff.description,
+        features: JSON.parse(tariff.features || '[]'),
+        isPopular: Boolean(tariff.is_popular),
+        isActive: Boolean(tariff.is_active),
+        storeLimit: tariff.store_limit
+      });
+    });
+  });
+});
+
+// Получение данных о подписке пользователя
+app.get('/api/user-subscription/:userId', (req, res) => {
+  const userId = req.params.userId;
+  
+  // Получаем данные пользователя и его тариф
+  db.get(
+    `SELECT u.*, t.name as tariff_name, t.store_limit 
+     FROM users u 
+     LEFT JOIN tariffs t ON u.tariff_id = t.id 
+     WHERE u.id = ?`, 
+    [userId], 
+    (err, row) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Ошибка при получении данных о подписке' });
+      }
+      if (!row) {
         return res.status(404).json({ error: 'Пользователь не найден' });
       }
-      res.json({ message: 'Информация о пользователе успешно обновлена' });
-    });
-  });
-
-// Настройка SMTP
-app.post('/api/email-settings', (req, res) => {
-  const { smtp_host, smtp_port, smtp_user, smtp_password, pop3_host, pop3_port, pop3_user, pop3_password } = req.body;
-  const query = `INSERT INTO email_settings (smtp_host, smtp_port, smtp_user, smtp_password, pop3_host, pop3_port, pop3_user, pop3_password)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-  db.run(query, [smtp_host, smtp_port, smtp_user, smtp_password, pop3_host, pop3_port, pop3_user, pop3_password], function(err) {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Ошибка при настройке SMTP' });
-    }
-    res.json({ id: this.lastID });
-  });
-});
-
-// Получение настроек SMTP
-app.get('/api/email-settings', (req, res) => {
-  db.get('SELECT * FROM email_settings ORDER BY id DESC LIMIT 1', (err, row) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Ошибка при получении настроек SMTP' });
-    }
-    if (!row) {
-      return res.status(404).json({ error: 'Настройки SMTP не найдены' });
-    }
-    res.json(row);
-  });
-});
-
-// Запрос на сброс пароля
-app.post('/api/password-reset-request', (req, res) => {
-  const { email } = req.body;
-  const query = 'SELECT * FROM users WHERE email = ?';
-  db.get(query, [email], (err, row) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Ошибка при запросе на сброс пароля' });
-    }
-    if (!row) {
-      return res.status(404).json({ error: 'Пользователь с таким email не найден' });
-    }
-
-    // Генерация токена и сохранение в базе данных
-    const token = require('crypto').randomBytes(20).toString('hex');
-    const expiry = new Date(Date.now() + 3600000); // Токен действителен 1 час
-    const insertQuery = 'INSERT INTO password_reset_tokens (user_id, token, expiry) VALUES (?, ?, ?)';
-    db.run(insertQuery, [row.id, token, expiry.toISOString()], function(insertErr) {
-      if (insertErr) {
-        console.error(insertErr);
-        return res.status(500).json({ error: 'Ошибка при сохранении токена сброса пароля' });
+      
+      // Расчитываем оставшиеся дни подписки
+      let daysLeft = 0;
+      if (row.subscription_expiry) {
+        const endDate = new Date(row.subscription_expiry);
+        const currentDate = new Date();
+        
+        const timeDiff = endDate.getTime() - currentDate.getTime();
+        daysLeft = Math.max(0, Math.ceil(timeDiff / (1000 * 3600 * 24)));
       }
-
-      // Отправка email с токеном
-      db.get('SELECT * FROM email_settings ORDER BY id DESC LIMIT 1', (emailSettingsErr, emailSettings) => {
-        if (emailSettingsErr) {
-          console.error(emailSettingsErr);
-          return res.status(500).json({ error: 'Ошибка при получении настроек SMTP' });
-        }
-        if (!emailSettings) {
-          return res.status(400).json({ error: 'Настройки SMTP не найдены' });
-        }
-
-        const transporter = nodemailer.createTransport({
-          host: emailSettings.smtp_host,
-          port: emailSettings.smtp_port,
-          secure: true,
-          auth: {
-            user: emailSettings.smtp_user,
-            pass: emailSettings.smtp_password
-          }
-        });
-
-        const mailOptions = {
-          from: emailSettings.smtp_user,
-          to: email,
-          subject: 'Сброс пароля',
-          text: `Для сброса пароля перейдите по ссылке: http://localhost:3000/reset-password/${token}`
-        };
-
-        transporter.sendMail(mailOptions, (sendErr, info) => {
-          if (sendErr) {
-            console.error(sendErr);
-            return res.status(500).json({ error: 'Ошибка при отправке email' });
-          }
-          console.log('Email sent: ' + info.response);
-          res.json({ message: 'Инструкции по сбросу пароля отправлены на ваш email' });
-        });
-      });
-    });
-  });
-});
-
-// Сброс пароля
-app.post('/api/reset-password', (req, res) => {
-  const { token, newPassword } = req.body;
-  const query = 'SELECT * FROM password_reset_tokens WHERE token = ? AND expiry > ?';
-  db.get(query, [token, new Date().toISOString()], (err, row) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Ошибка при сбросе пароля' });
-    }
-    if (!row) {
-      return res.status(400).json({ error: 'Неверный или устаревший токен' });
-    }
-
-    // Обновление пароля пользователя
-    const updateQuery = 'UPDATE users SET password = ? WHERE id = ?';
-    db.run(updateQuery, [newPassword, row.user_id], function(updateErr) {
-      if (updateErr) {
-        console.error(updateErr);
-        return res.status(500).json({ error: 'Ошибка при обновлении пароля' });
-      }
-
-      // Удаление токена из базы данных
-      const deleteQuery = 'DELETE FROM password_reset_tokens WHERE token = ?';
-      db.run(deleteQuery, [token], function(deleteErr) {
-        if (deleteErr) {
-          console.error(deleteErr);
-          return res.status(500).json({ error: 'Ошибка при удалении токена сброса пароля' });
-        }
-
-        res.json({ message: 'Пароль успешно сброшен' });
-      });
-    });
-  });
-});
-
-// История платежей
-app.post('/api/payment-history', (req, res) => {
-  const { user_id, payment_date, amount, subscription_type, payment_method } = req.body;
-  const query = `INSERT INTO payment_history (user_id, payment_date, amount, subscription_type, payment_method)
-                 VALUES (?, ?, ?, ?, ?)`;
-  db.run(query, [user_id, payment_date, amount, subscription_type, payment_method], function(err) {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Ошибка при добавлении записи в историю платежей' });
-    }
-    res.json({ id: this.lastID });
-  });
-});
-
-// Получение истории платежей пользователя
-app.get('/api/payment-history/:user_id', (req, res) => {
-  const userId = req.params.user_id;
-  const query = 'SELECT * FROM payment_history WHERE user_id = ?';
-  db.all(query, [userId], (err, rows) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Ошибка при получении истории платежей' });
-    }
-    res.json(rows);
-  });
-});
-
-// API для работы с данными от Wildberries
-// Сохранение статистики магазина
-app.post('/api/store-stats', (req, res) => {
-  const { storeId, dateFrom, dateTo, data } = req.body;
-  
-  if (!storeId || !data) {
-    return res.status(400).json({ error: 'Необходимо указать storeId и data' });
-  }
-
-  const timestamp = Date.now();
-  const query = `INSERT INTO store_stats (store_id, date_from, date_to, data, timestamp) 
-                 VALUES (?, ?, ?, ?, ?)`;
-  
-  db.run(query, [storeId, dateFrom, dateTo, JSON.stringify(data), timestamp], function(err) {
-    if (err) {
-      console.error('Error saving store stats:', err);
-      return res.status(500).json({ error: 'Ошибка при сохранении статистики магазина' });
-    }
-
-    res.json({ success: true, id: this.lastID });
-  });
-});
-
-// Получение статистики магазина
-app.get('/api/store-stats/:storeId', (req, res) => {
-  const { storeId } = req.params;
-  
-  db.get('SELECT * FROM store_stats WHERE store_id = ? ORDER BY timestamp DESC LIMIT 1', [storeId], (err, row) => {
-    if (err) {
-      console.error('Error getting store stats:', err);
-      return res.status(500).json({ error: 'Ошибка при получении статистики магазина' });
-    }
-
-    if (!row) {
-      return res.status(404).json({ error: 'Статистика не найдена' });
-    }
-
-    try {
-      row.data = JSON.parse(row.data);
-      res.json(row);
-    } catch (e) {
-      console.error('Error parsing JSON data:', e);
-      res.status(500).json({ error: 'Ошибка при обработке данных' });
-    }
-  });
-});
-
-// Сохранение заказов
-app.post('/api/orders', (req, res) => {
-  const { storeId, dateFrom, dateTo, orders, warehouseDistribution, regionDistribution } = req.body;
-  
-  if (!storeId || !orders) {
-    return res.status(400).json({ error: 'Необходимо указать storeId и orders' });
-  }
-
-  const timestamp = Date.now();
-  const query = `INSERT INTO orders (store_id, date_from, date_to, orders, warehouse_distribution, region_distribution, timestamp) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`;
-  
-  db.run(query, [
-    storeId, 
-    dateFrom, 
-    dateTo, 
-    JSON.stringify(orders), 
-    JSON.stringify(warehouseDistribution || []), 
-    JSON.stringify(regionDistribution || []), 
-    timestamp
-  ], function(err) {
-    if (err) {
-      console.error('Error saving orders:', err);
-      return res.status(500).json({ error: 'Ошибка при сохранении заказов' });
-    }
-
-    res.json({ success: true, id: this.lastID });
-  });
-});
-
-// Получение заказов
-app.get('/api/orders/:storeId', (req, res) => {
-  const { storeId } = req.params;
-  
-  db.get('SELECT * FROM orders WHERE store_id = ? ORDER BY timestamp DESC LIMIT 1', [storeId], (err, row) => {
-    if (err) {
-      console.error('Error getting orders:', err);
-      return res.status(500).json({ error: 'Ошибка при получении заказов' });
-    }
-
-    if (!row) {
-      return res.status(404).json({ error: 'Заказы не найдены' });
-    }
-
-    try {
-      row.orders = JSON.parse(row.orders);
-      row.warehouse_distribution = JSON.parse(row.warehouse_distribution);
-      row.region_distribution = JSON.parse(row.region_distribution);
-      res.json(row);
-    } catch (e) {
-      console.error('Error parsing JSON data:', e);
-      res.status(500).json({ error: 'Ошибка при обработке данных' });
-    }
-  });
-});
-
-// Сохранение продаж
-app.post('/api/sales', (req, res) => {
-  const { storeId, dateFrom, dateTo, sales } = req.body;
-  
-  if (!storeId || !sales) {
-    return res.status(400).json({ error: 'Необходимо указать storeId и sales' });
-  }
-
-  const timestamp = Date.now();
-  const query = `INSERT INTO sales (store_id, date_from, date_to, sales, timestamp) 
-                 VALUES (?, ?, ?, ?, ?)`;
-  
-  db.run(query, [storeId, dateFrom, dateTo, JSON.stringify(sales), timestamp], function(err) {
-    if (err) {
-      console.error('Error saving sales:', err);
-      return res.status(500).json({ error: 'Ошибка при сохранении продаж' });
-    }
-
-    res.json({ success: true, id: this.lastID });
-  });
-});
-
-// Получение продаж
-app.get('/api/sales/:storeId', (req, res) => {
-  const { storeId } = req.params;
-  
-  db.get('SELECT * FROM sales WHERE store_id = ? ORDER BY timestamp DESC LIMIT 1', [storeId], (err, row) => {
-    if (err) {
-      console.error('Error getting sales:', err);
-      return res.status(500).json({ error: 'Ошибка при получении продаж' });
-    }
-
-    if (!row) {
-      return res.status(404).json({ error: 'Продажи не найдены' });
-    }
-
-    try {
-      row.sales = JSON.parse(row.sales);
-      res.json(row);
-    } catch (e) {
-      console.error('Error parsing JSON data:', e);
-      res.status(500).json({ error: 'Ошибка при обработке данных' });
-    }
-  });
-});
-
-// Сохранение товаров
-app.post('/api/products', (req, res) => {
-  const { storeId, products } = req.body;
-  
-  if (!storeId || !products) {
-    return res.status(400).json({ error: 'Необходимо указать storeId и products' });
-  }
-
-  const timestamp = Date.now();
-  const query = `INSERT INTO products (store_id, products, timestamp) 
-                 VALUES (?, ?, ?)`;
-  
-  db.run(query, [storeId, JSON.stringify(products), timestamp], function(err) {
-    if (err) {
-      console.error('Error saving products:', err);
-      return res.status(500).json({ error: 'Ошибка при сохранении товаров' });
-    }
-
-    res.json({ success: true, id: this.lastID });
-  });
-});
-
-// Получение товаров
-app.get('/api/products/:storeId', (req, res) => {
-  const { storeId } = req.params;
-  
-  db.get('SELECT * FROM products WHERE store_id = ? ORDER BY timestamp DESC LIMIT 1', [storeId], (err, row) => {
-    if (err) {
-      console.error('Error getting products:', err);
-      return res.status(500).json({ error: 'Ошибка при получении товаров' });
-    }
-
-    if (!row) {
-      return res.status(404).json({ error: 'Товары не найдены' });
-    }
-
-    try {
-      row.products = JSON.parse(row.products);
-      res.json(row);
-    } catch (e) {
-      console.error('Error parsing JSON data:', e);
-      res.status(500).json({ error: 'Ошибка при обработке данных' });
-    }
-  });
-});
-
-// Сохранение аналитики
-app.post('/api/analytics', (req, res) => {
-  const { 
-    storeId, 
-    dateFrom, 
-    dateTo, 
-    data, 
-    penalties, 
-    returns, 
-    deductions,
-    deductionsTimeline, 
-    productAdvertisingData, 
-    advertisingBreakdown 
-  } = req.body;
-  
-  if (!storeId || !data) {
-    return res.status(400).json({ error: 'Необходимо указать storeId и data' });
-  }
-
-  const timestamp = Date.now();
-  const query = `INSERT INTO analytics (
-    store_id, date_from, date_to, data, penalties, returns, deductions,
-    deductions_timeline, product_advertising_data, advertising_breakdown, timestamp
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-  
-  db.run(query, [
-    storeId, 
-    dateFrom, 
-    dateTo, 
-    JSON.stringify(data), 
-    JSON.stringify(penalties || []), 
-    JSON.stringify(returns || []),
-    JSON.stringify(deductions || []),
-    JSON.stringify(deductionsTimeline || []), 
-    JSON.stringify(productAdvertisingData || []), 
-    JSON.stringify(advertisingBreakdown || {}),
-    timestamp
-  ], function(err) {
-    if (err) {
-      console.error('Error saving analytics:', err);
-      return res.status(500).json({ error: 'Ошибка при сохранении аналитики' });
-    }
-
-    res.json({ success: true, id: this.lastID });
-  });
-});
-
-// Получение аналитики
-app.get('/api/analytics/:storeId', (req, res) => {
-  const { storeId } = req.params;
-  
-  db.get('SELECT * FROM analytics WHERE store_id = ? ORDER BY timestamp DESC LIMIT 1', [storeId], (err, row) => {
-    if (err) {
-      console.error('Error getting analytics:', err);
-      return res.status(500).json({ error: 'Ошибка при получении аналитики' });
-    }
-
-    if (!row) {
-      return res.status(404).json({ error: 'Аналитика не найдена' });
-    }
-
-    try {
-      row.data = JSON.parse(row.data);
-      row.penalties = JSON.parse(row.penalties);
-      row.returns = JSON.parse(row.returns);
-      row.deductions = JSON.parse(row.deductions);
-      row.deductions_timeline = JSON.parse(row.deductions_timeline);
-      row.product_advertising_data = JSON.parse(row.product_advertising_data);
-      row.advertising_breakdown = JSON.parse(row.advertising_breakdown);
-      res.json(row);
-    } catch (e) {
-      console.error('Error parsing JSON data:', e);
-      res.status(500).json({ error: 'Ошибка при обработке данных' });
-    }
-  });
-});
-
-// API для работы с данными о себестоимости
-app.post('/api/cost-price', (req, res) => {
-  const { storeId, totalCostPrice, totalSoldItems, avgCostPrice, lastUpdateDate } = req.body;
-  
-  if (!storeId) {
-    return res.status(400).json({ error: 'Необходимо указать storeId' });
-  }
-
-  const timestamp = Date.now();
-  const query = `INSERT INTO cost_price (store_id, total_cost_price, total_sold_items, avg_cost_price, last_update_date, timestamp) 
-                 VALUES (?, ?, ?, ?, ?, ?)`;
-  
-  db.run(query, [storeId, totalCostPrice, totalSoldItems, avgCostPrice, lastUpdateDate, timestamp], function(err) {
-    if (err) {
-      console.error('Error saving cost price data:', err);
-      return res.status(500).json({ error: 'Ошибка при сохранении данных о себестоимости' });
-    }
-
-    res.json({ success: true, id: this.lastID });
-  });
-});
-
-// Получение данных о себестоимости
-app.get('/api/cost-price/:storeId', (req, res) => {
-  const { storeId } = req.params;
-  
-  db.get('SELECT * FROM cost_price WHERE store_id = ? ORDER BY timestamp DESC LIMIT 1', [storeId], (err, row) => {
-    if (err) {
-      console.error('Error getting cost price data:', err);
-      return res.status(500).json({ error: 'Ошибка при получении данных о себестоимости' });
-    }
-
-    if (!row) {
-      return res.status(404).json({ error: 'Данные о себестоимости не найдены' });
-    }
-
-    res.json({
-      totalCostPrice: row.total_cost_price,
-      totalSoldItems: row.total_sold_items,
-      avgCostPrice: row.avg_cost_price,
-      lastUpdateDate: row.last_update_date
-    });
-  });
-});
-
-// API для работы с данными о рекламе товаров
-app.post('/api/product-advertising', (req, res) => {
-  const { storeId, userId, productAdvertisingData } = req.body;
-  
-  if (!storeId || !productAdvertisingData) {
-    return res.status(400).json({ error: 'Необходимо указать storeId и productAdvertisingData' });
-  }
-
-  const timestamp = Date.now();
-  const query = `INSERT INTO product_advertising (store_id, user_id, product_advertising_data, timestamp) 
-                 VALUES (?, ?, ?, ?)`;
-  
-  db.run(query, [storeId, userId, JSON.stringify(productAdvertisingData), timestamp], function(err) {
-    if (err) {
-      console.error('Error saving product advertising data:', err);
-      return res.status(500).json({ error: 'Ошибка при сохранении данных о рекламе товаров' });
-    }
-
-    res.json({ success: true, id: this.lastID });
-  });
-});
-
-// Получение данных о рекламе товаров
-app.get('/api/product-advertising/:storeId', (req, res) => {
-  const { storeId } = req.params;
-  const { userId } = req.query;
-  
-  let query = 'SELECT * FROM product_advertising WHERE store_id = ?';
-  let params = [storeId];
-
-  // Если передан userId, добавляем его в условие запроса
-  if (userId) {
-    query += ' AND user_id = ?';
-    params.push(userId);
-  }
-  
-  query += ' ORDER BY timestamp DESC LIMIT 1';
-  
-  db.get(query, params, (err, row) => {
-    if (err) {
-      console.error('Error getting product advertising data:', err);
-      return res.status(500).json({ error: 'Ошибка при получении данных о рекламе товаров' });
-    }
-
-    if (!row) {
-      return res.status(404).json({ error: 'Данные о рекламе товаров не найдены' });
-    }
-
-    try {
-      row.product_advertising_data = JSON.parse(row.product_advertising_data);
+      
       res.json({
-        storeId: row.store_id,
-        productAdvertisingData: row.product_advertising_data,
-        timestamp: row.timestamp
+        isActive: Boolean(row.is_subscription_active),
+        tariffId: row.tariff_id,
+        tariffName: row.tariff_name,
+        startDate: row.registered_at,
+        endDate: row.subscription_expiry,
+        daysLeft,
+        storeLimit: row.store_limit
       });
-    } catch (e) {
-      console.error('Error parsing JSON data:', e);
-      res.status(500).json({ error: 'Ошибка при обработке данных' });
     }
+  );
+});
+
+// Активация подписки
+app.post('/api/activate-subscription', (req, res) => {
+  const { userId, tariffId, months } = req.body;
+  
+  if (!userId || !tariffId || !months) {
+    return res.status(400).json({ error: 'Необходимо указать userId, tariffId и months' });
+  }
+  
+  // Проверяем, существует ли пользователь
+  db.get('SELECT * FROM users WHERE id = ?', [userId], (err, user) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Ошибка при активации подписки' });
+    }
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    
+    // Расчитываем новую дату окончания подписки
+    const currentDate = new Date();
+    let endDate = user.subscription_expiry ? new Date(user.subscription_expiry) : currentDate;
+    
+    // Если текущая подписка истекла, начинаем отсчет от текущей даты
+    if (endDate < currentDate) {
+      endDate = currentDate;
+    }
+    
+    // Добавляем указанное количество месяцев
+    endDate.setMonth(endDate.getMonth() + parseInt(months));
+    
+    // Обновляем данные пользователя
+    db.run(
+      `UPDATE users SET 
+       tariff_id = ?, 
+       is_subscription_active = 1, 
+       subscription_expiry = ?
+       WHERE id = ?`,
+      [tariffId, endDate.toISOString(), userId],
+      function(err) {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: 'Ошибка при активации подписки' });
+        }
+        
+        // Добавляем запись в историю платежей
+        const tariffPromise = new Promise((resolve, reject) => {
+          db.get('SELECT * FROM tariffs WHERE id = ?', [tariffId], (err, tariff) => {
+            if (err) {
+              reject(err);
+              return;
+            }
+            resolve(tariff);
+          });
+        });
+        
+        tariffPromise
+          .then((tariff) => {
+            if (!tariff) {
+              throw new Error('Тариф не найден');
+            }
+            
+            // Расчитываем сумму платежа
+            const amount = tariff.price * months;
+            
+            // Добавляем запись в историю платежей
+            db.run(
+              `INSERT INTO payment_history (
+                user_id, payment_date, amount, subscription_type, payment_method
+              ) VALUES (?, ?, ?, ?, ?)`,
+              [userId, new Date().toISOString(), amount, tariff.name, 'Администратор'],
+              function(err) {
+                if (err) {
+                  console.error(err);
+                  // Продолжаем выполнение, даже если не удалось добавить запись в историю платежей
+                }
+                
+                // Получаем обновленного пользователя
+                db.get(
+                  `SELECT u.*, t.name as tariff_name, t.store_limit 
+                   FROM users u 
+                   LEFT JOIN tariffs t ON u.tariff_id = t.id 
+                   WHERE u.id = ?`, 
+                  [userId], 
+                  (err, updatedUser) => {
+                    if (err) {
+                      console.error(err);
+                      return res.status(500).json({ error: 'Ошибка при получении обновленного пользователя' });
+                    }
+                    
+                    res.json({
+                      id: updatedUser.id.toString(),
+                      email: updatedUser.email,
+                      name: updatedUser.name,
+                      phone: updatedUser.phone,
+                      company: updatedUser.company,
+                      role: updatedUser.role,
+                      status: updatedUser.status,
+                      tariffId: updatedUser.tariff_id,
+                      isSubscriptionActive: Boolean(updatedUser.is_subscription_active),
+                      subscriptionEndDate: updatedUser.subscription_expiry,
+                      registeredAt: updatedUser.registered_at,
+                      lastLogin: updatedUser.last_login,
+                      avatar: updatedUser.avatar,
+                      isInTrial: Boolean(updatedUser.is_in_trial),
+                      storeCount: updatedUser.store_count || 0,
+                      storeLimit: updatedUser.store_limit
+                    });
+                  }
+                );
+              }
+            );
+          })
+          .catch((error) => {
+            console.error(error);
+            return res.status(500).json({ error: 'Ошибка при активации подписки' });
+          });
+      }
+    );
   });
 });
 
-// API для управления магазинами пользователя
-app.post('/api/user-stores', (req, res) => {
-  const { userId, storeId, marketplace, storeName, apiKey, isSelected, lastFetchDate } = req.body;
-  
-  if (!userId || !storeId || !marketplace || !storeName || !apiKey) {
-    return res.status(400).json({ error: 'Необходимо указать userId, storeId, marketplace, storeName и apiKey' });
-  }
+// ... keep existing code
 
-  const query = `INSERT OR REPLACE INTO user_stores 
-                (user_id, store_id, marketplace, store_name, api_key, is_selected, last_fetch_date)
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
+
