@@ -143,6 +143,298 @@ export const getSalesData = async (storeId: string) => {
   return null;
 };
 
+// Constants for warehouse data caching
+const WAREHOUSES_CACHE_KEY = 'wb_warehouses_cache';
+const COEFFICIENTS_CACHE_KEY = 'wb_coefficients_cache';
+const REMAINS_CACHE_KEY = 'wb_remains_cache';
+const PAID_STORAGE_CACHE_KEY = 'wb_paid_storage_cache';
+const AVG_SALES_CACHE_KEY = 'wb_avg_sales_cache';
+const STORAGE_COSTS_CACHE_KEY = 'wb_storage_costs_cache';
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+// Helper function to check if cache is fresh
+const isCacheFresh = (timestamp: number): boolean => {
+  if (!timestamp) return false;
+  const now = Date.now();
+  return (now - timestamp) < CACHE_TTL;
+};
+
+/**
+ * Saves warehouse data to cache
+ */
+export const saveWarehousesToCache = (storeId: string, warehouses: any): void => {
+  try {
+    const cacheKey = `${WAREHOUSES_CACHE_KEY}_${storeId}`;
+    const cacheData = {
+      data: warehouses,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+    console.log(`[Cache] Warehouses data saved to cache for store ${storeId}`);
+  } catch (error) {
+    console.error('[Cache] Error saving warehouses to cache:', error);
+  }
+};
+
+/**
+ * Loads warehouses from cache
+ */
+export const loadWarehousesFromCache = (storeId: string): { data: any; isFresh: boolean } => {
+  try {
+    const cacheKey = `${WAREHOUSES_CACHE_KEY}_${storeId}`;
+    const cached = localStorage.getItem(cacheKey);
+    
+    if (!cached) {
+      return { data: null, isFresh: false };
+    }
+    
+    const { data, timestamp } = JSON.parse(cached);
+    const isFresh = isCacheFresh(timestamp);
+    
+    console.log(`[Cache] Warehouses loaded from cache for store ${storeId}, fresh: ${isFresh}`);
+    return { data, isFresh };
+  } catch (error) {
+    console.error('[Cache] Error loading warehouses from cache:', error);
+    return { data: null, isFresh: false };
+  }
+};
+
+/**
+ * Saves coefficients data to cache
+ */
+export const saveCoefficientsToCache = (storeId: string, coefficients: any, warehouseId?: number): void => {
+  try {
+    const cacheKey = warehouseId 
+      ? `${COEFFICIENTS_CACHE_KEY}_${storeId}_${warehouseId}` 
+      : `${COEFFICIENTS_CACHE_KEY}_${storeId}`;
+    
+    const cacheData = {
+      data: coefficients,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+    console.log(`[Cache] Coefficients saved to cache for store ${storeId}${warehouseId ? ` and warehouse ${warehouseId}` : ''}`);
+  } catch (error) {
+    console.error('[Cache] Error saving coefficients to cache:', error);
+  }
+};
+
+/**
+ * Loads coefficients from cache
+ */
+export const loadCoefficientsFromCache = (storeId: string, warehouseId?: number): { data: any; isFresh: boolean } => {
+  try {
+    const cacheKey = warehouseId 
+      ? `${COEFFICIENTS_CACHE_KEY}_${storeId}_${warehouseId}` 
+      : `${COEFFICIENTS_CACHE_KEY}_${storeId}`;
+    
+    const cached = localStorage.getItem(cacheKey);
+    
+    if (!cached) {
+      return { data: null, isFresh: false };
+    }
+    
+    const { data, timestamp } = JSON.parse(cached);
+    const isFresh = isCacheFresh(timestamp);
+    
+    console.log(`[Cache] Coefficients loaded from cache for store ${storeId}${warehouseId ? ` and warehouse ${warehouseId}` : ''}, fresh: ${isFresh}`);
+    return { data, isFresh };
+  } catch (error) {
+    console.error('[Cache] Error loading coefficients from cache:', error);
+    return { data: null, isFresh: false };
+  }
+};
+
+/**
+ * Saves warehouse remains data to cache
+ */
+export const saveRemainsToCache = (storeId: string, remains: any): void => {
+  try {
+    const cacheKey = `${REMAINS_CACHE_KEY}_${storeId}`;
+    const cacheData = {
+      data: remains,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+    console.log(`[Cache] Warehouse remains saved to cache for store ${storeId}`);
+  } catch (error) {
+    console.error('[Cache] Error saving warehouse remains to cache:', error);
+  }
+};
+
+/**
+ * Loads warehouse remains from cache
+ */
+export const loadRemainsFromCache = (storeId: string): { data: any; isFresh: boolean } => {
+  try {
+    const cacheKey = `${REMAINS_CACHE_KEY}_${storeId}`;
+    const cached = localStorage.getItem(cacheKey);
+    
+    if (!cached) {
+      return { data: null, isFresh: false };
+    }
+    
+    const { data, timestamp } = JSON.parse(cached);
+    const isFresh = isCacheFresh(timestamp);
+    
+    console.log(`[Cache] Warehouse remains loaded from cache for store ${storeId}, fresh: ${isFresh}`);
+    return { data, isFresh };
+  } catch (error) {
+    console.error('[Cache] Error loading warehouse remains from cache:', error);
+    return { data: null, isFresh: false };
+  }
+};
+
+/**
+ * Saves paid storage data to cache
+ */
+export const savePaidStorageToCache = (storeId: string, storageData: any): void => {
+  try {
+    const cacheKey = `${PAID_STORAGE_CACHE_KEY}_${storeId}`;
+    const cacheData = {
+      data: storageData,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+    console.log(`[Cache] Paid storage data saved to cache for store ${storeId}`);
+  } catch (error) {
+    console.error('[Cache] Error saving paid storage data to cache:', error);
+  }
+};
+
+/**
+ * Loads paid storage data from cache
+ */
+export const loadPaidStorageFromCache = (storeId: string): { data: any; isFresh: boolean } => {
+  try {
+    const cacheKey = `${PAID_STORAGE_CACHE_KEY}_${storeId}`;
+    const cached = localStorage.getItem(cacheKey);
+    
+    if (!cached) {
+      return { data: null, isFresh: false };
+    }
+    
+    const { data, timestamp } = JSON.parse(cached);
+    const isFresh = isCacheFresh(timestamp);
+    
+    console.log(`[Cache] Paid storage data loaded from cache for store ${storeId}, fresh: ${isFresh}`);
+    return { data, isFresh };
+  } catch (error) {
+    console.error('[Cache] Error loading paid storage data from cache:', error);
+    return { data: null, isFresh: false };
+  }
+};
+
+/**
+ * Saves average daily sales data to cache
+ */
+export const saveAvgSalesToCache = (storeId: string, salesData: any): void => {
+  try {
+    const cacheKey = `${AVG_SALES_CACHE_KEY}_${storeId}`;
+    const cacheData = {
+      data: salesData,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+    console.log(`[Cache] Average daily sales data saved to cache for store ${storeId}`);
+  } catch (error) {
+    console.error('[Cache] Error saving average daily sales data to cache:', error);
+  }
+};
+
+/**
+ * Loads average daily sales data from cache
+ */
+export const loadAvgSalesFromCache = (storeId: string): { data: any; isFresh: boolean } => {
+  try {
+    const cacheKey = `${AVG_SALES_CACHE_KEY}_${storeId}`;
+    const cached = localStorage.getItem(cacheKey);
+    
+    if (!cached) {
+      return { data: null, isFresh: false };
+    }
+    
+    const { data, timestamp } = JSON.parse(cached);
+    const isFresh = isCacheFresh(timestamp);
+    
+    console.log(`[Cache] Average daily sales data loaded from cache for store ${storeId}, fresh: ${isFresh}`);
+    return { data, isFresh };
+  } catch (error) {
+    console.error('[Cache] Error loading average daily sales data from cache:', error);
+    return { data: null, isFresh: false };
+  }
+};
+
+/**
+ * Saves storage costs data to cache
+ */
+export const saveStorageCostsToCache = (storeId: string, costsData: any): void => {
+  try {
+    const cacheKey = `${STORAGE_COSTS_CACHE_KEY}_${storeId}`;
+    const cacheData = {
+      data: costsData,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+    console.log(`[Cache] Storage costs data saved to cache for store ${storeId}`);
+  } catch (error) {
+    console.error('[Cache] Error saving storage costs data to cache:', error);
+  }
+};
+
+/**
+ * Loads storage costs data from cache
+ */
+export const loadStorageCostsFromCache = (storeId: string): { data: any; isFresh: boolean } => {
+  try {
+    const cacheKey = `${STORAGE_COSTS_CACHE_KEY}_${storeId}`;
+    const cached = localStorage.getItem(cacheKey);
+    
+    if (!cached) {
+      return { data: null, isFresh: false };
+    }
+    
+    const { data, timestamp } = JSON.parse(cached);
+    const isFresh = isCacheFresh(timestamp);
+    
+    console.log(`[Cache] Storage costs data loaded from cache for store ${storeId}, fresh: ${isFresh}`);
+    return { data, isFresh };
+  } catch (error) {
+    console.error('[Cache] Error loading storage costs data from cache:', error);
+    return { data: null, isFresh: false };
+  }
+};
+
+/**
+ * Invalidates all warehouse related caches for a specific store
+ */
+export const invalidateWarehouseCache = (storeId: string): void => {
+  try {
+    const cacheKeys = [
+      `${WAREHOUSES_CACHE_KEY}_${storeId}`,
+      `${COEFFICIENTS_CACHE_KEY}_${storeId}`,
+      `${REMAINS_CACHE_KEY}_${storeId}`,
+      `${PAID_STORAGE_CACHE_KEY}_${storeId}`,
+      `${AVG_SALES_CACHE_KEY}_${storeId}`,
+      `${STORAGE_COSTS_CACHE_KEY}_${storeId}`
+    ];
+    
+    cacheKeys.forEach(key => localStorage.removeItem(key));
+    
+    // Also clear any warehouse-specific coefficient caches
+    const allKeys = Object.keys(localStorage);
+    const warehouseSpecificKeys = allKeys.filter(key => 
+      key.startsWith(`${COEFFICIENTS_CACHE_KEY}_${storeId}_`)
+    );
+    
+    warehouseSpecificKeys.forEach(key => localStorage.removeItem(key));
+    
+    console.log(`[Cache] All warehouse related caches invalidated for store ${storeId}`);
+  } catch (error) {
+    console.error('[Cache] Error invalidating warehouse caches:', error);
+  }
+};
+
 export const fetchAndUpdateOrders = async (store: Store) => {
   if (store.marketplace === "Wildberries") {
     try {
@@ -583,6 +875,4 @@ export const validateApiKey = async (apiKey: string): Promise<{ isValid: boolean
       return { isValid: false, errorCode: status, errorMessage };
     }
     
-    return { isValid: false, errorMessage: "Невозможно соединиться с API Wildberries" };
-  }
-};
+    return { isValid: false

@@ -39,7 +39,21 @@ import {
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ensureStoreSelectionPersistence } from '@/utils/storeUtils';
+import { 
+  ensureStoreSelectionPersistence,
+  saveWarehousesToCache,
+  loadWarehousesFromCache,
+  saveCoefficientsToCache,
+  loadCoefficientsFromCache,
+  saveRemainsToCache,
+  loadRemainsFromCache,
+  savePaidStorageToCache,
+  loadPaidStorageFromCache,
+  saveAvgSalesToCache,
+  loadAvgSalesFromCache,
+  saveStorageCostsToCache,
+  loadStorageCostsFromCache
+} from '@/utils/storeUtils';
 import { Store as StoreType } from '@/types/store';
 import { fetchAverageDailySalesFromAPI } from '@/components/analytics/data/demoData';
 import LimitExceededMessage from '@/components/analytics/components/LimitExceededMessage';
@@ -60,6 +74,14 @@ const Warehouses: React.FC = () => {
     paidStorage: false,
     averageSales: false
   });
+  const [isCachedData, setIsCachedData] = useState({
+    warehouses: false,
+    coefficients: false,
+    remains: false,
+    paidStorage: false,
+    averageSales: false,
+    storageCosts: false
+  });
   const [selectedStore, setSelectedStore] = useState<StoreType | null>(null);
   const [preferredWarehouses, setPreferredWarehouses] = useState<number[]>([]);
   const [averageDailySales, setAverageDailySales] = useState<Record<number, number>>({});
@@ -76,16 +98,16 @@ const Warehouses: React.FC = () => {
     if (selected) {
       setSelectedStore(selected);
       if (activeTab === 'supplies') {
-        loadWarehouses(selected.apiKey);
-        loadCoefficients(selected.apiKey);
+        loadWarehousesWithCache(selected);
+        loadCoefficientsWithCache(selected);
         const preferred = getPreferredWarehouses(selected.id);
         setPreferredWarehouses(preferred);
       } else if (activeTab === 'inventory') {
-        loadWarehouseRemains(selected.apiKey);
-        loadAverageDailySales(selected.apiKey);
-        loadPaidStorageData(selected.apiKey);
+        loadWarehouseRemainsWithCache(selected);
+        loadAverageDailySalesWithCache(selected);
+        loadPaidStorageDataWithCache(selected);
       } else if (activeTab === 'storage') {
-        loadPaidStorageData(selected.apiKey);
+        loadPaidStorageDataWithCache(selected);
       }
     } else if (stores.length > 0) {
       setSelectedStore(stores[0]);
@@ -95,16 +117,16 @@ const Warehouses: React.FC = () => {
   useEffect(() => {
     if (selectedStore) {
       if (activeTab === 'supplies') {
-        loadWarehouses(selectedStore.apiKey);
-        loadCoefficients(selectedStore.apiKey);
+        loadWarehousesWithCache(selectedStore);
+        loadCoefficientsWithCache(selectedStore);
         const preferred = getPreferredWarehouses(selectedStore.id);
         setPreferredWarehouses(preferred);
       } else if (activeTab === 'inventory') {
-        loadWarehouseRemains(selectedStore.apiKey);
-        loadAverageDailySales(selectedStore.apiKey);
-        loadPaidStorageData(selectedStore.apiKey);
+        loadWarehouseRemainsWithCache(selectedStore);
+        loadAverageDailySalesWithCache(selectedStore);
+        loadPaidStorageDataWithCache(selectedStore);
       } else if (activeTab === 'storage') {
-        loadPaidStorageData(selectedStore.apiKey);
+        loadPaidStorageDataWithCache(selectedStore);
       }
     }
   }, [activeTab, selectedStore]);
@@ -127,12 +149,174 @@ const Warehouses: React.FC = () => {
     }
   }, [showHelpGuide]);
 
-  const loadAverageDailySales = async (apiKey: string) => {
-    if (!apiKey) {
+  const loadWarehousesWithCache = async (store: StoreType) => {
+    if (!store || !store.id) return;
+    
+    // Try to load from cache first
+    const { data: cachedWarehouses, isFresh } = loadWarehousesFromCache(store.id);
+    
+    if (cachedWarehouses && cachedWarehouses.length > 0) {
+      setWbWarehouses(cachedWarehouses);
+      setIsCachedData(prev => ({ ...prev, warehouses: true }));
+      
+      // If cache is fresh, don't fetch again
+      if (isFresh) {
+        console.log('[Warehouses] Using fresh cached warehouses data');
+        return;
+      }
+    }
+    
+    // If we got here, we need to fetch from API (either no cache or stale cache)
+    // If we have stale data, we'll show it while loading new data
+    try {
+      setLoading(prev => ({ ...prev, warehouses: true }));
+      const data = await fetchWarehouses(store.apiKey);
+      setWbWarehouses(data);
+      setIsCachedData(prev => ({ ...prev, warehouses: false }));
+      
+      // Save to cache
+      saveWarehousesToCache(store.id, data);
+    } catch (error) {
+      console.error('Ошибка при загрузке складов:', error);
+      toast.error('Не удалось загрузить список складов');
+      
+      // If we have cache data (even if stale), keep using it
+      if (!cachedWarehouses || cachedWarehouses.length === 0) {
+        toast.warning('Используются сохраненные данные (возможно, устаревшие)');
+      }
+    } finally {
+      setLoading(prev => ({ ...prev, warehouses: false }));
+    }
+  };
+
+  const loadCoefficientsWithCache = async (store: StoreType, warehouseId?: number) => {
+    if (!store || !store.id) return;
+    
+    // Try to load from cache first
+    const { data: cachedCoefficients, isFresh } = loadCoefficientsFromCache(store.id, warehouseId);
+    
+    if (cachedCoefficients && cachedCoefficients.length > 0) {
+      setCoefficients(cachedCoefficients);
+      setIsCachedData(prev => ({ ...prev, coefficients: true }));
+      
+      // If cache is fresh, don't fetch again
+      if (isFresh) {
+        console.log('[Warehouses] Using fresh cached coefficients data');
+        return;
+      }
+    }
+    
+    // If we got here, we need to fetch from API (either no cache or stale cache)
+    try {
+      setLoading(prev => ({ ...prev, coefficients: true }));
+      const data = await fetchAcceptanceCoefficients(
+        store.apiKey, 
+        warehouseId ? [warehouseId] : undefined
+      );
+      setCoefficients(data);
+      setIsCachedData(prev => ({ ...prev, coefficients: false }));
+      
+      // Save to cache
+      saveCoefficientsToCache(store.id, data, warehouseId);
+    } catch (error) {
+      console.error('Ошибка при загрузке коэффициентов:', error);
+      toast.error('Не удалось загрузить коэффициенты приемки');
+      
+      // If we have cache data (even if stale), keep using it
+      if (!cachedCoefficients || cachedCoefficients.length === 0) {
+        toast.warning('Используются сохраненные данные (возможно, устаревшие)');
+      }
+    } finally {
+      setLoading(prev => ({ ...prev, coefficients: false }));
+    }
+  };
+
+  const loadWarehouseRemainsWithCache = async (store: StoreType) => {
+    if (!store || !store.id || !store.apiKey) {
       toast.warning('Необходимо выбрать магазин для получения данных');
       return;
     }
     
+    // Try to load from cache first
+    const { data: cachedRemains, isFresh } = loadRemainsFromCache(store.id);
+    
+    if (cachedRemains && cachedRemains.length > 0) {
+      setWarehouseRemains(cachedRemains);
+      setIsCachedData(prev => ({ ...prev, remains: true }));
+      
+      // If cache is fresh, don't fetch again
+      if (isFresh) {
+        console.log('[Warehouses] Using fresh cached warehouse remains data');
+        
+        // Try to load storage costs from cache as well
+        const { data: cachedCosts } = loadStorageCostsFromCache(store.id);
+        if (cachedCosts) {
+          setDailyStorageCosts(cachedCosts);
+          setStorageCostsCalculated(true);
+          setIsCachedData(prev => ({ ...prev, storageCosts: true }));
+        }
+        
+        return;
+      }
+    }
+    
+    // If we got here, we need to fetch from API (either no cache or stale cache)
+    try {
+      setLoading(prev => ({ ...prev, remains: true }));
+      toast.info('Запрос на формирование отчета отправлен. Это может занять некоторое время...');
+      
+      const data = await fetchWarehouseRemains(store.apiKey, {
+        groupByBrand: true,
+        groupBySubject: true,
+        groupBySa: true,
+        groupBySize: true
+      });
+      
+      setWarehouseRemains(data);
+      setIsCachedData(prev => ({ ...prev, remains: false }));
+      toast.success('Отчет об остатках на складах успешно загружен');
+      
+      // Save to cache
+      saveRemainsToCache(store.id, data);
+      
+      if (paidStorageData.length > 0) {
+        calculateRealStorageCostsFromAPI();
+      }
+      
+    } catch (error: any) {
+      console.error('Ошибка при загрузке остатков на складах:', error);
+      toast.error(`Не удалось загрузить отчет: ${error.message || 'Неизвестная ошибка'}`);
+      
+      // If we have cache data (even if stale), keep using it
+      if (cachedRemains && cachedRemains.length > 0) {
+        toast.warning('Используются сохраненные данные (возможно, устаревшие)');
+      }
+    } finally {
+      setLoading(prev => ({ ...prev, remains: false }));
+    }
+  };
+
+  const loadAverageDailySalesWithCache = async (store: StoreType) => {
+    if (!store || !store.id || !store.apiKey) {
+      toast.warning('Необходимо выбрать магазин для получения данных');
+      return;
+    }
+    
+    // Try to load from cache first
+    const { data: cachedSales, isFresh } = loadAvgSalesFromCache(store.id);
+    
+    if (cachedSales && Object.keys(cachedSales).length > 0) {
+      setAverageDailySales(cachedSales);
+      setIsCachedData(prev => ({ ...prev, averageSales: true }));
+      
+      // If cache is fresh, don't fetch again
+      if (isFresh) {
+        console.log('[Warehouses] Using fresh cached average sales data');
+        return;
+      }
+    }
+    
+    // If we got here, we need to fetch from API (either no cache or stale cache)
     try {
       setLoading(prev => ({ ...prev, averageSales: true }));
       
@@ -145,17 +329,97 @@ const Warehouses: React.FC = () => {
       
       console.log(`[Warehouses] Запрашиваем данные о средних продажах с ${dateFrom} по ${dateTo}`);
       
-      const data = await fetchAverageDailySalesFromAPI(apiKey, dateFrom, dateTo);
+      const data = await fetchAverageDailySalesFromAPI(store.apiKey, dateFrom, dateTo);
       console.log('[Warehouses] Получены данные о средних продажах:', 
                   `${Object.keys(data).length} товаров`);
       
       setAverageDailySales(data);
+      setIsCachedData(prev => ({ ...prev, averageSales: false }));
+      
+      // Save to cache
+      saveAvgSalesToCache(store.id, data);
       
     } catch (error: any) {
       console.error('[Warehouses] Ошибка при загрузке средних продаж:', error);
-      generateMockAverageSales();
+      
+      // If we have no data (even cached), generate mock data
+      if (!cachedSales || Object.keys(cachedSales).length === 0) {
+        generateMockAverageSales();
+      } else {
+        toast.warning('Используются сохраненные данные о продажах (возможно, устаревшие)');
+      }
     } finally {
       setLoading(prev => ({ ...prev, averageSales: false }));
+    }
+  };
+
+  const loadPaidStorageDataWithCache = async (
+    store: StoreType, 
+    dateFrom: string = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    dateTo: string = new Date().toISOString().split('T')[0]
+  ) => {
+    if (!store || !store.id || !store.apiKey) {
+      toast.warning('Необходимо выбрать магазин для получения данных');
+      return;
+    }
+    
+    // Try to load from cache first
+    const { data: cachedStorage, isFresh } = loadPaidStorageFromCache(store.id);
+    
+    if (cachedStorage && cachedStorage.length > 0) {
+      setPaidStorageData(cachedStorage);
+      setIsCachedData(prev => ({ ...prev, paidStorage: true }));
+      
+      // If cache is fresh, don't fetch again
+      if (isFresh) {
+        console.log('[Warehouses] Using fresh cached paid storage data');
+        
+        if (warehouseRemains.length > 0) {
+          calculateRealStorageCostsFromAPI();
+        }
+        
+        return;
+      }
+    }
+    
+    // If we got here, we need to fetch from API (either no cache or stale cache)
+    try {
+      setLoading(prev => ({ ...prev, paidStorage: true }));
+      toast.info('Запрос отчета о платном хранении. Это может занять некоторое время...');
+      
+      const data = await fetchFullPaidStorageReport(store.apiKey, dateFrom, dateTo);
+      console.log(`[Warehouses] Получено ${data.length} записей данных о платном хранении`);
+      
+      if (data.length > 0) {
+        console.log('[Warehouses] Пример данных платного хранения:', {
+          nmId: data[0].nmId,
+          warehousePrice: data[0].warehousePrice,
+          volume: data[0].volume,
+          barcode: data[0].barcode,
+        });
+      }
+      
+      setPaidStorageData(data);
+      setIsCachedData(prev => ({ ...prev, paidStorage: false }));
+      
+      // Save to cache
+      savePaidStorageToCache(store.id, data);
+      
+      if (warehouseRemains.length > 0) {
+        calculateRealStorageCostsFromAPI();
+      }
+      
+      toast.success('Отчет о платном хранении успешно загружен');
+    } catch (error: any) {
+      console.error('Ошибка при загрузке отчета о платном хранении:', error);
+      toast.error(`Не удалось загрузить отчет: ${error.message || 'Неизвестная ошибка'}`);
+      
+      // If we have cache data (even if stale), keep using it
+      if (cachedStorage && cachedStorage.length > 0) {
+        toast.warning('Используются сохраненные данные (возможно, устаревшие)');
+      }
+    } finally {
+      setLoading(prev => ({ ...prev, paidStorage: false }));
     }
   };
   
@@ -191,7 +455,13 @@ const Warehouses: React.FC = () => {
     console.log('[Warehouses] Расчет стоимости хранения завершен для', Object.keys(storageCosts).length, 'товаров');
     setDailyStorageCosts(storageCosts);
     setStorageCostsCalculated(true);
-  }, [warehouseRemains, paidStorageData]);
+    
+    // Save storage costs to cache
+    if (selectedStore && selectedStore.id) {
+      saveStorageCostsToCache(selectedStore.id, storageCosts);
+    }
+    
+  }, [warehouseRemains, paidStorageData, selectedStore]);
   
   const calculateCategoryRate = (category: string): number => {
     switch(category.toLowerCase()) {
@@ -229,6 +499,11 @@ const Warehouses: React.FC = () => {
       setLoading(prev => ({ ...prev, warehouses: true }));
       const data = await fetchWarehouses(apiKey);
       setWbWarehouses(data);
+      
+      // Save to cache if we have a selected store
+      if (selectedStore && selectedStore.id) {
+        saveWarehousesToCache(selectedStore.id, data);
+      }
     } catch (error) {
       console.error('Ошибка при загрузке складов:', error);
       toast.error('Не удалось загрузить список складов');
@@ -245,6 +520,11 @@ const Warehouses: React.FC = () => {
         warehouseId ? [warehouseId] : undefined
       );
       setCoefficients(data);
+      
+      // Save to cache if we have a selected store
+      if (selectedStore && selectedStore.id) {
+        saveCoefficientsToCache(selectedStore.id, data, warehouseId);
+      }
     } catch (error) {
       console.error('Ошибка при загрузке коэффициентов:', error);
       toast.error('Не удалось загрузить коэффициенты приемки');
@@ -257,7 +537,7 @@ const Warehouses: React.FC = () => {
     setSelectedWarehouseId(warehouseId);
     
     if (selectedStore) {
-      loadCoefficients(selectedStore.apiKey, warehouseId);
+      loadCoefficientsWithCache(selectedStore, warehouseId);
     }
   };
 
@@ -287,6 +567,11 @@ const Warehouses: React.FC = () => {
       
       setWarehouseRemains(data);
       toast.success('Отчет об остатках на складах успешно загружен');
+      
+      // Save to cache if we have a selected store
+      if (selectedStore && selectedStore.id) {
+        saveRemainsToCache(selectedStore.id, data);
+      }
       
       if (paidStorageData.length > 0) {
         calculateRealStorageCostsFromAPI();
@@ -328,6 +613,11 @@ const Warehouses: React.FC = () => {
       
       setPaidStorageData(data);
       
+      // Save to cache if we have a selected store
+      if (selectedStore && selectedStore.id) {
+        savePaidStorageToCache(selectedStore.id, data);
+      }
+      
       if (warehouseRemains.length > 0) {
         calculateRealStorageCostsFromAPI();
       }
@@ -347,6 +637,7 @@ const Warehouses: React.FC = () => {
       return;
     }
     
+    // Force reload from API
     if (activeTab === 'inventory') {
       loadWarehouseRemains(selectedStore.apiKey);
       loadAverageDailySales(selectedStore.apiKey);
@@ -356,6 +647,43 @@ const Warehouses: React.FC = () => {
       loadCoefficients(selectedStore.apiKey);
     } else if (activeTab === 'storage') {
       loadPaidStorageData(selectedStore.apiKey);
+    }
+  };
+
+  const loadAverageDailySales = async (apiKey: string) => {
+    if (!apiKey) {
+      toast.warning('Необходимо выбрать магазин для получения данных');
+      return;
+    }
+    
+    try {
+      setLoading(prev => ({ ...prev, averageSales: true }));
+      
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now);
+      thirtyDaysAgo.setDate(now.getDate() - 30);
+      
+      const dateFrom = formatDate(thirtyDaysAgo);
+      const dateTo = formatDate(now);
+      
+      console.log(`[Warehouses] Запрашиваем данные о средних продажах с ${dateFrom} по ${dateTo}`);
+      
+      const data = await fetchAverageDailySalesFromAPI(apiKey, dateFrom, dateTo);
+      console.log('[Warehouses] Получены данные о средних продажах:', 
+                  `${Object.keys(data).length} товаров`);
+      
+      setAverageDailySales(data);
+      
+      // Save to cache if we have a selected store
+      if (selectedStore && selectedStore.id) {
+        saveAvgSalesToCache(selectedStore.id, data);
+      }
+      
+    } catch (error: any) {
+      console.error('[Warehouses] Ошибка при загрузке средних продаж:', error);
+      generateMockAverageSales();
+    } finally {
+      setLoading(prev => ({ ...prev, averageSales: false }));
     }
   };
 
@@ -440,7 +768,9 @@ const Warehouses: React.FC = () => {
                 <div className="flex items-center">
                   <div>
                     <h2 className="text-lg font-semibold">Остатки товаров на складах</h2>
-                    <p className="text-sm text-muted-foreground">Актуальная информация о количестве товаров</p>
+                    <p className="text-sm text-muted-foreground">
+                      {isCachedData.remains ? 'Данные загружены из локального кеша' : 'Актуальная информация о количестве товаров'}
+                    </p>
                   </div>
                   <TooltipProvider>
                     <Tooltip>
@@ -479,7 +809,7 @@ const Warehouses: React.FC = () => {
                 </Button>
               </div>
 
-              {loading.remains ? (
+              {loading.remains && warehouseRemains.length === 0 ? (
                 <div className="grid gap-4">
                   <Skeleton className="h-[400px] w-full" />
                   <Skeleton className="h-[300px] w-full" />
@@ -492,7 +822,7 @@ const Warehouses: React.FC = () => {
                   />
                   
                   <div className="mt-8">
-                    {loading.paidStorage ? (
+                    {loading.paidStorage && paidStorageData.length === 0 ? (
                       <Skeleton className="h-[400px] w-full" />
                     ) : (
                       <StorageProfitabilityAnalysis 
@@ -520,7 +850,7 @@ const Warehouses: React.FC = () => {
                       Управление поставками
                     </h2>
                     <p className="text-sm text-muted-foreground">
-                      Анализ коэффициентов приемки и выбор оптимального склада
+                      {isCachedData.warehouses ? 'Данные о складах загружены из локального кеша' : 'Анализ коэффициентов приемки и выбор оптимального склада'}
                     </p>
                   </div>
                   <TooltipProvider>
@@ -566,7 +896,7 @@ const Warehouses: React.FC = () => {
                 </div>
                 
                 <div className="lg:col-span-2">
-                  {loading.coefficients ? (
+                  {loading.coefficients && coefficients.length === 0 ? (
                     <Skeleton className="h-[600px] w-full" />
                   ) : (
                     <WarehouseCoefficientsDateCard
@@ -589,7 +919,9 @@ const Warehouses: React.FC = () => {
                 <div className="flex items-center">
                   <div>
                     <h2 className="text-lg font-semibold">Отчет о платном хранении</h2>
-                    <p className="text-sm text-muted-foreground">Аналитика затрат на хранение товаров</p>
+                    <p className="text-sm text-muted-foreground">
+                      {isCachedData.paidStorage ? 'Данные о платном хранении загружены из локального кеша' : 'Аналитика затрат на хранение товаров'}
+                    </p>
                   </div>
                   <TooltipProvider>
                     <Tooltip>
@@ -636,7 +968,7 @@ const Warehouses: React.FC = () => {
                   apiKey={selectedStore.apiKey}
                   storageData={paidStorageData}
                   isLoading={loading.paidStorage}
-                  onRefresh={loadPaidStorageData}
+                  onRefresh={(apiKey) => loadPaidStorageData(apiKey)}
                 />
               )}
             </>
