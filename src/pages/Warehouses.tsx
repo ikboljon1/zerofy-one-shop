@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -39,11 +40,25 @@ import {
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ensureStoreSelectionPersistence } from '@/utils/storeUtils';
+import { ensureStoreSelectionPersistence, getSelectedStore } from '@/utils/storeUtils';
 import { Store as StoreType } from '@/types/store';
 import { fetchAverageDailySalesFromAPI } from '@/components/analytics/data/demoData';
 import LimitExceededMessage from '@/components/analytics/components/LimitExceededMessage';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { 
+  getWarehouses,
+  saveWarehouses,
+  getCoefficients,
+  saveCoefficients, 
+  getWarehouseRemains,
+  saveWarehouseRemains,
+  getPaidStorage,
+  savePaidStorage,
+  getAverageSales,
+  saveAverageSales,
+  isCacheValid,
+  getCacheExpirationTime
+} from '@/utils/warehouseCacheUtils';
 
 const Warehouses: React.FC = () => {
   const [activeTab, setActiveTab] = useState('inventory');
@@ -68,44 +83,29 @@ const Warehouses: React.FC = () => {
   const [showHelpGuide, setShowHelpGuide] = useState(
     localStorage.getItem('warehouses_seen_help') !== 'true'
   );
+  const [lastUpdated, setLastUpdated] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    const stores = ensureStoreSelectionPersistence();
-    const selected = stores.find(store => store.isSelected);
-    
-    if (selected) {
-      setSelectedStore(selected);
-      if (activeTab === 'supplies') {
-        loadWarehouses(selected.apiKey);
-        loadCoefficients(selected.apiKey);
-        const preferred = getPreferredWarehouses(selected.id);
-        setPreferredWarehouses(preferred);
-      } else if (activeTab === 'inventory') {
-        loadWarehouseRemains(selected.apiKey);
-        loadAverageDailySales(selected.apiKey);
-        loadPaidStorageData(selected.apiKey);
-      } else if (activeTab === 'storage') {
-        loadPaidStorageData(selected.apiKey);
+    // Get store from localStorage without modifying
+    const store = getSelectedStore();
+    if (store) {
+      setSelectedStore(store);
+      loadCachedData(store.id, activeTab);
+    } else {
+      const stores = ensureStoreSelectionPersistence();
+      const selected = stores.find(store => store.isSelected);
+      if (selected) {
+        setSelectedStore(selected);
+        loadCachedData(selected.id, activeTab);
+      } else if (stores.length > 0) {
+        setSelectedStore(stores[0]);
       }
-    } else if (stores.length > 0) {
-      setSelectedStore(stores[0]);
     }
   }, []);
 
   useEffect(() => {
     if (selectedStore) {
-      if (activeTab === 'supplies') {
-        loadWarehouses(selectedStore.apiKey);
-        loadCoefficients(selectedStore.apiKey);
-        const preferred = getPreferredWarehouses(selectedStore.id);
-        setPreferredWarehouses(preferred);
-      } else if (activeTab === 'inventory') {
-        loadWarehouseRemains(selectedStore.apiKey);
-        loadAverageDailySales(selectedStore.apiKey);
-        loadPaidStorageData(selectedStore.apiKey);
-      } else if (activeTab === 'storage') {
-        loadPaidStorageData(selectedStore.apiKey);
-      }
+      loadCachedData(selectedStore.id, activeTab);
     }
   }, [activeTab, selectedStore]);
 
@@ -127,8 +127,88 @@ const Warehouses: React.FC = () => {
     }
   }, [showHelpGuide]);
 
+  // Function to load cached data based on active tab
+  const loadCachedData = (storeId: string, tab: string) => {
+    console.log(`[Warehouses] Loading cached data for store ${storeId}, tab ${tab}`);
+    
+    if (tab === 'supplies') {
+      // Load warehouses data
+      const cachedWarehouses = getWarehouses(storeId);
+      if (cachedWarehouses) {
+        setWbWarehouses(cachedWarehouses);
+        updateLastUpdated('warehouses', storeId);
+      } else {
+        loadWarehouses(storeId);
+      }
+      
+      // Load coefficients data
+      const cachedCoefficients = getCoefficients(storeId);
+      if (cachedCoefficients) {
+        setCoefficients(cachedCoefficients);
+        updateLastUpdated('coefficients', storeId);
+      } else {
+        loadCoefficients(storeId);
+      }
+      
+      // Load preferred warehouses
+      const preferred = getPreferredWarehouses(storeId);
+      setPreferredWarehouses(preferred);
+    } 
+    else if (tab === 'inventory') {
+      // Load warehouse remains
+      const cachedRemains = getWarehouseRemains(storeId);
+      if (cachedRemains) {
+        setWarehouseRemains(cachedRemains);
+        updateLastUpdated('remains', storeId);
+      } else {
+        loadWarehouseRemains(storeId);
+      }
+      
+      // Load average daily sales
+      const cachedSales = getAverageSales(storeId);
+      if (cachedSales) {
+        setAverageDailySales(cachedSales);
+        updateLastUpdated('sales', storeId);
+      } else {
+        loadAverageDailySales(storeId);
+      }
+      
+      // Load paid storage data
+      const cachedStorage = getPaidStorage(storeId);
+      if (cachedStorage) {
+        setPaidStorageData(cachedStorage);
+        updateLastUpdated('storage', storeId);
+      } else {
+        loadPaidStorageData(storeId);
+      }
+    } 
+    else if (tab === 'storage') {
+      // Load paid storage data
+      const cachedStorage = getPaidStorage(storeId);
+      if (cachedStorage) {
+        setPaidStorageData(cachedStorage);
+        updateLastUpdated('storage', storeId);
+      } else {
+        loadPaidStorageData(storeId);
+      }
+    }
+  };
+
+  const updateLastUpdated = (dataType: string, storeId: string) => {
+    setLastUpdated(prev => ({
+      ...prev,
+      [dataType]: getCacheExpirationTime(
+        dataType === 'warehouses' ? 'warehouses_' : 
+        dataType === 'coefficients' ? 'coefficients_' : 
+        dataType === 'remains' ? 'remains_' : 
+        dataType === 'sales' ? 'average_sales_' : 'paid_storage_', 
+        storeId
+      )
+    }));
+  };
+
   const loadAverageDailySales = async (apiKey: string) => {
-    if (!apiKey) {
+    if (!apiKey || !selectedStore) {
       toast.warning('Необходимо выбрать магазин для получения данных');
       return;
     }
@@ -150,6 +230,8 @@ const Warehouses: React.FC = () => {
                   `${Object.keys(data).length} товаров`);
       
       setAverageDailySales(data);
+      saveAverageSales(selectedStore.id, data);
+      updateLastUpdated('sales', selectedStore.id);
       
     } catch (error: any) {
       console.error('[Warehouses] Ошибка при загрузке средних продаж:', error);
@@ -225,10 +307,14 @@ const Warehouses: React.FC = () => {
   };
 
   const loadWarehouses = async (apiKey: string) => {
+    if (!selectedStore) return;
+    
     try {
       setLoading(prev => ({ ...prev, warehouses: true }));
       const data = await fetchWarehouses(apiKey);
       setWbWarehouses(data);
+      saveWarehouses(selectedStore.id, data);
+      updateLastUpdated('warehouses', selectedStore.id);
     } catch (error) {
       console.error('Ошибка при загрузке складов:', error);
       toast.error('Не удалось загрузить список складов');
@@ -238,6 +324,8 @@ const Warehouses: React.FC = () => {
   };
 
   const loadCoefficients = async (apiKey: string, warehouseId?: number) => {
+    if (!selectedStore) return;
+    
     try {
       setLoading(prev => ({ ...prev, coefficients: true }));
       const data = await fetchAcceptanceCoefficients(
@@ -245,6 +333,10 @@ const Warehouses: React.FC = () => {
         warehouseId ? [warehouseId] : undefined
       );
       setCoefficients(data);
+      if (!warehouseId) {
+        saveCoefficients(selectedStore.id, data);
+        updateLastUpdated('coefficients', selectedStore.id);
+      }
     } catch (error) {
       console.error('Ошибка при загрузке коэффициентов:', error);
       toast.error('Не удалось загрузить коэффициенты приемки');
@@ -269,7 +361,7 @@ const Warehouses: React.FC = () => {
   };
 
   const loadWarehouseRemains = async (apiKey: string) => {
-    if (!apiKey) {
+    if (!apiKey || !selectedStore) {
       toast.warning('Необходимо выбрать магазин для получения данных');
       return;
     }
@@ -286,6 +378,9 @@ const Warehouses: React.FC = () => {
       });
       
       setWarehouseRemains(data);
+      saveWarehouseRemains(selectedStore.id, data);
+      updateLastUpdated('remains', selectedStore.id);
+      
       toast.success('Отчет об остатках на складах успешно загружен');
       
       if (paidStorageData.length > 0) {
@@ -305,7 +400,7 @@ const Warehouses: React.FC = () => {
     dateFrom: string = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     dateTo: string = new Date().toISOString().split('T')[0]
   ) => {
-    if (!apiKey) {
+    if (!apiKey || !selectedStore) {
       toast.warning('Необходимо выбрать магазин для получения данных');
       return;
     }
@@ -327,6 +422,8 @@ const Warehouses: React.FC = () => {
       }
       
       setPaidStorageData(data);
+      savePaidStorage(selectedStore.id, data);
+      updateLastUpdated('storage', selectedStore.id);
       
       if (warehouseRemains.length > 0) {
         calculateRealStorageCostsFromAPI();
@@ -440,7 +537,12 @@ const Warehouses: React.FC = () => {
                 <div className="flex items-center">
                   <div>
                     <h2 className="text-lg font-semibold">Остатки товаров на складах</h2>
-                    <p className="text-sm text-muted-foreground">Актуальная информация о количестве товаров</p>
+                    <p className="text-sm text-muted-foreground">
+                      Актуальная информация о количестве товаров 
+                      {lastUpdated.remains && (
+                        <span className="ml-1">(Обновлено до: {lastUpdated.remains})</span>
+                      )}
+                    </p>
                   </div>
                   <TooltipProvider>
                     <Tooltip>
@@ -521,6 +623,9 @@ const Warehouses: React.FC = () => {
                     </h2>
                     <p className="text-sm text-muted-foreground">
                       Анализ коэффициентов приемки и выбор оптимального склада
+                      {lastUpdated.coefficients && (
+                        <span className="ml-1">(Обновлено до: {lastUpdated.coefficients})</span>
+                      )}
                     </p>
                   </div>
                   <TooltipProvider>
@@ -589,7 +694,12 @@ const Warehouses: React.FC = () => {
                 <div className="flex items-center">
                   <div>
                     <h2 className="text-lg font-semibold">Отчет о платном хранении</h2>
-                    <p className="text-sm text-muted-foreground">Аналитика затрат на хранение товаров</p>
+                    <p className="text-sm text-muted-foreground">
+                      Аналитика затрат на хранение товаров
+                      {lastUpdated.storage && (
+                        <span className="ml-1">(Обновлено до: {lastUpdated.storage})</span>
+                      )}
+                    </p>
                   </div>
                   <TooltipProvider>
                     <Tooltip>

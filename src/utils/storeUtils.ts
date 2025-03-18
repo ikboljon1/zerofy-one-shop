@@ -1,4 +1,4 @@
-import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY, ORDERS_STORAGE_KEY, SALES_STORAGE_KEY, WildberriesOrder, WildberriesSale } from "@/types/store";
+import { Store, STORES_STORAGE_KEY, STATS_STORAGE_KEY, ORDERS_STORAGE_KEY, SALES_STORAGE_KEY } from "@/types/store";
 import { fetchWildberriesStats, fetchWildberriesOrders, fetchWildberriesSales } from "@/services/wildberriesApi";
 import axios from "axios";
 
@@ -461,7 +461,7 @@ export const ensureStoreSelectionPersistence = (): Store[] => {
   const currentUserId = userData ? JSON.parse(userData).id : null;
   
   const userStores = currentUserId 
-    ? stores.filter(store => store.userId === currentUserId) 
+    ? stores.filter(store => store.userId === currentUserId)
     : stores;
   
   if (!userStores.length) return userStores;
