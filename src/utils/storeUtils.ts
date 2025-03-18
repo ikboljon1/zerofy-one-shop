@@ -15,19 +15,21 @@ export const loadStores = (): Store[] => {
 };
 
 export const saveStores = (stores: Store[]): void => {
+  const storesWithTimestamp = {
+    stores,
+    timestamp: new Date().toISOString()
+  };
   localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(stores));
   localStorage.setItem(`${STORES_STORAGE_KEY}_timestamp`, Date.now().toString());
   
   const selectedStore = stores.find(s => s.isSelected);
   if (selectedStore) {
-    // Save the selected store separately for better persistence
     localStorage.setItem('last_selected_store', JSON.stringify({
       storeId: selectedStore.id,
       timestamp: Date.now()
     }));
   }
   
-  // Dispatch a custom event to notify components about store changes
   window.dispatchEvent(new CustomEvent('stores-updated', { 
     detail: { stores, timestamp: Date.now() } 
   }));
@@ -516,55 +518,17 @@ export const ensureStoreSelectionPersistence = (): Store[] => {
  */
 export const getSelectedStore = (): Store | null => {
   try {
-    // Get the current user ID
     const userData = localStorage.getItem('user');
     const currentUserId = userData ? JSON.parse(userData).id : null;
     
-    // First try to get the directly selected store
-    const lastSelectedStoreData = localStorage.getItem('last_selected_store');
-    let selectedStoreId = null;
+    const stores = JSON.parse(localStorage.getItem(STORES_STORAGE_KEY) || '[]');
     
-    if (lastSelectedStoreData) {
-      try {
-        const { storeId } = JSON.parse(lastSelectedStoreData);
-        selectedStoreId = storeId;
-      } catch (e) {
-        console.error('Error parsing last selected store data:', e);
-      }
-    }
-    
-    // Get all stores
-    const allStores = loadStores();
-    
-    // Filter to only the current user's stores
     const userStores = currentUserId 
-      ? allStores.filter((store: Store) => store.userId === currentUserId)
-      : allStores;
+      ? stores.filter((store: Store) => store.userId === currentUserId)
+      : stores;
     
-    if (userStores.length === 0) {
-      console.log('No stores available for this user');
-      return null;
-    }
-    
-    // Try to find the store that matches the last selected store ID
-    if (selectedStoreId) {
-      const storedSelectedStore = userStores.find((store: Store) => store.id === selectedStoreId);
-      if (storedSelectedStore) {
-        console.log(`Found last selected store: ${storedSelectedStore.name} (${storedSelectedStore.id})`);
-        return storedSelectedStore;
-      }
-    }
-    
-    // Try to find a store marked as selected in the stores array
-    const markedSelectedStore = userStores.find((store: Store) => store.isSelected);
-    if (markedSelectedStore) {
-      console.log(`Found marked selected store: ${markedSelectedStore.name} (${markedSelectedStore.id})`);
-      return markedSelectedStore;
-    }
-    
-    // If no selected store found, return the first store
-    console.log(`No selected store found, defaulting to first store: ${userStores[0].name}`);
-    return userStores[0];
+    return userStores.find((store: Store) => store.isSelected) || 
+           (userStores.length > 0 ? userStores[0] : null);
   } catch (error) {
     console.error('Error getting selected store:', error);
     return null;
