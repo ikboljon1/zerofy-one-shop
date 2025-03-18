@@ -1,7 +1,7 @@
 
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { InfoCircle } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { 
   Tooltip,
   TooltipContent,
@@ -24,7 +24,7 @@ export const LastUpdateInfo: React.FC<LastUpdateInfoProps> = ({ timestamp, type 
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <InfoCircle className="h-3 w-3" />
+            <Info className="h-3 w-3" />
             <span>Обновлено: {formattedDate}</span>
           </div>
         </TooltipTrigger>

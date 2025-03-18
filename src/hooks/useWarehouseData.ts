@@ -45,8 +45,10 @@ export const useWarehouseData = ({
     queryFn: fetchWithCache,
     staleTime: ttl,
     retry: 2,
-    onError: (err: Error) => {
-      toast.error(`Ошибка при загрузке данных: ${err.message}`);
+    meta: {
+      errorHandler: (err: Error) => {
+        toast.error(`Ошибка при загрузке данных: ${err.message}`);
+      }
     }
   });
 
