@@ -875,4 +875,4 @@ export const validateApiKey = async (apiKey: string): Promise<{ isValid: boolean
       return { isValid: false, errorCode: status, errorMessage };
     }
     
-    return { isValid: false, errorMessage:
+    return { isValid: false
