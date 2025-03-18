@@ -25,11 +25,15 @@ export const useWarehouseData = ({
   const fullCacheKey = `${cacheKey}_${storeId}`;
 
   const fetchWithCache = useCallback(async () => {
+    // Сначала проверяем кэш
     const cachedData = getCacheItem(fullCacheKey, ttl);
     if (cachedData) {
+      console.log(`[Cache] Using cached data for ${endpoint}, storeId: ${storeId}`);
       return cachedData;
     }
 
+    // Если в кэше нет данных или они устарели, делаем запрос
+    console.log(`[Cache] Fetching fresh data for ${endpoint}, storeId: ${storeId}`);
     try {
       const data = await fetchFn();
       setCacheItem(fullCacheKey, data);

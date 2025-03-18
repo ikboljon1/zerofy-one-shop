@@ -17,6 +17,7 @@ export const setCacheItem = <T>(key: string, data: T): void => {
     timestamp: Date.now()
   };
   localStorage.setItem(key, JSON.stringify(cacheItem));
+  console.log(`[Cache] Data cached for key: ${key}`);
 };
 
 export const getCacheItem = <T>(key: string, ttl: number): T | null => {
@@ -28,12 +29,15 @@ export const getCacheItem = <T>(key: string, ttl: number): T | null => {
     const now = Date.now();
 
     if (now - cacheItem.timestamp > ttl) {
+      console.log(`[Cache] Cache expired for key: ${key}`);
       localStorage.removeItem(key);
       return null;
     }
 
+    console.log(`[Cache] Cache hit for key: ${key}`);
     return cacheItem.data;
   } catch {
+    console.log(`[Cache] Error reading cache for key: ${key}`);
     return null;
   }
 };
