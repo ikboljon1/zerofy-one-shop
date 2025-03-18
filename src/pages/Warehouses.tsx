@@ -27,10 +27,11 @@ import {
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ensureStoreSelectionPersistence } from '@/utils/storeUtils';
+import { ensureStoreSelectionPersistence, getSelectedStore } from '@/utils/storeUtils';
 import { Store as StoreType } from '@/types/store';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useWarehouse } from '@/contexts/WarehouseContext';
+import { LimitExceededMessage } from '@/components/analytics/components';
 
 const Warehouses: React.FC = () => {
   const [activeTab, setActiveTab] = useState('inventory');
@@ -57,7 +58,10 @@ const Warehouses: React.FC = () => {
     loadPaidStorageData,
     loadAverageDailySales,
     refreshData,
-    togglePreferredWarehouse: togglePreferredWarehouseInContext
+    togglePreferredWarehouse: togglePreferredWarehouseInContext,
+    resetDataCache,
+    currentStoreId,
+    setCurrentStoreId
   } = useWarehouse();
 
   useEffect(() => {
@@ -67,11 +71,18 @@ const Warehouses: React.FC = () => {
     if (selected) {
       setSelectedStore(selected);
       
+      // Check if store has changed
+      if (currentStoreId !== selected.id) {
+        console.log('Store has changed, resetting cache and updating currentStoreId');
+        resetDataCache();
+        setCurrentStoreId(selected.id);
+      }
+      
       // Load data based on active tab
       loadDataForActiveTab(selected, activeTab);
       
       // Get preferred warehouses
-      const preferred = getPreferredWarehouses(selected.id);
+      const preferred = getPreferredWarehouses(Number(selected.id));
       setPreferredWarehouses(preferred);
     } else if (stores.length > 0) {
       setSelectedStore(stores[0]);
@@ -80,10 +91,17 @@ const Warehouses: React.FC = () => {
 
   useEffect(() => {
     if (selectedStore) {
+      // Check if store has changed
+      if (currentStoreId !== selectedStore.id) {
+        console.log('Store has changed, resetting cache and updating currentStoreId');
+        resetDataCache();
+        setCurrentStoreId(selectedStore.id);
+      }
+      
       loadDataForActiveTab(selectedStore, activeTab);
       
       // Update preferred warehouses when store changes
-      const preferred = getPreferredWarehouses(selectedStore.id);
+      const preferred = getPreferredWarehouses(Number(selectedStore.id));
       setPreferredWarehouses(preferred);
     }
   }, [activeTab, selectedStore]);
@@ -122,7 +140,7 @@ const Warehouses: React.FC = () => {
   const handleSavePreferredWarehouse = (warehouseId: number) => {
     if (!selectedStore) return;
     
-    const newPreferred = togglePreferredWarehouseInContext(selectedStore.id, warehouseId);
+    const newPreferred = togglePreferredWarehouseInContext(Number(selectedStore.id), warehouseId);
     setPreferredWarehouses(newPreferred);
   };
 

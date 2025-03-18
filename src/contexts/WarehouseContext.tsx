@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { 
   WarehouseCoefficient, 
@@ -28,6 +27,7 @@ interface WarehouseContextType {
   dailyStorageCosts: Record<number, number>;
   storageCostsCalculated: boolean;
   selectedWarehouseId: number | undefined;
+  currentStoreId: string | null;
   
   // Loading states
   loading: {
@@ -47,7 +47,9 @@ interface WarehouseContextType {
   calculateRealStorageCostsFromAPI: () => void;
   setSelectedWarehouseId: (id: number | undefined) => void;
   refreshData: (apiKey: string, section: 'inventory' | 'supplies' | 'storage') => Promise<void>;
-  togglePreferredWarehouse: (storeId: number, warehouseId: number) => void;
+  togglePreferredWarehouse: (storeId: number, warehouseId: number) => number[];
+  resetDataCache: () => void;
+  setCurrentStoreId: (storeId: string | null) => void;
 }
 
 const WarehouseContext = createContext<WarehouseContextType | undefined>(undefined);
@@ -75,6 +77,7 @@ export const WarehouseProvider: React.FC<WarehouseProviderProps> = ({ children }
   const [dailyStorageCosts, setDailyStorageCosts] = useState<Record<number, number>>({});
   const [storageCostsCalculated, setStorageCostsCalculated] = useState(false);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | undefined>(undefined);
+  const [currentStoreId, setCurrentStoreId] = useState<string | null>(null);
   
   const [loading, setLoading] = useState({
     warehouses: false,
@@ -92,6 +95,28 @@ export const WarehouseProvider: React.FC<WarehouseProviderProps> = ({ children }
     paidStorage: false,
     averageSales: false
   });
+
+  // Reset data cache when switching stores
+  const resetDataCache = () => {
+    console.log('[WarehouseContext] Resetting data cache');
+    setDataFetched({
+      warehouses: false,
+      coefficients: false,
+      remains: false,
+      paidStorage: false,
+      averageSales: false
+    });
+    
+    // Optionally clear existing data
+    setWbWarehouses([]);
+    setCoefficients([]);
+    setWarehouseRemains([]);
+    setPaidStorageData([]);
+    setAverageDailySales({});
+    setDailyStorageCosts({});
+    setStorageCostsCalculated(false);
+    setSelectedWarehouseId(undefined);
+  };
 
   // Function to load warehouses if not already loaded
   const loadWarehouses = async (apiKey: string) => {
@@ -363,7 +388,7 @@ export const WarehouseProvider: React.FC<WarehouseProviderProps> = ({ children }
   };
   
   // Function to toggle preferred warehouse for a store
-  const togglePreferredWarehouse = (storeId: number, warehouseId: number) => {
+  const togglePreferredWarehouse = (storeId: number, warehouseId: number): number[] => {
     // Get the current list of preferred warehouses for the store
     const currentPreferred = getPreferredWarehouses(storeId);
     
@@ -441,6 +466,7 @@ export const WarehouseProvider: React.FC<WarehouseProviderProps> = ({ children }
     dailyStorageCosts,
     storageCostsCalculated,
     selectedWarehouseId,
+    currentStoreId,
     
     // Loading states
     loading,
@@ -454,7 +480,9 @@ export const WarehouseProvider: React.FC<WarehouseProviderProps> = ({ children }
     calculateRealStorageCostsFromAPI,
     setSelectedWarehouseId,
     refreshData,
-    togglePreferredWarehouse
+    togglePreferredWarehouse,
+    resetDataCache,
+    setCurrentStoreId
   };
 
   return (
