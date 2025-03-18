@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -33,6 +32,7 @@ import { useWarehouse } from '@/contexts/WarehouseContext';
 const Warehouses: React.FC = () => {
   const [activeTab, setActiveTab] = useState('inventory');
   const [selectedStore, setSelectedStore] = useState<StoreType | null>(null);
+  const [storeLoading, setStoreLoading] = useState(true);
   const [showHelpGuide, setShowHelpGuide] = useState(
     localStorage.getItem('warehouses_seen_help') !== 'true'
   );
@@ -61,6 +61,13 @@ const Warehouses: React.FC = () => {
 
   // Combine both loadDataForActiveTab functions into one with an optional forceRefresh parameter
   const loadDataForActiveTab = (store: StoreType, tab: string, forceRefresh: boolean = false) => {
+    if (!store || !store.apiKey) {
+      console.log("Cannot load data: store or API key is missing", store);
+      return;
+    }
+    
+    console.log(`Loading data for ${tab} tab, store: ${store.name} (${store.id}) - force refresh: ${forceRefresh}`);
+    
     switch (tab) {
       case 'supplies':
         loadWarehouses(store.apiKey, forceRefresh);
@@ -77,64 +84,86 @@ const Warehouses: React.FC = () => {
     }
   };
 
-  // Initialize store and load initial data
+  // Initialize store and load initial data - running once on component mount
   useEffect(() => {
     console.log("Initializing Warehouses component");
     
-    // First, try to get the selected store directly
-    const directSelectedStore = getSelectedStore();
+    const initializeWithStore = () => {
+      // First, try to get the selected store directly using improved getSelectedStore
+      const directSelectedStore = getSelectedStore();
+      
+      if (directSelectedStore) {
+        console.log(`Direct selected store found: ${directSelectedStore.name} (${directSelectedStore.id})`);
+        setSelectedStore(directSelectedStore);
+        
+        // Reset data for this store to ensure we don't show stale data
+        resetDataForStore(directSelectedStore.id);
+        
+        // Load data for the current tab
+        loadDataForActiveTab(directSelectedStore, activeTab);
+        setStoreLoading(false);
+        return;
+      }
+      
+      console.log("No direct selected store found, trying fallback method");
+      
+      // Fallback to the old method if needed
+      const stores = ensureStoreSelectionPersistence();
+      const selected = stores.find(store => store.isSelected);
+      
+      if (selected) {
+        console.log(`Selected store found from persistence: ${selected.name} (${selected.id})`);
+        setSelectedStore(selected);
+        
+        // Reset data for this store to ensure we don't show stale data
+        resetDataForStore(selected.id);
+        
+        loadDataForActiveTab(selected, activeTab);
+      } else if (stores.length > 0) {
+        console.log(`No selected store found, using first available: ${stores[0].name}`);
+        setSelectedStore(stores[0]);
+      } else {
+        console.log("No stores found");
+      }
+      
+      setStoreLoading(false);
+    };
     
-    if (directSelectedStore) {
-      console.log(`Direct selected store found: ${directSelectedStore.name} (${directSelectedStore.id})`);
-      setSelectedStore(directSelectedStore);
-      
-      // Reset data for this store to ensure we don't show stale data
-      resetDataForStore(directSelectedStore.id);
-      
-      // Load data for the current tab
-      loadDataForActiveTab(directSelectedStore, activeTab);
-      return;
-    }
-    
-    // Fallback to the old method if needed
-    const stores = ensureStoreSelectionPersistence();
-    const selected = stores.find(store => store.isSelected);
-    
-    if (selected) {
-      console.log(`Selected store found from persistence: ${selected.name} (${selected.id})`);
-      setSelectedStore(selected);
-      
-      // Reset data for this store to ensure we don't show stale data
-      resetDataForStore(selected.id);
-      
-      loadDataForActiveTab(selected, activeTab);
-    } else if (stores.length > 0) {
-      console.log(`No selected store found, using first available: ${stores[0].name}`);
-      setSelectedStore(stores[0]);
-    } else {
-      console.log("No stores found");
-    }
+    // Small delay to ensure store data is loaded
+    setTimeout(initializeWithStore, 100);
   }, []);
 
   // Handle tab changes
   useEffect(() => {
-    if (selectedStore) {
+    if (selectedStore && !storeLoading) {
       loadDataForActiveTab(selectedStore, activeTab);
     }
   }, [activeTab]);
 
-  // Handle store changes
+  // Listen for store selection changes
   useEffect(() => {
-    if (selectedStore) {
-      console.log(`[Warehouses] Store changed to: ${selectedStore.name} (${selectedStore.id})`);
-      
-      // Reset data cache for this store to ensure fresh data
-      resetDataForStore(selectedStore.id);
-      
-      // Load data for current tab
-      loadDataForActiveTab(selectedStore, activeTab);
-    }
-  }, [selectedStore]);
+    const handleStoreUpdate = () => {
+      console.log("Store selection changed, updating Warehouses component");
+      const updatedStore = getSelectedStore();
+      if (updatedStore && (!selectedStore || updatedStore.id !== selectedStore.id)) {
+        console.log(`Updating selected store to: ${updatedStore.name} (${updatedStore.id})`);
+        setSelectedStore(updatedStore);
+        
+        // Reset data for this store to ensure fresh data
+        resetDataForStore(updatedStore.id);
+        
+        // Load data for current tab
+        loadDataForActiveTab(updatedStore, activeTab);
+      }
+    };
+    
+    // Listen for store-updated event
+    window.addEventListener('stores-updated', handleStoreUpdate);
+    
+    return () => {
+      window.removeEventListener('stores-updated', handleStoreUpdate);
+    };
+  }, [selectedStore, activeTab]);
 
   // Hide help guide after timeout
   useEffect(() => {
@@ -227,234 +256,212 @@ const Warehouses: React.FC = () => {
         </div>
       )}
 
-      <Tabs defaultValue="inventory" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid grid-cols-3 w-full max-w-md">
-          <TabsTrigger value="inventory" className="flex items-center justify-center">
-            <ClipboardListIcon className="h-4 w-4 mr-2" />
-            <span>Инвентарь</span>
-          </TabsTrigger>
-          <TabsTrigger value="supplies" className="flex items-center justify-center">
-            <PackageOpen className="h-4 w-4 mr-2" />
-            <span>Поставки</span>
-          </TabsTrigger>
-          <TabsTrigger value="storage" className="flex items-center justify-center">
-            <DollarSign className="h-4 w-4 mr-2" />
-            <span>Хранение</span>
-          </TabsTrigger>
-        </TabsList>
+      {storeLoading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-12 w-64" />
+          <Skeleton className="h-[400px] w-full" />
+        </div>
+      ) : (
+        <Tabs defaultValue="inventory" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="grid grid-cols-3 w-full max-w-md">
+            <TabsTrigger value="inventory" className="flex items-center justify-center">
+              <ClipboardListIcon className="h-4 w-4 mr-2" />
+              <span>Инвентарь</span>
+            </TabsTrigger>
+            <TabsTrigger value="supplies" className="flex items-center justify-center">
+              <PackageOpen className="h-4 w-4 mr-2" />
+              <span>Поставки</span>
+            </TabsTrigger>
+            <TabsTrigger value="storage" className="flex items-center justify-center">
+              <DollarSign className="h-4 w-4 mr-2" />
+              <span>Хранение</span>
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="inventory" className="space-y-4">
-          {!selectedStore ? renderNoStoreSelected() : (
-            <>
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center">
-                  <div>
-                    <h2 className="text-lg font-semibold">Остатки товаров на складах</h2>
-                    <p className="text-sm text-muted-foreground">Актуальная информация о количестве товаров</p>
+          <TabsContent value="inventory" className="space-y-4">
+            {!selectedStore ? renderNoStoreSelected() : (
+              <>
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex items-center">
+                    <div>
+                      <h2 className="text-lg font-semibold">Остатки товаров на складах</h2>
+                      <p className="text-sm text-muted-foreground">Актуальная информация о количестве товаров</p>
+                    </div>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="ml-1">
+                            <Book className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs">
+                          <div className="space-y-2">
+                            <p className="font-medium">Как работать с разделом "Инвентарь":</p>
+                            <ol className="list-decimal pl-4 space-y-1">
+                              <li>Здесь отображаются все ваши товары на складах Wildberries</li>
+                              <li>Таблица показывает количество, стоимость и дневные продажи</li>
+                              <li>Анализ рентабельности помогает выявить "залежавшиеся" товары</li>
+                              <li>При отсутствии данных API показываются демо-данные</li>
+                            </ol>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="ml-1">
-                          <Book className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="right" className="max-w-xs">
-                        <div className="space-y-2">
-                          <p className="font-medium">Как работать с разделом "Инвентарь":</p>
-                          <ol className="list-decimal pl-4 space-y-1">
-                            <li>Здесь отображаются все ваши товары на складах Wildberries</li>
-                            <li>Таблица показывает количество, стоимость и дневные продажи</li>
-                            <li>Анализ рентабельности помогает выявить "залежавшиеся" товары</li>
-                            <li>При отсутствии данных API показываются демо-данные</li>
-                          </ol>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleRefreshData}
-                  disabled={loading.remains}
-                  className="flex items-center gap-2"
-                >
-                  {loading.remains ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                  Обновить данные
-                </Button>
-              </div>
-
-              {loading.remains ? (
-                <div className="grid gap-4">
-                  <Skeleton className="h-[400px] w-full" />
-                  <Skeleton className="h-[300px] w-full" />
-                </div>
-              ) : (
-                <>
-                  <WarehouseRemains 
-                    data={warehouseRemains} 
-                    isLoading={loading.remains} 
-                  />
-                  
-                  <div className="mt-8">
-                    {loading.paidStorage ? (
-                      <Skeleton className="h-[400px] w-full" />
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleRefreshData}
+                    disabled={loading.remains}
+                    className="flex items-center gap-2"
+                  >
+                    {loading.remains ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
                     ) : (
-                      <StorageProfitabilityAnalysis 
-                        warehouseItems={warehouseRemains}
-                        paidStorageData={paidStorageData}
-                        averageDailySalesRate={averageDailySales}
-                        dailyStorageCost={dailyStorageCosts}
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                    Обновить данные
+                  </Button>
+                </div>
+
+                {loading.remains ? (
+                  <div className="grid gap-4">
+                    <Skeleton className="h-[400px] w-full" />
+                    <Skeleton className="h-[300px] w-full" />
+                  </div>
+                ) : (
+                  <>
+                    <WarehouseRemains 
+                      data={warehouseRemains} 
+                      isLoading={loading.remains} 
+                    />
+                    
+                    <div className="mt-8">
+                      {loading.paidStorage ? (
+                        <Skeleton className="h-[400px] w-full" />
+                      ) : (
+                        <StorageProfitabilityAnalysis 
+                          warehouseItems={warehouseRemains}
+                          paidStorageData={paidStorageData}
+                          averageDailySalesRate={averageDailySales}
+                          dailyStorageCost={dailyStorageCosts}
+                        />
+                      )}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </TabsContent>
+
+          <TabsContent value="supplies" className="space-y-4">
+            {!selectedStore ? renderNoStoreSelected() : (
+              <>
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex items-center">
+                    <div>
+                      <h2 className="text-lg font-semibold flex items-center gap-2">
+                        <Building2 className="h-5 w-5 text-primary" />
+                        Управление поставками
+                      </h2>
+                      <p className="text-sm text-muted-foreground">
+                        Анализ коэффициентов приемки и выбор оптимального склада
+                      </p>
+                    </div>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="ml-1">
+                            <Book className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs">
+                          <div className="space-y-2">
+                            <p className="font-medium">Как работать с разделом "Поставки":</p>
+                            <ol className="list-decimal pl-4 space-y-1">
+                              <li>Используйте форму для ввода параметров планируемой поставки</li>
+                              <li>Изучите коэффициенты приемки по дням недели для каждого склада</li>
+                              <li>Выбирайте склады с высокими коэффициентами для более быстрой приемки</li>
+                              <li>При отсутствии данных API показываются демо-данные</li>
+                            </ol>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleRefreshData}
+                    disabled={loading.warehouses || loading.coefficients}
+                    className="flex items-center gap-2"
+                  >
+                    {(loading.warehouses || loading.coefficients) ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                    Обновить данные
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="space-y-6">
+                    <SupplyForm />
+                  </div>
+                  
+                  <div className="lg:col-span-2">
+                    {loading.coefficients ? (
+                      <Skeleton className="h-[600px] w-full" />
+                    ) : (
+                      <WarehouseCoefficientsDateCard
+                        coefficients={coefficients} 
+                        selectedWarehouseId={selectedWarehouseId}
+                        title="Коэффициенты приемки по дням"
+                        warehouses={wbWarehouses}
                       />
                     )}
                   </div>
-                </>
-              )}
-            </>
-          )}
-        </TabsContent>
+                </div>
+              </>
+            )}
+          </TabsContent>
 
-        <TabsContent value="supplies" className="space-y-4">
-          {!selectedStore ? renderNoStoreSelected() : (
-            <>
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center">
-                  <div>
-                    <h2 className="text-lg font-semibold flex items-center gap-2">
-                      <Building2 className="h-5 w-5 text-primary" />
-                      Управление поставками
-                    </h2>
-                    <p className="text-sm text-muted-foreground">
-                      Анализ коэффициентов приемки и выбор оптимального склада
-                    </p>
+          <TabsContent value="storage" className="space-y-4">
+            {!selectedStore ? renderNoStoreSelected() : (
+              <>
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex items-center">
+                    <div>
+                      <h2 className="text-lg font-semibold">Отчет о платном хранении</h2>
+                      <p className="text-sm text-muted-foreground">Аналитика затрат на хранение товаров</p>
+                    </div>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="ml-1">
+                            <Book className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs">
+                          <div className="space-y-2">
+                            <p className="font-medium">Как работать с разделом "Хранение":</p>
+                            <ol className="list-decimal pl-4 space-y-1">
+                              <li>Здесь отображаются затраты на хранение ваших товаров</li>
+                              <li>Анализируйте дневную стоимость хранения каждого товара</li>
+                              <li>Сопоставляйте стоимость хранения с прибылью от продаж</li>
+                              <li>Выявляйте товары с высокими затратами на хранение</li>
+                              <li>При отсутствии данных API показываются демо-данные</li>
+                            </ol>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="ml-1">
-                          <Book className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="right" className="max-w-xs">
-                        <div className="space-y-2">
-                          <p className="font-medium">Как работать с разделом "Поставки":</p>
-                          <ol className="list-decimal pl-4 space-y-1">
-                            <li>Используйте форму для ввода параметров планируемой поставки</li>
-                            <li>Изучите коэффициенты приемки по дням недели для каждого склада</li>
-                            <li>Выбирайте склады с высокими коэффициентами для более быстрой приемки</li>
-                            <li>При отсутствии данных API показываются демо-данные</li>
-                          </ol>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleRefreshData}
-                  disabled={loading.warehouses || loading.coefficients}
-                  className="flex items-center gap-2"
-                >
-                  {(loading.warehouses || loading.coefficients) ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                  Обновить данные
-                </Button>
-              </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleRefreshData}
+                    disabled={loading.paidStorage}
+                   
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="space-y-6">
-                  <SupplyForm />
-                </div>
-                
-                <div className="lg:col-span-2">
-                  {loading.coefficients ? (
-                    <Skeleton className="h-[600px] w-full" />
-                  ) : (
-                    <WarehouseCoefficientsDateCard
-                      coefficients={coefficients} 
-                      selectedWarehouseId={selectedWarehouseId}
-                      title="Коэффициенты приемки по дням"
-                      warehouses={wbWarehouses}
-                    />
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-        </TabsContent>
-
-        <TabsContent value="storage" className="space-y-4">
-          {!selectedStore ? renderNoStoreSelected() : (
-            <>
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center">
-                  <div>
-                    <h2 className="text-lg font-semibold">Отчет о платном хранении</h2>
-                    <p className="text-sm text-muted-foreground">Аналитика затрат на хранение товаров</p>
-                  </div>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="ml-1">
-                          <Book className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="right" className="max-w-xs">
-                        <div className="space-y-2">
-                          <p className="font-medium">Как работать с разделом "Хранение":</p>
-                          <ol className="list-decimal pl-4 space-y-1">
-                            <li>Здесь отображаются затраты на хранение ваших товаров</li>
-                            <li>Анализируйте дневную стоимость хранения каждого товара</li>
-                            <li>Сопоставляйте стоимость хранения с прибылью от продаж</li>
-                            <li>Выявляйте товары с высокими затратами на хранение</li>
-                            <li>При отсутствии данных API показываются демо-данные</li>
-                          </ol>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleRefreshData}
-                  disabled={loading.paidStorage}
-                  className="flex items-center gap-2"
-                >
-                  {loading.paidStorage ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                  Обновить данные
-                </Button>
-              </div>
-
-              {loading.paidStorage && paidStorageData.length === 0 ? (
-                <Skeleton className="h-[600px] w-full" />
-              ) : (
-                <PaidStorageCostReport 
-                  apiKey={selectedStore.apiKey}
-                  storageData={paidStorageData}
-                  isLoading={loading.paidStorage}
-                  onRefresh={() => loadPaidStorageData(selectedStore.apiKey, undefined, undefined, true)}
-                />
-              )}
-            </>
-          )}
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-};
-
-export default Warehouses;
