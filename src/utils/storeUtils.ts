@@ -794,7 +794,7 @@ export const ensureStoreSelectionPersistence = (): Store[] => {
       return { ...store, isSelected: false };
     });
     
-    saveStores(updatedAllStores);
+    saveStores(updatedAllStores);\
     
     return currentUserId 
       ? updatedAllStores.filter(store => store.userId === currentUserId)
@@ -875,4 +875,4 @@ export const validateApiKey = async (apiKey: string): Promise<{ isValid: boolean
       return { isValid: false, errorCode: status, errorMessage };
     }
     
-    return { isValid: false
+    return { isValid: false, errorMessage:
