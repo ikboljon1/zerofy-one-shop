@@ -553,7 +553,7 @@ export const getProductProfitabilityData = (storeId: string) => {
       
       const analyticsData = localStorage.getItem(`marketplace_analytics_${storeId}`);
       if (analyticsData) {
-        const parsedData = JSON.parse(analyticsData);
+        const parsedData = JSON.parse(analyticsData);\
         return {
           profitableProducts: (parsedData.data.topProfitableProducts || []).slice(0, 3),
           unprofitableProducts: (parsedData.data.topUnprofitableProducts || []).slice(0, 3),
@@ -794,7 +794,7 @@ export const ensureStoreSelectionPersistence = (): Store[] => {
       return { ...store, isSelected: false };
     });
     
-    saveStores(updatedAllStores);\
+    saveStores(updatedAllStores);
     
     return currentUserId 
       ? updatedAllStores.filter(store => store.userId === currentUserId)
@@ -875,4 +875,4 @@ export const validateApiKey = async (apiKey: string): Promise<{ isValid: boolean
       return { isValid: false, errorCode: status, errorMessage };
     }
     
-    return { isValid: false, errorMessage:
+    return { isValid: false
