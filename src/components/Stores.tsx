@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ShoppingBag, Store, Package2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,6 +9,9 @@ import { StoreCard } from "./stores/StoreCard";
 import { getSubscriptionStatus, SubscriptionData } from "@/services/userService";
 import { Badge } from "@/components/ui/badge";
 import { clearAllStoreCache, clearStoreCache } from "@/utils/warehouseCacheUtils";
+import { Tariff } from "@/data/tariffs";
+
+const TARIFFS_STORAGE_KEY = "app_tariffs";
 
 interface StoresProps {
   onStoreSelect?: (store: { id: string; apiKey: string }) => void;
@@ -61,23 +63,40 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     
     try {
       const user = JSON.parse(userData);
+      const tariffId = user.tariffId;
       
-      // Set store limit based on tariff
-      switch (user.tariffId) {
-        case "1": // Базовый
-          setStoreLimit(1);
-          break;
-        case "2": // Профессиональный
-          setStoreLimit(3);
-          break;
-        case "3": // Бизнес
-          setStoreLimit(10);
-          break;
-        case "4": // Корпоративный
-          setStoreLimit(999); // Practically unlimited
-          break;
-        default:
-          setStoreLimit(1); // Default to basic plan
+      // Получаем тарифы из localStorage или используем значения по умолчанию
+      const savedTariffsJson = localStorage.getItem(TARIFFS_STORAGE_KEY);
+      const savedTariffs: Tariff[] = savedTariffsJson 
+        ? JSON.parse(savedTariffsJson) 
+        : [];
+      
+      // Находим тариф пользователя
+      const userTariff = savedTariffs.find(t => t.id === tariffId);
+      
+      if (userTariff) {
+        // Используем storeLimit из найденного тарифа
+        console.log(`Applying tariff ${userTariff.name} with store limit: ${userTariff.storeLimit}`);
+        setStoreLimit(userTariff.storeLimit);
+      } else {
+        // Если тариф не найден, используем лимит по умолчанию на основе tariffId
+        console.log(`Tariff not found in saved tariffs, using default for ID: ${tariffId}`);
+        switch (tariffId) {
+          case "1": // Базовый
+            setStoreLimit(1);
+            break;
+          case "2": // Профессиональный
+            setStoreLimit(2); // Обновлено с 3 на 2 
+            break;
+          case "3": // Бизнес
+            setStoreLimit(10);
+            break;
+          case "4": // Корпоративный
+            setStoreLimit(999); // Practically unlimited
+            break;
+          default:
+            setStoreLimit(1); // Default to basic plan
+        }
       }
     } catch (error) {
       console.error("Ошибка при получении лимита магазинов:", error);

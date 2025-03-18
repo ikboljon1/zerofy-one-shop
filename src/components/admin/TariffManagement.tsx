@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Tag, 
@@ -43,6 +42,8 @@ interface TariffFormData {
   storeLimit: number;
 }
 
+const TARIFFS_STORAGE_KEY = "app_tariffs";
+
 const TariffManagement = () => {
   const [tariffs, setTariffs] = useState<Tariff[]>([]);
   const [selectedTariff, setSelectedTariff] = useState<TariffFormData | null>(null);
@@ -52,9 +53,21 @@ const TariffManagement = () => {
   const [newFeature, setNewFeature] = useState("");
   const { toast } = useToast();
 
-  // Загрузка тарифов из данных
   useEffect(() => {
-    setTariffs(initialTariffs);
+    const savedTariffs = localStorage.getItem(TARIFFS_STORAGE_KEY);
+    if (savedTariffs) {
+      try {
+        const parsedTariffs = JSON.parse(savedTariffs);
+        setTariffs(parsedTariffs);
+      } catch (error) {
+        console.error("Ошибка при загрузке тарифов:", error);
+        setTariffs(initialTariffs);
+        localStorage.setItem(TARIFFS_STORAGE_KEY, JSON.stringify(initialTariffs));
+      }
+    } else {
+      setTariffs(initialTariffs);
+      localStorage.setItem(TARIFFS_STORAGE_KEY, JSON.stringify(initialTariffs));
+    }
   }, []);
 
   const handleEditTariff = (tariff: Tariff) => {
@@ -75,7 +88,10 @@ const TariffManagement = () => {
 
   const confirmDeleteTariff = () => {
     if (selectedTariff) {
-      setTariffs(tariffs.filter((tariff) => tariff.id !== selectedTariff.id));
+      const updatedTariffs = tariffs.filter((tariff) => tariff.id !== selectedTariff.id);
+      setTariffs(updatedTariffs);
+      localStorage.setItem(TARIFFS_STORAGE_KEY, JSON.stringify(updatedTariffs));
+      
       setIsDeleteDialogOpen(false);
       toast({
         title: "Тариф удален",
@@ -102,9 +118,14 @@ const TariffManagement = () => {
         storeLimit: selectedTariff.storeLimit
       };
 
-      setTariffs(
-        tariffs.map((tariff) => (tariff.id === selectedTariff.id ? updatedTariff : tariff))
+      const updatedTariffs = tariffs.map((tariff) => 
+        (tariff.id === selectedTariff.id ? updatedTariff : tariff)
       );
+      
+      setTariffs(updatedTariffs);
+      
+      localStorage.setItem(TARIFFS_STORAGE_KEY, JSON.stringify(updatedTariffs));
+      
       setIsEditDialogOpen(false);
       toast({
         title: "Изменения сохранены",
@@ -127,7 +148,11 @@ const TariffManagement = () => {
         storeLimit: selectedTariff.storeLimit || 1
       };
       
-      setTariffs([...tariffs, newTariff]);
+      const updatedTariffs = [...tariffs, newTariff];
+      setTariffs(updatedTariffs);
+      
+      localStorage.setItem(TARIFFS_STORAGE_KEY, JSON.stringify(updatedTariffs));
+      
       setIsAddDialogOpen(false);
       toast({
         title: "Тариф добавлен",
@@ -251,7 +276,6 @@ const TariffManagement = () => {
         </CardContent>
       </Card>
 
-      {/* Edit Tariff Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -384,7 +408,6 @@ const TariffManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Tariff Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -424,7 +447,6 @@ const TariffManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Add Tariff Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
