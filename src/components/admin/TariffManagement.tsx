@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Tag, 
   Plus, 
@@ -8,7 +8,8 @@ import {
   Check, 
   X, 
   CreditCard,
-  BadgePercent
+  BadgePercent,
+  Store
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,75 +31,45 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tariff, initialTariffs } from "@/data/tariffs";
 
-interface TariffData {
+interface TariffFormData {
   id: string;
   name: string;
   price: number;
   billingPeriod: string;
   features: string[];
   isPopular: boolean;
+  storeLimit: number;
 }
 
-// Mock data for demonstration
-const mockTariffs: TariffData[] = [
-  {
-    id: "1",
-    name: "Базовый",
-    price: 1990,
-    billingPeriod: "месяц",
-    features: [
-      "1 магазин",
-      "Базовая аналитика",
-      "5 пользователей",
-    ],
-    isPopular: false,
-  },
-  {
-    id: "2",
-    name: "Профессиональный",
-    price: 4990,
-    billingPeriod: "месяц",
-    features: [
-      "5 магазинов",
-      "Расширенная аналитика",
-      "15 пользователей",
-      "Приоритетная поддержка",
-    ],
-    isPopular: true,
-  },
-  {
-    id: "3",
-    name: "Корпоративный",
-    price: 9990,
-    billingPeriod: "месяц",
-    features: [
-      "Неограниченное количество магазинов",
-      "Полная аналитика и прогнозирование",
-      "Неограниченное количество пользователей",
-      "Персональный менеджер",
-      "API интеграции",
-    ],
-    isPopular: false,
-  },
-];
-
 const TariffManagement = () => {
-  const [tariffs, setTariffs] = useState<TariffData[]>(mockTariffs);
-  const [selectedTariff, setSelectedTariff] = useState<TariffData | null>(null);
+  const [tariffs, setTariffs] = useState<Tariff[]>([]);
+  const [selectedTariff, setSelectedTariff] = useState<TariffFormData | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newFeature, setNewFeature] = useState("");
   const { toast } = useToast();
 
-  const handleEditTariff = (tariff: TariffData) => {
-    setSelectedTariff({ ...tariff });
+  // Загрузка тарифов из данных
+  useEffect(() => {
+    setTariffs(initialTariffs);
+  }, []);
+
+  const handleEditTariff = (tariff: Tariff) => {
+    setSelectedTariff({ 
+      ...tariff, 
+      billingPeriod: tariff.period === 'monthly' ? 'месяц' : 'год' 
+    });
     setIsEditDialogOpen(true);
   };
 
-  const handleDeleteTariff = (tariff: TariffData) => {
-    setSelectedTariff(tariff);
+  const handleDeleteTariff = (tariff: Tariff) => {
+    setSelectedTariff({ 
+      ...tariff, 
+      billingPeriod: tariff.period === 'monthly' ? 'месяц' : 'год' 
+    });
     setIsDeleteDialogOpen(true);
   };
 
@@ -115,8 +86,24 @@ const TariffManagement = () => {
 
   const saveTariffChanges = () => {
     if (selectedTariff) {
+      const updatedTariff: Tariff = {
+        id: selectedTariff.id,
+        name: selectedTariff.name,
+        price: selectedTariff.price,
+        period: selectedTariff.billingPeriod === 'месяц' ? 'monthly' : 'yearly',
+        description: selectedTariff.id === '1' 
+          ? 'Идеально для начинающих продавцов' 
+          : selectedTariff.id === '2' 
+            ? 'Для растущих магазинов' 
+            : 'Комплексное решение для крупных продавцов',
+        features: selectedTariff.features,
+        isPopular: selectedTariff.isPopular,
+        isActive: true,
+        storeLimit: selectedTariff.storeLimit
+      };
+
       setTariffs(
-        tariffs.map((tariff) => (tariff.id === selectedTariff.id ? selectedTariff : tariff))
+        tariffs.map((tariff) => (tariff.id === selectedTariff.id ? updatedTariff : tariff))
       );
       setIsEditDialogOpen(false);
       toast({
@@ -128,10 +115,18 @@ const TariffManagement = () => {
 
   const addNewTariff = () => {
     if (selectedTariff) {
-      const newTariff = {
-        ...selectedTariff,
+      const newTariff: Tariff = {
         id: Date.now().toString(),
+        name: selectedTariff.name,
+        price: selectedTariff.price,
+        period: selectedTariff.billingPeriod === 'месяц' ? 'monthly' : 'yearly',
+        description: 'Новый тарифный план',
+        features: selectedTariff.features,
+        isPopular: selectedTariff.isPopular,
+        isActive: true,
+        storeLimit: selectedTariff.storeLimit || 1
       };
+      
       setTariffs([...tariffs, newTariff]);
       setIsAddDialogOpen(false);
       toast({
@@ -149,6 +144,7 @@ const TariffManagement = () => {
       billingPeriod: "месяц",
       features: [],
       isPopular: false,
+      storeLimit: 1
     });
     setIsAddDialogOpen(true);
   };
@@ -176,6 +172,11 @@ const TariffManagement = () => {
 
   const formatPrice = (price: number): string => {
     return new Intl.NumberFormat("ru-RU").format(price);
+  };
+
+  const getStoreLimitText = (limit: number): string => {
+    if (limit === 999) return "Неограниченно";
+    return `${limit} ${limit === 1 ? 'магазин' : limit < 5 ? 'магазина' : 'магазинов'}`;
   };
 
   return (
@@ -208,7 +209,12 @@ const TariffManagement = () => {
                   
                   <div className="mb-4">
                     <span className="text-3xl font-bold">{formatPrice(tariff.price)} ₽</span>
-                    <span className="text-sm text-muted-foreground">/{tariff.billingPeriod}</span>
+                    <span className="text-sm text-muted-foreground">/{tariff.period === 'monthly' ? 'месяц' : 'год'}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 mb-4 text-blue-600">
+                    <Store className="h-4 w-4" />
+                    <span>{getStoreLimitText(tariff.storeLimit)}</span>
                   </div>
                   
                   <ul className="space-y-2 mb-6">
@@ -279,6 +285,22 @@ const TariffManagement = () => {
                   value={selectedTariff.price}
                   onChange={(e) =>
                     setSelectedTariff({ ...selectedTariff, price: Number(e.target.value) })
+                  }
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="storeLimit" className="text-right text-sm">
+                  Лимит магазинов
+                </label>
+                <Input
+                  id="storeLimit"
+                  type="number"
+                  min="1"
+                  max="999"
+                  value={selectedTariff.storeLimit}
+                  onChange={(e) =>
+                    setSelectedTariff({ ...selectedTariff, storeLimit: Number(e.target.value) })
                   }
                   className="col-span-3"
                 />
@@ -436,6 +458,22 @@ const TariffManagement = () => {
                   value={selectedTariff.price}
                   onChange={(e) =>
                     setSelectedTariff({ ...selectedTariff, price: Number(e.target.value) })
+                  }
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="new-storeLimit" className="text-right text-sm">
+                  Лимит магазинов
+                </label>
+                <Input
+                  id="new-storeLimit"
+                  type="number"
+                  min="1"
+                  max="999"
+                  value={selectedTariff.storeLimit}
+                  onChange={(e) =>
+                    setSelectedTariff({ ...selectedTariff, storeLimit: Number(e.target.value) })
                   }
                   className="col-span-3"
                 />

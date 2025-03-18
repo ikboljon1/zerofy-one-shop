@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ShoppingBag, Store, Package2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,17 +21,19 @@ export default function Stores({ onStoreSelect }: StoresProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [canDeleteStores, setCanDeleteStores] = useState(false);
   const [storeLimit, setStoreLimit] = useState<number>(1); // Default to 1
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     try {
       const userData = localStorage.getItem('user');
-      const currentUserId = userData ? JSON.parse(userData).id : null;
+      const userId = userData ? JSON.parse(userData).id : null;
+      setCurrentUserId(userId);
       
       // Load and filter stores by current user
       const savedStores = ensureStoreSelectionPersistence();
-      const userStores = currentUserId 
-        ? savedStores.filter(store => store.userId === currentUserId)
+      const userStores = userId 
+        ? savedStores.filter(store => store.userId === userId)
         : savedStores;
       
       setStores(userStores);
@@ -147,7 +150,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
 
       // Get current user from localStorage
       const userData = localStorage.getItem('user');
-      const currentUserId = userData ? JSON.parse(userData).id : null;
+      const userId = userData ? JSON.parse(userData).id : null;
 
       const store: StoreType = {
         id: Date.now().toString(),
@@ -156,7 +159,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         apiKey: newStore.apiKey,
         isSelected: false,
         lastFetchDate: new Date().toISOString(),
-        userId: currentUserId
+        userId: userId
       };
 
       console.log("Created new store object:", store);
@@ -181,7 +184,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       const allStores = loadStores();
       
       // If this is the user's first store, mark it as selected and deselect others
-      const userStoreCount = allStores.filter(s => s.userId === currentUserId).length;
+      const userStoreCount = allStores.filter(s => s.userId === userId).length;
       
       if (userStoreCount === 0) {
         storeToAdd.isSelected = true;
@@ -194,8 +197,8 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       const updatedStores = [...allStores, storeToAdd];
       
       // Update only current user's stores in state
-      const userStores = currentUserId 
-        ? updatedStores.filter(s => s.userId === currentUserId)
+      const userStores = userId 
+        ? updatedStores.filter(s => s.userId === userId)
         : updatedStores;
       
       setStores(userStores);
@@ -246,9 +249,6 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     }));
     
     // Update state only for current user's stores
-    const userData = localStorage.getItem('user');
-    const currentUserId = userData ? JSON.parse(userData).id : null;
-    
     const userStores = currentUserId 
       ? updatedAllStores.filter(store => store.userId === currentUserId)
       : updatedAllStores;
@@ -286,9 +286,6 @@ export default function Stores({ onStoreSelect }: StoresProps) {
         );
         
         // Update state only for current user's stores
-        const userData = localStorage.getItem('user');
-        const currentUserId = userData ? JSON.parse(userData).id : null;
-        
         const userStores = currentUserId 
           ? updatedAllStores.filter(s => s.userId === currentUserId)
           : updatedAllStores;
@@ -346,9 +343,6 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     const updatedAllStores = allStores.filter(store => store.id !== storeId);
     
     // Update state only for current user's stores
-    const userData = localStorage.getItem('user');
-    const currentUserId = userData ? JSON.parse(userData).id : null;
-    
     const userStores = currentUserId 
       ? updatedAllStores.filter(store => store.userId === currentUserId)
       : updatedAllStores;
