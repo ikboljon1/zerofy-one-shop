@@ -9,7 +9,9 @@ import { StoreCard } from "./stores/StoreCard";
 import { getSubscriptionStatus, SubscriptionData } from "@/services/userService";
 import { Badge } from "@/components/ui/badge";
 import { clearAllStoreCache, clearStoreCache } from "@/utils/warehouseCacheUtils";
-import { getStoreLimitForTariff } from "@/services/tariffService";
+import { Tariff } from "@/data/tariffs";
+
+const TARIFFS_STORAGE_KEY = "app_tariffs";
 
 interface StoresProps {
   onStoreSelect?: (store: { id: string; apiKey: string }) => void;
@@ -38,11 +40,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       
       setStores(userStores);
       checkDeletePermissions();
-      
-      if (userId) {
-        // Get user's tariff and store limit from the database
-        getStoreLimitFromTariff(userId);
-      }
+      getStoreLimitFromTariff();
       
       // Make sure at least one store is selected if any stores exist
       if (userStores.length > 0 && !userStores.some(store => store.isSelected)) {
@@ -58,7 +56,7 @@ export default function Stores({ onStoreSelect }: StoresProps) {
     }
   }, []);
 
-  const getStoreLimitFromTariff = async (userId: string) => {
+  const getStoreLimitFromTariff = () => {
     // Get user data from localStorage
     const userData = localStorage.getItem('user');
     if (!userData) return;
@@ -67,10 +65,39 @@ export default function Stores({ onStoreSelect }: StoresProps) {
       const user = JSON.parse(userData);
       const tariffId = user.tariffId;
       
-      // Получаем лимит магазинов из базы данных через сервис
-      const limit = await getStoreLimitForTariff(tariffId);
-      console.log(`Applying tariff with store limit: ${limit}`);
-      setStoreLimit(limit);
+      // Получаем тарифы из localStorage или используем значения по умолчанию
+      const savedTariffsJson = localStorage.getItem(TARIFFS_STORAGE_KEY);
+      const savedTariffs: Tariff[] = savedTariffsJson 
+        ? JSON.parse(savedTariffsJson) 
+        : [];
+      
+      // Находим тариф пользователя
+      const userTariff = savedTariffs.find(t => t.id === tariffId);
+      
+      if (userTariff) {
+        // Используем storeLimit из найденного тарифа
+        console.log(`Applying tariff ${userTariff.name} with store limit: ${userTariff.storeLimit}`);
+        setStoreLimit(userTariff.storeLimit);
+      } else {
+        // Если тариф не найден, используем лимит по умолчанию на основе tariffId
+        console.log(`Tariff not found in saved tariffs, using default for ID: ${tariffId}`);
+        switch (tariffId) {
+          case "1": // Базовый
+            setStoreLimit(1);
+            break;
+          case "2": // Профессиональный
+            setStoreLimit(2); // Обновлено с 3 на 2 
+            break;
+          case "3": // Бизнес
+            setStoreLimit(10);
+            break;
+          case "4": // Корпоративный
+            setStoreLimit(999); // Practically unlimited
+            break;
+          default:
+            setStoreLimit(1); // Default to basic plan
+        }
+      }
     } catch (error) {
       console.error("Ошибка при получении лимита магазинов:", error);
       setStoreLimit(1); // Default to basic plan on error
