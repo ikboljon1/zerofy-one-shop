@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { 
   WarehouseCoefficient, 
@@ -365,7 +364,7 @@ export const WarehouseProvider: React.FC<WarehouseProviderProps> = ({ children }
   // Function to toggle preferred warehouse for a store
   const togglePreferredWarehouse = (storeId: number, warehouseId: number) => {
     // Get the current list of preferred warehouses for the store
-    const currentPreferred = getPreferredWarehouses(storeId);
+    const currentPreferred = getPreferredWarehouses(storeId.toString());
     
     // Toggle the warehouse ID in the preferred list
     let newPreferred = [...currentPreferred];
