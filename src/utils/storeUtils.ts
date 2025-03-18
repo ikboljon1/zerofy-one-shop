@@ -553,7 +553,7 @@ export const getProductProfitabilityData = (storeId: string) => {
       
       const analyticsData = localStorage.getItem(`marketplace_analytics_${storeId}`);
       if (analyticsData) {
-        const parsedData = JSON.parse(analyticsData);\
+        const parsedData = JSON.parse(analyticsData);
         return {
           profitableProducts: (parsedData.data.topProfitableProducts || []).slice(0, 3),
           unprofitableProducts: (parsedData.data.topUnprofitableProducts || []).slice(0, 3),
