@@ -223,7 +223,7 @@ export const authenticate = async (
   } catch (error) {
     console.error('Error during authentication:', error);
     
-    // Fallback для разработки
+    // Fallback для разработки - только для "zerofy" логина
     if (email === 'zerofy' && password === 'Zerofy2025') {
       const users = await getUsers();
       const adminUser = users.find(user => user.role === 'admin') || users[0];
@@ -242,7 +242,7 @@ export const authenticate = async (
     const users = await getUsers();
     const user = users.find(u => u.email === email);
     
-    if (user && (password === 'password' || password === user.password)) {
+    if (user && (password === user.password)) {
       user.lastLogin = new Date().toISOString();
       await updateUser(user.id, { lastLogin: user.lastLogin });
       
@@ -488,6 +488,8 @@ export const testSmtpConnection = async (settings: SmtpSettings): Promise<{ succ
     return result;
   } catch (error) {
     console.error("Ошибка при проверке SMTP:", error);
+    
+    // Fallback для разработки
     return { 
       success: false, 
       message: error instanceof Error ? error.message : "Неизвестная ошибка при подключении к SMTP-серверу" 
@@ -723,7 +725,7 @@ function simulatePop3Connection(settings: Pop3Settings): { success: boolean; mes
   if (blacklistedHosts.includes(settings.host)) {
     return { 
       success: false, 
-      message: "Не уд��лось подключиться к серверу: хост не найден в DNS" 
+      message: "Не уд��лось п��дключиться к серверу: хост не найден в DNS" 
     };
   }
   
@@ -823,7 +825,7 @@ function simulatePop3Connection(settings: Pop3Settings): { success: boolean; mes
       if (userDomain === 'gmail.com') {
         return {
           success: false,
-          message: "POP3 может быть отключен в настройках Gmail. Проверьте настройки вашего аккаунта Gmail."
+          message: "POP3 может быть о��ключен в настройках Gmail. Проверьте настройки вашего аккаунта Gmail."
         };
       } else {
         return {
@@ -919,7 +921,7 @@ export const sendEmail = async (
     `);
     
     // В реальной ситуации здесь был бы код отправки через настроенный SMTP сервер
-    // Для демонстрации возвращаем положительный результат
+    // Для де��онстрации возвращаем положительный результат
     return {
       success: true,
       message: "Письмо успешно отправлено на указанный адрес"
@@ -1189,9 +1191,9 @@ export const changePassword = async (
   
   const user = users[userIndex];
   
-  // Check if the current password is correct (for admin)
-  if (user.role === 'admin' && currentPassword === 'admin') {
-    // Admin user with default 'admin' password
+  // Remove the admin/admin check and only keep the zerofy check for admin
+  if (user.role === 'admin' && currentPassword === 'Zerofy2025') {
+    // Admin user with correct password
     user.password = newPassword;
     users[userIndex] = user;
     localStorage.setItem('users', JSON.stringify(users));
@@ -1378,3 +1380,4 @@ export const deleteUserStore = async (userId: string, storeId: string): Promise<
     return true;
   }
 };
+
