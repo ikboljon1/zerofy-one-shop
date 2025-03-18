@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -59,6 +58,24 @@ const Warehouses: React.FC = () => {
     resetDataForStore
   } = useWarehouse();
 
+  // Combine both loadDataForActiveTab functions into one with an optional forceRefresh parameter
+  const loadDataForActiveTab = (store: StoreType, tab: string, forceRefresh: boolean = false) => {
+    switch (tab) {
+      case 'supplies':
+        loadWarehouses(store.apiKey, forceRefresh);
+        loadCoefficients(store.apiKey, undefined, forceRefresh);
+        break;
+      case 'inventory':
+        loadWarehouseRemains(store.apiKey, forceRefresh);
+        loadAverageDailySales(store.apiKey, forceRefresh);
+        loadPaidStorageData(store.apiKey, undefined, undefined, forceRefresh);
+        break;
+      case 'storage':
+        loadPaidStorageData(store.apiKey, undefined, undefined, forceRefresh);
+        break;
+    }
+  };
+
   // Initialize store and load initial data
   useEffect(() => {
     const stores = ensureStoreSelectionPersistence();
@@ -82,24 +99,6 @@ const Warehouses: React.FC = () => {
       loadDataForActiveTab(selectedStore, activeTab);
     }
   }, [activeTab]);
-
-  // Load data based on active tab
-  const loadDataForActiveTab = (store: StoreType, tab: string) => {
-    switch (tab) {
-      case 'supplies':
-        loadWarehouses(store.apiKey);
-        loadCoefficients(store.apiKey);
-        break;
-      case 'inventory':
-        loadWarehouseRemains(store.apiKey);
-        loadAverageDailySales(store.apiKey);
-        loadPaidStorageData(store.apiKey);
-        break;
-      case 'storage':
-        loadPaidStorageData(store.apiKey);
-        break;
-    }
-  };
 
   // Handle store changes
   useEffect(() => {
@@ -145,24 +144,6 @@ const Warehouses: React.FC = () => {
     }
     
     loadDataForActiveTab(selectedStore, activeTab, true);
-  };
-  
-  // Load data with force refresh
-  const loadDataForActiveTab = (store: StoreType, tab: string, forceRefresh: boolean = false) => {
-    switch (tab) {
-      case 'supplies':
-        loadWarehouses(store.apiKey, forceRefresh);
-        loadCoefficients(store.apiKey, undefined, forceRefresh);
-        break;
-      case 'inventory':
-        loadWarehouseRemains(store.apiKey, forceRefresh);
-        loadAverageDailySales(store.apiKey, forceRefresh);
-        loadPaidStorageData(store.apiKey, undefined, undefined, forceRefresh);
-        break;
-      case 'storage':
-        loadPaidStorageData(store.apiKey, undefined, undefined, forceRefresh);
-        break;
-    }
   };
 
   const renderNoStoreSelected = () => (
