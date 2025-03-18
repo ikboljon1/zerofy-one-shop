@@ -1,3 +1,4 @@
+
 import React, { Suspense, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from "@/components/ui/sonner";
@@ -14,7 +15,11 @@ import Warehouses from './pages/Warehouses';
 import './App.css';
 
 function App() {
+  const [activeTab, setActiveTab] = useState("home");
   
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+  };
 
   return (
     <ThemeProvider>
@@ -23,7 +28,7 @@ function App() {
           <Routes>
             <Route path="/dashboard/*" element={
               <Suspense fallback={<div>Loading...</div>}>
-                <MainLayout>
+                <MainLayout activeTab={activeTab} onTabChange={handleTabChange}>
                   <Routes>
                     <Route index element={<Index />} />
                     <Route path="products" element={<Products />} />
