@@ -1,3 +1,4 @@
+
 export interface Store {
   id: string;
   marketplace: string;
@@ -10,6 +11,24 @@ export interface Store {
     totalOrders: number;
     totalSales: number;
     totalProducts: number;
+    currentPeriod?: {
+      sales: number;
+      transferred: number;
+      expenses: {
+        total: number;
+        logistics: number;
+        storage: number;
+        penalties: number;
+        advertising: number;
+        acceptance: number;
+        deductions?: number;
+        costPrice?: number;
+      };
+      netProfit: number;
+      acceptance: number;
+      returnsAmount?: number;
+      orderCount?: number;
+    };
   };
 }
 
@@ -17,6 +36,7 @@ export interface NewStore {
   marketplace: string;
   name: string;
   apiKey: string;
+  userId?: string;
 }
 
 export interface WildberriesOrder {
@@ -42,6 +62,11 @@ export interface WildberriesOrder {
   gNumber: string;
   srid: string;
   priceWithDisc: number;
+  finishedPrice?: number;
+  regionName?: string;
+  countryName?: string;
+  oblastOkrugName?: string;
+  warehouseType?: string;
 }
 
 export interface WildberriesSale {
@@ -88,8 +113,15 @@ export interface SubscriptionData {
   isTrial: boolean;
 }
 
+// Storage keys
+export const STORES_STORAGE_KEY = "marketplace_stores";
 export const STATS_STORAGE_KEY = "marketplace_stats";
 export const PRODUCTS_STORAGE_KEY = "marketplace_products";
+export const ORDERS_STORAGE_KEY = "marketplace_orders";
+export const SALES_STORAGE_KEY = "marketplace_sales";
+
+// Available marketplace options
+export const marketplaces = ["Wildberries", "Ozon", "Яндекс.Маркет"];
 
 // Дополним типы AnalyticsData и StoredAnalyticsData для корректной работы с количеством заказов
 export interface AnalyticsData {
@@ -111,7 +143,12 @@ export interface AnalyticsData {
     returnsAmount?: number;
     orderCount?: number; // Добавляем поле для реального количества заказов
   };
-  dailySales: any[];
+  dailySales: Array<{
+    date: string;
+    sales: number;
+    previousSales: number;
+    orderCount?: number; // Добавляем поле для количества заказов по дням
+  }>;
   productSales: any[];
   productReturns: Array<{
     name: string;
