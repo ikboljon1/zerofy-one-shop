@@ -25,10 +25,6 @@ const OrderMetrics: React.FC<OrderMetricsProps> = ({ orders }) => {
   const totalAmount = orders.reduce((sum, order) => sum + order.priceWithDisc, 0);
   const cancelRate = totalOrders > 0 ? (canceledOrders / totalOrders) * 100 : 0;
   
-  // Для подсчёта уникальных заказов (на случай, если один заказ содержит несколько позиций)
-  const uniqueOrderIds = new Set(orders.map(order => order.orderId));
-  const uniqueOrderCount = uniqueOrderIds.size || totalOrders;
-  
   const container = {
     hidden: { opacity: 0 },
     show: {
@@ -64,15 +60,15 @@ const OrderMetrics: React.FC<OrderMetricsProps> = ({ orders }) => {
               <Badge variant="outline" className="bg-indigo-100/50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 text-[10px] h-5">За период</Badge>
             </div>
             <CardDescription className="text-indigo-500/70 dark:text-indigo-400/70 pl-12">
-              {uniqueOrderCount > 0 ? "Активные и отмененные" : "Нет данных за период"}
+              {totalOrders > 0 ? "Активные и отмененные" : "Нет данных за период"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-end justify-between">
               <div className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-700 dark:from-indigo-400 dark:to-blue-400">
-                {uniqueOrderCount}
+                {totalOrders}
               </div>
-              {uniqueOrderCount > 0 && (
+              {totalOrders > 0 && (
                 <div className="text-sm text-indigo-600/80 dark:text-indigo-400/80 flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded-full">
                   <TrendingUp className="h-3 w-3" />
                   <span>+{Math.floor(Math.random() * 15 + 5)}%</span>

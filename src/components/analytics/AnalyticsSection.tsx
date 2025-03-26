@@ -45,7 +45,6 @@ interface AnalyticsData {
     netProfit: number;
     acceptance: number;
     returnsAmount?: number;
-    orderCount?: number;
   };
   dailySales: Array<{
     date: string;
@@ -301,27 +300,6 @@ const AnalyticsSection = () => {
           forPay - logistics - storage - penalties - totalAdvertisingCost - acceptance - deductionsValue - returnsAmount
         );
         
-        let orderCount = 0;
-        if (statsData.dailySales && Array.isArray(statsData.dailySales)) {
-          statsData.dailySales.forEach(day => {
-            if (day.sales && Array.isArray(day.sales)) {
-              const uniqueOrderIds = new Set();
-              day.sales.forEach(sale => {
-                if (sale.orderId && !sale.isReturn) {
-                  uniqueOrderIds.add(sale.orderId);
-                }
-              });
-              orderCount += uniqueOrderIds.size;
-            } else if (typeof day.orderCount === 'number') {
-              orderCount += day.orderCount;
-            }
-          });
-        }
-        
-        if (orderCount === 0) {
-          orderCount = Math.round(sales / 2500);
-        }
-        
         const modifiedData: AnalyticsData = {
           currentPeriod: {
             ...statsData.currentPeriod,
@@ -337,8 +315,7 @@ const AnalyticsSection = () => {
               acceptance: acceptance,
               deductions: deductionsValue
             },
-            returnsAmount: returnsAmount,
-            orderCount: orderCount
+            returnsAmount: returnsAmount
           },
           dailySales: statsData.dailySales,
           productSales: statsData.productSales,
@@ -661,3 +638,4 @@ const AnalyticsSection = () => {
 };
 
 export default AnalyticsSection;
+

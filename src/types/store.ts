@@ -1,130 +1,30 @@
 
+import { WildberriesResponse as ApiWildberriesResponse } from "@/services/wildberriesApi";
+
+export type Marketplace = "Wildberries" | "Ozon" | "Yandexmarket" | "Uzum";
+
 export interface Store {
   id: string;
-  marketplace: string;
+  marketplace: Marketplace;
   name: string;
   apiKey: string;
   isSelected?: boolean;
+  stats?: WildberriesResponse;
   lastFetchDate?: string;
-  userId?: string;
-  stats?: {
-    totalOrders: number;
-    totalSales: number;
-    totalProducts: number;
-    currentPeriod?: {
-      sales: number;
-      transferred: number;
-      expenses: {
-        total: number;
-        logistics: number;
-        storage: number;
-        penalties: number;
-        advertising: number;
-        acceptance: number;
-        deductions?: number;
-        costPrice?: number;
-      };
-      netProfit: number;
-      acceptance: number;
-      returnsAmount?: number;
-      orderCount?: number;
-    };
-  };
+  userId?: string; // Добавляем ID пользователя
 }
 
-export interface NewStore {
-  marketplace: string;
-  name: string;
-  apiKey: string;
-  userId?: string;
-}
+export interface NewStore extends Partial<Store> {}
 
-export interface WildberriesOrder {
-  orderId: string;
-  date: string;
-  lastChangeDate: string;
-  supplierArticle: string;
-  techSize: string;
-  barcode: string;
-  quantity: number;
-  totalPrice: number;
-  discountPercent: number;
-  warehouseName: string;
-  oblast: string;
-  incomeID: number;
-  odid: number;
-  nmId: number;
-  subject: string;
-  category: string;
-  brand: string;
-  isCancel: boolean;
-  cancel_dt: string;
-  gNumber: string;
-  srid: string;
-  priceWithDisc: number;
-  finishedPrice?: number;
-  regionName?: string;
-  countryName?: string;
-  oblastOkrugName?: string;
-  warehouseType?: string;
-}
+export const STORES_STORAGE_KEY = 'marketplace_stores';
+export const STATS_STORAGE_KEY = 'marketplace_stats';
+export const ORDERS_STORAGE_KEY = 'marketplace_orders';
+export const SALES_STORAGE_KEY = 'marketplace_sales';
+export const ADVERTISING_DATA_KEY = 'marketplace_advertising_data'; // Добавляем ключ для рекламных данных
 
-export interface WildberriesSale {
-  gNumber: string;
-  date: string;
-  lastChangeDate: string;
-  warehouseName: string;
-  countryName: string;
-  oblastOkrugName: string;
-  regionName: string;
-  incomeID: number;
-  saleID: string;
-  odid: number;
-  srid: string;
-  nmId: number;
-  subject: string;
-  category: string;
-  brand: string;
-  supplierArticle: string;
-  techSize: string;
-  barcode: string;
-  totalPrice: number;
-  discountPercent: number;
-  isSupply: boolean;
-  isRealization: boolean;
-  promoCodeDiscount: number;
-  warehouseId: number;
-  priceWithDisc: number;
-  forPay: number;
-  finishedPrice: number;
-  price: number;
-  isStorno: number;
-  orderId: string;
-  rrId: number;
-  shkId: number;
-  retailPrice: number;
-  isReturn?: boolean;
-}
+export const marketplaces: Marketplace[] = ["Wildberries", "Ozon", "Yandexmarket", "Uzum"];
 
-export interface SubscriptionData {
-  startDate: string | null;
-  endDate: string | null;
-  tariffId: string | null;
-  isTrial: boolean;
-}
-
-// Storage keys
-export const STORES_STORAGE_KEY = "marketplace_stores";
-export const STATS_STORAGE_KEY = "marketplace_stats";
-export const PRODUCTS_STORAGE_KEY = "marketplace_products";
-export const ORDERS_STORAGE_KEY = "marketplace_orders";
-export const SALES_STORAGE_KEY = "marketplace_sales";
-
-// Available marketplace options
-export const marketplaces = ["Wildberries", "Ozon", "Яндекс.Маркет"];
-
-// Дополним типы AnalyticsData и StoredAnalyticsData для корректной работы с количеством заказов
-export interface AnalyticsData {
+export type WildberriesResponse = {
   currentPeriod: {
     sales: number;
     transferred: number;
@@ -133,46 +33,124 @@ export interface AnalyticsData {
       logistics: number;
       storage: number;
       penalties: number;
-      advertising: number;
       acceptance: number;
+      advertising: number;
       deductions?: number;
       costPrice?: number;
     };
     netProfit: number;
     acceptance: number;
-    returnsAmount?: number;
-    orderCount?: number; // Добавляем поле для реального количества заказов
+    returns?: number;
+    returnsAmount?: number;  // Added returnsAmount as optional property
   };
-  dailySales: Array<{
-    date: string;
+  previousPeriod?: {
     sales: number;
-    previousSales: number;
-    orderCount?: number; // Добавляем поле для количества заказов по дням
-  }>;
-  productSales: any[];
-  productReturns: Array<{
-    name: string;
-    value: number;
-    count?: number;
-  }>;
-  topProfitableProducts?: Array<{
-    name: string;
-    price: string;
-    profit: string;
-    image: string;
-    quantitySold?: number;
-    margin?: number;
-    returnCount?: number;
-    category?: string;
-  }>;
-  topUnprofitableProducts?: Array<{
-    name: string;
-    price: string;
-    profit: string;
-    image: string;
-    quantitySold?: number;
-    margin?: number;
-    returnCount?: number;
-    category?: string;
-  }>;
+    transferred: number;
+    expenses: {
+      total: number;
+      logistics: number;
+      storage: number;
+      penalties: number;
+      acceptance: number;
+      advertising: number;
+      deductions?: number;
+      costPrice?: number;
+    };
+    netProfit: number;
+    acceptance: number;
+    returns?: number;
+    returnsAmount?: number;  // Also adding it to previousPeriod for consistency
+  };
+  dailySales?: any[];
+  productSales?: any[];
+};
+
+// Интерфейс для возвратов по nmId, используемый в Python-скрипте
+export interface ReturnsByNmId {
+  [nmId: string]: number;
+}
+
+// Wildberries Order based on API structure
+export interface WildberriesOrder {
+  date: string;
+  lastChangeDate: string;
+  warehouseName: string;
+  warehouseType: string;
+  countryName: string;
+  oblastOkrugName: string;
+  regionName: string;
+  supplierArticle: string;
+  nmId: number;
+  barcode: string;
+  category: string;
+  subject: string;
+  brand: string;
+  techSize: string;
+  incomeID: number;
+  isSupply: boolean;
+  isRealization: boolean;
+  totalPrice: number;
+  discountPercent: number;
+  spp: number;
+  finishedPrice: number;
+  priceWithDisc: number;
+  isCancel: boolean;
+  isReturn?: boolean; // Added isReturn property as optional
+  cancelDate: string;
+  orderType: string;
+  sticker: string;
+  gNumber: string;
+  srid: string;
+}
+
+// Wildberries Sale based on API structure
+export interface WildberriesSale {
+  date: string;
+  lastChangeDate: string;
+  warehouseName: string;
+  warehouseType: string;
+  countryName: string;
+  oblastOkrugName: string;
+  regionName: string;
+  supplierArticle: string;
+  nmId: number;
+  barcode: string;
+  category: string;
+  subject: string;
+  brand: string;
+  techSize: string;
+  incomeID: number;
+  isSupply: boolean;
+  isRealization: boolean;
+  totalPrice: number;
+  discountPercent: number;
+  spp: number;
+  paymentSaleAmount: number;
+  forPay: number;
+  finishedPrice: number;
+  priceWithDisc: number;
+  isReturn?: boolean; // Added isReturn property as optional
+  saleID: string;
+  orderType: string;
+  sticker: string;
+  gNumber: string;
+  srid: string;
+}
+
+// Payment History Item for user payments
+export interface PaymentHistoryItem {
+  userId: string;
+  tariff: string;
+  amount: number;
+  period: number;
+  date: string;
+}
+
+// Интерфейс для рекламных данных по товарам
+export interface ProductAdvertisingData {
+  nmId: number;
+  name: string;
+  advertisingCost: number;
+  salesCount: number;
+  salesAmount: number;
 }
