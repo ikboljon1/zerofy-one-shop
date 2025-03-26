@@ -1,99 +1,143 @@
 
-import React from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { BarChart3 } from "lucide-react";
-import { formatCurrency } from "@/utils/formatCurrency";
+import { Card } from "@/components/ui/card";
+import { DollarSign } from "lucide-react";
+import { format } from "date-fns";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ReferenceLine
+} from "recharts";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SalesChartProps {
-  data: any;
+  data: {
+    dailySales: Array<{
+      date: string;
+      sales: number;
+    }>;
+  };
 }
 
-const SalesChart: React.FC<SalesChartProps> = ({ data }) => {
-  const dailySales = data.dailySales || [];
+const SalesChart = ({ data }: SalesChartProps) => {
+  const isMobile = useIsMobile();
+  // Check if data is valid and has sales data
+  const hasSalesData = data && data.dailySales && data.dailySales.length > 0;
   
-  // Форматируем данные для графика
-  const chartData = dailySales.map((item: any) => ({
-    name: new Date(item.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }),
-    Продажи: item.sales,
-    "Прошлый период": item.previousSales || 0,
-    "Количество заказов": item.orderCount || 0
-  }));
+  // Calculate average sales
+  const avgSales = hasSalesData 
+    ? data.dailySales.reduce((sum, item) => sum + item.sales, 0) / data.dailySales.length
+    : 0;
+  
+  if (!hasSalesData) {
+    return (
+      <Card className="p-6 shadow-xl border-purple-100/30 dark:border-purple-800/20 rounded-xl overflow-hidden bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950/30">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-purple-700 to-indigo-700 dark:from-purple-400 dark:to-indigo-400">Динамика продаж</h3>
+          <div className="bg-purple-100 dark:bg-purple-900/60 p-2 rounded-full shadow-inner">
+            <DollarSign className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+          </div>
+        </div>
+        <div className="h-[300px] flex items-center justify-center">
+          <p className="text-muted-foreground">Нет данных о продажах за выбранный период</p>
+        </div>
+      </Card>
+    );
+  }
   
   return (
-    <Card className="overflow-hidden border-0 shadow-xl rounded-xl bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/30 dark:to-blue-900/10 border-blue-100 dark:border-blue-800/30">
-      <CardHeader className="pb-2">
-        <div className="flex items-center">
-          <div className="w-8 h-8 rounded-full bg-blue-100/80 dark:bg-blue-800/40 flex items-center justify-center mr-3 shadow-inner">
-            <BarChart3 className="h-4 w-4 text-blue-600 dark:text-blue-300" />
-          </div>
-          <div>
-            <CardTitle className="text-base font-medium text-blue-700 dark:text-blue-400">
-              Продажи и заказы по дням
-            </CardTitle>
-            <CardDescription className="text-blue-600/70 dark:text-blue-400/70">
-              Динамика продаж и заказов в выбранном периоде
-            </CardDescription>
-          </div>
+    <Card className="p-6 shadow-xl border-purple-100/30 dark:border-purple-800/20 rounded-xl overflow-hidden bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950/30">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-purple-700 to-indigo-700 dark:from-purple-400 dark:to-indigo-400">
+          Динамика продаж
+        </h3>
+        <div className="bg-purple-100 dark:bg-purple-900/60 p-2 rounded-full shadow-inner">
+          <DollarSign className="h-5 w-5 text-purple-600 dark:text-purple-400" />
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={chartData}
-              margin={{
-                top: 20,
-                right: 30,
-                left: 20,
-                bottom: 10,
+      </div>
+      <div className="h-[300px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data.dailySales} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8}/>
+                <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
+              </linearGradient>
+              <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+                <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#8B5CF6" floodOpacity="0.3"/>
+              </filter>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+            <XAxis 
+              dataKey="date" 
+              tickFormatter={(value) => {
+                const date = new Date(value);
+                return `${date.getDate()}.${date.getMonth() + 1}`;
               }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="name" />
-              <YAxis 
-                yAxisId="left"
-                tickFormatter={(value) => formatCurrency(value)}
+              stroke="#9ca3af"
+              tick={{ fontSize: 12 }}
+              tickLine={{ stroke: '#e5e7eb' }}
+              axisLine={{ stroke: '#e5e7eb' }}
+            />
+            <YAxis 
+              stroke="#9ca3af"
+              tickFormatter={(value) => value >= 1000 ? `${value/1000}k` : value}
+              tick={{ fontSize: 12 }}
+              tickLine={{ stroke: '#e5e7eb' }}
+              axisLine={{ stroke: '#e5e7eb' }}
+            />
+            <Tooltip 
+              formatter={(value: any) => [`${value.toLocaleString()} ₽`, 'Продажи']}
+              labelFormatter={(label) => {
+                try {
+                  const date = new Date(label);
+                  return format(date, 'dd.MM.yyyy');
+                } catch (e) {
+                  return label;
+                }
+              }}
+              contentStyle={{ 
+                background: 'rgba(255, 255, 255, 0.95)', 
+                borderRadius: '8px', 
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+              }}
+            />
+            {!isMobile && (
+              <ReferenceLine 
+                y={avgSales} 
+                stroke="#8B5CF6" 
+                strokeDasharray="3 3"
+                label={{
+                  value: "Средние продажи",
+                  position: "insideTopLeft",
+                  fill: "#8B5CF6",
+                  fontSize: 12
+                }}
               />
-              <YAxis 
-                yAxisId="right" 
-                orientation="right" 
-                domain={[0, 'auto']}
-              />
-              <Tooltip 
-                formatter={(value, name) => {
-                  if (name === "Количество заказов") return [value, name];
-                  return [formatCurrency(value as number), name];
-                }} 
-              />
-              <Legend />
-              <Line
-                yAxisId="left"
-                type="monotone"
-                dataKey="Продажи"
-                stroke="#3b82f6"
-                activeDot={{ r: 8 }}
-                strokeWidth={2}
-              />
-              <Line
-                yAxisId="left"
-                type="monotone"
-                dataKey="Прошлый период"
-                stroke="#94a3b8"
-                strokeDasharray="5 5"
-                strokeWidth={2}
-              />
-              <Line
-                yAxisId="right"
-                type="monotone"
-                dataKey="Количество заказов"
-                stroke="#16a34a"
-                strokeWidth={2}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
+            )}
+            <Area
+              type="monotone"
+              dataKey="sales"
+              stroke="#8B5CF6"
+              strokeWidth={2}
+              fillOpacity={1}
+              fill="url(#colorSales)"
+              name="Продажи"
+              activeDot={{ 
+                r: 6, 
+                strokeWidth: 0, 
+                fill: "#8B5CF6",
+                filter: "url(#shadow)" 
+              }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
     </Card>
   );
 };

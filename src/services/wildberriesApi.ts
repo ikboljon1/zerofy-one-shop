@@ -17,13 +17,11 @@ export interface WildberriesResponse {
     };
     netProfit: number;
     acceptance: number;
-    orderCount?: number;
   };
   dailySales: Array<{
     date: string;
     sales: number;
     previousSales: number;
-    orderCount?: number;
   }>;
   productSales: Array<{
     subject_name: string;
@@ -87,277 +85,6 @@ const formatDate = (date: Date): string => {
 const formatDateRFC3339 = (date: Date, isEnd: boolean = false): string => {
   const formattedDate = date.toISOString().split('T')[0];
   return isEnd ? `${formattedDate}T23:59:59` : `${formattedDate}T00:00:00`;
-};
-
-/**
- * Рассчитывает метрики на основе данных отчета
- * Реализация в соответствии с функцией calculate_metrics из Python-скрипта
- */
-const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
-  if (!data || data.length === 0) {
-    return null;
-  }
-
-  let totalSales = 0;           // Продажа (retail_price_withdisc_rub)
-  let totalForPay = 0;          // К перечислению за товар (ppvz_for_pay)
-  let totalDeliveryRub = 0;     // Стоимость логистики (delivery_rub)
-  let totalRebillLogisticCost = 0; // Логистика возмещение издержек (rebill_logistic_cost)
-  let totalStorageFee = 0;      // Стоимость хранения (storage_fee)
-  let totalReturns = 0;         // Возврат (отрицательные ppvz_for_pay)
-  let totalPenalty = 0;         // Штрафы (penalty)
-  let totalDeduction = 0;       // Удержания (deduction)
-  let totalReturnCount = 0;     // Количество возвратов
-  let totalToPay = 0;           // Итого к оплате
-  let totalOrderCount = 0;      // Общее количество заказов
-  
-  // Для подсчета уникальных заказов
-  const uniqueOrderIds = new Set<string>();
-
-  const returnsByProduct: Record<string, { value: number; count: number }> = {};
-  const returnsByNmId: Record<string, number> = {}; // Словарь для хранения информации о возвратах по nmId
-  const penaltiesByReason: Record<string, number> = {};
-  const deductionsByReason: Record<string, { total: number; items: Array<{nm_id?: string | number; value: number}> }> = {};
-  
-  // Метрики для расчета прибыльности товаров
-  const productProfitability: Record<string, { 
-    name: string;
-    price: number;
-    sales: number;
-    costs: number;
-    profit: number;
-    image: string;
-    count: number;
-    returnCount: number;
-  }> = {};
-
-  // Создаем объект для отслеживания количества заказов по дням
-  const ordersByDay: Record<string, number> = {};
-
-  console.log(`Processing ${data.length} records for metrics calculation...`);
-  
-  for (const record of data) {
-    // Обработка продаж в соответствии с Python-скриптом
-    if (record.doc_type_name === 'Продажа') {
-      totalSales += record.retail_price_withdisc_rub || 0;
-      totalForPay += record.ppvz_for_pay || 0;
-      
-      // Учет данных для расчета прибыльности товаров
-      if (record.sa_name) {
-        const productName = record.sa_name;
-        if (!productProfitability[productName]) {
-          productProfitability[productName] = { 
-            name: productName,
-            price: record.retail_price || 0,
-            sales: 0,
-            costs: 0,
-            profit: 0,
-            image: record.pic_url || '',
-            count: 0,
-            returnCount: 0
-          };
-        }
-        
-        productProfitability[productName].sales += record.ppvz_for_pay || 0;
-        productProfitability[productName].costs += (record.delivery_rub || 0) + 
-                                               (record.storage_fee || 0) + 
-                                               (record.penalty || 0) +
-                                               (record.deduction || 0);
-        productProfitability[productName].price = record.retail_price || productProfitability[productName].price;
-        if (record.pic_url && !productProfitability[productName].image) {
-          productProfitability[productName].image = record.pic_url;
-        }
-        productProfitability[productName].count += 1;
-      }
-      
-      // Подсчет уникальных заказов
-      if (record.srid) {
-        uniqueOrderIds.add(record.srid);
-        
-        // Учитываем заказы по дням
-        const orderDate = record.rr_dt ? record.rr_dt.split('T')[0] : '';
-        if (orderDate) {
-          ordersByDay[orderDate] = (ordersByDay[orderDate] || 0) + 1;
-        }
-      }
-    } 
-    // Обработка возвратов в соответствии с Python-скриптом
-    else if (record.doc_type_name === 'Возврат') {
-      totalReturns += Math.abs(record.ppvz_for_pay || 0);
-      totalReturnCount += 1;
-      
-      // Учет возвратов по nmId в соответствии с Python-скриптом
-      if (record.nm_id) {
-        const nmId = record.nm_id.toString();
-        if (!returnsByNmId[nmId]) {
-          returnsByNmId[nmId] = 0;
-        }
-        returnsByNmId[nmId] += 1;
-      }
-      
-      if (record.sa_name) {
-        const productName = record.sa_name;
-        if (!productProfitability[productName]) {
-          productProfitability[productName] = { 
-            name: productName,
-            price: record.retail_price || 0,
-            sales: 0,
-            costs: 0,
-            profit: 0,
-            image: record.pic_url || '',
-            count: 0,
-            returnCount: 0
-          };
-        }
-        
-        productProfitability[productName].returnCount += 1;
-        
-        if (!returnsByProduct[productName]) {
-          returnsByProduct[productName] = { value: 0, count: 0 };
-        }
-        returnsByProduct[productName].value += Math.abs(record.ppvz_for_pay || 0);
-        returnsByProduct[productName].count += 1;
-      }
-    }
-    
-    // Учет расходов на логистику и хранение в соответствии с Python-скриптом
-    totalDeliveryRub += record.delivery_rub || 0;
-    totalRebillLogisticCost += record.rebill_logistic_cost || 0;
-    totalStorageFee += record.storage_fee || 0;
-    
-    // Обработка штрафов (сохраняем существующую логику)
-    if (record.penalty && record.penalty > 0) {
-      const reason = record.penalty_reason || record.bonus_type_name || 'Другие причины';
-      if (!penaltiesByReason[reason]) {
-        penaltiesByReason[reason] = 0;
-      }
-      penaltiesByReason[reason] += record.penalty;
-      totalPenalty += record.penalty;
-    }
-    
-    // Обработка удержаний (сохраняем существующую логику)
-    if (record.deduction !== undefined && record.deduction !== null) {
-      const reason = record.bonus_type_name || 'Прочие удержания';
-      
-      if (!deductionsByReason[reason]) {
-        deductionsByReason[reason] = { total: 0, items: [] };
-      }
-      
-      deductionsByReason[reason].total += record.deduction;
-      deductionsByReason[reason].items.push({
-        nm_id: record.nm_id || record.shk || '',
-        value: record.deduction
-      });
-      
-      totalDeduction += record.deduction;
-    }
-  }
-
-  // Определяем общее количество заказов
-  totalOrderCount = uniqueOrderIds.size;
-
-  // Расчет общей суммы по платной приемке
-  const totalAcceptance = paidAcceptanceData.reduce((sum, record) => sum + (record.total || 0), 0);
-
-  // Расчет итоговой суммы к оплате по логике Python-скрипта
-  totalToPay = totalForPay - totalDeliveryRub - totalStorageFee - totalReturns;
-
-  // Расчет прибыльности товаров
-  for (const key in productProfitability) {
-    productProfitability[key].profit = productProfitability[key].sales - productProfitability[key].costs;
-  }
-
-  // Подготовка данных о возвратах по товарам
-  const productReturns = Object.entries(returnsByProduct)
-    .map(([name, { value, count }]) => ({ name, value, count }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 5);
-
-  // Подготовка данных о штрафах
-  const penaltiesData = Object.entries(penaltiesByReason)
-    .map(([name, value]) => ({
-      name,
-      value: Math.round(value * 100) / 100
-    }))
-    .sort((a, b) => b.value - a.value);
-
-  // Подготовка данных об удержаниях
-  const deductionsData = Object.entries(deductionsByReason)
-    .map(([name, data]) => {
-      if (data.total === 0) return null;
-      
-      return {
-        name,
-        value: Math.round(data.total * 100) / 100,
-        count: data.items.length,
-        isNegative: data.total < 0
-      };
-    })
-    .filter(item => item !== null)
-    .sort((a, b) => Math.abs((b?.value || 0)) - Math.abs((a?.value || 0)));
-
-  // Подготовка данных о самых прибыльных и убыточных товарах
-  const productProfitabilityArray = Object.values(productProfitability);
-
-  const sortedByProfit = [...productProfitabilityArray].sort((a, b) => b.profit - a.profit);
-  const topProfitableProducts = sortedByProfit.slice(0, 3).map(item => ({
-    name: item.name,
-    price: item.price.toString(),
-    profit: item.profit.toString(),
-    image: item.image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg",
-    quantitySold: item.count || 0,
-    margin: Math.round((item.profit / item.sales) * 100) || 0,
-    returnCount: item.returnCount || 0,
-    category: "Одежда"
-  }));
-
-  const sortedByLoss = [...productProfitabilityArray].sort((a, b) => a.profit - b.profit);
-  const topUnprofitableProducts = sortedByLoss.slice(0, 3).map(item => ({
-    name: item.name,
-    price: item.price.toString(),
-    profit: item.profit.toString(),
-    image: item.image || "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg",
-    quantitySold: item.count || 0,
-    margin: Math.round((item.profit / item.sales) * 100) || 0,
-    returnCount: item.returnCount || 0,
-    category: "Одежда"
-  }));
-
-  // Подготовка данных о продажах по дням с учетом количества заказов
-  const dailySalesWithOrders = Object.entries(ordersByDay || {}).map(([date, orderCount]) => {
-    const sales = data.find((item: any) => item.rr_dt && item.rr_dt.split('T')[0] === date)?.retail_price_withdisc_rub || 0;
-    return {
-      date,
-      sales,
-      previousSales: 0, // TODO: Add previous sales data
-      orderCount
-    };
-  });
-
-  console.log(`Calculated metrics: Total sales: ${totalSales}, Total for pay: ${totalForPay}, Logistics: ${totalDeliveryRub}, Storage: ${totalStorageFee}, Returns: ${totalReturns}, Total to pay: ${totalToPay}, Order count: ${totalOrderCount}`);
-
-  return {
-    metrics: {
-      total_sales: Math.round(totalSales * 100) / 100,
-      total_for_pay: Math.round(totalForPay * 100) / 100,
-      total_delivery_rub: Math.round(totalDeliveryRub * 100) / 100,
-      total_rebill_logistic_cost: Math.round(totalRebillLogisticCost * 100) / 100,
-      total_storage_fee: Math.round(totalStorageFee * 100) / 100,
-      total_returns: Math.round(Math.abs(totalReturns) * 100) / 100,
-      total_penalty: Math.round(totalPenalty * 100) / 100,
-      total_deduction: Math.round(Math.abs(totalDeduction) * 100) / 100,
-      total_to_pay: Math.round(totalToPay * 100) / 100,
-      total_acceptance: Math.round(totalAcceptance * 100) / 100,
-      total_return_count: totalReturnCount,
-      total_order_count: totalOrderCount
-    },
-    penaltiesData,
-    deductionsData,
-    productReturns,
-    topProfitableProducts,
-    topUnprofitableProducts,
-    returnsByNmId,
-    dailySales: dailySalesWithOrders
-  };
 };
 
 /**
@@ -491,6 +218,244 @@ const fetchPaidAcceptanceReport = async (apiKey: string, dateFrom: Date, dateTo:
   }
 };
 
+/**
+ * Рассчитывает метрики на основе данных отчета
+ * Реализация в соответствии с функцией calculate_metrics из Python-скрипта
+ */
+const calculateMetrics = (data: any[], paidAcceptanceData: any[] = []) => {
+  if (!data || data.length === 0) {
+    return null;
+  }
+
+  let totalSales = 0;           // Продажа (retail_price_withdisc_rub)
+  let totalForPay = 0;          // К перечислению за товар (ppvz_for_pay)
+  let totalDeliveryRub = 0;     // Стоимость логистики (delivery_rub)
+  let totalRebillLogisticCost = 0; // Логистика возмещение издержек (rebill_logistic_cost)
+  let totalStorageFee = 0;      // Стоимость хранения (storage_fee)
+  let totalReturns = 0;         // Возврат (отрицательные ppvz_for_pay)
+  let totalPenalty = 0;         // Штрафы (penalty)
+  let totalDeduction = 0;       // Удержания (deduction)
+  let totalReturnCount = 0;     // Количество возвратов
+  let totalToPay = 0;           // Итого к оплате
+
+  const returnsByProduct: Record<string, { value: number; count: number }> = {};
+  const returnsByNmId: Record<string, number> = {}; // Словарь для хранения информации о возвратах по nmId
+  const penaltiesByReason: Record<string, number> = {};
+  const deductionsByReason: Record<string, { total: number; items: Array<{nm_id?: string | number; value: number}> }> = {};
+  
+  // Метрики для расчета прибыльности товаров
+  const productProfitability: Record<string, { 
+    name: string;
+    price: number;
+    sales: number;
+    costs: number;
+    profit: number;
+    image: string;
+    count: number;
+    returnCount: number;
+  }> = {};
+
+  console.log(`Processing ${data.length} records for metrics calculation...`);
+  
+  for (const record of data) {
+    // Обработка продаж в соответствии с Python-скриптом
+    if (record.doc_type_name === 'Продажа') {
+      totalSales += record.retail_price_withdisc_rub || 0;
+      totalForPay += record.ppvz_for_pay || 0;
+      
+      // Учет данных для расчета прибыльности товаров
+      if (record.sa_name) {
+        const productName = record.sa_name;
+        if (!productProfitability[productName]) {
+          productProfitability[productName] = { 
+            name: productName,
+            price: record.retail_price || 0,
+            sales: 0,
+            costs: 0,
+            profit: 0,
+            image: record.pic_url || '',
+            count: 0,
+            returnCount: 0
+          };
+        }
+        
+        productProfitability[productName].sales += record.ppvz_for_pay || 0;
+        productProfitability[productName].costs += (record.delivery_rub || 0) + 
+                                               (record.storage_fee || 0) + 
+                                               (record.penalty || 0) +
+                                               (record.deduction || 0);
+        productProfitability[productName].price = record.retail_price || productProfitability[productName].price;
+        if (record.pic_url && !productProfitability[productName].image) {
+          productProfitability[productName].image = record.pic_url;
+        }
+        productProfitability[productName].count += 1;
+      }
+    } 
+    // Обработка возвратов в соответствии с Python-скриптом
+    else if (record.doc_type_name === 'Возврат') {
+      totalReturns += Math.abs(record.ppvz_for_pay || 0);
+      totalReturnCount += 1;
+      
+      // Учет возвратов по nmId в соответствии с Python-скриптом
+      if (record.nm_id) {
+        const nmId = record.nm_id.toString();
+        if (!returnsByNmId[nmId]) {
+          returnsByNmId[nmId] = 0;
+        }
+        returnsByNmId[nmId] += 1;
+      }
+      
+      if (record.sa_name) {
+        const productName = record.sa_name;
+        if (!productProfitability[productName]) {
+          productProfitability[productName] = { 
+            name: productName,
+            price: record.retail_price || 0,
+            sales: 0,
+            costs: 0,
+            profit: 0,
+            image: record.pic_url || '',
+            count: 0,
+            returnCount: 0
+          };
+        }
+        
+        productProfitability[productName].returnCount += 1;
+        
+        if (!returnsByProduct[productName]) {
+          returnsByProduct[productName] = { value: 0, count: 0 };
+        }
+        returnsByProduct[productName].value += Math.abs(record.ppvz_for_pay || 0);
+        returnsByProduct[productName].count += 1;
+      }
+    }
+    
+    // Учет расходов на логистику и хранение в соответствии с Python-скриптом
+    totalDeliveryRub += record.delivery_rub || 0;
+    totalRebillLogisticCost += record.rebill_logistic_cost || 0;
+    totalStorageFee += record.storage_fee || 0;
+    
+    // Обработка штрафов (сохраняем существующую логику)
+    if (record.penalty && record.penalty > 0) {
+      const reason = record.penalty_reason || record.bonus_type_name || 'Другие причины';
+      if (!penaltiesByReason[reason]) {
+        penaltiesByReason[reason] = 0;
+      }
+      penaltiesByReason[reason] += record.penalty;
+      totalPenalty += record.penalty;
+    }
+    
+    // Обработка удержаний (сохраняем существующую логику)
+    if (record.deduction !== undefined && record.deduction !== null) {
+      const reason = record.bonus_type_name || 'Прочие удержания';
+      
+      if (!deductionsByReason[reason]) {
+        deductionsByReason[reason] = { total: 0, items: [] };
+      }
+      
+      deductionsByReason[reason].total += record.deduction;
+      deductionsByReason[reason].items.push({
+        nm_id: record.nm_id || record.shk || '',
+        value: record.deduction
+      });
+      
+      totalDeduction += record.deduction;
+    }
+  }
+
+  // Расчет общей суммы по платной приемке
+  const totalAcceptance = paidAcceptanceData.reduce((sum, record) => sum + (record.total || 0), 0);
+
+  // Расчет итоговой суммы к оплате по логике Python-скрипта
+  totalToPay = totalForPay - totalDeliveryRub - totalStorageFee - totalReturns;
+
+  // Расчет прибыльности товаров
+  for (const key in productProfitability) {
+    productProfitability[key].profit = productProfitability[key].sales - productProfitability[key].costs;
+  }
+
+  // Подготовка данных о возвратах по товарам
+  const productReturns = Object.entries(returnsByProduct)
+    .map(([name, { value, count }]) => ({ name, value, count }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5);
+
+  // Подготовка данных о штрафах
+  const penaltiesData = Object.entries(penaltiesByReason)
+    .map(([name, value]) => ({
+      name,
+      value: Math.round(value * 100) / 100
+    }))
+    .sort((a, b) => b.value - a.value);
+
+  // Подготовка данных об удержаниях
+  const deductionsData = Object.entries(deductionsByReason)
+    .map(([name, data]) => {
+      if (data.total === 0) return null;
+      
+      return {
+        name,
+        value: Math.round(data.total * 100) / 100,
+        count: data.items.length,
+        isNegative: data.total < 0
+      };
+    })
+    .filter(item => item !== null)
+    .sort((a, b) => Math.abs((b?.value || 0)) - Math.abs((a?.value || 0)));
+
+  // Подготовка данных о самых прибыльных и убыточных товарах
+  const productProfitabilityArray = Object.values(productProfitability);
+
+  const sortedByProfit = [...productProfitabilityArray].sort((a, b) => b.profit - a.profit);
+  const topProfitableProducts = sortedByProfit.slice(0, 3).map(item => ({
+    name: item.name,
+    price: item.price.toString(),
+    profit: item.profit.toString(),
+    image: item.image || "https://storage.googleapis.com/a1aa/image/Fo-j_LX7WQeRkTq3s3S37f5pM6wusM-7URWYq2Rq85w.jpg",
+    quantitySold: item.count || 0,
+    margin: Math.round((item.profit / item.sales) * 100) || 0,
+    returnCount: item.returnCount || 0,
+    category: "Одежда"
+  }));
+
+  const sortedByLoss = [...productProfitabilityArray].sort((a, b) => a.profit - b.profit);
+  const topUnprofitableProducts = sortedByLoss.slice(0, 3).map(item => ({
+    name: item.name,
+    price: item.price.toString(),
+    profit: item.profit.toString(),
+    image: item.image || "https://storage.googleapis.com/a1aa/image/OVMl1GnzKz6bgDAEJKScyzvR2diNKk-j6FoazEY-XRI.jpg",
+    quantitySold: item.count || 0,
+    margin: Math.round((item.profit / item.sales) * 100) || 0,
+    returnCount: item.returnCount || 0,
+    category: "Одежда"
+  }));
+
+  console.log(`Calculated metrics: Total sales: ${totalSales}, Total for pay: ${totalForPay}, Logistics: ${totalDeliveryRub}, Storage: ${totalStorageFee}, Returns: ${totalReturns}, Total to pay: ${totalToPay}`);
+
+  return {
+    metrics: {
+      total_sales: Math.round(totalSales * 100) / 100,
+      total_for_pay: Math.round(totalForPay * 100) / 100,
+      total_delivery_rub: Math.round(totalDeliveryRub * 100) / 100,
+      total_rebill_logistic_cost: Math.round(totalRebillLogisticCost * 100) / 100,
+      total_storage_fee: Math.round(totalStorageFee * 100) / 100,
+      total_returns: Math.round(Math.abs(totalReturns) * 100) / 100,
+      total_penalty: Math.round(totalPenalty * 100) / 100,
+      total_deduction: Math.round(Math.abs(totalDeduction) * 100) / 100,
+      total_to_pay: Math.round(totalToPay * 100) / 100,
+      total_acceptance: Math.round(totalAcceptance * 100) / 100,
+      total_return_count: totalReturnCount
+    },
+    penaltiesData,
+    deductionsData,
+    productReturns,
+    topProfitableProducts,
+    topUnprofitableProducts,
+    returnsByNmId,
+    dailySales: []
+  };
+};
+
 export const fetchWildberriesOrders = async (apiKey: string, dateFrom: Date): Promise<WildberriesOrder[]> => {
   try {
     const formattedDate = formatDateRFC3339(dateFrom);
@@ -595,13 +560,13 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
     const ordersData = await fetchWildberriesOrders(apiKey, dateFrom);
     const salesData = await fetchWildberriesSales(apiKey, dateFrom);
     
-    // 4. Если данных нет, возвращаем дем��-данные
+    // 4. Если данных нет, возвращаем демо-данные
     if (!reportData || reportData.length === 0) {
       console.log('No data received from Wildberries API, using demo data');
       return getDemoData();
     }
     
-    // 5. Рассчитываем метрики на основе полученных данных
+    // 5. Рассчитываем метрики на основе полученных данных (�� соответствии с Python-скриптом)
     console.log("Calculating metrics from report data...");
     const result = calculateMetrics(reportData, paidAcceptanceData);
     
@@ -617,8 +582,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
       deductionsData, 
       topProfitableProducts, 
       topUnprofitableProducts, 
-      returnsByNmId,
-      dailySales: calculatedDailySales 
+      returnsByNmId 
     } = result;
     
     // 6. Группируем продажи по категориям и собираем nmId
@@ -721,95 +685,172 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
           deductions: metrics.total_deduction
         },
         netProfit: metrics.total_to_pay,
-        acceptance: metrics.total_acceptance,
-        orderCount: metrics.total_order_count // Добавляем реальное количество заказов
+        acceptance: metrics.total_acceptance
       },
-      dailySales: calculatedDailySales || dailySales,
+      dailySales,
       productSales,
-      productReturns: productReturns || [],
+      productReturns,
       penaltiesData,
       deductionsData,
       topProfitableProducts,
       topUnprofitableProducts,
-      returnsByNmId,
       orders: ordersData,
       sales: salesData,
       warehouseDistribution,
       regionDistribution
     };
     
+    console.log(`Successfully processed data from Wildberries API. Net profit (total_to_pay): ${metrics.total_to_pay}`);
+    
     return response;
   } catch (error) {
-    console.error('Error fetching Wildberries stats:', error);
+    console.error("Error fetching Wildberries stats:", error);
     return getDemoData();
   }
 };
 
-// Function to get demo data for development purposes
-const getDemoData = () => {
-  const demoData: WildberriesResponse = {
+/**
+ * Возвращает демо-данные для тестирования и отладки
+ * @returns Демо-данные для Wildberries
+ */
+const getDemoData = (): WildberriesResponse => {
+  return {
     currentPeriod: {
-      sales: 150000,
-      transferred: 120000,
+      sales: 294290.6,
+      transferred: 218227.70,
       expenses: {
-        total: 45000,
-        logistics: 15000,
-        storage: 12000,
-        penalties: 8000,
-        acceptance: 5000,
-        advertising: 5000,
-        deductions: 0
+        total: 65794.94, 
+        logistics: 35669.16,
+        storage: 23125.78,
+        penalties: 0,
+        acceptance: 0,
+        advertising: 0,
+        deductions: 7000 
       },
-      netProfit: 75000,
-      acceptance: 5000,
-      orderCount: 250 // Added real order count to demo data
+      netProfit: 147037.23,
+      acceptance: 0
     },
-    dailySales: Array.from({ length: 7 }, (_, i) => ({
-      date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      sales: 15000 + Math.random() * 10000,
-      previousSales: 13000 + Math.random() * 8000,
-      orderCount: 25 + Math.floor(Math.random() * 20) // Added order count to daily sales
-    })),
-    productSales: Array.from({ length: 5 }, (_, i) => ({
-      subject_name: `Товар ${i + 1}`,
-      quantity: 50 - i * 5
-    })),
-    productReturns: Array.from({ length: 3 }, (_, i) => ({
-      name: `Причина возврата ${i + 1}`,
-      value: 2000 - i * 500,
-      count: 5 - i
-    })),
-    topProfitableProducts: Array.from({ length: 3 }, (_, i) => ({
-      name: `Прибыльный товар ${i + 1}`,
-      price: `${1500 + i * 500}`,
-      profit: `${800 + i * 200}`,
-      image: "https://via.placeholder.com/100",
-      quantitySold: 30 - i * 5,
-      margin: 40 + i * 5,
-      returnCount: i,
-      category: "Одежда"
-    })),
-    topUnprofitableProducts: Array.from({ length: 3 }, (_, i) => ({
-      name: `Убыточный товар ${i + 1}`,
-      price: `${1200 + i * 300}`,
-      profit: `${-500 - i * 200}`,
-      image: "https://via.placeholder.com/100",
-      quantitySold: 10 - i,
-      margin: -30 - i * 5,
-      returnCount: 5 - i,
-      category: "Электроника"
-    })),
-    warehouseDistribution: Array.from({ length: 5 }, (_, i) => ({
-      name: `Склад ${i + 1}`,
-      count: 50 - i * 7,
-      percentage: 30 - i * 5
-    })),
-    regionDistribution: Array.from({ length: 5 }, (_, i) => ({
-      name: `Регион ${i + 1}`,
-      count: 40 - i * 5,
-      percentage: 25 - i * 3
-    }))
+    dailySales: [
+      {
+        date: "2025-02-26",
+        sales: 36652.93,
+        previousSales: 0
+      },
+      {
+        date: "2025-02-27",
+        sales: 79814.5,
+        previousSales: 0
+      },
+      {
+        date: "2025-02-28",
+        sales: 37899.90,
+        previousSales: 0
+      },
+      {
+        date: "2025-03-01",
+        sales: 62596.15,
+        previousSales: 0
+      },
+      {
+        date: "2025-03-02",
+        sales: 77327.11,
+        previousSales: 0
+      }
+    ],
+    productSales: [
+      { subject_name: "Костюмы", quantity: 48 },
+      { subject_name: "Платья", quantity: 6 },
+      { subject_name: "Свитшоты", quantity: 4 },
+      { subject_name: "Лонгсливы", quantity: 3 },
+      { subject_name: "Костюмы спортивные", quantity: 1 }
+    ],
+    productReturns: [
+      { name: "Костюм женский спортивный", value: 12000, count: 3 },
+      { name: "Платье летнее", value: 8500, count: 2 },
+      { name: "Футболка мужская", value: 6300, count: 4 },
+      { name: "Джинсы классические", value: 4200, count: 1 },
+      { name: "Куртка зимняя", value: 3000, count: 1 }
+    ],
+    penaltiesData: [
+      { name: "Недопоставка", value: 3500 },
+      { name: "Нарушение упаковки", value: 2800 },
+      { name: "Нарушение маркировки", value: 1200 },
+      { name: "Другие причины", value: 2500 }
+    ],
+    deductionsData: [ 
+      { name: "Услуги доставки транзитных поставок", value: 17265.33 },
+      { name: "Штраф за перенос поставки", value: -1079.00, isNegative: true },
+      { name: "Штраф за недопоставку", value: -2345.67, isNegative: true },
+      { name: "Компенсация клиенту за брак", value: -1587.45, isNegative: true },
+      { name: "Недостача товара", value: -3254.89, isNegative: true }
+    ],
+    topProfitableProducts: [
+      { 
+        name: "Костюм женский спортивный", 
+        price: "3200", 
+        profit: "25000", 
+        image: "https://images.wbstatic.net/big/new/25250000/25251346-1.jpg",
+        quantitySold: 65,
+        margin: 42,
+        returnCount: 3,
+        category: "Женская одежда"
+      },
+      { 
+        name: "Платье летнее", 
+        price: "1200", 
+        profit: "18000", 
+        image: "https://images.wbstatic.net/big/new/22270000/22271973-1.jpg",
+        quantitySold: 58,
+        margin: 45,
+        returnCount: 2,
+        category: "Женская одежда" 
+      },
+      { 
+        name: "Джинсы классические", 
+        price: "2800", 
+        profit: "15500", 
+        image: "https://images.wbstatic.net/big/new/13730000/13733711-1.jpg",
+        quantitySold: 42,
+        margin: 35,
+        returnCount: 1,
+        category: "Мужская одежда" 
+      }
+    ],
+    topUnprofitableProducts: [
+      { 
+        name: "Шарф зимний", 
+        price: "800", 
+        profit: "-5200", 
+        image: "https://images.wbstatic.net/big/new/11080000/11081822-1.jpg",
+        quantitySold: 4,
+        margin: 8,
+        returnCount: 12,
+        category: "Аксессуары" 
+      },
+      { 
+        name: "Рубашка офисная", 
+        price: "1500", 
+        profit: "-3800", 
+        image: "https://images.wbstatic.net/big/new/9080000/9080277-1.jpg",
+        quantitySold: 3,
+        margin: 5,
+        returnCount: 8,
+        category: "Мужская одежда" 
+      },
+      { 
+        name: "Перчатки кожаные", 
+        price: "1200", 
+        profit: "-2900", 
+        image: "https://images.wbstatic.net/big/new/10320000/10328291-1.jpg",
+        quantitySold: 2,
+        margin: 12,
+        returnCount: 10,
+        category: "Аксессуары" 
+      }
+    ],
+    orders: [],
+    sales: [],
+    warehouseDistribution: [],
+    regionDistribution: []
   };
-  
-  return demoData;
 };
