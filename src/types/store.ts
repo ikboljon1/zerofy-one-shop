@@ -42,6 +42,7 @@ export type WildberriesResponse = {
     acceptance: number;
     returns?: number;
     returnsAmount?: number;  // Added returnsAmount as optional property
+    orderCount?: number;   // Добавляем количество заказов
   };
   previousPeriod?: {
     sales: number;
@@ -60,6 +61,7 @@ export type WildberriesResponse = {
     acceptance: number;
     returns?: number;
     returnsAmount?: number;  // Also adding it to previousPeriod for consistency
+    orderCount?: number;   // Добавляем количество заказов
   };
   dailySales?: any[];
   productSales?: any[];

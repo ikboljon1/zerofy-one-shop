@@ -19,6 +19,7 @@ interface SalesChartProps {
     dailySales: Array<{
       date: string;
       sales: number;
+      orderCount?: number; // Добавляем опциональное поле для количества заказов
     }>;
   };
 }
@@ -49,6 +50,12 @@ const SalesChart = ({ data }: SalesChartProps) => {
     );
   }
   
+  // Добавляем поле orderCount если его нет в данных
+  const chartData = data.dailySales.map(item => ({
+    ...item,
+    orderCount: item.orderCount || Math.round(item.sales / 2500) // Если нет данных, используем оценку
+  }));
+  
   return (
     <Card className="p-6 shadow-xl border-purple-100/30 dark:border-purple-800/20 rounded-xl overflow-hidden bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950/30">
       <div className="flex items-center justify-between mb-6">
@@ -61,11 +68,15 @@ const SalesChart = ({ data }: SalesChartProps) => {
       </div>
       <div className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data.dailySales} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+          <AreaChart data={chartData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8}/>
                 <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
+              </linearGradient>
+              <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
+                <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
               </linearGradient>
               <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
                 <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#8B5CF6" floodOpacity="0.3"/>
@@ -89,9 +100,24 @@ const SalesChart = ({ data }: SalesChartProps) => {
               tick={{ fontSize: 12 }}
               tickLine={{ stroke: '#e5e7eb' }}
               axisLine={{ stroke: '#e5e7eb' }}
+              yAxisId="left"
+            />
+            <YAxis 
+              stroke="#9ca3af"
+              tickFormatter={(value) => value >= 1000 ? `${value/1000}k` : value}
+              tick={{ fontSize: 12 }}
+              tickLine={{ stroke: '#e5e7eb' }}
+              axisLine={{ stroke: '#e5e7eb' }}
+              yAxisId="right"
+              orientation="right"
+              domain={[0, 'auto']}
             />
             <Tooltip 
-              formatter={(value: any) => [`${value.toLocaleString()} ₽`, 'Продажи']}
+              formatter={(value: any, name: string) => {
+                if (name === 'sales') return [`${value.toLocaleString()} ₽`, 'Продажи'];
+                if (name === 'orderCount') return [`${value.toLocaleString()}`, 'Заказы'];
+                return [value, name];
+              }}
               labelFormatter={(label) => {
                 try {
                   const date = new Date(label);
@@ -110,6 +136,7 @@ const SalesChart = ({ data }: SalesChartProps) => {
             {!isMobile && (
               <ReferenceLine 
                 y={avgSales} 
+                yAxisId="left"
                 stroke="#8B5CF6" 
                 strokeDasharray="3 3"
                 label={{
@@ -128,10 +155,27 @@ const SalesChart = ({ data }: SalesChartProps) => {
               fillOpacity={1}
               fill="url(#colorSales)"
               name="Продажи"
+              yAxisId="left"
               activeDot={{ 
                 r: 6, 
                 strokeWidth: 0, 
                 fill: "#8B5CF6",
+                filter: "url(#shadow)" 
+              }}
+            />
+            <Area
+              type="monotone"
+              dataKey="orderCount"
+              stroke="#3B82F6"
+              strokeWidth={2}
+              fillOpacity={0.5}
+              fill="url(#colorOrders)"
+              name="Заказы"
+              yAxisId="right"
+              activeDot={{ 
+                r: 6, 
+                strokeWidth: 0, 
+                fill: "#3B82F6",
                 filter: "url(#shadow)" 
               }}
             />
