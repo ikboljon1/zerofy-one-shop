@@ -595,7 +595,7 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
     const ordersData = await fetchWildberriesOrders(apiKey, dateFrom);
     const salesData = await fetchWildberriesSales(apiKey, dateFrom);
     
-    // 4. Если данных нет, возвращаем демо-данные
+    // 4. Если данных нет, возвращаем дем��-данные
     if (!reportData || reportData.length === 0) {
       console.log('No data received from Wildberries API, using demo data');
       return getDemoData();
@@ -724,3 +724,92 @@ export const fetchWildberriesStats = async (apiKey: string, dateFrom: Date, date
         acceptance: metrics.total_acceptance,
         orderCount: metrics.total_order_count // Добавляем реальное количество заказов
       },
+      dailySales: calculatedDailySales || dailySales,
+      productSales,
+      productReturns: productReturns || [],
+      penaltiesData,
+      deductionsData,
+      topProfitableProducts,
+      topUnprofitableProducts,
+      returnsByNmId,
+      orders: ordersData,
+      sales: salesData,
+      warehouseDistribution,
+      regionDistribution
+    };
+    
+    return response;
+  } catch (error) {
+    console.error('Error fetching Wildberries stats:', error);
+    return getDemoData();
+  }
+};
+
+// Function to get demo data for development purposes
+const getDemoData = () => {
+  const demoData: WildberriesResponse = {
+    currentPeriod: {
+      sales: 150000,
+      transferred: 120000,
+      expenses: {
+        total: 45000,
+        logistics: 15000,
+        storage: 12000,
+        penalties: 8000,
+        acceptance: 5000,
+        advertising: 5000,
+        deductions: 0
+      },
+      netProfit: 75000,
+      acceptance: 5000,
+      orderCount: 250 // Added real order count to demo data
+    },
+    dailySales: Array.from({ length: 7 }, (_, i) => ({
+      date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      sales: 15000 + Math.random() * 10000,
+      previousSales: 13000 + Math.random() * 8000,
+      orderCount: 25 + Math.floor(Math.random() * 20) // Added order count to daily sales
+    })),
+    productSales: Array.from({ length: 5 }, (_, i) => ({
+      subject_name: `Товар ${i + 1}`,
+      quantity: 50 - i * 5
+    })),
+    productReturns: Array.from({ length: 3 }, (_, i) => ({
+      name: `Причина возврата ${i + 1}`,
+      value: 2000 - i * 500,
+      count: 5 - i
+    })),
+    topProfitableProducts: Array.from({ length: 3 }, (_, i) => ({
+      name: `Прибыльный товар ${i + 1}`,
+      price: `${1500 + i * 500}`,
+      profit: `${800 + i * 200}`,
+      image: "https://via.placeholder.com/100",
+      quantitySold: 30 - i * 5,
+      margin: 40 + i * 5,
+      returnCount: i,
+      category: "Одежда"
+    })),
+    topUnprofitableProducts: Array.from({ length: 3 }, (_, i) => ({
+      name: `Убыточный товар ${i + 1}`,
+      price: `${1200 + i * 300}`,
+      profit: `${-500 - i * 200}`,
+      image: "https://via.placeholder.com/100",
+      quantitySold: 10 - i,
+      margin: -30 - i * 5,
+      returnCount: 5 - i,
+      category: "Электроника"
+    })),
+    warehouseDistribution: Array.from({ length: 5 }, (_, i) => ({
+      name: `Склад ${i + 1}`,
+      count: 50 - i * 7,
+      percentage: 30 - i * 5
+    })),
+    regionDistribution: Array.from({ length: 5 }, (_, i) => ({
+      name: `Регион ${i + 1}`,
+      count: 40 - i * 5,
+      percentage: 25 - i * 3
+    }))
+  };
+  
+  return demoData;
+};

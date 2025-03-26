@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, ShoppingCart, CreditCard, BarChart3, Wallet, PackageX } from "lucide-react";
