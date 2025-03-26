@@ -42,6 +42,7 @@ export type WildberriesResponse = {
     acceptance: number;
     returns?: number;
     returnsAmount?: number;  // Added returnsAmount as optional property
+    orderCount?: number;     // Added orderCount to track actual number of orders
   };
   previousPeriod?: {
     sales: number;
@@ -60,8 +61,14 @@ export type WildberriesResponse = {
     acceptance: number;
     returns?: number;
     returnsAmount?: number;  // Also adding it to previousPeriod for consistency
+    orderCount?: number;     // Added orderCount to track actual number of orders
   };
-  dailySales?: any[];
+  dailySales?: Array<{
+    date: string;
+    sales: number;
+    previousSales: number;
+    orderCount?: number;     // Adding orderCount to daily sales data
+  }>;
   productSales?: any[];
 };
 

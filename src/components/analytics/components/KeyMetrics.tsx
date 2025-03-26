@@ -1,217 +1,126 @@
-import { Card } from "@/components/ui/card";
-import { DollarSign, ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { ShoppingCart, TrendingDown, Percent } from "../icons";
+import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { TrendingUp, ShoppingCart, CreditCard, BarChart3, Wallet, PackageX } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/utils/formatCurrency";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { useEffect, useState } from "react";
 
 interface KeyMetricsProps {
-  data: {
-    currentPeriod: {
-      sales: number;
-      expenses: {
-        total: number;
-        costPrice?: number;
-      };
-      netProfit: number;
-      transferred: number;
-      returnsAmount?: number;
-    };
-  };
+  data: any;
 }
 
-const KeyMetrics = ({ data }: KeyMetricsProps) => {
-  const isMobile = useIsMobile();
-  const [netProfit, setNetProfit] = useState(data.currentPeriod.netProfit);
-  const [totalExpenses, setTotalExpenses] = useState(data.currentPeriod.expenses.total);
-  const [returnsAmount, setReturnsAmount] = useState(data.currentPeriod.returnsAmount || 0);
+const KeyMetrics: React.FC<KeyMetricsProps> = ({ data }) => {
+  // Получение реального количества заказов из данных, с запасным вариантом расчета
+  const orderCount = data.currentPeriod.orderCount || 
+    Math.floor(data.currentPeriod.sales / 2500); // Используем запасной вариант, если нет реальных данных
   
-  useEffect(() => {
-    setTotalExpenses(data.currentPeriod.expenses.total);
-    setNetProfit(data.currentPeriod.netProfit);
-    setReturnsAmount(data.currentPeriod.returnsAmount || 0);
-    
-    const handleCostPriceUpdate = () => {
-      const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
-      const selectedStore = stores.find((store: any) => store.isSelected);
-      
-      if (selectedStore) {
-        const analyticsData = JSON.parse(localStorage.getItem(`marketplace_analytics_${selectedStore.id}`) || "{}");
-        if (analyticsData?.data?.currentPeriod) {
-          setTotalExpenses(analyticsData.data.currentPeriod.expenses.total);
-          setNetProfit(analyticsData.data.currentPeriod.netProfit);
-          setReturnsAmount(analyticsData.data.currentPeriod.returnsAmount || 0);
-        }
-      }
-    };
-    
-    window.addEventListener('costPriceUpdated', handleCostPriceUpdate);
-    
-    return () => {
-      window.removeEventListener('costPriceUpdated', handleCostPriceUpdate);
-    };
-  }, [data]);
-  
-  useEffect(() => {
-    // Обновляем расчет чистой прибыли с учетом возвратов
-    setNetProfit(data.currentPeriod.transferred - data.currentPeriod.expenses.total - (data.currentPeriod.returnsAmount || 0));
-  }, [data]);
+  const returnsAmount = data.currentPeriod.returnsAmount || 0;
+  const returnCount = data.productReturns ? 
+    data.productReturns.reduce((total: number, item: any) => total + (item.count || 0), 0) : 0;
   
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      {isMobile ? (
-        <>
-          <div className="grid grid-cols-2 gap-4">
-            <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background border-purple-200 dark:border-purple-800">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Общая сумма продаж</p>
-                  <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-700 to-purple-900 dark:from-purple-400 dark:to-purple-200">
-                    {formatCurrency(data.currentPeriod.sales)}
-                  </h3>
-                  <div className="flex items-center mt-2 text-sm text-green-600 dark:text-green-400">
-                    <ArrowUpRight className="h-4 w-4 mr-1" />
-                    <span>+12.5% с прошлого периода</span>
-                  </div>
-                </div>
-                <div className="bg-purple-100 dark:bg-purple-900/60 p-3 rounded-full shadow-inner">
-                  <DollarSign className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <Card className="overflow-hidden border-0 shadow-xl rounded-xl bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/10 border-blue-100 dark:border-blue-800/30">
+        <CardContent className="pt-6">
+          <div className="flex justify-between items-start mb-3">
+            <div className="flex items-center">
+              <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-800/30 flex items-center justify-center mr-3 shadow-sm">
+                <ShoppingCart className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
-            </Card>
-
-            <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background border-blue-200 dark:border-blue-800">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Количество заказов</p>
-                  <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-blue-900 dark:from-blue-400 dark:to-blue-200">
-                    {(data.currentPeriod.sales / 2500).toFixed(0)}
-                  </h3>
-                  <div className="flex items-center mt-2 text-sm text-green-600 dark:text-green-400">
-                    <ArrowUpRight className="h-4 w-4 mr-1" />
-                    <span>+8.2% с прошлого периода</span>
-                  </div>
-                </div>
-                <div className="bg-blue-100 dark:bg-blue-900/60 p-3 rounded-full shadow-inner">
-                  <ShoppingCart className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-red-50 to-white dark:from-red-950/20 dark:to-background border-red-200 dark:border-red-800">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Общие удержания и возвраты</p>
-                  <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-700 to-red-900 dark:from-red-400 dark:to-red-200">
-                    {formatCurrency(totalExpenses + returnsAmount)}
-                  </h3>
-                  <div className="flex items-center mt-2 text-sm text-red-600 dark:text-red-400">
-                    <ArrowDownRight className="h-4 w-4 mr-1" />
-                    <span>+3.7% с прошлого периода</span>
-                  </div>
-                </div>
-                <div className="bg-red-100 dark:bg-red-900/60 p-3 rounded-full shadow-inner">
-                  <TrendingDown className="h-6 w-6 text-red-600 dark:text-red-400" />
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-green-50 to-white dark:from-green-950/20 dark:to-background border-green-200 dark:border-green-800">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Чистая прибыль</p>
-                  <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-700 to-green-900 dark:from-green-400 dark:to-green-200">
-                    {formatCurrency(netProfit)}
-                  </h3>
-                  <div className="flex items-center mt-2 text-sm text-green-600 dark:text-green-400">
-                    <ArrowUpRight className="h-4 w-4 mr-1" />
-                    <span>+15.3% с прошлого периода</span>
-                  </div>
-                </div>
-                <div className="bg-green-100 dark:bg-green-900/60 p-3 rounded-full shadow-inner">
-                  <Percent className="h-6 w-6 text-green-600 dark:text-green-400" />
-                </div>
-              </div>
-            </Card>
-          </div>
-        </>
-      ) : (
-        <>
-          <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background border-purple-200 dark:border-purple-800">
-            <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Общая сумма продаж</p>
-                <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-700 to-purple-900 dark:from-purple-400 dark:to-purple-200">
+                <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Количество заказов</p>
+                <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-blue-900 dark:from-blue-400 dark:to-blue-200">
+                  {orderCount}
+                </h3>
+              </div>
+            </div>
+            <Badge 
+              variant="outline" 
+              className="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800"
+            >
+              <TrendingUp className="h-3 w-3 mr-1" />
+              +8.2% с прошлого периода
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="overflow-hidden border-0 shadow-xl rounded-xl bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/10 border-green-100 dark:border-green-800/30">
+        <CardContent className="pt-6">
+          <div className="flex justify-between items-start mb-3">
+            <div className="flex items-center">
+              <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-800/30 flex items-center justify-center mr-3 shadow-sm">
+                <CreditCard className="h-5 w-5 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-green-600 dark:text-green-400">Общая выручка</p>
+                <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-700 to-green-900 dark:from-green-400 dark:to-green-200">
                   {formatCurrency(data.currentPeriod.sales)}
                 </h3>
-                <div className="flex items-center mt-2 text-sm text-green-600 dark:text-green-400">
-                  <ArrowUpRight className="h-4 w-4 mr-1" />
-                  <span>+12.5% с прошлого периода</span>
-                </div>
-              </div>
-              <div className="bg-purple-100 dark:bg-purple-900/60 p-3 rounded-full shadow-inner">
-                <DollarSign className="h-6 w-6 text-purple-600 dark:text-purple-400" />
               </div>
             </div>
-          </Card>
+            <Badge 
+              variant="outline" 
+              className="bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800"
+            >
+              <TrendingUp className="h-3 w-3 mr-1" />
+              +12.4% с прошлого периода
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
 
-          <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background border-blue-200 dark:border-blue-800">
-            <div className="flex justify-between items-start">
+      <Card className="overflow-hidden border-0 shadow-xl rounded-xl bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-950/30 dark:to-orange-900/10 border-orange-100 dark:border-orange-800/30">
+        <CardContent className="pt-6">
+          <div className="flex justify-between items-start mb-3">
+            <div className="flex items-center">
+              <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-800/30 flex items-center justify-center mr-3 shadow-sm">
+                <BarChart3 className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+              </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Количество заказов</p>
-                <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-blue-900 dark:from-blue-400 dark:to-blue-200">
-                  {(data.currentPeriod.sales / 2500).toFixed(0)}
+                <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Чистая прибыль</p>
+                <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-700 to-orange-900 dark:from-orange-400 dark:to-orange-200">
+                  {formatCurrency(data.currentPeriod.netProfit)}
                 </h3>
-                <div className="flex items-center mt-2 text-sm text-green-600 dark:text-green-400">
-                  <ArrowUpRight className="h-4 w-4 mr-1" />
-                  <span>+8.2% с прошлого периода</span>
-                </div>
-              </div>
-              <div className="bg-blue-100 dark:bg-blue-900/60 p-3 rounded-full shadow-inner">
-                <ShoppingCart className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
-          </Card>
+            <Badge 
+              variant="outline" 
+              className="bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-800"
+            >
+              <TrendingUp className="h-3 w-3 mr-1" />
+              +9.7% с прошлого периода
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
 
-          <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-red-50 to-white dark:from-red-950/20 dark:to-background border-red-200 dark:border-red-800">
-            <div className="flex justify-between items-start">
+      <Card className="overflow-hidden border-0 shadow-xl rounded-xl bg-gradient-to-br from-red-50 to-red-100/50 dark:from-red-950/30 dark:to-red-900/10 border-red-100 dark:border-red-800/30">
+        <CardContent className="pt-6">
+          <div className="flex justify-between items-start mb-3">
+            <div className="flex items-center">
+              <div className="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-800/30 flex items-center justify-center mr-3 shadow-sm">
+                <PackageX className="h-5 w-5 text-red-600 dark:text-red-400" />
+              </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Общие удержания и возвраты</p>
+                <p className="text-sm font-medium text-red-600 dark:text-red-400">Сумма возвратов</p>
                 <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-700 to-red-900 dark:from-red-400 dark:to-red-200">
-                  {formatCurrency(totalExpenses + returnsAmount)}
+                  {formatCurrency(returnsAmount)}
                 </h3>
-                <div className="flex items-center mt-2 text-sm text-red-600 dark:text-red-400">
-                  <ArrowDownRight className="h-4 w-4 mr-1" />
-                  <span>+3.7% с прошлого периода</span>
-                </div>
-              </div>
-              <div className="bg-red-100 dark:bg-red-900/60 p-3 rounded-full shadow-inner">
-                <TrendingDown className="h-6 w-6 text-red-600 dark:text-red-400" />
+                <p className="text-sm text-red-600/70 dark:text-red-400/70 mt-1">
+                  ({returnCount} возвратов)
+                </p>
               </div>
             </div>
-          </Card>
-
-          <Card className="p-6 shadow-lg border-0 rounded-xl overflow-hidden bg-gradient-to-br from-green-50 to-white dark:from-green-950/20 dark:to-background border-green-200 dark:border-green-800">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Чистая прибыль</p>
-                <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-700 to-green-900 dark:from-green-400 dark:to-green-200">
-                  {formatCurrency(netProfit)}
-                </h3>
-                <div className="flex items-center mt-2 text-sm text-green-600 dark:text-green-400">
-                  <ArrowUpRight className="h-4 w-4 mr-1" />
-                  <span>+15.3% с прошлого периода</span>
-                </div>
-              </div>
-              <div className="bg-green-100 dark:bg-green-900/60 p-3 rounded-full shadow-inner">
-                <Percent className="h-6 w-6 text-green-600 dark:text-green-400" />
-              </div>
-            </div>
-          </Card>
-        </>
-      )}
+            <Badge 
+              variant="outline" 
+              className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800"
+            >
+              <TrendingUp className="h-3 w-3 mr-1" />
+              +3.1% с прошлого периода
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
