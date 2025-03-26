@@ -19,7 +19,7 @@ interface SalesChartProps {
     dailySales: Array<{
       date: string;
       sales: number;
-      orderCount?: number; // Добавляем опциональное поле для количества заказов
+      orderCount?: number;
     }>;
   };
 }
@@ -50,10 +50,10 @@ const SalesChart = ({ data }: SalesChartProps) => {
     );
   }
   
-  // Добавляем поле orderCount если его нет в данных
+  // Используем реальные данные о количестве заказов из API
   const chartData = data.dailySales.map(item => ({
     ...item,
-    orderCount: item.orderCount || Math.round(item.sales / 2500) // Если нет данных, используем оценку
+    orderCount: item.orderCount || 0 // В случае если данные отсутствуют, используем 0
   }));
   
   return (
