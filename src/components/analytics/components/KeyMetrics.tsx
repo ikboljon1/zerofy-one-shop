@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import { DollarSign, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { ShoppingCart, TrendingDown, Percent } from "../icons";
@@ -16,6 +17,7 @@ interface KeyMetricsProps {
       netProfit: number;
       transferred: number;
       returnsAmount?: number;
+      orderCount?: number; // Добавляем поле для реального количества заказов
     };
   };
 }
@@ -25,11 +27,13 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
   const [netProfit, setNetProfit] = useState(data.currentPeriod.netProfit);
   const [totalExpenses, setTotalExpenses] = useState(data.currentPeriod.expenses.total);
   const [returnsAmount, setReturnsAmount] = useState(data.currentPeriod.returnsAmount || 0);
+  const [orderCount, setOrderCount] = useState(data.currentPeriod.orderCount || 0);
   
   useEffect(() => {
     setTotalExpenses(data.currentPeriod.expenses.total);
     setNetProfit(data.currentPeriod.netProfit);
     setReturnsAmount(data.currentPeriod.returnsAmount || 0);
+    setOrderCount(data.currentPeriod.orderCount || 0);
     
     const handleCostPriceUpdate = () => {
       const stores = JSON.parse(localStorage.getItem('marketplace_stores') || '[]');
@@ -41,6 +45,7 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
           setTotalExpenses(analyticsData.data.currentPeriod.expenses.total);
           setNetProfit(analyticsData.data.currentPeriod.netProfit);
           setReturnsAmount(analyticsData.data.currentPeriod.returnsAmount || 0);
+          setOrderCount(analyticsData.data.currentPeriod.orderCount || 0);
         }
       }
     };
@@ -85,7 +90,7 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">Количество заказов</p>
                   <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-blue-900 dark:from-blue-400 dark:to-blue-200">
-                    {(data.currentPeriod.sales / 2500).toFixed(0)}
+                    {orderCount}
                   </h3>
                   <div className="flex items-center mt-2 text-sm text-green-600 dark:text-green-400">
                     <ArrowUpRight className="h-4 w-4 mr-1" />
@@ -162,7 +167,7 @@ const KeyMetrics = ({ data }: KeyMetricsProps) => {
               <div>
                 <p className="text-sm font-medium text-muted-foreground mb-1">Количество заказов</p>
                 <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-blue-900 dark:from-blue-400 dark:to-blue-200">
-                  {(data.currentPeriod.sales / 2500).toFixed(0)}
+                  {orderCount}
                 </h3>
                 <div className="flex items-center mt-2 text-sm text-green-600 dark:text-green-400">
                   <ArrowUpRight className="h-4 w-4 mr-1" />
